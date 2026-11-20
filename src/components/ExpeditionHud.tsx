@@ -1,0 +1,390 @@
+import React from 'react';
+import { Pause, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { ELEMENT_META, STATUS_META } from '../game/catalog';
+import type { ControlMode, ExpeditionHudSnapshot } from '../game/types';
+import { ElementIcon, ScatterIcon, VoxelCreatureAvatar } from './Icons';
+
+interface ExpeditionHudProps {
+  hud: ExpeditionHudSnapshot;
+  muted: boolean;
+  onCastSkill: (index: number) => void;
+  onScatter: () => void;
+  onUltimate: () => void;
+  onToggleControlMode: () => void;
+  onToggleMute: () => void;
+  onPause: () => void;
+}
+
+const CONTROL_LABELS: Record<ControlMode, string> = {
+  semi: 'Semi-Auto [E]',
+  auto: 'Auto Total [E]',
+  manual: 'Manuel [E]',
+};
+
+export function ExpeditionHud({
+  hud,
+  muted,
+  onCastSkill,
+  onScatter,
+  onUltimate,
+  onToggleControlMode,
+  onToggleMute,
+  onPause,
+}: ExpeditionHudProps) {
+  const scatterReady = hud.scatterCooldown <= 0.05;
+  const scatterRatio = Math.max(
+    0,
+    Math.min(1, 1 - hud.scatterCooldown / Math.max(0.1, hud.scatterMaxCooldown)),
+  );
+  const ultimateReady = hud.ultimateCharge >= 100;
+  const ultimateRatio = Math.max(0, Math.min(1, hud.ultimateCharge / 100));
+
+  const mins = Math.floor(hud.elapsedSec / 60);
+  const secs = Math.floor(hud.elapsedSec % 60);
+  const timerStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+  return (
+    <div className="fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-3 sm:p-4">
+      {/* Top Perimeter Row */}
+      <div className="flex items-start justify-between gap-3">
+        {/* Top-Left: Wave & Stage Telemetry */}
+        <div className="flex flex-col gap-2 max-w-[65%]">
+          <div className="voxel-panel rounded-xl px-3.5 py-2 flex items-center gap-3">
+            <div>
+              <p className="text-[11px] font-semibold tracking-wider text-[#B8C2D1] uppercase leading-none">
+                {hud.biomeName}
+              </p>
+              <p className="font-display font-bold text-sm sm:text-base text-[#FAF7F0] leading-tight mt-0.5">
+                {hud.stageName}
+              </p>
+            </div>
+            <div className="h-7 w-px bg-[#39445A]" />
+            <div className="text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B8C2D1] leading-none">
+                Vague
+              </p>
+              <p className="font-mono-num font-bold text-base text-[#F4B942] leading-tight mt-0.5">
+                {hud.waveIndex + 1}/{hud.totalWaves}
+              </p>
+            </div>
+            <div className="h-7 w-px bg-[#39445A] hidden sm:block" />
+            <div className="text-right hidden sm:block">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B8C2D1] leading-none">
+                Temps
+              </p>
+              <p className="font-mono-num font-bold text-base text-[#FAF7F0] leading-tight mt-0.5">
+                {timerStr}
+              </p>
+            </div>
+          </div>
+
+          {/* Boss HP Bar with Phase Markers & Statuses */}
+          {hud.boss && (
+            <div className="voxel-panel rounded-xl px-3.5 py-2 w-[min(390px,82vw)] border-[#E85D3F]">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <ElementIcon element={hud.boss.element} size={16} />
+                  <span className="font-display font-bold text-sm text-[#FAF7F0] truncate">
+                    {hud.boss.name}
+                  </span>
+                  <span
+                    className={`font-mono-num text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shrink-0 ${
+                      hud.boss.phase === 3
+                        ? 'bg-[#F4B942] text-[#0F172A]'
+                        : hud.boss.phase === 2
+                          ? 'bg-[#F43F5E] text-[#FAF7F0]'
+                          : 'bg-[#273145] text-[#CBD5E1]'
+                    }`}
+                  >
+                    P{hud.boss.phase}/{hud.boss.maxPhases}
+                    {hud.boss.phase === 3
+                      ? ' · SURCHARGE'
+                      : hud.boss.phase === 2
+                        ? ' · FUREUR'
+                        : ''}
+                  </span>
+                </div>
+                <span className="font-mono-num text-xs font-bold text-[#FCA5A5] whitespace-nowrap shrink-0">
+                  {hud.boss.telegraphing
+                    ? 'ATTAQUE ! ESQUIVEZ !'
+                    : `${Math.round(hud.boss.hp)} / ${Math.round(hud.boss.maxHp)}`}
+                </span>
+              </div>
+              <div className="relative h-2.5 w-full rounded bg-[#111622] overflow-hidden border border-[#39445A]">
+                <div
+                  className={`h-full transition-transform duration-150 origin-left ${
+                    hud.boss.phase === 3
+                      ? 'bg-[#F4B942]'
+                      : hud.boss.phase === 2
+                        ? 'bg-[#F43F5E]'
+                        : 'bg-[#E85D3F]'
+                  }`}
+                  style={{
+                    transform: `scaleX(${Math.max(0, Math.min(1, hud.boss.hp / Math.max(1, hud.boss.maxHp)))})`,
+                  }}
+                />
+                {/* Phase Threshold Tick Markers (50% and 25% for 3-phase Bosses) */}
+                <div className="absolute inset-y-0 left-1/2 w-[2px] bg-[#0F1420]/85 pointer-events-none" />
+                {hud.boss.maxPhases === 3 && (
+                  <div className="absolute inset-y-0 left-1/4 w-[2px] bg-[#0F1420]/85 pointer-events-none" />
+                )}
+              </div>
+              {hud.boss.statuses.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] font-bold">
+                  {hud.boss.statuses.map((st) => (
+                    <span
+                      key={st}
+                      style={{ color: STATUS_META[st].color }}
+                      className="uppercase tracking-wider"
+                    >
+                      {STATUS_META[st].shortLabel}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contextual Combo & Elemental Reaction Indicator (only visible when active) */}
+          {(hud.comboCount >= 2 || hud.lastReactionLabel) && (
+            <div className="flex items-center gap-2.5 px-3 py-1 rounded-lg bg-[#141A26]/90 border border-[#39445A] w-fit">
+              {hud.comboCount >= 2 && (
+                <span className="font-mono-num font-extrabold text-sm text-[#F4B942]">
+                  ×{hud.comboCount} COMBO
+                </span>
+              )}
+              {hud.lastReactionLabel && (
+                <span
+                  className="font-display font-bold text-xs tracking-wide uppercase"
+                  style={{ color: hud.lastReactionColor ?? '#F4B942' }}
+                >
+                  {hud.lastReactionLabel}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Top-Right: Compact Utility Controls */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onToggleControlMode();
+            }}
+            className={`voxel-btn cursor-pointer px-3 h-10 rounded-lg border-2 text-xs font-bold whitespace-nowrap shrink-0 ${
+              hud.controlMode === 'auto'
+                ? 'bg-[#2FB97A] text-[#0F172A] border-[#141925]'
+                : 'bg-[#181E2A]/92 text-[#FAF7F0] border-[#39445A] hover:border-[#F4B942]'
+            }`}
+            aria-label="Changer le mode de contrôle"
+          >
+            {CONTROL_LABELS[hud.controlMode]}
+          </button>
+
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onToggleMute();
+            }}
+            className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
+            aria-label={muted ? 'Activer le son' : 'Couper le son'}
+          >
+            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onPause();
+            }}
+            className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
+            aria-label="Mettre en pause"
+          >
+            <Pause className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Transient Wave / Boss Banner */}
+      {hud.bannerText && (
+        <div className="self-center px-5 py-1.5 rounded-lg bg-[#181E2A]/92 border-2 border-[#F4B942] font-display font-bold text-base sm:text-lg text-[#F4B942] tracking-wide">
+          {hud.bannerText}
+        </div>
+      )}
+
+      {/* Bottom Perimeter Dock: 3 Squad Cards + Scatter + Ultimate */}
+      <div className="flex items-end justify-center gap-2 sm:gap-2.5 pointer-events-auto">
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 w-[min(600px,64vw)]">
+          {hud.units.map((u, idx) => {
+            const hpRatio = Math.max(0, Math.min(1, u.hp / Math.max(1, u.maxHp)));
+            const shieldRatio = Math.max(0, Math.min(1, u.shieldHp / Math.max(1, u.maxHp)));
+            const skillReady = !u.fainted && u.moveCooldown <= 0.05;
+            const cdRatio = Math.max(
+              0,
+              Math.min(1, 1 - u.moveCooldown / Math.max(0.1, u.moveMaxCooldown)),
+            );
+            const moveColor = ELEMENT_META[u.moveElement].color;
+
+            return (
+              <div
+                key={u.uid}
+                className={`voxel-panel rounded-xl p-2 sm:p-2.5 flex flex-col gap-1.5 ${
+                  u.fainted ? 'opacity-65' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <VoxelCreatureAvatar speciesId={u.speciesId} size={34} className="shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-display font-bold text-xs sm:text-sm text-[#FAF7F0] truncate">
+                        {u.name}
+                      </span>
+                      <span className="font-mono-num text-[10px] text-[#B8C2D1] shrink-0">
+                        N.{u.level}
+                      </span>
+                    </div>
+                    <div className="relative mt-1 h-2 w-full rounded bg-[#111622] overflow-hidden border border-[#39445A]">
+                      <div
+                        className={`h-full transition-transform duration-150 origin-left ${
+                          hpRatio < 0.3 ? 'bg-[#E85D3F]' : 'bg-[#2FB97A]'
+                        }`}
+                        style={{ transform: `scaleX(${hpRatio})` }}
+                      />
+                      {shieldRatio > 0 && (
+                        <div
+                          className="absolute inset-y-0 left-0 bg-[#F4B942]/80 origin-left pointer-events-none"
+                          style={{ transform: `scaleX(${shieldRatio})` }}
+                        />
+                      )}
+                    </div>
+                    <div className="mt-0.5 flex items-center justify-between gap-1 text-[10px] font-mono-num text-[#B8C2D1]">
+                      <span className="truncate">
+                        {u.fainted
+                          ? `Réanim. ${u.reviveTimer.toFixed(0)}s`
+                          : u.shieldHp > 0
+                            ? `${Math.round(u.hp)} +${u.shieldHp}`
+                            : `${Math.round(u.hp)}/${Math.round(u.maxHp)}`}
+                      </span>
+                      <span className="flex items-center gap-1 shrink-0">
+                        {u.buffActive && <span className="text-[#38BDF8] font-bold">DEF+</span>}
+                        {u.statuses.slice(0, 2).map((st) => (
+                          <span
+                            key={st}
+                            style={{ color: STATUS_META[st].color }}
+                            className="font-bold"
+                          >
+                            {STATUS_META[st].shortLabel}
+                          </span>
+                        ))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Special Move Trigger Button */}
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  disabled={!skillReady}
+                  onClick={(e) => {
+                    e.currentTarget.blur();
+                    onCastSkill(idx);
+                  }}
+                  className={`voxel-btn relative overflow-hidden cursor-pointer rounded-lg px-2 py-1.5 border-2 text-left flex items-center justify-between gap-1.5 ${
+                    skillReady
+                      ? 'border-[#141925] text-[#FAF7F0]'
+                      : 'border-[#39445A] bg-[#161C28] text-[#94A3B8] cursor-not-allowed'
+                  }`}
+                  style={skillReady ? { backgroundColor: moveColor } : undefined}
+                  aria-label={`Lancer ${u.moveName} avec ${u.name}`}
+                >
+                  {!skillReady && !u.fainted && (
+                    <div
+                      className="absolute inset-0 bg-white/10 origin-left pointer-events-none"
+                      style={{ transform: `scaleX(${cdRatio})` }}
+                    />
+                  )}
+                  <span className="relative z-10 text-[11px] sm:text-xs font-bold truncate hud-text-stroke">
+                    {u.moveName}
+                  </span>
+                  <span className="relative z-10 font-mono-num text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#141925]/70 text-[#FAF7F0] shrink-0">
+                    {skillReady ? idx + 1 : `${u.moveCooldown.toFixed(1)}s`}
+                  </span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Iconic Scatter Dodge Button */}
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={!scatterReady}
+          onClick={(e) => {
+            e.currentTarget.blur();
+            onScatter();
+          }}
+          className={`voxel-btn relative overflow-hidden cursor-pointer h-[106px] w-[84px] sm:w-[98px] rounded-xl border-2 flex flex-col items-center justify-center gap-1 shrink-0 ${
+            scatterReady
+              ? 'bg-[#E85D3F] hover:bg-[#F06D50] border-[#141925] text-[#FAF7F0]'
+              : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
+          }`}
+          aria-label="Dispersion de l'escouade"
+        >
+          {!scatterReady && (
+            <div
+              className="absolute inset-x-0 bottom-0 bg-[#E85D3F]/25 origin-bottom pointer-events-none"
+              style={{ height: `${scatterRatio * 100}%` }}
+            />
+          )}
+          <ScatterIcon size={24} />
+          <span className="relative z-10 font-display font-bold text-xs leading-none">
+            Dispersion
+          </span>
+          <span className="relative z-10 font-mono-num text-[10px] opacity-90">
+            {scatterReady ? 'ESPACE' : `${hud.scatterCooldown.toFixed(1)}s`}
+          </span>
+        </button>
+
+        {/* V0.2 Squad Ultimate Button (Cubi-Déchaînement [R]) */}
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={!ultimateReady}
+          onClick={(e) => {
+            e.currentTarget.blur();
+            onUltimate();
+          }}
+          className={`voxel-btn relative overflow-hidden cursor-pointer h-[106px] w-[84px] sm:w-[98px] rounded-xl border-2 flex flex-col items-center justify-center gap-1 shrink-0 ${
+            ultimateReady
+              ? 'bg-[#F4B942] hover:bg-[#F7C964] border-[#141925] text-[#0F172A]'
+              : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
+          }`}
+          aria-label="Déclencher l'Ultime d'escouade"
+        >
+          {!ultimateReady && (
+            <div
+              className="absolute inset-x-0 bottom-0 bg-[#F4B942]/30 origin-bottom pointer-events-none"
+              style={{ height: `${ultimateRatio * 100}%` }}
+            />
+          )}
+          <Sparkles className="relative z-10 w-6 h-6" />
+          <span className="relative z-10 font-display font-bold text-xs leading-none">
+            Ultime
+          </span>
+          <span className="relative z-10 font-mono-num text-[10px] font-bold">
+            {ultimateReady ? 'TOUCHE R' : `${hud.ultimateCharge}%`}
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+}

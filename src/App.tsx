@@ -1,0 +1,616 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { CampHud, type CampDrawerTab } from './components/CampHud';
+import { CodexDrawer } from './components/CodexDrawer';
+import { CookingDrawer } from './components/CookingDrawer';
+import { ExpeditionDrawer } from './components/ExpeditionDrawer';
+import { ExpeditionHud } from './components/ExpeditionHud';
+import { QuestsDrawer } from './components/QuestsDrawer';
+import { StarterModal } from './components/StarterModal';
+import { OutcomeModal, PauseModal } from './components/StatusModals';
+import { TeamDrawer } from './components/TeamDrawer';
+import { TitleOverlay } from './components/TitleOverlay';
+import { soundFx } from './game/audio';
+import { INGREDIENT_LIST, RECIPE_BY_ID, STAGES } from './game/catalog';
+import {
+  applyExpeditionRewards,
+  claimAchievementReward,
+  claimQuestReward,
+  collectCookedCreature,
+  countClaimableRewards,
+  createInitialSaveState,
+  equipMoveStone,
+  equipPowerStone,
+  evolveCreature,
+  getPotIngredientCost,
+  loadSaveState,
+  persistSaveState,
+  startCookingPot,
+  unequipPowerStone,
+} from './game/rules';
+import type {
+  CodexAnswer,
+  ControlMode,
+  ExpeditionHudSnapshot,
+  ExpeditionOutcome,
+  GameScreenState,
+  MoveStoneKind,
+  OwnedCreature,
+  PlayMode,
+  PotTier,
+  SaveState,
+  StageDef,
+} from './game/types';
+import { VoxelEngine } from './game/VoxelEngine';
+
+function hasAutostartParam(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('autostart') === '1';
+}
+
+export default function App() {
+  const canvasMountRef = useRef<HTMLDivElement | null>(null);
+  const engineRef = useRef<VoxelEngine | null>(null);
+
+  const [save, setSave] = useState<SaveState>(() => {
+    const loaded = loadSaveState();
+    if (hasAutostartParam() && !loaded.starterChosen) {
+      return { ...loaded, starterChosen: true };
+    }
+    return loaded;
+  });
+
+  const [screenState, setScreenState] = useState<GameScreenState>(() =>
+    hasAutostartParam() ? 'playing' : 'title',
+  );
+  const [playMode, setPlayMode] = useState<PlayMode>('camp');
+  const [activeDrawer, setActiveDrawer] = useState<CampDrawerTab>(null);
+  const [dockCollapsed, setDockCollapsed] = useState(false);
+  const [controlMode, setControlMode] = useState<ControlMode>('semi');
+  const [muted, setMuted] = useState(false);
+
+  const [activeStage, setActiveStage] = useState<StageDef | null>(null);
+  const [hudSnapshot, setHudSnapshot] = useState<ExpeditionHudSnapshot | null>(null);
+  const [outcome, setOutcome] = useState<ExpeditionOutcome | null>(null);
+  const [recruitedPreview, setRecruitedPreview] = useState<OwnedCreature | null>(null);
+  const [codexHistory, setCodexHistory] = useState<CodexAnswer[]>([]);
+
+  // Refs so Three.js callbacks never stale-close or tear down the canvas
+  const saveRef = useRef(save);
+  const activeStageRef = useRef(activeStage);
+  saveRef.current = save;
+  activeStageRef.current = activeStage;
+
+  // Persist save changes
+  useEffect(() => {
+    persistSaveState(save);
+  }, [save]);
+
+  // Mirror state machine to document.body.dataset.state
+  useEffect(() => {
+    document.body.dataset.state = screenState;
+    engineRef.current?.setScreenState(screenState);
+  }, [screenState]);
+
+  const getSquadCreatures = useCallback((state: SaveState): OwnedCreature[] => {
+    return state.squadIds
+      .map((uid) => state.roster.find((c) => c.uid === uid))
+      .filter((c): c is OwnedCreature => Boolean(c));
+  }, []);
+
+  // Mount WebGLRenderer once in isolated ref container
+  useEffect(() => {
+    const mount = canvasMountRef.current;
+    if (!mount) return;
+
+    const engine = new VoxelEngine(mount, {
+      onHudUpdate: (snap) => {
+        setHudSnapshot(snap);
+      },
+      onExpeditionComplete: (result) => {
+        const stage = activeStageRef.current;
+        if (!stage) return;
+        const { nextSave, outcome: finalOutcome } = applyExpeditionRewards(
+          saveRef.current,
+          stage,
+          result.victory,
+          result,
+        );
+        setSave(nextSave);
+        setOutcome(finalOutcome);
+        setScreenState('gameover');
+      },
+    });
+    engineRef.current = engine;
+
+    const initialSave = saveRef.current;
+    engine.loadCampScene(
+      getSquadCreatures(initialSave),
+      initialSave.pot.recipeId,
+      initialSave.pot.status,
+    );
+    engine.setScreenState(hasAutostartParam() ? 'playing' : 'title');
+
+    return () => {
+      engine.dispose();
+      engineRef.current = null;
+    };
+  }, [getSquadCreatures]);
+
+  // Sync Camp 3D pot liquid visual whenever pot state changes in Camp
+  useEffect(() => {
+    if (playMode === 'camp') {
+      engineRef.current?.setPotVisual(save.pot.recipeId, save.pot.status);
+    }
+  }, [playMode, save.pot.recipeId, save.pot.status]);
+
+  // Actions
+  const handleStartFromTitle = useCallback(() => {
+    soundFx.playUiClick();
+    document.body.dataset.state = 'playing';
+    setScreenState('playing');
+    setPlayMode('camp');
+    setActiveDrawer(null);
+  }, []);
+
+  const handleNewAdventure = useCallback(() => {
+    soundFx.playUiClick();
+    const fresh = createInitialSaveState('pyrocube', false);
+    setSave(fresh);
+    setOutcome(null);
+    setActiveDrawer(null);
+    setPlayMode('camp');
+    setScreenState('playing');
+    engineRef.current?.loadCampScene(
+      getSquadCreatures(fresh),
+      fresh.pot.recipeId,
+      fresh.pot.status,
+    );
+  }, [getSquadCreatures]);
+
+  const handleSelectStarter = useCallback(
+    (speciesId: string) => {
+      soundFx.playEvolution();
+      const fresh = createInitialSaveState(speciesId, true);
+      setSave(fresh);
+      engineRef.current?.loadCampScene(
+        getSquadCreatures(fresh),
+        fresh.pot.recipeId,
+        fresh.pot.status,
+      );
+    },
+    [getSquadCreatures],
+  );
+
+  const handleLaunchStage = useCallback(
+    (stage: StageDef) => {
+      soundFx.playUiClick();
+      setActiveDrawer(null);
+      setOutcome(null);
+      setActiveStage(stage);
+      setPlayMode('expedition');
+      setScreenState('playing');
+      document.body.dataset.state = 'playing';
+      engineRef.current?.startExpedition(
+        stage,
+        getSquadCreatures(saveRef.current),
+        saveRef.current.powerStones,
+        controlMode,
+      );
+    },
+    [controlMode, getSquadCreatures],
+  );
+
+  const handleReturnCamp = useCallback(() => {
+    soundFx.playUiClick();
+    setOutcome(null);
+    setActiveStage(null);
+    setHudSnapshot(null);
+    setPlayMode('camp');
+    setScreenState('playing');
+    engineRef.current?.loadCampScene(
+      getSquadCreatures(saveRef.current),
+      saveRef.current.pot.recipeId,
+      saveRef.current.pot.status,
+    );
+  }, [getSquadCreatures]);
+
+  const handleToggleControlMode = useCallback(() => {
+    soundFx.playUiClick();
+    setControlMode((prev) => {
+      const next: ControlMode = prev === 'semi' ? 'auto' : prev === 'auto' ? 'manual' : 'semi';
+      engineRef.current?.setControlMode(next);
+      return next;
+    });
+  }, []);
+
+  const handleToggleMute = useCallback(() => {
+    const nextMuted = soundFx.toggleMute();
+    setMuted(nextMuted);
+  }, []);
+
+  // Global keyboard controls
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (screenState === 'title') {
+        if (e.code === 'Enter' || e.code === 'Space') {
+          e.preventDefault();
+          handleStartFromTitle();
+        }
+        return;
+      }
+
+      if (e.code === 'KeyM') {
+        handleToggleMute();
+        return;
+      }
+
+      if (playMode === 'expedition') {
+        if (e.code === 'Escape' || e.code === 'KeyP') {
+          e.preventDefault();
+          if (screenState === 'playing') setScreenState('paused');
+          else if (screenState === 'paused') setScreenState('playing');
+          return;
+        }
+
+        if (screenState === 'playing') {
+          if (e.code === 'Digit1' || e.code === 'Numpad1') {
+            engineRef.current?.triggerAllySkill(0);
+          } else if (e.code === 'Digit2' || e.code === 'Numpad2') {
+            engineRef.current?.triggerAllySkill(1);
+          } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
+            engineRef.current?.triggerAllySkill(2);
+          } else if (e.code === 'Space') {
+            e.preventDefault();
+            engineRef.current?.triggerScatter();
+          } else if (e.code === 'KeyR' && !e.repeat) {
+            engineRef.current?.triggerUltimate();
+          }
+        }
+      } else if (playMode === 'camp' && e.code === 'Escape' && activeDrawer) {
+        setActiveDrawer(null);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeDrawer, handleStartFromTitle, handleToggleMute, playMode, screenState]);
+
+  // Separate clean listener for `KeyE` Auto toggle during expedition
+  useEffect(() => {
+    const onAutoKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (playMode === 'expedition' && screenState === 'playing' && e.code === 'KeyE' && !e.repeat) {
+        handleToggleControlMode();
+      }
+    };
+    window.addEventListener('keydown', onAutoKey);
+    return () => window.removeEventListener('keydown', onAutoKey);
+  }, [handleToggleControlMode, playMode, screenState]);
+
+  // Cooking Pot handlers
+  const handleChangePotTier = (tier: PotTier) => {
+    soundFx.playUiClick();
+    setSave((prev) => ({
+      ...prev,
+      pot: { ...prev.pot, tier, slots: [null, null, null, null, null] },
+    }));
+  };
+
+  const handleAddIngredient = (ingId: string) => {
+    soundFx.playUiClick();
+    setSave((prev) => {
+      const emptyIdx = prev.pot.slots.indexOf(null);
+      if (emptyIdx === -1) return prev;
+      const nextSlots = [...prev.pot.slots];
+      nextSlots[emptyIdx] = ingId;
+      return { ...prev, pot: { ...prev.pot, slots: nextSlots } };
+    });
+  };
+
+  const handleRemovePotSlot = (idx: number) => {
+    soundFx.playUiClick();
+    setSave((prev) => {
+      const nextSlots = [...prev.pot.slots];
+      nextSlots[idx] = null;
+      return { ...prev, pot: { ...prev.pot, slots: nextSlots } };
+    });
+  };
+
+  const handleClearPotSlots = () => {
+    soundFx.playUiClick();
+    setSave((prev) => ({
+      ...prev,
+      pot: { ...prev.pot, slots: [null, null, null, null, null] },
+    }));
+  };
+
+  const handleAutoFillPot = () => {
+    soundFx.playUiClick();
+    setSave((prev) => {
+      const cost = getPotIngredientCost(prev.pot.tier);
+      const nextSlots = [...prev.pot.slots];
+      const tempStock = { ...prev.ingredients };
+      for (const id of nextSlots) {
+        if (id) tempStock[id] = Math.max(0, (tempStock[id] ?? 0) - cost);
+      }
+      for (let i = 0; i < 5; i++) {
+        if (nextSlots[i] !== null) continue;
+        const pick = INGREDIENT_LIST.find((ing) => (tempStock[ing.id] ?? 0) >= cost);
+        if (!pick) break;
+        nextSlots[i] = pick.id;
+        tempStock[pick.id] -= cost;
+      }
+      return { ...prev, pot: { ...prev.pot, slots: nextSlots } };
+    });
+  };
+
+  const handleStartCooking = () => {
+    setSave((prev) => {
+      const next = startCookingPot(prev);
+      if (next.pot.status === 'cooking' && next.pot.recipeId) {
+        const hex = RECIPE_BY_ID[next.pot.recipeId]?.soupHex ?? '#F4B942';
+        engineRef.current?.triggerCookBurstFx(hex);
+      }
+      return next;
+    });
+  };
+
+  const handleFastFinishCooking = () => {
+    soundFx.playCookBubble();
+    setSave((prev) => {
+      if (prev.pot.status !== 'cooking') return prev;
+      return {
+        ...prev,
+        pot: { ...prev.pot, expeditionsRemaining: 0, status: 'ready' },
+      };
+    });
+  };
+
+  const handleCollectCreature = () => {
+    const { nextSave, creature } = collectCookedCreature(saveRef.current);
+    if (creature) {
+      soundFx.playVictory();
+      engineRef.current?.triggerCookBurstFx('#2FB97A');
+      setSave(nextSave);
+      setRecruitedPreview(creature);
+    }
+  };
+
+  // Team & Stones handlers
+  const handleToggleSquadMember = (uid: string) => {
+    soundFx.playUiClick();
+    setSave((prev) => {
+      const exists = prev.squadIds.includes(uid);
+      let nextSquad: string[];
+      if (exists) {
+        if (prev.squadIds.length <= 1) return prev; // Keep at least 1 active
+        nextSquad = prev.squadIds.filter((id) => id !== uid);
+      } else {
+        if (prev.squadIds.length >= 3) return prev;
+        nextSquad = [...prev.squadIds, uid];
+      }
+      const nextSave = { ...prev, squadIds: nextSquad };
+      if (playMode === 'camp') {
+        engineRef.current?.loadCampScene(
+          getSquadCreatures(nextSave),
+          nextSave.pot.recipeId,
+          nextSave.pot.status,
+        );
+      }
+      return nextSave;
+    });
+  };
+
+  const handleEquipStone = (creatureUid: string, slotIdx: number, stoneId: string) => {
+    soundFx.playUiClick();
+    setSave((prev) => equipPowerStone(prev, creatureUid, slotIdx, stoneId));
+  };
+
+  const handleUnequipStone = (creatureUid: string, slotIdx: number) => {
+    soundFx.playUiClick();
+    setSave((prev) => unequipPowerStone(prev, creatureUid, slotIdx));
+  };
+
+  const handleEquipMoveStone = (
+    creatureUid: string,
+    slotIdx: number,
+    kind: MoveStoneKind | null,
+  ) => {
+    soundFx.playUiClick();
+    setSave((prev) => equipMoveStone(prev, creatureUid, slotIdx, kind));
+  };
+
+  const handleEvolve = (creatureUid: string) => {
+    setSave((prev) => {
+      const next = evolveCreature(prev, creatureUid);
+      if (next !== prev) {
+        engineRef.current?.loadCampScene(
+          getSquadCreatures(next),
+          next.pot.recipeId,
+          next.pot.status,
+        );
+        engineRef.current?.triggerEvolutionFx();
+      }
+      return next;
+    });
+  };
+
+  // V0.2 Quests, Achievements & Local Save Import/Reset handlers
+  const handleClaimQuest = (questUid: string) => {
+    soundFx.playRewardClaim();
+    setSave((prev) => claimQuestReward(prev, questUid));
+  };
+
+  const handleClaimAchievement = (achId: string) => {
+    soundFx.playRewardClaim();
+    setSave((prev) => claimAchievementReward(prev, achId));
+  };
+
+  const handleImportSave = (imported: SaveState) => {
+    soundFx.playRewardClaim();
+    setSave(imported);
+    if (playMode === 'camp') {
+      engineRef.current?.loadCampScene(
+        getSquadCreatures(imported),
+        imported.pot.recipeId,
+        imported.pot.status,
+      );
+    }
+  };
+
+  const claimableCount = countClaimableRewards(save);
+
+  const nextStageDef = activeStage
+    ? STAGES.find((s) => s.index === activeStage.index + 1) ?? null
+    : null;
+
+  return (
+    <main className="relative w-full h-full overflow-hidden bg-[#181E2A]">
+      {/* Isolated WebGL 3D Canvas Mount (never re-created by React HUD state) */}
+      <div
+        ref={canvasMountRef}
+        data-testid="voxel-viewport"
+        className="fixed inset-0 w-full h-full"
+      />
+
+      {/* Title Screen */}
+      {screenState === 'title' && (
+        <TitleOverlay
+          hasExistingSave={save.starterChosen}
+          onStart={handleStartFromTitle}
+          onNewAdventure={handleNewAdventure}
+        />
+      )}
+
+      {/* First-run Starter Selection */}
+      {screenState === 'playing' && playMode === 'camp' && !save.starterChosen && (
+        <StarterModal onSelectStarter={handleSelectStarter} />
+      )}
+
+      {/* Base Camp HUD & Drawers */}
+      {screenState === 'playing' && playMode === 'camp' && save.starterChosen && (
+        <>
+          <CampHud
+            save={save}
+            activeDrawer={activeDrawer}
+            claimableCount={claimableCount}
+            dockCollapsed={dockCollapsed}
+            muted={muted}
+            onSelectDrawer={(tab) => {
+              soundFx.playUiClick();
+              setActiveDrawer((cur) => (cur === tab ? null : tab));
+            }}
+            onToggleCollapse={() => {
+              soundFx.playUiClick();
+              setDockCollapsed((v) => !v);
+            }}
+            onToggleMute={handleToggleMute}
+            onReturnTitle={() => {
+              soundFx.playUiClick();
+              setActiveDrawer(null);
+              setScreenState('title');
+            }}
+          />
+
+          {activeDrawer === 'expeditions' && (
+            <ExpeditionDrawer
+              save={save}
+              onLaunchStage={handleLaunchStage}
+              onClose={() => setActiveDrawer(null)}
+            />
+          )}
+
+          {activeDrawer === 'cooking' && (
+            <CookingDrawer
+              save={save}
+              recruitedPreview={recruitedPreview}
+              onDismissRecruit={() => setRecruitedPreview(null)}
+              onChangePotTier={handleChangePotTier}
+              onAddIngredient={handleAddIngredient}
+              onRemoveSlot={handleRemovePotSlot}
+              onClearSlots={handleClearPotSlots}
+              onAutoFillSlots={handleAutoFillPot}
+              onStartCooking={handleStartCooking}
+              onFastFinishCooking={handleFastFinishCooking}
+              onCollectCreature={handleCollectCreature}
+              onClose={() => setActiveDrawer(null)}
+            />
+          )}
+
+          {activeDrawer === 'team' && (
+            <TeamDrawer
+              save={save}
+              onToggleSquadMember={handleToggleSquadMember}
+              onEquipStone={handleEquipStone}
+              onUnequipStone={handleUnequipStone}
+              onEquipMoveStone={handleEquipMoveStone}
+              onEvolve={handleEvolve}
+              onClose={() => setActiveDrawer(null)}
+            />
+          )}
+
+          {activeDrawer === 'quests' && (
+            <QuestsDrawer
+              save={save}
+              onClaimQuest={handleClaimQuest}
+              onClaimAchievement={handleClaimAchievement}
+              onImportSave={handleImportSave}
+              onResetSave={handleNewAdventure}
+              onClose={() => setActiveDrawer(null)}
+            />
+          )}
+
+          {activeDrawer === 'codex' && (
+            <CodexDrawer
+              save={save}
+              history={codexHistory}
+              onSaveAnswer={(ans) => setCodexHistory((prev) => [ans, ...prev])}
+              onClose={() => setActiveDrawer(null)}
+            />
+          )}
+        </>
+      )}
+
+      {/* Expedition Active HUD */}
+      {playMode === 'expedition' && hudSnapshot && screenState !== 'title' && (
+        <ExpeditionHud
+          hud={hudSnapshot}
+          muted={muted}
+          onCastSkill={(idx) => engineRef.current?.triggerAllySkill(idx)}
+          onScatter={() => engineRef.current?.triggerScatter()}
+          onUltimate={() => engineRef.current?.triggerUltimate()}
+          onToggleControlMode={handleToggleControlMode}
+          onToggleMute={handleToggleMute}
+          onPause={() => setScreenState('paused')}
+        />
+      )}
+
+      {/* Pause Modal */}
+      {screenState === 'paused' && activeStage && (
+        <PauseModal
+          stageName={activeStage.name}
+          onResume={() => setScreenState('playing')}
+          onRestart={() => handleLaunchStage(activeStage)}
+          onReturnCamp={handleReturnCamp}
+        />
+      )}
+
+      {/* Victory / Defeat Modal */}
+      {screenState === 'gameover' && outcome && activeStage && (
+        <OutcomeModal
+          outcome={outcome}
+          hasNextStage={Boolean(nextStageDef && nextStageDef.index <= save.highestStageIndex)}
+          onNextStage={() => {
+            if (nextStageDef) handleLaunchStage(nextStageDef);
+          }}
+          onRetry={() => handleLaunchStage(activeStage)}
+          onReturnCamp={handleReturnCamp}
+        />
+      )}
+    </main>
+  );
+}

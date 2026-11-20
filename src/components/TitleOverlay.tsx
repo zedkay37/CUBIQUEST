@@ -1,0 +1,57 @@
+import React from 'react';
+import { CubiQuestTitleLockup } from './Icons';
+
+interface TitleOverlayProps {
+  hasExistingSave: boolean;
+  onStart: () => void;
+  onNewAdventure: () => void;
+}
+
+export function TitleOverlay({
+  hasExistingSave,
+  onStart,
+  onNewAdventure,
+}: TitleOverlayProps) {
+  return (
+    <div className="fixed inset-0 z-20 flex flex-col justify-between pointer-events-none px-6 py-8">
+      {/* Upper calm negative-space lockup over the sunlit 3D sky */}
+      <div className="flex flex-col items-center pt-4 sm:pt-8">
+        <CubiQuestTitleLockup />
+      </div>
+
+      {/* Lower primary CTA + single flat control-hint line */}
+      <div className="flex flex-col items-center gap-4 pb-2">
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <button
+            type="button"
+            data-start="true"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onStart();
+            }}
+            className="voxel-btn cursor-pointer px-8 py-3.5 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-display font-bold text-lg tracking-wide border-2 border-[#181E2A] whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4B942]"
+          >
+            {hasExistingSave ? 'Continuer l’aventure' : 'Commencer l’aventure'}
+          </button>
+
+          {hasExistingSave && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.currentTarget.blur();
+                onNewAdventure();
+              }}
+              className="voxel-btn cursor-pointer px-5 py-3.5 rounded-xl bg-[#181E2A]/90 hover:bg-[#242D3F] text-[#FAF7F0] font-semibold text-sm border-2 border-[#39445A] whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4B942]"
+            >
+              Nouvelle île
+            </button>
+          )}
+        </div>
+
+        <p className="text-xs sm:text-sm font-medium text-[#FAF7F0] hud-text-stroke tracking-wide text-center">
+          1 / 2 / 3 Sorts · Espace Dispersion · R Ultime · ZQSD Déplacer · E Auto · P Pause
+        </p>
+      </div>
+    </div>
+  );
+}
