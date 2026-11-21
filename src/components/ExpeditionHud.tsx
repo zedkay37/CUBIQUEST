@@ -137,7 +137,7 @@ export function ExpeditionHud({
                       style={{ color: STATUS_META[st].color }}
                       className="uppercase tracking-wider"
                     >
-                      {STATUS_META[st].shortLabel}
+                      {STATUS_META[st].shortTag}
                     </span>
                   ))}
                 </div>
@@ -280,7 +280,7 @@ export function ExpeditionHud({
                             style={{ color: STATUS_META[st].color }}
                             className="font-bold"
                           >
-                            {STATUS_META[st].shortLabel}
+                            {STATUS_META[st].shortTag}
                           </span>
                         ))}
                       </span>

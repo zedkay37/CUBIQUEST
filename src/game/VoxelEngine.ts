@@ -1253,7 +1253,7 @@ export class VoxelEngine {
     // Check Boss Phase Shift!
     if (target.isBoss && target.hp > 0) {
       const nextPhase = computeBossPhase(target.hp, target.maxHp, target.bossMaxPhases === 3);
-      if (nextPhase > target.bossPhase) {
+      if (nextPhase > target.bossPhase && nextPhase !== 1) {
         target.bossPhase = nextPhase;
         this.onBossPhaseShift(target, nextPhase);
       }

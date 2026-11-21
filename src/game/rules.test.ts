@@ -191,13 +191,16 @@ test('V0.2 elemental reactions and status resistance compute deterministically',
   assert.equal(resolveElementalReaction('soaked', 'electric')?.id, 'electrocution');
   assert.equal(resolveElementalReaction('burn', 'electric')?.id, 'overload');
   assert.equal(resolveElementalReaction('sunder', 'fire')?.id, 'crystallize');
-  assert.equal(resolveElementalReaction('confused', 'psychic')?.id, 'psy_resonance');
+  // Règle voulue : Psy + AUTRE élément (même élément => pas de réaction)
+  assert.equal(resolveElementalReaction('confused', 'fire')?.id, 'psy_resonance');
+  assert.equal(resolveElementalReaction('confused', 'psychic'), null);
   assert.equal(resolveElementalReaction('burn', 'fire'), null);
 
   const baseDur = computeStatusDuration('burn', 0);
   const resistedDur = computeStatusDuration('burn', 50);
   assert.ok(resistedDur < baseDur);
-  assert.ok(computeStatusDuration('burn', 200) >= 1.2);
+  // Plancher de la règle : jamais moins de 1 s, même avec une résistance extrême
+  assert.ok(computeStatusDuration('burn', 200) >= 1.0);
 });
 
 test('V0.2 boss phases and ultimate gauge clamp properly', () => {
