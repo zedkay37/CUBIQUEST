@@ -10,7 +10,7 @@ import { OutcomeModal, PauseModal } from './components/StatusModals';
 import { TeamDrawer } from './components/TeamDrawer';
 import { TitleOverlay } from './components/TitleOverlay';
 import { soundFx } from './game/audio';
-import { INGREDIENT_LIST, RECIPE_BY_ID, STAGES } from './game/catalog';
+import { INGREDIENT_LIST, RECIPE_BY_ID, SPECIES, STAGE_BY_ID, STAGES } from './game/catalog';
 import {
   applyExpeditionRewards,
   claimAchievementReward,
@@ -18,6 +18,7 @@ import {
   collectCookedCreature,
   countClaimableRewards,
   createInitialSaveState,
+  createOwnedCreature,
   equipMoveStone,
   equipPowerStone,
   evolveCreature,
@@ -46,6 +47,25 @@ import { VoxelEngine } from './game/VoxelEngine';
 function hasAutostartParam(): boolean {
   if (typeof window === 'undefined') return false;
   return new URLSearchParams(window.location.search).get('autostart') === '1';
+}
+
+/**
+ * Mode aperçu pour tester un niveau sans toucher à la sauvegarde :
+ *   ?stage=tundra-3&squad=givrelin,cryolithe,auroramure&lvl=42
+ * (escouade et niveau facultatifs ; aucune récompense n'est enregistrée).
+ */
+function getPreviewParams(): { stage: StageDef; squad: string[]; level: number } | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const stage = STAGE_BY_ID[params.get('stage') ?? ''];
+  if (!stage) return null;
+  const squad = (params.get('squad') ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => Boolean(SPECIES[id]))
+    .slice(0, 3);
+  const level = Math.max(1, Math.min(50, Number(params.get('lvl')) || stage.waves[0].enemies[0].level + 5));
+  return { stage, squad, level };
 }
 
 export default function App() {
@@ -79,6 +99,7 @@ export default function App() {
   // Refs so Three.js callbacks never stale-close or tear down the canvas
   const saveRef = useRef(save);
   const activeStageRef = useRef(activeStage);
+  const previewRef = useRef(false); // true : expédition d'aperçu, rien n'est sauvegardé
   saveRef.current = save;
   activeStageRef.current = activeStage;
 
@@ -117,7 +138,7 @@ export default function App() {
           result.victory,
           result,
         );
-        setSave(nextSave);
+        if (!previewRef.current) setSave(nextSave);
         setOutcome(finalOutcome);
         setScreenState('gameover');
       },
@@ -131,6 +152,26 @@ export default function App() {
       initialSave.pot.status,
     );
     engine.setScreenState(hasAutostartParam() ? 'playing' : 'title');
+
+    const preview = getPreviewParams();
+    if (preview) {
+      const speciesIds =
+        preview.squad.length > 0
+          ? preview.squad
+          : getSquadCreatures(initialSave).map((c) => c.speciesId);
+      const creatures = speciesIds.map((id, i) =>
+        // bonus généreux : simule les Pierres de Pouvoir qu'aurait une vraie escouade à ce stade
+        createOwnedCreature(id, preview.level, preview.level * 18, `preview_${i}`),
+      );
+      previewRef.current = true;
+      activeStageRef.current = preview.stage;
+      setActiveStage(preview.stage);
+      setPlayMode('expedition');
+      setScreenState('playing');
+      setControlMode('auto');
+      engine.startExpedition(preview.stage, creatures, [], 'auto');
+      engine.setScreenState('playing');
+    }
 
     return () => {
       engine.dispose();
@@ -197,6 +238,7 @@ export default function App() {
   const handleLaunchStage = useCallback(
     (stage: StageDef) => {
       soundFx.playUiClick();
+      previewRef.current = false;
       setActiveDrawer(null);
       setOutcome(null);
       setActiveStage(stage);
@@ -215,6 +257,7 @@ export default function App() {
 
   const handleReturnCamp = useCallback(() => {
     soundFx.playUiClick();
+    previewRef.current = false;
     setOutcome(null);
     setActiveStage(null);
     setHudSnapshot(null);

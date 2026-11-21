@@ -920,6 +920,128 @@ export const SPECIES: Record<string, SpeciesDef> = {
     dexNote: 'Colosse de la banquise : chacun de ses pas redessine la carte des crevasses.',
     isRare: true,
   },
+
+  // === GIGA UPDATE — CIME DES ORAGES : lignée du serpent-éclair (Électrik) ===
+  crepitil: {
+    id: 'crepitil',
+    name: 'Crépitil',
+    element: 'electric',
+    role: 'ranged',
+    archetype: 'serpentine',
+    stage: 1,
+    baseHp: 120,
+    baseAtk: 150,
+    moveSpeed: 5.4,
+    attackRange: 6.0,
+    moveId: 'chain_spark',
+    evolvesTo: 'serpeclair',
+    evolveLevel: 15,
+    scale: 0.95,
+    palette: {
+      primary: '#F2C230',
+      secondary: '#3B4A6B',
+      belly: '#FFF3B8',
+      accent: '#7DD3FC',
+      eye: '#151B2B',
+    },
+    dexNote: 'Il se love autour des paratonnerres pour faire la sieste et se réveille chargé à bloc.',
+  },
+  serpeclair: {
+    id: 'serpeclair',
+    name: 'Serpéclair',
+    element: 'electric',
+    role: 'ranged',
+    archetype: 'serpentine',
+    stage: 2,
+    baseHp: 185,
+    baseAtk: 240,
+    moveSpeed: 5.5,
+    attackRange: 6.4,
+    moveId: 'chain_spark',
+    evolvesTo: 'tempestrix',
+    evolveLevel: 26,
+    scale: 1.16,
+    palette: {
+      primary: '#E8A91F',
+      secondary: '#2E3A59',
+      belly: '#FFEFA8',
+      accent: '#38BDF8',
+      eye: '#12182A',
+    },
+    dexNote: 'Ses écailles dorsales s’illuminent une à une, comme un compte à rebours avant la décharge.',
+  },
+  tempestrix: {
+    id: 'tempestrix',
+    name: 'Tempestrix',
+    element: 'electric',
+    role: 'ranged',
+    archetype: 'serpentine',
+    stage: 3,
+    baseHp: 280,
+    baseAtk: 365,
+    moveSpeed: 5.6,
+    attackRange: 6.8,
+    moveId: 'tempest_coil',
+    scale: 1.36,
+    palette: {
+      primary: '#3A4766',
+      secondary: '#F5C542',
+      belly: '#C9D4EA',
+      accent: '#FDE047',
+      eye: '#FEF9C3',
+    },
+    dexNote: 'Dragon-serpent qui nage dans les cumulonimbus : là où il s’enroule naît l’œil du cyclone.',
+    isRare: true,
+  },
+
+  // === GIGA UPDATE — CIME DES ORAGES : lignée du nuage rêveur (Psy) ===
+  nimbulle: {
+    id: 'nimbulle',
+    name: 'Nimbulle',
+    element: 'psychic',
+    role: 'ranged',
+    archetype: 'jelly',
+    stage: 1,
+    baseHp: 135,
+    baseAtk: 135,
+    moveSpeed: 4.8,
+    attackRange: 6.2,
+    moveId: 'dream_mist',
+    evolvesTo: 'cumulord',
+    evolveLevel: 20,
+    scale: 0.98,
+    palette: {
+      primary: '#E9E4FB',
+      secondary: '#A79BD9',
+      belly: '#FFFFFF',
+      accent: '#C084FC',
+      eye: '#2A2148',
+    },
+    dexNote: 'Petit nuage distrait : la bruine qu’il laisse tomber donne de beaux rêves à son escouade.',
+  },
+  cumulord: {
+    id: 'cumulord',
+    name: 'Cumulord',
+    element: 'psychic',
+    role: 'ranged',
+    archetype: 'jelly',
+    stage: 3,
+    baseHp: 300,
+    baseAtk: 330,
+    moveSpeed: 5.0,
+    attackRange: 7.0,
+    moveId: 'mirage_storm',
+    scale: 1.38,
+    palette: {
+      primary: '#6E6A93',
+      secondary: '#3D3A5C',
+      belly: '#B9B4DA',
+      accent: '#FACC15',
+      eye: '#FEF3C7',
+    },
+    dexNote: 'Souverain de la mer de nuages, il façonne des mirages si réels qu’on peut s’y abriter.',
+    isRare: true,
+  },
 };
 
 export const STARTER_IDS = ['pyrocube', 'aquabloc', 'bourgeon'] as const;
@@ -1016,6 +1138,24 @@ export const INGREDIENTS: Record<string, IngredientDef> = {
     hex: '#5EEAD4',
     accentHex: '#F0ABFC',
     description: 'Pétale lumineux qui ne s’ouvre que sous les aurores boréales.',
+  },
+  storm_pepper: {
+    id: 'storm_pepper',
+    name: 'Poivre d’Orage',
+    color: 'yellow',
+    rarity: 'rare',
+    hex: '#F59E0B',
+    accentHex: '#FDE047',
+    description: 'Grain qui crépite sur la langue, ramassé au pied des paratonnerres.',
+  },
+  cloud_fluff: {
+    id: 'cloud_fluff',
+    name: 'Flocon de Nuage',
+    color: 'gray',
+    rarity: 'common',
+    hex: '#E5E7EB',
+    accentHex: '#FFFFFF',
+    description: 'Mousse de nuage sucrée, légère comme l’air, prélevée sur la mer de nuages.',
   },
 };
 
@@ -1245,6 +1385,7 @@ export const BIOME_ORDER: BiomeId[] = [
   'volcano',
   'sanctuary',
   'tundra',
+  'stormpeak',
 ];
 
 export const STAGES: StageDef[] = [
@@ -1765,6 +1906,113 @@ export const STAGES: StageDef[] = [
         enemies: [
           { speciesId: 'ramurgel', level: 41, ai: 'charger' },
           { speciesId: 'glaciatitan', level: 43, ai: 'boss', isBoss: true },
+        ],
+      },
+    ],
+  },
+
+  // === GIGA UPDATE — CIME DES ORAGES (débloquée après le Trône de la Banquise) ===
+  {
+    id: 'stormpeak-1',
+    index: 15,
+    biomeId: 'stormpeak',
+    stageNumber: 1,
+    name: 'Sentier des Paratonnerres',
+    recommendedPower: 10200,
+    bossSpeciesId: 'serpeclair',
+    bossKit: 'storm',
+    dropIngredients: ['storm_pepper', 'cloud_fluff', 'sun_pollen'],
+    stonePowerRange: [720, 960],
+    xpReward: 2800,
+    waves: [
+      {
+        enemies: [
+          { speciesId: 'crepitil', level: 43, ai: 'kiter' },
+          { speciesId: 'nimbulle', level: 43, ai: 'kiter' },
+          { speciesId: 'granitox', level: 43, ai: 'chaser' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'crepitil', level: 44, ai: 'charger' },
+          { speciesId: 'raicube', level: 44, ai: 'kiter' },
+          { speciesId: 'givrock', level: 44, ai: 'chaser' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'crepitil', level: 44, ai: 'kiter' },
+          { speciesId: 'serpeclair', level: 46, ai: 'boss', isBoss: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'stormpeak-2',
+    index: 16,
+    biomeId: 'stormpeak',
+    stageNumber: 2,
+    name: 'Mer de Nuages',
+    recommendedPower: 11200,
+    bossSpeciesId: 'cumulord',
+    bossKit: 'storm',
+    dropIngredients: ['cloud_fluff', 'storm_pepper', 'aurora_petal'],
+    stonePowerRange: [800, 1060],
+    xpReward: 3250,
+    waves: [
+      {
+        enemies: [
+          { speciesId: 'nimbulle', level: 45, ai: 'kiter' },
+          { speciesId: 'serpeclair', level: 45, ai: 'kiter' },
+          { speciesId: 'magmadrake', level: 45, ai: 'chaser' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'nimbulle', level: 46, ai: 'kiter' },
+          { speciesId: 'raicube', level: 46, ai: 'charger' },
+          { speciesId: 'cryolithe', level: 46, ai: 'chaser' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'nimbulle', level: 46, ai: 'kiter' },
+          { speciesId: 'cumulord', level: 48, ai: 'boss', isBoss: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'stormpeak-3',
+    index: 17,
+    biomeId: 'stormpeak',
+    stageNumber: 3,
+    name: 'Œil du Cyclone',
+    recommendedPower: 12400,
+    bossSpeciesId: 'tempestrix',
+    bossKit: 'storm',
+    dropIngredients: ['storm_pepper', 'cloud_fluff', 'aurora_petal', 'mystic_shard'],
+    stonePowerRange: [900, 1200],
+    xpReward: 3900,
+    waves: [
+      {
+        enemies: [
+          { speciesId: 'serpeclair', level: 47, ai: 'kiter' },
+          { speciesId: 'cumulord', level: 47, ai: 'kiter' },
+          { speciesId: 'glaciatitan', level: 47, ai: 'chaser' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'serpeclair', level: 48, ai: 'charger' },
+          { speciesId: 'auroramure', level: 48, ai: 'charger' },
+          { speciesId: 'aetherion', level: 48, ai: 'kiter' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'serpeclair', level: 48, ai: 'kiter' },
+          { speciesId: 'tempestrix', level: 50, ai: 'boss', isBoss: true },
         ],
       },
     ],

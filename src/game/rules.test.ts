@@ -396,10 +396,53 @@ test('Giga: une ancienne sauvegarde terminée accède à la Toundra après migra
   assert.equal(migrated.roster.length, fresh.roster.length);
 });
 
-test('Giga: lignées de la Toundra — évolutions en chaîne et gain de puissance', () => {
+test('Giga: la Cime des Orages se débloque après la Toundra, lignée à 2 stades', () => {
+  const fresh = createInitialSaveState('pyrocube', true);
+  const tundra3 = STAGES.find((s) => s.id === 'tundra-3')!;
+  const atTundraEnd = { ...fresh, highestStageIndex: tundra3.index };
+  assert.equal(isBiomeUnlocked(atTundraEnd, 'stormpeak'), false);
+  const { nextSave, outcome } = applyExpeditionRewards(
+    atTundraEnd,
+    tundra3,
+    true,
+    { clearTimeSec: 60, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 },
+    () => 0.4,
+  );
+  assert.equal(isBiomeUnlocked(nextSave, 'stormpeak'), true);
+  assert.equal(outcome.unlockedNextStageName, 'Sentier des Paratonnerres');
+
+  // Le tout dernier niveau ne débloque plus rien mais compte bien comme terminé
+  const last = STAGES[STAGES.length - 1];
+  const end = applyExpeditionRewards(
+    { ...fresh, highestStageIndex: last.index },
+    last,
+    true,
+    { clearTimeSec: 60, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 },
+    () => 0.4,
+  );
+  assert.equal(end.outcome.unlockedNextStageName, null);
+  assert.equal(end.nextSave.highestStageIndex, last.index);
+  assert.ok(end.nextSave.completedStageIds.includes(last.id));
+  assert.ok(end.nextSave.discoveredSpeciesIds.includes('tempestrix'));
+
+  // Nimbulle -> Cumulord (lignée courte)
+  let save = createInitialSaveState('pyrocube', true);
+  const cloud = createOwnedCreature('nimbulle', 19, 0, 'test_nimbulle');
+  save = { ...save, roster: [...save.roster, cloud] };
+  assert.equal(canEvolve(cloud), false);
+  save = { ...save, roster: save.roster.map((c) => (c.uid === cloud.uid ? { ...c, level: 20 } : c)) };
+  save = evolveCreature(save, cloud.uid);
+  const evolved = save.roster.find((c) => c.uid === cloud.uid)!;
+  assert.equal(evolved.speciesId, 'cumulord');
+  assert.equal(evolved.moveId, 'mirage_storm');
+  assert.equal(canEvolve(evolved), false);
+});
+
+test('Giga: lignées à 3 stades — évolutions en chaîne et gain de puissance', () => {
   for (const [baseId, midId, finalId] of [
     ['givrelin', 'ramurgel', 'auroramure'],
     ['givrock', 'cryolithe', 'glaciatitan'],
+    ['crepitil', 'serpeclair', 'tempestrix'],
   ]) {
     let save = createInitialSaveState('pyrocube', true);
     const cub = createOwnedCreature(baseId, 1, 0, `test_${baseId}`);
