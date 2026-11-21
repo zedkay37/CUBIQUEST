@@ -10,7 +10,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { ACHIEVEMENTS, INGREDIENTS, MOVE_STONES } from '../game/catalog';
+import { ACHIEVEMENTS, INGREDIENTS, MOVE_STONES, STAGES } from '../game/catalog';
 import {
   exportSaveToJson,
   getAchievementProgress,
@@ -135,7 +135,7 @@ export function QuestsDrawer({
     setConfirmReset(false);
     setFeedback({
       kind: 'success',
-      text: `Sauvegarde restaurée (${res.save.roster.length} Cubimons, ${res.save.completedStageIds.length}/12 niveaux).`,
+      text: `Sauvegarde restaurée (${res.save.roster.length} Cubimons, ${res.save.completedStageIds.length}/${STAGES.length} niveaux).`,
     });
   };
 

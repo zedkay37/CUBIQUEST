@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Play, X } from 'lucide-react';
-import { BIOMES, ELEMENT_META, INGREDIENTS, SPECIES, STAGES } from '../game/catalog';
-import { computeSquadPower } from '../game/rules';
+import { BIOME_ORDER, BIOMES, ELEMENT_META, INGREDIENTS, SPECIES, STAGES } from '../game/catalog';
+import { computeSquadPower, isBiomeUnlocked } from '../game/rules';
 import type { BiomeId, SaveState, StageDef } from '../game/types';
 import { ElementIcon, VoxelCreatureAvatar } from './Icons';
 
@@ -11,7 +11,6 @@ interface ExpeditionDrawerProps {
   onClose: () => void;
 }
 
-const BIOME_ORDER: BiomeId[] = ['meadow', 'shore', 'volcano', 'sanctuary'];
 
 export function ExpeditionDrawer({
   save,
@@ -64,8 +63,7 @@ export function ExpeditionDrawer({
         <div className="flex items-center gap-2 px-5 py-3 border-b border-[#2A3346] overflow-x-auto">
           {BIOME_ORDER.map((bId) => {
             const b = BIOMES[bId];
-            const firstIdx = STAGES.find((s) => s.biomeId === bId)?.index ?? 0;
-            const unlocked = save.highestStageIndex >= firstIdx;
+            const unlocked = isBiomeUnlocked(save, bId);
             const active = selectedBiome === bId;
             return (
               <button

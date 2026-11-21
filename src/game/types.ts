@@ -8,7 +8,12 @@ export type CreatureArchetype =
   | 'shelled'
   | 'winged'
   | 'horned'
-  | 'floating';
+  | 'floating'
+  // Giga Update : nouvelles silhouettes
+  | 'antlered'
+  | 'golem'
+  | 'serpentine'
+  | 'jelly';
 
 export type MoveStyle = 'melee' | 'projectile' | 'aoe' | 'dash' | 'buff';
 
@@ -23,7 +28,10 @@ export type PotTier = 'iron' | 'bronze' | 'silver' | 'gold';
 export type IngredientColor = 'red' | 'blue' | 'yellow' | 'gray';
 export type IngredientRarity = 'common' | 'rare' | 'mystic';
 
-export type BiomeId = 'meadow' | 'shore' | 'volcano' | 'sanctuary';
+export type BiomeId = 'meadow' | 'shore' | 'volcano' | 'sanctuary' | 'tundra' | 'stormpeak';
+
+/** Jeu de mécaniques télégraphiées d'un boss (voir VoxelEngine, IA 'boss'). */
+export type BossKit = 'classic' | 'frost' | 'storm';
 
 export type ControlMode = 'semi' | 'auto' | 'manual';
 
@@ -53,6 +61,8 @@ export interface SpeciesDef {
   };
   dexNote: string;
   isRare?: boolean;
+  /** Stade d'évolution (1..3) : enrichit le modèle voxel des nouvelles silhouettes. */
+  stage?: 1 | 2 | 3;
 }
 
 export interface MoveDef {
@@ -167,6 +177,8 @@ export interface StageDef {
   dropIngredients: string[];
   stonePowerRange: [number, number];
   xpReward: number;
+  /** Mécaniques de boss propres au biome ('classic' par défaut). */
+  bossKit?: BossKit;
 }
 
 export interface BiomeDef {
@@ -282,7 +294,7 @@ export interface SaveState {
   moveStoneBag: Record<MoveStoneKind, number>;
   pot: PotState;
   unlockedPotTiers: PotTier[];
-  highestStageIndex: number; // 0..11 unlocked
+  highestStageIndex: number; // 0..STAGES.length-1 unlocked
   completedStageIds: string[];
   discoveredSpeciesIds: string[];
   discoveredRecipeIds: string[];

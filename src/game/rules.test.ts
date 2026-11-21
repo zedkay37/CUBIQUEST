@@ -10,6 +10,9 @@ import {
   collectCookedCreature,
   computeBossPhase,
   computeCreatureStats,
+  computeHighestUnlockedStageIndex,
+  getBiomeProgress,
+  isBiomeUnlocked,
   computeSquadPower,
   computeStatusDuration,
   computeUltimateCharge,
@@ -33,7 +36,16 @@ import {
   startCookingPot,
   unequipPowerStone,
 } from './rules';
-import { ACHIEVEMENTS, MOVES, STAGES } from './catalog';
+import {
+  ACHIEVEMENTS,
+  BIOME_ORDER,
+  BIOMES,
+  INGREDIENTS,
+  MOVES,
+  RECIPES,
+  SPECIES,
+  STAGES,
+} from './catalog';
 import { normalizeSettings } from './settings';
 
 test('elemental type effectiveness returns accurate multipliers', () => {
@@ -298,4 +310,120 @@ test('Giga: options de confort normalisées (tremblement de caméra désactivabl
   assert.equal(normalizeSettings(null).screenShake, true);
   assert.equal(normalizeSettings({ screenShake: false }).screenShake, false);
   assert.equal(normalizeSettings({ screenShake: 'oui' }).screenShake, true);
+});
+
+test('Giga: intégrité du catalogue (niveaux, espèces, sorts, ingrédients, lignées)', () => {
+  STAGES.forEach((stage, idx) => {
+    assert.equal(stage.index, idx, `index de ${stage.id}`);
+    assert.ok(BIOMES[stage.biomeId], `biome de ${stage.id}`);
+    assert.ok(SPECIES[stage.bossSpeciesId], `boss de ${stage.id}`);
+    assert.equal(stage.waves[stage.waves.length - 1].enemies.filter((e) => e.isBoss).length, 1);
+    for (const wave of stage.waves) {
+      for (const enemy of wave.enemies) assert.ok(SPECIES[enemy.speciesId], enemy.speciesId);
+    }
+    for (const ing of stage.dropIngredients) assert.ok(INGREDIENTS[ing], ing);
+    if (idx > 0) assert.ok(stage.recommendedPower > STAGES[idx - 1].recommendedPower);
+  });
+  for (const biomeId of BIOME_ORDER) {
+    assert.equal(STAGES.filter((s) => s.biomeId === biomeId).length, 3, biomeId);
+  }
+  for (const species of Object.values(SPECIES)) {
+    assert.ok(MOVES[species.moveId], `sort de ${species.id}`);
+    if (species.evolvesTo) {
+      assert.ok(SPECIES[species.evolvesTo], `évolution de ${species.id}`);
+      assert.ok((species.evolveLevel ?? 0) > 1);
+      assert.equal(SPECIES[species.evolvesTo].element, species.element);
+    }
+  }
+  for (const recipe of RECIPES) {
+    for (const id of recipe.poolSpeciesIds) assert.ok(SPECIES[id], `${recipe.id} -> ${id}`);
+  }
+});
+
+test('Giga: les nouveaux biomes se débloquent après les biomes actuels', () => {
+  const fresh = createInitialSaveState('pyrocube', true);
+  assert.equal(isBiomeUnlocked(fresh, 'meadow'), true);
+  assert.equal(isBiomeUnlocked(fresh, 'tundra'), false);
+
+  // Vaincre le Cœur d'Aetherion (ancien dernier niveau) ouvre la Toundra
+  const sanctuary3 = STAGES.find((s) => s.id === 'sanctuary-3')!;
+  const atEnd = { ...fresh, highestStageIndex: sanctuary3.index };
+  const { nextSave, outcome } = applyExpeditionRewards(
+    atEnd,
+    sanctuary3,
+    true,
+    { clearTimeSec: 60, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 },
+    () => 0.4,
+  );
+  assert.equal(isBiomeUnlocked(nextSave, 'tundra'), true);
+  assert.equal(outcome.unlockedNextStageName, 'Lisière Givrée');
+
+  // Une défaite ne débloque rien
+  const lost = applyExpeditionRewards(
+    atEnd,
+    sanctuary3,
+    false,
+    { clearTimeSec: 60, wavesCleared: 1, damageDealt: 1, bossHpPercentRemaining: 50 },
+    () => 0.4,
+  );
+  assert.equal(isBiomeUnlocked(lost.nextSave, 'tundra'), false);
+
+  assert.equal(computeHighestUnlockedStageIndex([], 0), 0);
+  assert.equal(computeHighestUnlockedStageIndex(['meadow-1'], 0), 1);
+  assert.equal(computeHighestUnlockedStageIndex(['meadow-1'], 5), 5);
+  assert.equal(
+    computeHighestUnlockedStageIndex([STAGES[STAGES.length - 1].id], 0),
+    STAGES.length - 1,
+  );
+  assert.deepEqual(getBiomeProgress({ completedStageIds: ['tundra-1', 'meadow-1'] }, 'tundra'), {
+    completed: 1,
+    total: 3,
+  });
+});
+
+test('Giga: une ancienne sauvegarde terminée accède à la Toundra après migration', () => {
+  const fresh = createInitialSaveState('bourgeon', true);
+  const finishedOld = {
+    ...fresh,
+    version: 2,
+    highestStageIndex: 11,
+    completedStageIds: STAGES.slice(0, 12).map((s) => s.id),
+  };
+  const migrated = migrateSaveState(JSON.parse(JSON.stringify(finishedOld)));
+  assert.ok(migrated !== null);
+  assert.equal(migrated.highestStageIndex, 12);
+  assert.equal(isBiomeUnlocked(migrated, 'tundra'), true);
+  assert.equal(migrated.roster.length, fresh.roster.length);
+});
+
+test('Giga: lignées de la Toundra — évolutions en chaîne et gain de puissance', () => {
+  for (const [baseId, midId, finalId] of [
+    ['givrelin', 'ramurgel', 'auroramure'],
+    ['givrock', 'cryolithe', 'glaciatitan'],
+  ]) {
+    let save = createInitialSaveState('pyrocube', true);
+    const cub = createOwnedCreature(baseId, 1, 0, `test_${baseId}`);
+    save = { ...save, roster: [...save.roster, cub] };
+    assert.equal(canEvolve(cub), false);
+    assert.equal(evolveCreature(save, cub.uid), save);
+
+    const lvl1 = SPECIES[baseId].evolveLevel!;
+    save = { ...save, roster: save.roster.map((c) => (c.uid === cub.uid ? { ...c, level: lvl1 } : c)) };
+    const before = computeCreatureStats(save.roster.find((c) => c.uid === cub.uid)!, []).power;
+    save = evolveCreature(save, cub.uid);
+    const mid = save.roster.find((c) => c.uid === cub.uid)!;
+    assert.equal(mid.speciesId, midId);
+    assert.equal(mid.moveId, SPECIES[midId].moveId);
+    assert.ok(computeCreatureStats(mid, []).power > before);
+    assert.equal(canEvolve(mid), false);
+
+    const lvl2 = SPECIES[midId].evolveLevel!;
+    save = { ...save, roster: save.roster.map((c) => (c.uid === cub.uid ? { ...c, level: lvl2 } : c)) };
+    save = evolveCreature(save, cub.uid);
+    const fin = save.roster.find((c) => c.uid === cub.uid)!;
+    assert.equal(fin.speciesId, finalId);
+    assert.equal(canEvolve(fin), false);
+    assert.ok(save.discoveredSpeciesIds.includes(midId) && save.discoveredSpeciesIds.includes(finalId));
+    assert.equal(save.stats.evolutionsDone, 2);
+  }
 });

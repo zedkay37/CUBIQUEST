@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SPECIES } from './catalog';
-import type { BiomeDef, SpeciesDef } from './types';
+import type { BiomeDef, BiomeId, CreatureArchetype, SpeciesDef } from './types';
 
 let sharedContactShadowTex: THREE.CanvasTexture | null = null;
 let sharedToyBumpTex: THREE.CanvasTexture | null = null;
@@ -82,6 +82,7 @@ export function getGroundCheckerTexture(primaryHex: string, altHex: string): THR
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(14, 14);
+  tex.userData.ownedByScene = true; // libérée avec le décor (voir VoxelEngine.disposeObject)
   sharedGroundTileTex = tex;
   return sharedGroundTileTex;
 }
@@ -113,6 +114,28 @@ function makeBox(
   mesh.castShadow = castShadow;
   mesh.receiveShadow = true;
   return mesh;
+}
+
+/** Silhouettes qui lévitent au lieu de marcher. */
+export function isHoverArchetype(archetype: CreatureArchetype): boolean {
+  return archetype === 'floating' || archetype === 'jelly';
+}
+
+/** Hauteur (échelle 1) où accrocher barre de vie et nombres de dégâts. */
+export function getRigTopY(species: SpeciesDef): number {
+  switch (species.archetype) {
+    case 'floating':
+    case 'jelly':
+      return 2.0;
+    case 'antlered':
+      return 2.5;
+    case 'golem':
+      return 2.1;
+    case 'serpentine':
+      return 1.6;
+    default:
+      return 1.72;
+  }
 }
 
 /**
@@ -183,6 +206,7 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
   root.add(shadowDisc);
 
   const arch = species.archetype;
+  const stage = species.stage ?? 1;
 
   if (arch === 'quadruped') {
     // Grounded stout quadruped with dorsal bulb/flower (Bourgéon line)
@@ -320,6 +344,143 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
     bodyPivot.add(makeBox(0.18, 0.2, 0.08, eyeMat, 0.22, 1.06, 0.43, false));
     bodyPivot.add(makeBox(0.07, 0.07, 0.09, eyeHighlightMat, -0.19, 1.11, 0.44, false));
     bodyPivot.add(makeBox(0.07, 0.07, 0.09, eyeHighlightMat, 0.25, 1.11, 0.44, false));
+  } else if (arch === 'antlered') {
+    // Cerf de givre : corps élancé, encolure dressée, bois de glace (Givrelin / Ramurgel / Auroramure)
+    bodyPivot.add(makeBox(0.84, 0.6, 1.2, primaryMat, 0, 0.8, -0.05));
+    bodyPivot.add(makeBox(0.7, 0.46, 0.34, bellyMat, 0, 0.74, 0.5)); // poitrail en fourrure
+    bodyPivot.add(makeBox(0.36, 0.52, 0.38, primaryMat, 0, 1.22, 0.46)); // encolure
+    bodyPivot.add(makeBox(0.56, 0.48, 0.58, primaryMat, 0, 1.6, 0.6)); // tête
+    bodyPivot.add(makeBox(0.34, 0.26, 0.26, secondaryMat, 0, 1.5, 0.98)); // museau
+    bodyPivot.add(makeBox(0.14, 0.2, 0.12, secondaryMat, -0.34, 1.78, 0.42));
+    bodyPivot.add(makeBox(0.14, 0.2, 0.12, secondaryMat, 0.34, 1.78, 0.42));
+    // Bois de glace : un étage de plus à chaque stade d'évolution
+    for (const side of [-1, 1]) {
+      const antler = new THREE.Group();
+      antler.position.set(side * 0.2, 1.84, 0.52);
+      antler.add(makeBox(0.11, 0.42 + stage * 0.1, 0.11, accentMat, 0, 0.2 + stage * 0.05, 0));
+      antler.add(makeBox(0.3, 0.1, 0.1, accentMat, side * 0.17, 0.3, 0));
+      if (stage >= 2) antler.add(makeBox(0.1, 0.26, 0.1, accentMat, side * 0.3, 0.44, 0));
+      if (stage >= 3) {
+        antler.add(makeBox(0.36, 0.1, 0.1, accentMat, side * 0.2, 0.62, 0));
+        antler.add(makeBox(0.1, 0.3, 0.1, accentMat, side * 0.38, 0.78, 0));
+      }
+      bodyPivot.add(antler);
+      extras.push(antler);
+    }
+    if (stage >= 2) bodyPivot.add(makeBox(0.5, 0.2, 0.7, secondaryMat, 0, 1.14, -0.1)); // selle de givre
+    if (stage >= 3) {
+      // crinière cristalline le long du dos
+      for (let i = 0; i < 3; i++) {
+        bodyPivot.add(makeBox(0.16, 0.3 - i * 0.05, 0.18, accentMat, 0, 1.36 - i * 0.03, 0.08 - i * 0.32));
+      }
+    }
+    bodyPivot.add(makeBox(0.2, 0.2, 0.2, bellyMat, 0, 0.98, -0.72)); // queue pompon
+    bodyPivot.add(makeBox(0.13, 0.16, 0.08, eyeMat, -0.19, 1.66, 0.9, false));
+    bodyPivot.add(makeBox(0.13, 0.16, 0.08, eyeMat, 0.19, 1.66, 0.9, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, -0.17, 1.7, 0.91, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, 0.21, 1.7, 0.91, false));
+    const hoofCoords: [number, number][] = [
+      [-0.28, 0.38],
+      [0.28, 0.38],
+      [-0.28, -0.46],
+      [0.28, -0.46],
+    ];
+    for (const [lx, lz] of hoofCoords) {
+      const leg = makeBox(0.2, 0.52, 0.2, secondaryMat, lx, 0.26, lz);
+      bodyPivot.add(leg);
+      legs.push(leg);
+    }
+  } else if (arch === 'golem') {
+    // Golem de glace : torse massif, petite tête enfoncée, poings énormes (Givrock / Cryolithe / Glaciatitan)
+    bodyPivot.add(makeBox(1.12, 0.92, 0.84, primaryMat, 0, 0.9, 0));
+    bodyPivot.add(makeBox(0.72, 0.5, 0.14, bellyMat, 0, 0.8, 0.44));
+    bodyPivot.add(makeBox(0.52, 0.4, 0.5, secondaryMat, 0, 1.54, 0.08));
+    bodyPivot.add(makeBox(0.13, 0.1, 0.08, eyeMat, -0.13, 1.56, 0.34, false));
+    bodyPivot.add(makeBox(0.13, 0.1, 0.08, eyeMat, 0.13, 1.56, 0.34, false));
+    bodyPivot.add(makeBox(0.05, 0.04, 0.09, eyeHighlightMat, -0.11, 1.58, 0.35, false));
+    bodyPivot.add(makeBox(0.05, 0.04, 0.09, eyeHighlightMat, 0.15, 1.58, 0.35, false));
+    const golemArms: THREE.Group[] = [];
+    for (const side of [-1, 1]) {
+      // pivot à l'épaule : le bras balance d'un bloc à la marche
+      const arm = new THREE.Group();
+      arm.position.set(side * 0.8, 1.2, 0.02);
+      arm.add(makeBox(0.4, 0.5, 0.46, secondaryMat, 0, -0.12, 0));
+      arm.add(makeBox(0.5, 0.52, 0.54, primaryMat, 0, -0.64, 0.06));
+      if (stage >= 2) arm.add(makeBox(0.2, 0.26, 0.2, accentMat, 0, 0.24, 0));
+      bodyPivot.add(arm);
+      golemArms.push(arm);
+    }
+    const golemLegL = makeBox(0.38, 0.44, 0.42, secondaryMat, -0.3, 0.22, 0);
+    const golemLegR = makeBox(0.38, 0.44, 0.42, secondaryMat, 0.3, 0.22, 0);
+    bodyPivot.add(golemLegL, golemLegR);
+    legs.push(golemLegL, golemLegR, golemArms[1], golemArms[0]); // bras en opposition de phase
+    // Stalactites dorsales
+    const crystals = new THREE.Group();
+    crystals.position.set(0, 1.4, -0.3);
+    const crystalCount = 2 + stage;
+    for (let i = 0; i < crystalCount; i++) {
+      const t = crystalCount === 1 ? 0 : i / (crystalCount - 1) - 0.5;
+      const shard = makeBox(0.18, 0.4 + (i % 2) * 0.22 + stage * 0.06, 0.18, accentMat, t * 0.8, 0.14 + (i % 2) * 0.08, -0.04);
+      shard.rotation.set(-0.35, 0, t * -0.7);
+      crystals.add(shard);
+    }
+    bodyPivot.add(crystals);
+    extras.push(crystals);
+  } else if (arch === 'serpentine') {
+    // Serpent-éclair : grosse tête, corps segmenté qui ondule (Crépitil / Serpéclair / Tempestrix)
+    bodyPivot.add(makeBox(0.72, 0.6, 0.72, primaryMat, 0, 0.66, 0.5));
+    bodyPivot.add(makeBox(0.52, 0.2, 0.56, bellyMat, 0, 0.38, 0.56));
+    bodyPivot.add(makeBox(0.16, 0.38 + stage * 0.08, 0.16, accentMat, 0, 1.12 + stage * 0.04, 0.4)); // corne-éclair
+    bodyPivot.add(makeBox(0.1, 0.3, 0.3, accentMat, -0.42, 0.8, 0.4));
+    bodyPivot.add(makeBox(0.1, 0.3, 0.3, accentMat, 0.42, 0.8, 0.4));
+    bodyPivot.add(makeBox(0.15, 0.17, 0.08, eyeMat, -0.2, 0.76, 0.87, false));
+    bodyPivot.add(makeBox(0.15, 0.17, 0.08, eyeMat, 0.2, 0.76, 0.87, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, -0.18, 0.8, 0.88, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, 0.22, 0.8, 0.88, false));
+    const segmentCount = 3 + stage;
+    for (let i = 0; i < segmentCount; i++) {
+      const s = Math.max(0.3, 0.62 - i * 0.07);
+      const seg = makeBox(s, s * 0.86, 0.5, i % 2 === 0 ? secondaryMat : primaryMat, 0, 0.1 + s * 0.43, -0.1 - i * 0.46);
+      if (stage >= 2 && i % 2 === 0) seg.add(makeBox(0.12, 0.2, 0.2, accentMat, 0, s * 0.43 + 0.1, 0));
+      bodyPivot.add(seg);
+      extras.push(seg);
+    }
+    const tailTip = makeBox(0.22, 0.34, 0.3, accentMat, 0, 0.4, -0.16 - segmentCount * 0.46);
+    bodyPivot.add(tailTip);
+    extras.push(tailTip);
+    if (stage >= 3) {
+      // ailerons de tempête
+      bodyPivot.add(makeBox(0.7, 0.08, 0.42, accentMat, -0.66, 0.92, 0.0));
+      bodyPivot.add(makeBox(0.7, 0.08, 0.42, accentMat, 0.66, 0.92, 0.0));
+    }
+  } else if (arch === 'jelly') {
+    // Nuage rêveur : dôme cotonneux, filaments de pluie qui se balancent (Nimbulle / Cumulord)
+    bodyPivot.add(makeBox(1.0, 0.56, 0.96, primaryMat, 0, 1.2, 0));
+    bodyPivot.add(makeBox(0.7, 0.3, 0.68, primaryMat, 0, 1.58, 0));
+    bodyPivot.add(makeBox(0.4, 0.36, 0.44, bellyMat, -0.6, 1.12, 0.1));
+    bodyPivot.add(makeBox(0.4, 0.36, 0.44, bellyMat, 0.6, 1.12, 0.1));
+    bodyPivot.add(makeBox(0.44, 0.34, 0.4, bellyMat, 0, 1.1, -0.56));
+    bodyPivot.add(makeBox(0.72, 0.16, 0.7, secondaryMat, 0, 0.86, 0));
+    const strandCount = stage >= 3 ? 6 : 4;
+    for (let i = 0; i < strandCount; i++) {
+      const ang = (i / strandCount) * Math.PI * 2 + 0.4;
+      const strand = new THREE.Group(); // pivot en haut du filament
+      strand.position.set(Math.cos(ang) * 0.26, 0.8, Math.sin(ang) * 0.26);
+      strand.add(makeBox(0.1, 0.46, 0.1, accentMat, 0, -0.24, 0));
+      bodyPivot.add(strand);
+      extras.push(strand);
+    }
+    if (stage >= 3) {
+      bodyPivot.add(makeBox(0.3, 0.2, 0.3, accentMat, 0, 1.84, 0)); // couronne d'orage
+      bodyPivot.add(makeBox(0.34, 0.3, 0.36, bellyMat, -0.46, 1.5, -0.3));
+      bodyPivot.add(makeBox(0.34, 0.3, 0.36, bellyMat, 0.46, 1.5, -0.3));
+    }
+    bodyPivot.add(makeBox(0.16, 0.2, 0.08, eyeMat, -0.22, 1.24, 0.49, false));
+    bodyPivot.add(makeBox(0.16, 0.2, 0.08, eyeMat, 0.22, 1.24, 0.49, false));
+    bodyPivot.add(makeBox(0.06, 0.06, 0.09, eyeHighlightMat, -0.19, 1.29, 0.5, false));
+    bodyPivot.add(makeBox(0.06, 0.06, 0.09, eyeHighlightMat, 0.25, 1.29, 0.5, false));
+    bodyPivot.add(makeBox(0.12, 0.1, 0.08, accentMat, -0.38, 1.08, 0.49, false));
+    bodyPivot.add(makeBox(0.12, 0.1, 0.08, accentMat, 0.38, 1.08, 0.49, false));
   } else {
     // Cute energetic biped (Pyrocube / Voltik / Sparkube)
     bodyPivot.add(makeBox(0.88, 0.92, 0.82, primaryMat, 0, 0.68, 0));
@@ -374,7 +535,7 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
 export function attachWorldHpBar(rig: VoxelCreatureRig, isEnemy: boolean, isBoss = false): void {
   const width = isBoss ? 1.85 : 1.05;
   const height = isBoss ? 0.18 : 0.12;
-  const yPos = rig.species.archetype === 'floating' ? 2.0 : 1.72;
+  const yPos = getRigTopY(rig.species);
 
   const bgMat = new THREE.MeshBasicMaterial({
     color: '#111622',
@@ -537,6 +698,265 @@ export interface BiomeEnvironmentHandle {
   group: THREE.Group;
   waterUniform: { value: number };
   cloudGroup: THREE.Group;
+  /** Animation légère propre au décor du biome (aurores, rochers flottants...). */
+  animate?: (elapsed: number) => void;
+}
+
+interface BiomeDecorStyle {
+  cliff: string;
+  foam: string;
+  seaRoughness: number;
+  seaEmissive: number;
+  cloud: string;
+  cloudOpacity: number;
+  trunk: string;
+  trunkStretch: number;
+  crownTints: string[];
+  crownRoughness: number;
+  crownMetalness: number;
+  crownScale: [number, number]; // [largeur, hauteur]
+  rockTints: string[];
+}
+
+const TEMPERATE_DECOR: BiomeDecorStyle = {
+  cliff: '#8C6E4E',
+  foam: '#E0F5FF',
+  seaRoughness: 0.24,
+  seaEmissive: 0.08,
+  cloud: '#FFFFFF',
+  cloudOpacity: 0.85,
+  trunk: '#7A5230',
+  trunkStretch: 1,
+  crownTints: ['#2F843D', '#3E9B47', '#266E36', '#56A943'],
+  crownRoughness: 0.76,
+  crownMetalness: 0.04,
+  crownScale: [1.05, 0.95],
+  rockTints: ['#9C9488', '#B5ADA0', '#7D766C'],
+};
+
+/** Habillage du décor par biome (palette, forme des "arbres", mer). */
+const BIOME_DECOR: Record<BiomeId, BiomeDecorStyle> = {
+  meadow: TEMPERATE_DECOR,
+  shore: { ...TEMPERATE_DECOR, crownTints: ['#2E9468', '#3BB07B', '#237A5E', '#52BC7C'] },
+  volcano: {
+    ...TEMPERATE_DECOR,
+    cliff: '#2A2322',
+    foam: '#FFD166',
+    seaRoughness: 0.34,
+    seaEmissive: 0.45,
+    cloud: '#7A544E',
+    cloudOpacity: 0.65,
+    trunk: '#2F2726',
+    trunkStretch: 1.5,
+    crownTints: ['#3C3232', '#523C38', '#C84B24', '#4A3A38'],
+    rockTints: ['#3A3231', '#544643', '#D9532F'],
+  },
+  sanctuary: {
+    ...TEMPERATE_DECOR,
+    cliff: '#4C446B',
+    foam: '#E9D5FF',
+    seaEmissive: 0.24,
+    cloud: '#635699',
+    trunk: '#584E7A',
+    crownTints: ['#8B5CF6', '#A78BFA', '#6366F1', '#C084FC'],
+    crownRoughness: 0.28,
+    crownMetalness: 0.25,
+    crownScale: [0.65, 1.5],
+    rockTints: ['#6B6091', '#8E7CC3', '#5EEAD4'],
+  },
+  // Sapins enneigés, mer glacée, nuages pâles
+  tundra: {
+    ...TEMPERATE_DECOR,
+    cliff: '#7FA3C2',
+    foam: '#FFFFFF',
+    seaRoughness: 0.14,
+    seaEmissive: 0.12,
+    cloud: '#DCEBFA',
+    cloudOpacity: 0.7,
+    trunk: '#5A4636',
+    crownTints: ['#F4FAFE', '#2F6B5A', '#E8F4FB', '#3C7F6B'],
+    crownScale: [0.85, 1.35],
+    rockTints: ['#DCEEF8', '#A5D8F0', '#67E8F9'],
+  },
+  // Piliers de pierre coiffés de paratonnerres dorés, mer de nuages
+  stormpeak: {
+    ...TEMPERATE_DECOR,
+    cliff: '#3B4250',
+    foam: '#E5E7EB',
+    seaRoughness: 0.9,
+    seaEmissive: 0.05,
+    cloud: '#2B313B',
+    cloudOpacity: 0.9,
+    trunk: '#4B5563',
+    trunkStretch: 1.9,
+    crownTints: ['#FACC15', '#FDE047', '#EAB308', '#FEF08A'],
+    crownRoughness: 0.3,
+    crownMetalness: 0.6,
+    crownScale: [0.22, 1.5],
+    rockTints: ['#4B5563', '#6B7280', '#FACC15'],
+  },
+};
+
+/** Décor propre à la Toundra Boréale : flèches de glace, congères, étangs gelés, igloo, aurores. */
+function addTundraDecor(env: THREE.Group, arenaRadius: number): (elapsed: number) => void {
+  const dummy = new THREE.Object3D();
+
+  const iceMat = new THREE.MeshStandardMaterial({
+    color: '#BFEFFF',
+    emissive: new THREE.Color('#38BDF8'),
+    emissiveIntensity: 0.32,
+    roughness: 0.12,
+    metalness: 0.3,
+    transparent: true,
+    opacity: 0.9,
+  });
+  const spireCount = 18;
+  const spires = new THREE.InstancedMesh(new THREE.BoxGeometry(0.7, 2.6, 0.7), iceMat, spireCount);
+  spires.castShadow = true;
+  for (let i = 0; i < spireCount; i++) {
+    const ang = (i / spireCount) * Math.PI * 2 + 0.17;
+    const r = 17 + ((i * 41) % 60) / 10;
+    const s = 0.7 + ((i * 29) % 80) / 100;
+    dummy.position.set(Math.cos(ang) * r, 1.1 * s, Math.sin(ang) * r);
+    dummy.scale.set(s, s * (1 + (i % 3) * 0.35), s);
+    dummy.rotation.set(((i % 5) - 2) * 0.07, i * 0.9, ((i % 4) - 1.5) * 0.08);
+    dummy.updateMatrix();
+    spires.setMatrixAt(i, dummy.matrix);
+  }
+  spires.computeBoundingSphere();
+  env.add(spires);
+
+  const snowMat = new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.95 });
+  const driftCount = 16;
+  const drifts = new THREE.InstancedMesh(new THREE.BoxGeometry(2.4, 0.36, 1.8), snowMat, driftCount);
+  drifts.receiveShadow = true;
+  for (let i = 0; i < driftCount; i++) {
+    const ang = (i / driftCount) * Math.PI * 2 + 0.6;
+    const r = 16.2 + ((i * 17) % 50) / 10;
+    const s = 0.8 + ((i * 23) % 70) / 100;
+    dummy.position.set(Math.cos(ang) * r, 0.16 * s, Math.sin(ang) * r);
+    dummy.scale.set(s, s, s);
+    dummy.rotation.set(0, i * 1.3, 0);
+    dummy.updateMatrix();
+    drifts.setMatrixAt(i, dummy.matrix);
+  }
+  drifts.computeBoundingSphere();
+  env.add(drifts);
+
+  // Étangs gelés (plats : ne gênent pas les déplacements)
+  const pondMat = new THREE.MeshStandardMaterial({ color: '#9BD8F2', roughness: 0.06, metalness: 0.4 });
+  const pondA = makeBox(6.5, 0.05, 4.6, pondMat, -8.5, 0.03, -9.5, false);
+  pondA.rotation.y = 0.3;
+  const pondB = makeBox(4.4, 0.05, 5.6, pondMat, 9.5, 0.03, 8.5, false);
+  pondB.rotation.y = -0.5;
+  env.add(pondA, pondB);
+
+  // Igloo en gradins
+  const igloo = new THREE.Group();
+  igloo.position.set(-18.5, 0, -15);
+  igloo.rotation.y = 0.7;
+  igloo.add(makeBox(3.2, 1.0, 3.2, snowMat, 0, 0.5, 0));
+  igloo.add(makeBox(2.5, 0.8, 2.5, snowMat, 0, 1.4, 0));
+  igloo.add(makeBox(1.6, 0.6, 1.6, snowMat, 0, 2.1, 0));
+  igloo.add(makeBox(0.9, 0.9, 0.3, new THREE.MeshStandardMaterial({ color: '#22324A', roughness: 0.9 }), 0, 0.45, 1.56));
+  env.add(igloo);
+
+  // Aurores boréales : rubans lumineux qui ondulent lentement dans le ciel
+  const auroraColors = ['#5EEAD4', '#A78BFA', '#67E8F9', '#F0ABFC'];
+  const ribbons: THREE.Mesh[] = [];
+  const ribbonGeo = new THREE.BoxGeometry(44, 0.6, 2.2);
+  auroraColors.forEach((hex, i) => {
+    const mat = new THREE.MeshBasicMaterial({
+      color: hex,
+      transparent: true,
+      opacity: 0.4,
+      depthWrite: false,
+      fog: false,
+    });
+    const ribbon = new THREE.Mesh(ribbonGeo, mat);
+    ribbon.position.set((i - 1.5) * 9, 20 + i * 1.6, -(arenaRadius + 8) - i * 4);
+    ribbon.rotation.set(0.5, (i - 1.5) * 0.12, (i % 2 === 0 ? 1 : -1) * 0.06);
+    env.add(ribbon);
+    ribbons.push(ribbon);
+  });
+
+  return (elapsed) => {
+    for (let i = 0; i < ribbons.length; i++) {
+      const ribbon = ribbons[i];
+      (ribbon.material as THREE.MeshBasicMaterial).opacity = 0.3 + Math.sin(elapsed * 0.6 + i * 1.7) * 0.16;
+      ribbon.position.y = 20 + i * 1.6 + Math.sin(elapsed * 0.35 + i) * 0.8;
+      ribbon.rotation.z = Math.sin(elapsed * 0.25 + i * 2.1) * 0.08;
+    }
+  };
+}
+
+/** Décor propre à la Cime des Orages : monolithes runiques, rochers en lévitation, anneau de nuées. */
+function addStormDecor(env: THREE.Group, arenaRadius: number): (elapsed: number) => void {
+  const dummy = new THREE.Object3D();
+
+  const slabMat = new THREE.MeshStandardMaterial({ color: '#374151', roughness: 0.8, metalness: 0.15 });
+  const runeMat = new THREE.MeshStandardMaterial({
+    color: '#FDE047',
+    emissive: new THREE.Color('#FACC15'),
+    emissiveIntensity: 0.9,
+    roughness: 0.3,
+  });
+  for (let i = 0; i < 6; i++) {
+    const ang = (i / 6) * Math.PI * 2 + 0.52;
+    const monolith = new THREE.Group();
+    monolith.position.set(Math.cos(ang) * 18.2, 0, Math.sin(ang) * 18.2);
+    monolith.rotation.y = -ang + Math.PI / 2;
+    monolith.add(makeBox(1.3, 4.6 + (i % 2) * 1.2, 0.7, slabMat, 0, 2.3 + (i % 2) * 0.6, 0));
+    monolith.add(makeBox(0.28, 2.6, 0.06, runeMat, 0, 2.6, 0.37, false));
+    monolith.add(makeBox(0.8, 0.22, 0.06, runeMat, 0, 3.4, 0.37, false));
+    env.add(monolith);
+  }
+
+  // Rochers en lévitation autour de l'arène
+  const shardCount = 14;
+  const shardMat = new THREE.MeshStandardMaterial({ color: '#4B5563', roughness: 0.85 });
+  const shards = new THREE.InstancedMesh(new THREE.BoxGeometry(1.6, 1.0, 1.4), shardMat, shardCount);
+  shards.castShadow = true;
+  for (let i = 0; i < shardCount; i++) {
+    const ang = (i / shardCount) * Math.PI * 2 + 0.2;
+    const r = 20 + ((i * 31) % 50) / 10;
+    const s = 0.6 + ((i * 19) % 90) / 100;
+    dummy.position.set(Math.cos(ang) * r, 4.5 + ((i * 13) % 50) / 10, Math.sin(ang) * r);
+    dummy.scale.set(s, s, s);
+    dummy.rotation.set(i * 0.4, i * 1.1, i * 0.7);
+    dummy.updateMatrix();
+    shards.setMatrixAt(i, dummy.matrix);
+  }
+  shards.computeBoundingSphere();
+  const shardGroup = new THREE.Group();
+  shardGroup.add(shards);
+  env.add(shardGroup);
+
+  // Anneau de nuées d'orage au ras du plateau
+  const cloudRing = new THREE.Group();
+  const stormCloudMat = new THREE.MeshStandardMaterial({
+    color: '#9CA3AF',
+    roughness: 1,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const puffGeo = new THREE.BoxGeometry(9, 1.6, 6);
+  for (let i = 0; i < 12; i++) {
+    const ang = (i / 12) * Math.PI * 2;
+    const puff = new THREE.Mesh(puffGeo, stormCloudMat);
+    puff.position.set(Math.cos(ang) * (arenaRadius + 5), -0.9 + (i % 3) * 0.5, Math.sin(ang) * (arenaRadius + 5));
+    puff.rotation.y = -ang;
+    puff.scale.setScalar(0.8 + (i % 4) * 0.18);
+    cloudRing.add(puff);
+  }
+  env.add(cloudRing);
+
+  return (elapsed) => {
+    shardGroup.position.y = Math.sin(elapsed * 0.6) * 0.45;
+    shardGroup.rotation.y = elapsed * 0.02;
+    cloudRing.rotation.y = elapsed * -0.012;
+    runeMat.emissiveIntensity = 0.75 + Math.sin(elapsed * 2.4) * 0.3;
+  };
 }
 
 /**
@@ -544,6 +964,7 @@ export interface BiomeEnvironmentHandle {
  */
 export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEnvironmentHandle {
   const env = new THREE.Group();
+  const decor = BIOME_DECOR[biome.id];
 
   // Extended natural terrain island slab (grounded, no floating rectangular walls!)
   const groundTex = getGroundCheckerTexture(biome.groundHex, biome.groundAltHex);
@@ -565,7 +986,7 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
 
   // Subtle stepped lower cliff rim around island
   const cliffMat = new THREE.MeshStandardMaterial({
-    color: biome.id === 'volcano' ? '#2A2322' : biome.id === 'sanctuary' ? '#4C446B' : '#8C6E4E',
+    color: decor.cliff,
     roughness: 0.9,
     metalness: 0.04,
   });
@@ -579,19 +1000,14 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
   // Animated PBR water / magma / astral sea using onBeforeCompile (single pass, software-WebGL friendly)
   const waterUniform = { value: 0 };
   const shoreExtent = arenaRadius + 1.4;
-  const foamColor =
-    biome.id === 'volcano'
-      ? new THREE.Color('#FFD166')
-      : biome.id === 'sanctuary'
-        ? new THREE.Color('#E9D5FF')
-        : new THREE.Color('#E0F5FF');
+  const foamColor = new THREE.Color(decor.foam);
 
   const seaMat = new THREE.MeshStandardMaterial({
     color: biome.waterHex,
-    roughness: biome.id === 'volcano' ? 0.34 : 0.24,
+    roughness: decor.seaRoughness,
     metalness: 0.14,
     emissive: new THREE.Color(biome.waterHex),
-    emissiveIntensity: biome.id === 'volcano' ? 0.45 : biome.id === 'sanctuary' ? 0.24 : 0.08,
+    emissiveIntensity: decor.seaEmissive,
   });
 
   seaMat.onBeforeCompile = (shader) => {
@@ -632,16 +1048,11 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
   // Drifting stylized voxel sky clouds (high and peripheral so Title Lockup stays crisp)
   const cloudGroup = new THREE.Group();
   const cloudMat = new THREE.MeshStandardMaterial({
-    color:
-      biome.id === 'volcano'
-        ? '#7A544E'
-        : biome.id === 'sanctuary'
-          ? '#635699'
-          : '#FFFFFF',
+    color: decor.cloud,
     roughness: 0.92,
     metalness: 0.0,
     transparent: true,
-    opacity: biome.id === 'volcano' ? 0.65 : 0.85,
+    opacity: decor.cloudOpacity,
   });
   const cloudCoords: [number, number, number, number][] = [
     [-26, 13.5, -24, 1.3],
@@ -686,13 +1097,13 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
   const trunkGeo = new THREE.BoxGeometry(0.65, 1.8, 0.65);
   const crownGeo = new THREE.BoxGeometry(1.9, 1.6, 1.9);
   const trunkMat = new THREE.MeshStandardMaterial({
-    color: biome.id === 'volcano' ? '#2F2726' : biome.id === 'sanctuary' ? '#584E7A' : '#7A5230',
+    color: decor.trunk,
     roughness: 0.88,
   });
   const crownMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
-    roughness: biome.id === 'sanctuary' ? 0.28 : 0.76,
-    metalness: biome.id === 'sanctuary' ? 0.25 : 0.04,
+    roughness: decor.crownRoughness,
+    metalness: decor.crownMetalness,
   });
 
   const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
@@ -701,14 +1112,7 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
   crowns.castShadow = true;
   crowns.receiveShadow = true;
 
-  const paletteTints =
-    biome.id === 'meadow'
-      ? ['#2F843D', '#3E9B47', '#266E36', '#56A943']
-      : biome.id === 'shore'
-        ? ['#2E9468', '#3BB07B', '#237A5E', '#52BC7C']
-        : biome.id === 'volcano'
-          ? ['#3C3232', '#523C38', '#C84B24', '#4A3A38']
-          : ['#8B5CF6', '#A78BFA', '#6366F1', '#C084FC'];
+  const paletteTints = decor.crownTints;
 
   const tmpColor = new THREE.Color();
   const minR = isCamp ? 10.5 : 16.5;
@@ -723,17 +1127,13 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
     const s = 0.85 + ((i * 19) % 30) / 100;
 
     dummy.position.set(x, 0.9 * s, z);
-    dummy.scale.set(s, s * (biome.id === 'volcano' ? 1.5 : 1.0), s);
+    dummy.scale.set(s, s * decor.trunkStretch, s);
     dummy.rotation.y = (i * 0.5) % (Math.PI * 2);
     dummy.updateMatrix();
     trunks.setMatrixAt(i, dummy.matrix);
 
-    dummy.position.set(x, 2.2 * s, z);
-    dummy.scale.set(
-      s * (biome.id === 'sanctuary' ? 0.65 : 1.05),
-      s * (biome.id === 'sanctuary' ? 1.5 : 0.95),
-      s * (biome.id === 'sanctuary' ? 0.65 : 1.05),
-    );
+    dummy.position.set(x, (decor.trunkStretch > 1.6 ? 3.6 : 2.2) * s, z);
+    dummy.scale.set(s * decor.crownScale[0], s * decor.crownScale[1], s * decor.crownScale[0]);
     dummy.updateMatrix();
     crowns.setMatrixAt(i, dummy.matrix);
 
@@ -753,12 +1153,7 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
     metalness: 0.08,
   });
   const rocks = new THREE.InstancedMesh(rockGeo, rockMat, rockCount);
-  const rockTints =
-    biome.id === 'volcano'
-      ? ['#3A3231', '#544643', '#D9532F']
-      : biome.id === 'sanctuary'
-        ? ['#6B6091', '#8E7CC3', '#5EEAD4']
-        : ['#9C9488', '#B5ADA0', '#7D766C'];
+  const rockTints = decor.rockTints;
 
   for (let i = 0; i < rockCount; i++) {
     const ang = (i / rockCount) * Math.PI * 2 + 0.4;
@@ -775,7 +1170,12 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
   rocks.computeBoundingSphere();
   env.add(rocks);
 
-  return { group: env, waterUniform, cloudGroup };
+  // Décor signature des biomes de la Giga Update
+  let animate: ((elapsed: number) => void) | undefined;
+  if (biome.id === 'tundra') animate = addTundraDecor(env, arenaRadius);
+  else if (biome.id === 'stormpeak') animate = addStormDecor(env, arenaRadius);
+
+  return { group: env, waterUniform, cloudGroup, animate };
 }
 
 // === V0.2 ZERO-GC FLOATING 3D COMBAT TEXT SPRITE POOL ===

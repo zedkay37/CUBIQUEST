@@ -16,6 +16,7 @@ import {
 import type {
   AchievementDef,
   ActiveQuest,
+  BiomeId,
   ComputedCreatureStats,
   ElementalReactionDef,
   ElementType,
@@ -133,6 +134,39 @@ export function computeBossPhase(
  */
 export function computeUltimateCharge(current: number, gain: number): number {
   return Math.max(0, Math.min(100, current + gain));
+}
+
+/**
+ * Giga Update — déblocage des niveaux/biomes.
+ * Le plus haut niveau jouable est AU MOINS « dernier niveau vaincu + 1 » : ainsi une
+ * sauvegarde qui avait déjà fini l'ancien dernier niveau accède aux nouveaux biomes.
+ */
+export function computeHighestUnlockedStageIndex(
+  completedStageIds: string[],
+  currentHighest: number,
+): number {
+  let highest = Math.max(0, Math.floor(Number(currentHighest) || 0));
+  for (const stage of STAGES) {
+    if (completedStageIds.includes(stage.id)) highest = Math.max(highest, stage.index + 1);
+  }
+  return Math.min(STAGES.length - 1, highest);
+}
+
+/** Un biome est ouvert dès que son premier niveau est jouable. */
+export function isBiomeUnlocked(save: Pick<SaveState, 'highestStageIndex'>, biomeId: BiomeId): boolean {
+  const first = STAGES.find((s) => s.biomeId === biomeId);
+  return Boolean(first && save.highestStageIndex >= first.index);
+}
+
+export function getBiomeProgress(
+  save: Pick<SaveState, 'completedStageIds'>,
+  biomeId: BiomeId,
+): { completed: number; total: number } {
+  const stages = STAGES.filter((s) => s.biomeId === biomeId);
+  return {
+    completed: stages.filter((s) => save.completedStageIds.includes(s.id)).length,
+    total: stages.length,
+  };
 }
 
 /**
@@ -1170,7 +1204,10 @@ export function migrateSaveState(raw: unknown): SaveState | null {
       expeditionsTotal: Number(obj.pot.expeditionsTotal ?? 0) || 0,
     },
     unlockedPotTiers: Array.isArray(obj.unlockedPotTiers) && obj.unlockedPotTiers.length > 0 ? obj.unlockedPotTiers : ['iron'],
-    highestStageIndex: Math.max(0, Math.min(STAGES.length - 1, Number(obj.highestStageIndex ?? 0) || 0)),
+    highestStageIndex: computeHighestUnlockedStageIndex(
+      Array.isArray(obj.completedStageIds) ? obj.completedStageIds : [],
+      Math.max(0, Math.min(STAGES.length - 1, Number(obj.highestStageIndex ?? 0) || 0)),
+    ),
     completedStageIds: Array.isArray(obj.completedStageIds) ? obj.completedStageIds : [],
     discoveredSpeciesIds: Array.isArray(obj.discoveredSpeciesIds) ? obj.discoveredSpeciesIds : validRoster.map((c) => c.speciesId),
     discoveredRecipeIds: Array.isArray(obj.discoveredRecipeIds) ? obj.discoveredRecipeIds : [],

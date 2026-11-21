@@ -32,6 +32,8 @@ import {
   buildCookingPotProp,
   buildVoxelCreature,
   FloatingTextPool,
+  getRigTopY,
+  isHoverArchetype,
   type VoxelCreatureRig,
 } from './voxelModels';
 
@@ -180,6 +182,7 @@ interface CombatActor {
   bossPhase: 1 | 2 | 3;
   bossMaxPhases: 2 | 3;
   bossPatternIndex: number;
+  pullTimer: number; // Œil du Cyclone : le boss aspire l'escouade tant que > 0
 }
 
 interface CampWanderer {
@@ -223,7 +226,29 @@ export interface EngineCallbacks {
 }
 
 const PARTICLE_POOL_SIZE = 320; // plafond dur : ring buffer, jamais d'allocation en combat
-const WEATHER_COUNT = 54;
+const WEATHER_COUNT = 96; // capacité max de l'InstancedMesh météo (le nombre actif dépend du biome)
+const BOLT_POOL_SIZE = 6;
+
+type WeatherKind = 'drift' | 'rain' | 'rise' | 'float' | 'snow';
+
+/** Ambiance particulaire par biome. */
+const WEATHER_PROFILES: Record<BiomeId, { kind: WeatherKind; count: number; colors: string[] }> = {
+  meadow: { kind: 'drift', count: 54, colors: ['#FEF08A', '#BBF7D0', '#FDE68A'] }, // pollen
+  shore: { kind: 'rain', count: 54, colors: ['#E0F2FE', '#7DD3FC', '#BAE6FD'] }, // embruns
+  volcano: { kind: 'rise', count: 54, colors: ['#FB923C', '#FDE047', '#EF4444'] }, // braises
+  sanctuary: { kind: 'float', count: 54, colors: ['#E9D5FF', '#67E8F9', '#C084FC'] }, // éclats astraux
+  tundra: { kind: 'snow', count: 96, colors: ['#FFFFFF', '#E0F2FE', '#F8FAFC'] }, // neige
+  stormpeak: { kind: 'rain', count: 96, colors: ['#CBD5E1', '#94A3B8', '#E2E8F0'] }, // pluie battante
+};
+
+const BIOME_LIGHTING: Record<BiomeId, { sky: string; ground: string; key: string }> = {
+  meadow: { sky: '#BCE2FF', ground: '#8D7356', key: '#FFF2D6' },
+  shore: { sky: '#BCE2FF', ground: '#8D7356', key: '#FFF2D6' },
+  volcano: { sky: '#FFA987', ground: '#3A2422', key: '#FFD6B0' },
+  sanctuary: { sky: '#D8C4FF', ground: '#3E345C', key: '#EFE4FF' },
+  tundra: { sky: '#CFE6FF', ground: '#6F86A8', key: '#EAF6FF' },
+  stormpeak: { sky: '#C2CCDA', ground: '#3B4252', key: '#DDE6F2' },
+};
 const ARENA_BOUND = 15.5;
 const MAX_ATTACK_TOKENS = 3;
 
@@ -256,6 +281,18 @@ export class VoxelEngine {
   private activeBiomeId: BiomeId = 'meadow';
   private waterUniform: { value: number } | null = null;
   private cloudGroup: THREE.Group | null = null;
+  private envAnimate: ((elapsed: number) => void) | null = null;
+  private weatherKind: WeatherKind = 'drift';
+  private weatherCount = 54;
+
+  // Éclairs (pool fixe) + flash d'orage
+  private bolts: { mesh: THREE.Mesh; life: number }[] = [];
+  private boltCursor = 0;
+  private boltGeo: THREE.BoxGeometry | null = null;
+  private boltMat: THREE.MeshBasicMaterial | null = null;
+  private lightningFlash = 0;
+  private stormTimer = 4;
+  private baseHemiIntensity = 0.52;
 
   // Mode & state
   private screenState: 'title' | 'playing' | 'paused' | 'gameover' = 'title';
@@ -424,6 +461,17 @@ export class VoxelEngine {
     this.fxGroup.add(this.weatherMesh);
     this.configureWeather('meadow');
 
+    // Pool d'éclairs voxel (géométrie + matériau partagés)
+    this.boltGeo = new THREE.BoxGeometry(0.3, 1, 0.3);
+    this.boltGeo.translate(0, 0.5, 0);
+    this.boltMat = new THREE.MeshBasicMaterial({ color: '#FEF9C3', transparent: true, opacity: 0.95, fog: false });
+    for (let i = 0; i < BOLT_POOL_SIZE; i++) {
+      const mesh = new THREE.Mesh(this.boltGeo, this.boltMat);
+      mesh.visible = false;
+      this.fxGroup.add(mesh);
+      this.bolts.push({ mesh, life: 0 });
+    }
+
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
     this.resizeObserver.observe(container);
 
@@ -438,52 +486,99 @@ export class VoxelEngine {
 
   private configureWeather(biomeId: BiomeId): void {
     this.activeBiomeId = biomeId;
+    const profile = WEATHER_PROFILES[biomeId];
+    const kind = profile.kind;
+    this.weatherKind = kind;
+    this.weatherCount = profile.count;
+    this.weatherMesh.count = profile.count;
     this.weatherMotes = [];
-    const colors =
-      biomeId === 'meadow'
-        ? ['#FEF08A', '#BBF7D0', '#FDE68A']
-        : biomeId === 'shore'
-          ? ['#E0F2FE', '#7DD3FC', '#BAE6FD']
-          : biomeId === 'volcano'
-            ? ['#FB923C', '#FDE047', '#EF4444']
-            : ['#E9D5FF', '#67E8F9', '#C084FC'];
+    const stormy = biomeId === 'stormpeak';
 
-    for (let i = 0; i < WEATHER_COUNT; i++) {
+    for (let i = 0; i < profile.count; i++) {
+      const small = 0.14 + Math.random() * 0.08;
       const mote: WeatherMote = {
         x: (Math.random() - 0.5) * 34,
         y: 0.8 + Math.random() * 12,
         z: (Math.random() - 0.5) * 34,
         vx:
-          biomeId === 'shore'
-            ? -2.2
-            : biomeId === 'volcano'
-              ? (Math.random() - 0.5) * 1.1
-              : (Math.random() - 0.5) * 0.9,
+          kind === 'rain'
+            ? stormy
+              ? -5.2
+              : -2.2
+            : kind === 'snow'
+              ? 0.9 + Math.random() * 0.7
+              : kind === 'rise'
+                ? (Math.random() - 0.5) * 1.1
+                : (Math.random() - 0.5) * 0.9,
         vy:
-          biomeId === 'shore'
-            ? -11.5 - Math.random() * 3
-            : biomeId === 'volcano'
+          kind === 'rain'
+            ? (stormy ? -16 : -11.5) - Math.random() * 3
+            : kind === 'rise'
               ? 1.6 + Math.random() * 1.8
-              : biomeId === 'sanctuary'
+              : kind === 'float'
                 ? 0.45 + Math.random() * 0.55
-                : -0.55 - Math.random() * 0.4,
-        vz:
-          biomeId === 'shore'
-            ? 1.4
-            : (Math.random() - 0.5) * 0.8,
-        sizeX: biomeId === 'shore' ? 0.06 : 0.14 + Math.random() * 0.08,
-        sizeY: biomeId === 'shore' ? 0.65 : 0.14 + Math.random() * 0.08,
-        sizeZ: biomeId === 'shore' ? 0.06 : 0.14 + Math.random() * 0.08,
+                : kind === 'snow'
+                  ? -1.3 - Math.random() * 1.1
+                  : -0.55 - Math.random() * 0.4,
+        vz: kind === 'rain' ? 1.4 : (Math.random() - 0.5) * 0.8,
+        sizeX: kind === 'rain' ? 0.06 : kind === 'snow' ? small * 0.8 : small,
+        sizeY: kind === 'rain' ? (stormy ? 0.9 : 0.65) : kind === 'snow' ? small * 0.8 : small,
+        sizeZ: kind === 'rain' ? 0.06 : kind === 'snow' ? small * 0.8 : small,
         phase: Math.random() * Math.PI * 2,
       };
       this.weatherMotes.push(mote);
-      this.weatherMesh.setColorAt(i, _color.set(colors[i % colors.length]));
+      this.weatherMesh.setColorAt(i, _color.set(profile.colors[i % profile.colors.length]));
     }
     if (this.weatherMesh.instanceColor) {
       this.weatherMesh.instanceColor.needsUpdate = true;
     }
   }
 
+  private applyBiomeLighting(biomeId: BiomeId): void {
+    const light = BIOME_LIGHTING[biomeId];
+    this.hemiLight.color.set(light.sky);
+    this.hemiLight.groundColor.set(light.ground);
+    this.keyLight.color.set(light.key);
+    this.keyLight.intensity = 1.28;
+    this.baseHemiIntensity = 0.52;
+    this.lightningFlash = 0;
+    this.stormTimer = 3 + Math.random() * 3;
+  }
+
+  /** Éclair voxel bref (pool fixe) + flash lumineux. */
+  private spawnBolt(x: number, z: number, height = 11): void {
+    const bolt = this.bolts[this.boltCursor];
+    this.boltCursor = (this.boltCursor + 1) % this.bolts.length;
+    bolt.mesh.position.set(x, 0, z);
+    bolt.mesh.scale.set(1, height, 1);
+    bolt.mesh.rotation.z = (Math.random() - 0.5) * 0.22;
+    bolt.mesh.visible = true;
+    bolt.life = 0.16;
+    this.lightningFlash = Math.max(this.lightningFlash, this.shakeEnabled ? 0.55 : 0.2);
+  }
+
+  private updateStormAmbience(dt: number): void {
+    for (const bolt of this.bolts) {
+      if (bolt.life > 0) {
+        bolt.life -= dt;
+        bolt.mesh.visible = bolt.life > 0;
+      }
+    }
+    if (this.lightningFlash > 0) {
+      this.lightningFlash = Math.max(0, this.lightningFlash - dt * 3.6);
+    }
+    this.hemiLight.intensity = this.baseHemiIntensity + this.lightningFlash * 1.5;
+
+    // Orage d'ambiance : la foudre tombe au loin toutes les quelques secondes
+    if (this.activeBiomeId !== 'stormpeak' || this.playMode !== 'expedition') return;
+    this.stormTimer -= dt;
+    if (this.stormTimer <= 0) {
+      this.stormTimer = 5 + Math.random() * 6;
+      const ang = Math.random() * Math.PI * 2;
+      this.spawnBolt(Math.cos(ang) * 21, Math.sin(ang) * 21, 17);
+      soundFx.playThunder();
+    }
+  }
   private static detectSoftwareGl(): boolean {
     try {
       const gl = document.createElement('canvas').getContext('webgl2');
@@ -567,9 +662,25 @@ export class VoxelEngine {
     while (group.children.length > 0) {
       const child = group.children[0];
       group.remove(child);
+      this.disposeObject(child);
     }
   }
 
+  /** Libère géométries et matériaux d'un sous-arbre retiré de la scène (les textures partagées sont conservées). */
+  private disposeObject(obj: THREE.Object3D): void {
+    obj.traverse((node) => {
+      const mesh = node as THREE.Mesh;
+      if (mesh.geometry) mesh.geometry.dispose();
+      if ((node as THREE.InstancedMesh).isInstancedMesh) (node as THREE.InstancedMesh).dispose();
+      const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
+      if (!mat) return;
+      for (const m of Array.isArray(mat) ? mat : [mat]) {
+        const map = (m as THREE.MeshStandardMaterial).map;
+        if (map && map.userData.ownedByScene) map.dispose();
+        m.dispose();
+      }
+    });
+  }
   public loadCampScene(
     squadCreatures: OwnedCreature[],
     potRecipeId: string | null,
@@ -588,16 +699,14 @@ export class VoxelEngine {
     const biome = BIOMES.meadow;
     this.scene.background = new THREE.Color(biome.skyHex);
     this.scene.fog = new THREE.Fog(biome.fogHex, 30, 82);
-    this.hemiLight.color.set('#BCE2FF');
-    this.hemiLight.groundColor.set('#8D7356');
-    this.keyLight.color.set('#FFF2D6');
-
     this.floatingText.clear();
     const env = buildBiomeEnvironment(biome, true);
     this.worldGroup.add(env.group);
     this.waterUniform = env.waterUniform;
     this.cloudGroup = env.cloudGroup;
+    this.envAnimate = env.animate ?? null;
     this.configureWeather('meadow');
+    this.applyBiomeLighting('meadow');
 
     // Tall waystone + explorer tent landmark framed in initial vista
     const landmark = buildCampLandmark();
@@ -683,24 +792,12 @@ export class VoxelEngine {
     const biome = BIOMES[stage.biomeId];
     this.scene.background = new THREE.Color(biome.skyHex);
     this.scene.fog = new THREE.Fog(biome.fogHex, 30, 84);
-    if (biome.id === 'volcano') {
-      this.hemiLight.color.set('#FFA987');
-      this.hemiLight.groundColor.set('#3A2422');
-      this.keyLight.color.set('#FFD6B0');
-    } else if (biome.id === 'sanctuary') {
-      this.hemiLight.color.set('#D8C4FF');
-      this.hemiLight.groundColor.set('#3E345C');
-      this.keyLight.color.set('#EFE4FF');
-    } else {
-      this.hemiLight.color.set('#BCE2FF');
-      this.hemiLight.groundColor.set('#8D7356');
-      this.keyLight.color.set('#FFF2D6');
-    }
-
+    this.applyBiomeLighting(biome.id);
     const env = buildBiomeEnvironment(biome, false);
     this.worldGroup.add(env.group);
     this.waterUniform = env.waterUniform;
     this.cloudGroup = env.cloudGroup;
+    this.envAnimate = env.animate ?? null;
     this.configureWeather(stage.biomeId);
 
     // Spawn 3 allied Cubimons in an open clearing facing forward (+X/-Z toward wave)
@@ -766,6 +863,7 @@ export class VoxelEngine {
         bossPhase: 1,
         bossMaxPhases: 2,
         bossPatternIndex: 0,
+        pullTimer: 0,
       };
     });
 
@@ -859,6 +957,7 @@ export class VoxelEngine {
         bossPhase: 1,
         bossMaxPhases: isFinalBiomeBoss ? 3 : 2,
         bossPatternIndex: 0,
+        pullTimer: 0,
       });
 
       this.spawnParticleBurst(spawnX, 0.8, spawnZ, species.palette.accent, isBoss ? 20 : 10, 4.5);
@@ -1279,7 +1378,7 @@ export class VoxelEngine {
         : 1;
 
     // 3D Floating Damage Number
-    const numY = target.rig.species.archetype === 'floating' ? 2.2 : 1.85;
+    const numY = getRigTopY(target.rig.species) + 0.15;
     if (finalDmg > 0) {
       // Lisible d'un coup d'œil : critique doré, super efficace orange, résisté gris
       const textColor = target.isAlly
@@ -1459,16 +1558,19 @@ export class VoxelEngine {
     dirX: number,
     dirZ: number,
     onComplete: () => void,
+    opts?: { innerRadius?: number; color?: string; silent?: boolean },
   ): void {
-    soundFx.playTelegraph();
+    if (!opts?.silent) soundFx.playTelegraph();
     const geo = isLine
       ? new THREE.PlaneGeometry(1.4, radius)
-      : new THREE.CircleGeometry(radius, 28);
+      : opts?.innerRadius
+        ? new THREE.RingGeometry(opts.innerRadius, radius, 40) // couronne : zone sûre au centre
+        : new THREE.CircleGeometry(radius, 28);
     if (isLine) {
       geo.translate(0, radius / 2, 0);
     }
     const mat = new THREE.MeshBasicMaterial({
-      color: '#EF4444',
+      color: opts?.color ?? '#EF4444',
       transparent: true,
       opacity: 0.32,
       side: THREE.DoubleSide,
@@ -1657,6 +1759,8 @@ export class VoxelEngine {
       this.waterUniform.value = this.elapsedTotal;
     }
 
+    this.envAnimate?.(this.elapsedTotal);
+
     if (this.cloudGroup) {
       const clouds = this.cloudGroup.children;
       for (let i = 0; i < clouds.length; i++) {
@@ -1683,6 +1787,7 @@ export class VoxelEngine {
 
       this.updateParticles(dt);
       this.updateWeather(dt);
+      this.updateStormAmbience(dt);
       this.floatingText.update(dt);
     }
 
@@ -1975,6 +2080,7 @@ export class VoxelEngine {
         if (enemy.koDissolveTimer <= 0) {
           enemy.removed = true;
           this.actorsGroup.remove(enemy.rig.root);
+          this.disposeObject(enemy.rig.root);
         }
         continue;
       }
@@ -1987,6 +2093,21 @@ export class VoxelEngine {
       const dist = Math.max(0.01, Math.hypot(dx, dz));
       enemy.facing = Math.atan2(dx, dz);
       let moved = false;
+
+      // Œil du Cyclone : tant que le boss charge, le vent aspire les alliés vers lui
+      if (enemy.pullTimer > 0) {
+        enemy.pullTimer = Math.max(0, enemy.pullTimer - simDt);
+        for (const ally of this.allies) {
+          if (ally.fainted || ally.scatterTimer > 0) continue;
+          const px = enemy.x - ally.x;
+          const pz = enemy.z - ally.z;
+          const pd = Math.hypot(px, pz);
+          if (pd > 1.8) {
+            ally.x += (px / pd) * 3.1 * simDt;
+            ally.z += (pz / pd) * 3.1 * simDt;
+          }
+        }
+      }
 
       if (enemy.telegraphing) {
         // Hold crouch stance during attack telegraph
@@ -2077,7 +2198,21 @@ export class VoxelEngine {
           enemy.telegraphing = true;
           enemy.hasAttackToken = true;
           activeTokens += 1;
-          const pattern = phase === 1 ? 0 : enemy.bossPatternIndex % 3;
+          // Rotation des attaques selon le kit du boss (données : StageDef.bossKit)
+          const kit = this.activeStage.bossKit ?? 'classic';
+          const cycle =
+            kit === 'frost'
+              ? phase === 1
+                ? [3, 0]
+                : [3, 1, 0, 2]
+              : kit === 'storm'
+                ? phase === 1
+                  ? [4, 0]
+                  : [4, 5, 1, 0]
+                : phase === 1
+                  ? [0]
+                  : [0, 1, 2];
+          const pattern = cycle[enemy.bossPatternIndex % cycle.length];
           enemy.bossPatternIndex += 1;
           const cooldownAfter = phase === 3 ? 2.8 : phase === 2 ? 3.4 : 4.6;
 
@@ -2170,7 +2305,7 @@ export class VoxelEngine {
                 }
               }
             });
-          } else {
+          } else if (pattern === 2) {
             // Pattern 2: Sequential Meteor Volley (3 staggered impact circles on squad!)
             const living = this.allies.filter((a) => !a.fainted);
             const meteorCount = phase === 3 ? 4 : 3;
@@ -2197,6 +2332,186 @@ export class VoxelEngine {
                 }
               });
             }
+          } else if (pattern === 3) {
+            // Kit GIVRE — Anneau de Givre : couronne glacée autour du boss.
+            // Zone sûre = au contact du boss. En phase 2+, un contrecoup central oblige à ressortir.
+            const inner = 2.7;
+            const outer = phase === 1 ? 7.0 : 8.2;
+            const windup = phase === 3 ? 0.8 : phase === 2 ? 0.9 : 1.05;
+            const bx = enemy.x;
+            const bz = enemy.z;
+            const hasFollowUp = phase >= 2;
+            this.bannerText = 'Anneau de Givre — collez-vous au boss !';
+            this.bannerTimer = 1.4;
+            this.spawnEnemyTelegraph(
+              bx,
+              bz,
+              outer,
+              windup,
+              false,
+              0,
+              0,
+              () => {
+                if (!hasFollowUp) {
+                  enemy.telegraphing = false;
+                  enemy.hasAttackToken = false;
+                  enemy.skillCooldown = cooldownAfter;
+                }
+                if (enemy.fainted || enemy.removed) return;
+                soundFx.playFrostCrack();
+                this.spawnShockwaveRing(bx, bz, outer, '#7DD3FC');
+                this.spawnElementBurst(bx, 0.6, bz, 'water', 26, 1.7);
+                this.trauma = Math.min(1, this.trauma + 0.4);
+                for (const ally of this.allies) {
+                  if (ally.fainted) continue;
+                  const d = Math.hypot(ally.x - bx, ally.z - bz);
+                  if (d >= inner && d <= outer + 0.4) {
+                    const exposed = ally.invulnTimer <= 0;
+                    this.applyDamageToActor(ally, Math.round(enemy.atk * 1.5), enemy, true, false, '#7DD3FC');
+                    if (exposed && !ally.fainted) {
+                      this.applyStatusToActor(ally, 'soaked', enemy.atk);
+                      if (phase >= 2) this.applyStatusToActor(ally, 'rooted', enemy.atk);
+                    }
+                  }
+                }
+                if (hasFollowUp) {
+                  this.bannerText = 'Contrecoup — éloignez-vous !';
+                  this.bannerTimer = 1.0;
+                  this.spawnEnemyTelegraph(
+                    bx,
+                    bz,
+                    inner + 0.9,
+                    0.78,
+                    false,
+                    0,
+                    0,
+                    () => {
+                      enemy.telegraphing = false;
+                      enemy.hasAttackToken = false;
+                      enemy.skillCooldown = cooldownAfter;
+                      if (enemy.fainted || enemy.removed) return;
+                      soundFx.playFrostCrack();
+                      this.spawnShockwaveRing(bx, bz, inner + 0.9, '#E0F2FE');
+                      this.spawnElementBurst(bx, 0.6, bz, 'rock', 16, 1.3);
+                      this.trauma = Math.min(1, this.trauma + 0.3);
+                      for (const ally of this.allies) {
+                        if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= inner + 1.3) {
+                          this.applyDamageToActor(ally, Math.round(enemy.atk * 1.4), enemy, true, false, '#E0F2FE');
+                        }
+                      }
+                      if (phase === 3) {
+                        // Phase 3 : éclats de glace en étoile
+                        for (let k = 0; k < 6; k++) {
+                          const shardAng = (k / 6) * Math.PI * 2 + 0.3;
+                          this.spawnProjectile({
+                            x: bx,
+                            y: 0.9,
+                            z: bz,
+                            vx: Math.sin(shardAng) * 7.4,
+                            vz: Math.cos(shardAng) * 7.4,
+                            radius: 0.36,
+                            life: 1.7,
+                            fromAlly: false,
+                            damage: Math.round(enemy.atk * 0.85),
+                            elementColor: '#A5F3FC',
+                            aoeRadius: 1.1,
+                            isCrit: false,
+                            casterUnit: enemy,
+                          });
+                        }
+                      }
+                    },
+                    { color: '#7DD3FC' },
+                  );
+                }
+              },
+              { innerRadius: inner, color: '#7DD3FC' },
+            );
+          } else if (pattern === 4) {
+            // Kit ORAGE — Foudre en Rafale : la foudre « marche » du boss vers sa cible.
+            // On l'évite en sortant de la ligne.
+            const dirX = dx / dist;
+            const dirZ = dz / dist;
+            const strikes = phase === 3 ? 9 : phase === 2 ? 7 : 5;
+            const strikeRad = 1.9;
+            const bx = enemy.x;
+            const bz = enemy.z;
+            this.bannerText = 'Foudre en Rafale — sortez de la ligne !';
+            this.bannerTimer = 1.4;
+            soundFx.playTelegraph();
+            for (let k = 0; k < strikes; k++) {
+              const sx = THREE.MathUtils.clamp(bx + dirX * (2.4 + k * 2.3), -ARENA_BOUND, ARENA_BOUND);
+              const sz = THREE.MathUtils.clamp(bz + dirZ * (2.4 + k * 2.3), -ARENA_BOUND, ARENA_BOUND);
+              const isLast = k === strikes - 1;
+              this.spawnEnemyTelegraph(
+                sx,
+                sz,
+                strikeRad,
+                0.72 + k * 0.14,
+                false,
+                0,
+                0,
+                () => {
+                  if (isLast) {
+                    enemy.telegraphing = false;
+                    enemy.hasAttackToken = false;
+                    enemy.skillCooldown = cooldownAfter;
+                  }
+                  if (enemy.fainted || enemy.removed) return;
+                  this.spawnBolt(sx, sz);
+                  if (k % 3 === 0) soundFx.playThunder();
+                  this.spawnElementBurst(sx, 0.5, sz, 'electric', 10, 1.2);
+                  this.trauma = Math.min(1, this.trauma + 0.14);
+                  for (const ally of this.allies) {
+                    if (!ally.fainted && Math.hypot(ally.x - sx, ally.z - sz) <= strikeRad + 0.35) {
+                      const exposed = ally.invulnTimer <= 0;
+                      this.applyDamageToActor(ally, Math.round(enemy.atk * 1.25), enemy, true, false, '#FACC15');
+                      if (exposed && !ally.fainted) this.applyStatusToActor(ally, 'shocked', enemy.atk);
+                    }
+                  }
+                },
+                { color: '#FACC15', silent: true },
+              );
+            }
+          } else {
+            // Kit ORAGE — Œil du Cyclone : le vent aspire l'escouade vers le boss, puis tout détone.
+            // Réponse attendue : Dispersion (qui annule l'aspiration) pour sortir du cercle.
+            const eyeRad = phase === 3 ? 6.6 : 6.0;
+            const windup = phase === 3 ? 1.2 : 1.35;
+            const bx = enemy.x;
+            const bz = enemy.z;
+            enemy.pullTimer = windup;
+            this.bannerText = 'Œil du Cyclone — Dispersion pour fuir le centre !';
+            this.bannerTimer = 1.5;
+            this.spawnEnemyTelegraph(
+              bx,
+              bz,
+              eyeRad,
+              windup,
+              false,
+              0,
+              0,
+              () => {
+                enemy.telegraphing = false;
+                enemy.hasAttackToken = false;
+                enemy.skillCooldown = cooldownAfter;
+                enemy.pullTimer = 0;
+                if (enemy.fainted || enemy.removed) return;
+                this.spawnBolt(bx, bz, 14);
+                soundFx.playThunder();
+                this.spawnShockwaveRing(bx, bz, eyeRad, '#FACC15');
+                this.spawnElementBurst(bx, 0.8, bz, 'electric', 30, 1.5);
+                this.trauma = Math.min(1, this.trauma + 0.5);
+                for (const ally of this.allies) {
+                  if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= eyeRad + 0.4) {
+                    const exposed = ally.invulnTimer <= 0;
+                    this.applyDamageToActor(ally, Math.round(enemy.atk * 1.75), enemy, true, false, '#FACC15');
+                    if (exposed && !ally.fainted) this.applyStatusToActor(ally, 'shocked', enemy.atk);
+                  }
+                }
+              },
+              { color: '#FACC15' },
+            );
           }
         } else if (dist > 3.1) {
           enemy.x += (dx / dist) * enemySpeed * simDt;
@@ -2426,32 +2741,64 @@ export class VoxelEngine {
     squashY: number,
     elapsed: number,
   ): void {
-    const hop = isMoving ? Math.abs(Math.sin(walkPhase)) * 0.24 : Math.sin(elapsed * 2.8) * 0.04;
-    const hover = rig.species.archetype === 'floating' ? 0.16 + Math.sin(elapsed * 3.5) * 0.12 : 0;
+    const arch = rig.species.archetype;
+    // Déphasage par créature : personne ne respire ni ne se balance à l'unisson
+    const seed = rig.root.id * 1.37;
+    const hopAmp = arch === 'serpentine' ? 0.08 : 0.24;
+    const hop = isMoving ? Math.abs(Math.sin(walkPhase)) * hopAmp : Math.sin(elapsed * 2.8 + seed) * 0.04;
+    const hover = isHoverArchetype(arch) ? 0.16 + Math.sin(elapsed * 3.5 + seed) * 0.12 : 0;
     rig.bodyPivot.position.y = hop + hover;
 
-    const invXZ = 1 / Math.sqrt(Math.max(0.5, squashY));
-    rig.bodyPivot.scale.set(invXZ, squashY, invXZ);
+    // Idle : respiration + regard qui se promène quand la créature est à l'arrêt
+    const breath = isMoving ? 0 : Math.sin(elapsed * 2.1 + seed) * 0.022;
+    const sy = squashY * (1 + breath);
+    const invXZ = 1 / Math.sqrt(Math.max(0.5, sy));
+    rig.bodyPivot.scale.set(invXZ, sy, invXZ);
+    rig.bodyPivot.rotation.y = isMoving ? 0 : Math.sin(elapsed * 0.7 + seed) * 0.16;
+    rig.bodyPivot.rotation.x = isMoving ? 0 : Math.sin(elapsed * 1.3 + seed * 0.7) * 0.025;
 
-    // Leg gait sync
+    // Leg gait sync (les bras du golem font partie de la démarche)
     rig.legs.forEach((leg, idx) => {
       const sign = idx % 2 === 0 ? 1 : -1;
       leg.rotation.x = isMoving ? Math.sin(walkPhase) * 0.45 * sign : 0;
     });
 
-    // Wings / orbiting psychic cubes / tail wag
+    // Wings / orbiting psychic cubes / tail wag / antlers / body segments / rain strands
     rig.extras.forEach((extra, idx) => {
-      if (rig.species.archetype === 'floating') {
-        extra.rotation.y = elapsed * 2.2;
-      } else if (rig.species.archetype === 'winged' && idx < 2) {
-        const dir = idx === 0 ? 1 : -1;
-        extra.rotation.z = Math.sin(elapsed * 7.5) * 0.32 * dir;
-      } else {
-        extra.rotation.y = Math.sin(elapsed * 5.2 + idx) * 0.25;
+      switch (arch) {
+        case 'floating':
+          extra.rotation.y = elapsed * 2.2;
+          break;
+        case 'winged':
+          if (idx < 2) {
+            const dir = idx === 0 ? 1 : -1;
+            extra.rotation.z = Math.sin(elapsed * 7.5) * 0.32 * dir;
+          } else {
+            extra.rotation.y = Math.sin(elapsed * 5.2 + idx) * 0.25;
+          }
+          break;
+        case 'antlered':
+          extra.rotation.z = Math.sin(elapsed * 1.6 + seed + idx) * 0.05;
+          break;
+        case 'golem':
+          extra.rotation.y = Math.sin(elapsed * 0.9 + seed) * 0.08;
+          break;
+        case 'serpentine': {
+          // ondulation qui se propage de la tête vers la queue
+          const wave = elapsed * (isMoving ? 9 : 4) + seed - idx * 0.85;
+          extra.position.x = Math.sin(wave) * 0.07 * Math.min(4, idx + 1);
+          extra.rotation.y = Math.cos(wave) * 0.22;
+          break;
+        }
+        case 'jelly':
+          extra.rotation.x = Math.sin(elapsed * 2.4 + idx * 1.3 + seed) * 0.3;
+          extra.rotation.z = Math.cos(elapsed * 2.0 + idx) * 0.22;
+          break;
+        default:
+          extra.rotation.y = Math.sin(elapsed * 5.2 + idx) * 0.25;
       }
     });
   }
-
   private updateParticles(dt: number): void {
     let dirty = false;
     for (let i = 0; i < PARTICLE_POOL_SIZE; i++) {
@@ -2504,35 +2851,33 @@ export class VoxelEngine {
   }
 
   private updateWeather(dt: number): void {
-    const isVolcano = this.activeBiomeId === 'volcano';
-    const isShore = this.activeBiomeId === 'shore';
-    const isSanctuary = this.activeBiomeId === 'sanctuary';
+    const kind = this.weatherKind;
+    const isRain = kind === 'rain';
+    const sway = isRain ? 0.15 : kind === 'snow' ? 0.9 : 0.65;
 
-    for (let i = 0; i < WEATHER_COUNT; i++) {
+    for (let i = 0; i < this.weatherCount; i++) {
       const m = this.weatherMotes[i];
       if (!m) continue;
-      m.phase += dt * (isSanctuary ? 1.8 : 2.6);
-      m.x += (m.vx + Math.sin(m.phase) * (isShore ? 0.15 : 0.65)) * dt;
+      m.phase += dt * (kind === 'float' ? 1.8 : 2.6);
+      m.x += (m.vx + Math.sin(m.phase) * sway) * dt;
       m.y += m.vy * dt;
-      m.z += (m.vz + Math.cos(m.phase * 0.8) * (isShore ? 0.15 : 0.55)) * dt;
+      m.z += (m.vz + Math.cos(m.phase * 0.8) * (isRain ? 0.15 : 0.55)) * dt;
 
       // Wrap seamlessly inside biome volume
-      if (isVolcano) {
+      if (kind === 'rise') {
         if (m.y > 14) {
           m.y = 0.5;
           m.x = (Math.random() - 0.5) * 34;
           m.z = (Math.random() - 0.5) * 34;
         }
-      } else if (isSanctuary) {
+      } else if (kind === 'float') {
         if (m.y > 15 || m.y < 1.2) {
           m.vy *= -1;
         }
-      } else {
-        if (m.y < 0.3) {
-          m.y = 11 + Math.random() * 6;
-          m.x = (Math.random() - 0.5) * 36;
-          m.z = (Math.random() - 0.5) * 36;
-        }
+      } else if (m.y < 0.3) {
+        m.y = 11 + Math.random() * 6;
+        m.x = (Math.random() - 0.5) * 36;
+        m.z = (Math.random() - 0.5) * 36;
       }
 
       if (m.x > 20) m.x = -20;
@@ -2541,8 +2886,8 @@ export class VoxelEngine {
       else if (m.z < -20) m.z = 20;
 
       _dummy.position.set(m.x, m.y, m.z);
-      if (isShore) {
-        _dummy.rotation.set(0, 0, 0.12);
+      if (isRain) {
+        _dummy.rotation.set(0, 0, m.vx < -4 ? 0.3 : 0.12);
       } else {
         _dummy.rotation.set(m.phase * 0.7, m.phase * 0.9, 0);
       }
@@ -2552,7 +2897,6 @@ export class VoxelEngine {
     }
     this.weatherMesh.instanceMatrix.needsUpdate = true;
   }
-
   private updateCamera(dt: number): void {
     if (this.screenState === 'title') {
       // Atmospheric isometric diorama orbit with upper sky negative space for the Title Lockup
@@ -2680,7 +3024,17 @@ export class VoxelEngine {
     window.removeEventListener('blur', this.handleBlur);
     document.removeEventListener('visibilitychange', this.handleVisibility);
     this.clearProjectilesAndTelegraphs();
+    this.clearGroup(this.worldGroup);
+    this.clearGroup(this.actorsGroup);
     this.floatingText.dispose();
+    this.particleMesh.geometry.dispose();
+    (this.particleMesh.material as THREE.Material).dispose();
+    this.particleMesh.dispose();
+    this.weatherMesh.geometry.dispose();
+    (this.weatherMesh.material as THREE.Material).dispose();
+    this.weatherMesh.dispose();
+    this.boltGeo?.dispose();
+    this.boltMat?.dispose();
     this.renderer.dispose();
   }
 }
