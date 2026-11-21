@@ -195,7 +195,43 @@ interface CampWanderer {
   waitTimer: number;
   walkPhase: number;
   facing: number;
+  emoteTimer: number; // délai avant le prochain petit saut de joie
+  emoteT: number; // temps restant du saut en cours
 }
+
+interface EvolutionSequence {
+  t: number;
+  revealed: boolean;
+  rig: VoxelCreatureRig;
+  baseScale: number;
+  toSpeciesId: string;
+  spawnAcc: number;
+  onReveal?: () => void;
+  onDone: () => void;
+}
+
+// Scène d'évolution : devant la marmite, face caméra
+const EVO_X = 0;
+const EVO_Z = 3.2; // assez près du centre pour que la caméra reste devant les arbres du pourtour
+const EVO_CHARGE_SEC = 2.0;
+const EVO_TOTAL_SEC = 3.8;
+const BOSS_INTRO_SEC = 1.9;
+const CONFETTI_COLORS = ['#F4B942', '#E85D3F', '#2FB97A', '#38BDF8', '#C084FC', '#FAF7F0'];
+
+// Cycle jour/nuit doux du camp (un tour complet = CAMP_DAY_LENGTH secondes)
+const CAMP_DAY_LENGTH = 150;
+function skyKey(t: number, sky: string, fog: string, key: string, keyI: number, hemiI: number) {
+  return { t, sky: new THREE.Color(sky), fog: new THREE.Color(fog), key: new THREE.Color(key), keyI, hemiI };
+}
+const CAMP_SKY_KEYS = [
+  skyKey(0.0, '#F6C9A0', '#F8DDC6', '#FFD2A6', 1.0, 0.46), // aube
+  skyKey(0.1, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52), // jour
+  skyKey(0.52, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52),
+  skyKey(0.64, '#F0A774', '#F3C3A0', '#FFB27A', 1.0, 0.46), // crépuscule
+  skyKey(0.74, '#27345E', '#34437A', '#A9BCFF', 0.5, 0.36), // nuit claire
+  skyKey(0.92, '#27345E', '#34437A', '#A9BCFF', 0.5, 0.36),
+  skyKey(1.0, '#F6C9A0', '#F8DDC6', '#FFD2A6', 1.0, 0.46),
+];
 
 interface WeatherMote {
   x: number;
@@ -293,6 +329,19 @@ export class VoxelEngine {
   private lightningFlash = 0;
   private stormTimer = 4;
   private baseHemiIntensity = 0.52;
+
+  // Moments forts : cycle jour/nuit, évolution, entrée de boss, fête de victoire
+  private campClock = 0.2;
+  private evo: EvolutionSequence | null = null;
+  private evoRing: THREE.Mesh | null = null;
+  private evoRingT = 0;
+  private bossIntroTimer = 0;
+  private bossIntroActor: CombatActor | null = null;
+  private bossDropY = 0;
+  private bossDropVel = 0;
+  private bossIntroInfo: { name: string; title: string; element: ElementType } | null = null;
+  private resultSent = false;
+  private confettiTimer = 0;
 
   // Mode & state
   private screenState: 'title' | 'playing' | 'paused' | 'gameover' = 'title';
@@ -695,6 +744,13 @@ export class VoxelEngine {
     this.clearGroup(this.worldGroup);
     this.clearGroup(this.actorsGroup);
     this.campWanderers = [];
+    this.evo = null; // le rig d'évolution vient d'être libéré avec actorsGroup
+    this.clearEvoRing();
+    this.bossIntroTimer = 0;
+    this.bossIntroActor = null;
+    this.bossIntroInfo = null;
+    this.resultSent = false;
+    this.pendingVictory = false;
 
     const biome = BIOMES.meadow;
     this.scene.background = new THREE.Color(biome.skyHex);
@@ -739,6 +795,8 @@ export class VoxelEngine {
         waitTimer: 0.8 + idx * 0.6,
         walkPhase: idx * 1.4,
         facing: 0,
+        emoteTimer: 3 + idx * 2.5,
+        emoteT: 0,
       });
     });
 
@@ -776,6 +834,14 @@ export class VoxelEngine {
     this.lastReactionColor = null;
     this.lastReactionTimer = 0;
     this.expeditionEnded = false;
+    this.pendingVictory = false;
+    this.resultSent = false;
+    this.confettiTimer = 0;
+    this.bossIntroTimer = 0;
+    this.bossIntroActor = null;
+    this.bossIntroInfo = null;
+    this.evo = null;
+    this.clearEvoRing();
     this.endDelayTimer = 0;
     this.waveSpawnDelay = 0;
     this.trauma = 0;
@@ -890,6 +956,9 @@ export class VoxelEngine {
       : `Vague ${index + 1} / ${this.activeStage.waves.length}`;
     this.bannerTimer = 2.4;
 
+    const stageHpMult = this.activeStage.enemyHpMult ?? 1;
+    const stageAtkMult = this.activeStage.enemyAtkMult ?? 1;
+    const stageBossHpMult = this.activeStage.bossHpMult ?? 1;
     wave.enemies.forEach((def, i) => {
       const species = SPECIES[def.speciesId] ?? SPECIES.bourgeon;
       const isBoss = Boolean(def.isBoss);
@@ -905,8 +974,10 @@ export class VoxelEngine {
 
       // Balanced enemy stats so Level 1 is genuinely winnable and later stages scale meaningfully
       const levelScale = 1 + (def.level - 1) * 0.14;
-      const maxHp = Math.round(species.baseHp * levelScale * (isBoss ? 3.4 : 1.15));
-      const atk = Math.round(species.baseAtk * (0.42 + (def.level - 1) * 0.055) * (isBoss ? 1.45 : 0.9));
+      const maxHp = Math.round(species.baseHp * levelScale * (isBoss ? 3.4 * stageBossHpMult : 1.15) * stageHpMult);
+      const atk = Math.round(
+        species.baseAtk * (0.42 + (def.level - 1) * 0.055) * (isBoss ? 1.45 : 0.9) * stageAtkMult,
+      );
 
       const isFinalBiomeBoss = isBoss && this.activeStage?.stageNumber === 3;
       this.enemies.push({
@@ -962,6 +1033,290 @@ export class VoxelEngine {
 
       this.spawnParticleBurst(spawnX, 0.8, spawnZ, species.palette.accent, isBoss ? 20 : 10, 4.5);
     });
+
+    // Entrée de boss : il tombe du ciel pendant une courte cinématique (combat gelé)
+    const boss = isBossWave ? this.enemies.find((e) => e.isBoss && !e.removed && !e.fainted) : undefined;
+    if (boss) {
+      this.bossIntroActor = boss;
+      this.bossIntroTimer = BOSS_INTRO_SEC;
+      this.bossDropY = 11;
+      this.bossDropVel = 0;
+      this.bossIntroInfo = {
+        name: boss.rig.species.name,
+        title:
+          this.activeStage.stageNumber === 3
+            ? `Souverain — ${BIOMES[this.activeStage.biomeId].name}`
+            : `Gardien — ${this.activeStage.name}`,
+        element: boss.rig.species.element,
+      };
+      this.bannerText = null;
+      this.bannerTimer = 0;
+      boss.rig.root.position.y = this.bossDropY;
+      soundFx.playBossIntro();
+      this.emitHudSnapshot();
+    }
+  }
+
+  private updateBossIntro(dt: number): void {
+    const boss = this.bossIntroActor;
+    this.bossIntroTimer = Math.max(0, this.bossIntroTimer - dt);
+    if (boss && this.bossDropY > 0) {
+      this.bossDropVel += 46 * dt;
+      this.bossDropY = Math.max(0, this.bossDropY - this.bossDropVel * dt);
+      if (this.bossDropY === 0) {
+        // Atterrissage : onde de choc, poussière, écrasement
+        boss.squashY = 0.58;
+        this.trauma = Math.min(1, this.trauma + 0.6);
+        this.spawnShockwaveRing(boss.x, boss.z, 5.5, boss.rig.species.palette.accent);
+        this.spawnElementBurst(boss.x, 0.3, boss.z, 'rock', 22, 1.5);
+        this.spawnElementBurst(boss.x, 0.8, boss.z, boss.rig.species.element, 18, 1.4);
+        soundFx.playHit(true, false);
+        soundFx.playElementImpact('rock', true);
+      }
+    }
+    if (this.bossIntroTimer === 0) {
+      this.bossIntroActor = null;
+      this.bossIntroInfo = null;
+      this.bossDropY = 0;
+      this.bannerText = 'ALERTE BOSS ! Préparez Dispersion !';
+      this.bannerTimer = 2.2;
+      this.emitHudSnapshot();
+    }
+  }
+
+  private updateEnemyDissolve(enemy: CombatActor, dt: number): void {
+    enemy.koDissolveTimer -= dt;
+    enemy.rig.bodyPivot.rotation.z = THREE.MathUtils.damp(enemy.rig.bodyPivot.rotation.z, -Math.PI / 2, 10, dt);
+    const s = Math.max(0.01, enemy.koDissolveTimer / 0.42) * enemy.rig.species.scale * (enemy.isBoss ? 1.48 : 0.96);
+    enemy.rig.root.scale.setScalar(s);
+    if (enemy.koDissolveTimer <= 0) {
+      enemy.removed = true;
+      this.actorsGroup.remove(enemy.rig.root);
+      this.disposeObject(enemy.rig.root);
+    }
+  }
+
+  /** Après la fin du combat : les K.O. se dissolvent, et en cas de victoire l'escouade fait la fête. */
+  private updateEndSequence(dt: number): void {
+    for (const enemy of this.enemies) {
+      if (!enemy.removed && enemy.fainted) this.updateEnemyDissolve(enemy, dt);
+    }
+    if (!this.pendingVictory) return;
+
+    let cx = 0;
+    let cz = 0;
+    let n = 0;
+    for (let i = 0; i < this.allies.length; i++) {
+      const ally = this.allies[i];
+      if (ally.fainted) continue;
+      const hopT = this.elapsedTotal * 8.5 + i * 1.3;
+      ally.rig.root.position.set(ally.x, 0, ally.z);
+      ally.rig.root.rotation.y = Math.sin(this.elapsedTotal * 3 + i * 2.1) * 0.7;
+      this.animateRigPose(ally.rig, hopT, true, 1 + Math.sin(hopT * 2) * 0.07, this.elapsedTotal);
+      ally.rig.bodyPivot.position.y += Math.abs(Math.sin(hopT)) * 0.4;
+      ally.rig.bodyPivot.rotation.z = 0;
+      if (ally.rig.hpBarBg) ally.rig.hpBarBg.visible = false;
+      cx += ally.x;
+      cz += ally.z;
+      n += 1;
+    }
+    if (n === 0) return;
+
+    this.confettiTimer -= dt;
+    if (this.confettiTimer <= 0) {
+      // rafales denses avant l'écran de résultat, puis pluie légère derrière la fenêtre
+      this.confettiTimer = this.resultSent ? 0.5 : 0.14;
+      this.spawnConfetti(cx / n + (Math.random() - 0.5) * 7, 1.2 + Math.random() * 1.5, cz / n + (Math.random() - 0.5) * 5, 9);
+      if (!this.resultSent) soundFx.playConfettiPop();
+    }
+  }
+
+  private spawnConfetti(x: number, y: number, z: number, count: number): void {
+    for (let i = 0; i < count; i++) {
+      const slot = this.particles[this.particleCursor];
+      this.particleCursor = (this.particleCursor + 1) % PARTICLE_POOL_SIZE;
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 1.2 + Math.random() * 2.6;
+      slot.active = true;
+      slot.x = x;
+      slot.y = y;
+      slot.z = z;
+      slot.vx = Math.cos(ang) * spd;
+      slot.vy = 4 + Math.random() * 3.4;
+      slot.vz = Math.sin(ang) * spd;
+      slot.maxLife = 1.0 + Math.random() * 0.6;
+      slot.life = slot.maxLife;
+      slot.size = 0.14 + Math.random() * 0.1;
+      slot.colorHex = CONFETTI_COLORS[(i + Math.floor(Math.random() * 6)) % CONFETTI_COLORS.length];
+      slot.gravity = 6.5;
+      slot.drag = 1.3;
+      slot.stretchY = 0.35;
+      slot.bounce = 0;
+    }
+  }
+
+  /** Cycle jour/nuit doux du camp : ciel, brume et lumières interpolés entre des clés. */
+  private updateDayNight(dt: number): void {
+    this.campClock = (this.campClock + dt / CAMP_DAY_LENGTH) % 1;
+    let idx = 0;
+    while (idx < CAMP_SKY_KEYS.length - 2 && this.campClock >= CAMP_SKY_KEYS[idx + 1].t) idx += 1;
+    const a = CAMP_SKY_KEYS[idx];
+    const b = CAMP_SKY_KEYS[idx + 1];
+    const raw = THREE.MathUtils.clamp((this.campClock - a.t) / Math.max(0.0001, b.t - a.t), 0, 1);
+    const f = raw * raw * (3 - 2 * raw);
+    if (this.scene.background instanceof THREE.Color) this.scene.background.lerpColors(a.sky, b.sky, f);
+    if (this.scene.fog) this.scene.fog.color.lerpColors(a.fog, b.fog, f);
+    this.keyLight.color.lerpColors(a.key, b.key, f);
+    this.keyLight.intensity = THREE.MathUtils.lerp(a.keyI, b.keyI, f);
+    this.baseHemiIntensity = THREE.MathUtils.lerp(a.hemiI, b.hemiI, f);
+  }
+
+  /**
+   * Animation d'évolution au camp : la créature s'élève en tournoyant dans un halo blanc,
+   * puis la nouvelle forme apparaît dans une gerbe d'étincelles. `onDone` recharge le camp.
+   */
+  public playEvolutionSequence(
+    fromSpeciesId: string,
+    toSpeciesId: string,
+    callbacks: { onReveal?: () => void; onDone: () => void },
+  ): void {
+    if (this.playMode !== 'camp' || this.disposed) {
+      callbacks.onReveal?.();
+      callbacks.onDone();
+      return;
+    }
+    if (this.evo) {
+      this.actorsGroup.remove(this.evo.rig.root);
+      this.disposeObject(this.evo.rig.root);
+    }
+    const rig = buildVoxelCreature(fromSpeciesId);
+    rig.root.position.set(EVO_X, 0, EVO_Z);
+    this.actorsGroup.add(rig.root);
+    this.evo = {
+      t: 0,
+      revealed: false,
+      rig,
+      baseScale: rig.root.scale.x,
+      toSpeciesId,
+      spawnAcc: 0,
+      onReveal: callbacks.onReveal,
+      onDone: callbacks.onDone,
+    };
+    soundFx.playEvolutionCharge();
+  }
+
+  private clearEvoRing(): void {
+    if (!this.evoRing) return;
+    this.fxGroup.remove(this.evoRing);
+    this.evoRing.geometry.dispose();
+    (this.evoRing.material as THREE.Material).dispose();
+    this.evoRing = null;
+  }
+
+  private updateEvolution(dt: number): void {
+    if (this.evoRing) {
+      this.evoRingT += dt;
+      const k = Math.min(1, this.evoRingT / 0.6);
+      this.evoRing.scale.setScalar(0.6 + k * 6.5);
+      (this.evoRing.material as THREE.MeshBasicMaterial).opacity = (1 - k) * 0.85;
+      if (k >= 1) this.clearEvoRing();
+    }
+
+    const evo = this.evo;
+    if (!evo) return;
+    evo.t += dt;
+
+    if (!evo.revealed) {
+      // Phase 1 — charge : lévitation, toupie de plus en plus rapide, halo blanc croissant
+      const p = Math.min(1, evo.t / EVO_CHARGE_SEC);
+      this.animateRigPose(evo.rig, 0, false, 1, this.elapsedTotal);
+      evo.rig.root.position.y = p * p * 0.9;
+      evo.rig.root.rotation.y += dt * (2 + p * p * 26);
+      evo.rig.root.scale.setScalar(evo.baseScale * (1 + Math.sin(evo.t * (8 + p * 20)) * 0.06 * p));
+      for (const m of evo.rig.flashMaterials) {
+        m.emissive.set('#FFFFFF');
+        m.emissiveIntensity = p * p * 1.5;
+      }
+      // étincelles aspirées en spirale vers la créature
+      evo.spawnAcc += dt;
+      while (evo.spawnAcc > 0.045) {
+        evo.spawnAcc -= 0.045;
+        const slot = this.particles[this.particleCursor];
+        this.particleCursor = (this.particleCursor + 1) % PARTICLE_POOL_SIZE;
+        const ang = Math.random() * Math.PI * 2;
+        const r = 2.2 + Math.random() * 1.2;
+        const life = 0.45 + Math.random() * 0.2;
+        slot.active = true;
+        slot.x = EVO_X + Math.cos(ang) * r;
+        slot.y = 0.3 + Math.random() * 2.2;
+        slot.z = EVO_Z + Math.sin(ang) * r;
+        slot.vx = (-Math.cos(ang) * r) / life - Math.sin(ang) * 1.6;
+        slot.vy = (1.0 - slot.y) / life;
+        slot.vz = (-Math.sin(ang) * r) / life + Math.cos(ang) * 1.6;
+        slot.maxLife = life;
+        slot.life = life;
+        slot.size = 0.12 + Math.random() * 0.1;
+        slot.colorHex = Math.random() < 0.5 ? '#FFFFFF' : evo.rig.species.palette.accent;
+        slot.gravity = 0;
+        slot.drag = 0;
+        slot.stretchY = 1;
+        slot.bounce = 0;
+      }
+
+      if (evo.t >= EVO_CHARGE_SEC) {
+        // Bascule : l'ancienne forme est libérée, la nouvelle surgit
+        this.actorsGroup.remove(evo.rig.root);
+        this.disposeObject(evo.rig.root);
+        const next = buildVoxelCreature(evo.toSpeciesId);
+        next.root.position.set(EVO_X, 0.9, EVO_Z);
+        this.actorsGroup.add(next.root);
+        evo.rig = next;
+        evo.baseScale = next.root.scale.x;
+        evo.revealed = true;
+        soundFx.playEvolutionBurst();
+        this.spawnParticleBurst(EVO_X, 1.3, EVO_Z, '#FFFFFF', 26, 7.5);
+        this.spawnParticleBurst(EVO_X, 1.3, EVO_Z, '#F4B942', 26, 6.0);
+        this.spawnElementBurst(EVO_X, 1.0, EVO_Z, next.species.element, 22, 1.6);
+        this.trauma = Math.min(1, this.trauma + 0.35);
+        this.lightningFlash = Math.max(this.lightningFlash, this.shakeEnabled ? 0.6 : 0.25);
+        this.clearEvoRing();
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.82, 1, 32),
+          new THREE.MeshBasicMaterial({
+            color: '#FFF7D6',
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.85,
+            depthWrite: false,
+          }),
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(EVO_X, 0.08, EVO_Z);
+        this.fxGroup.add(ring);
+        this.evoRing = ring;
+        this.evoRingT = 0;
+        evo.onReveal?.();
+      }
+      return;
+    }
+
+    // Phase 2 — révélation : apparition avec rebond, sauts de joie, fontaine dorée
+    const q = Math.min(1, (evo.t - EVO_CHARGE_SEC) / (EVO_TOTAL_SEC - EVO_CHARGE_SEC));
+    const pop = q < 0.2 ? 0.3 + (q / 0.2) * 0.95 : 1.25 - Math.min(1, (q - 0.2) / 0.15) * 0.25;
+    evo.rig.root.scale.setScalar(evo.baseScale * pop);
+    evo.rig.root.position.y = Math.max(0, 0.9 - q * 3.6);
+    evo.rig.root.rotation.y = THREE.MathUtils.damp(evo.rig.root.rotation.y, 0.2, 6, dt);
+    this.animateRigPose(evo.rig, this.elapsedTotal * 9, q > 0.3, 1, this.elapsedTotal);
+    evo.spawnAcc += dt;
+    if (evo.spawnAcc > 0.16) {
+      evo.spawnAcc = 0;
+      this.spawnParticleBurst(EVO_X + (Math.random() - 0.5) * 2, 0.4, EVO_Z + (Math.random() - 0.5) * 1.5, '#F4B942', 4, 3.2);
+    }
+    if (evo.t >= EVO_TOTAL_SEC) {
+      const done = evo.onDone;
+      this.evo = null; // le rig reste en scène : onDone recharge le camp, qui le libère
+      done();
+    }
   }
 
   public triggerAllySkill(slotIndex: number): boolean {
@@ -1112,13 +1467,6 @@ export class VoxelEngine {
 
     this.emitHudSnapshot();
     return true;
-  }
-
-  public triggerEvolutionFx(): void {
-    soundFx.playEvolution();
-    for (const w of this.campWanderers) {
-      this.spawnParticleBurst(w.x, 1.0, w.z, '#F4B942', 20, 5.2);
-    }
   }
 
   public triggerCookBurstFx(colorHex: string): void {
@@ -1802,6 +2150,9 @@ export class VoxelEngine {
   }
 
   private updateCamp(dt: number): void {
+    this.updateDayNight(dt);
+    this.updateEvolution(dt);
+
     // Animate cooking pot embers & steam cubes
     if (this.potFireMesh) {
       const flicker = 0.92 + Math.sin(this.elapsedTotal * 14) * 0.14;
@@ -1814,62 +2165,95 @@ export class VoxelEngine {
     }
 
     for (const w of this.campWanderers) {
-      const dx = w.targetX - w.x;
-      const dz = w.targetZ - w.z;
-      const dist = Math.hypot(dx, dz);
-      if (dist > 0.25) {
-        const spd = 2.2;
-        const step = Math.min(dist, spd * dt);
-        w.x += (dx / dist) * step;
-        w.z += (dz / dist) * step;
-        w.facing = Math.atan2(dx, dz);
-        w.walkPhase += step * 4.4;
-        this.animateRigPose(w.rig, w.walkPhase, true, 1, this.elapsedTotal);
-      } else {
-        w.waitTimer -= dt;
+      let lift = 0;
+      if (this.evo) {
+        // Toute l'escouade s'arrête pour regarder la métamorphose
+        w.facing = Math.atan2(EVO_X - w.x, EVO_Z - w.z);
         this.animateRigPose(w.rig, w.walkPhase, false, 1, this.elapsedTotal);
-        if (w.waitTimer <= 0) {
-          const ang = Math.random() * Math.PI * 2;
-          const r = 2.8 + Math.random() * 4.6;
-          w.targetX = Math.cos(ang) * r;
-          w.targetZ = Math.sin(ang) * r + 1.2;
-          w.waitTimer = 1.8 + Math.random() * 2.4;
+      } else {
+        const dx = w.targetX - w.x;
+        const dz = w.targetZ - w.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 0.25) {
+          const spd = 2.2;
+          const step = Math.min(dist, spd * dt);
+          w.x += (dx / dist) * step;
+          w.z += (dz / dist) * step;
+          w.facing = Math.atan2(dx, dz);
+          w.walkPhase += step * 4.4;
+          this.animateRigPose(w.rig, w.walkPhase, true, 1, this.elapsedTotal);
+        } else {
+          w.waitTimer -= dt;
+          // Émote d'attente : un petit saut de joie de temps en temps
+          w.emoteTimer -= dt;
+          if (w.emoteT <= 0 && w.emoteTimer <= 0) {
+            w.emoteT = 0.55;
+            w.emoteTimer = 5 + Math.random() * 7;
+            this.spawnParticleBurst(w.x, 1.5, w.z, w.rig.species.palette.accent, 4, 2.2);
+            if (this.screenState === 'playing') soundFx.playIdleChirp();
+          }
+          let squash = 1;
+          if (w.emoteT > 0) {
+            w.emoteT = Math.max(0, w.emoteT - dt);
+            const k = 1 - w.emoteT / 0.55;
+            lift = Math.sin(k * Math.PI) * 0.6;
+            squash = 1 + Math.sin(k * Math.PI * 2) * 0.12;
+          }
+          this.animateRigPose(w.rig, w.walkPhase, false, squash, this.elapsedTotal);
+          if (w.waitTimer <= 0 && w.emoteT <= 0) {
+            const ang = Math.random() * Math.PI * 2;
+            const r = 2.8 + Math.random() * 4.6;
+            w.targetX = Math.cos(ang) * r;
+            w.targetZ = Math.sin(ang) * r + 1.2;
+            w.waitTimer = 1.8 + Math.random() * 2.4;
+          }
         }
       }
+      w.rig.bodyPivot.position.y += lift; // l'ombre de contact reste au sol
       w.rig.root.position.set(w.x, 0, w.z);
       w.rig.root.rotation.y = w.facing;
     }
   }
-
   private updateExpedition(dt: number, simDt: number): void {
     if (!this.activeStage) return;
 
-    if (this.expeditionEnded) {
-      this.endDelayTimer -= dt;
-      if (this.endDelayTimer <= 0) {
-        const boss = this.enemies.find((e) => e.isBoss);
-        const bossPct = boss ? (boss.hp / Math.max(1, boss.maxHp)) * 100 : 0;
-        const wavesCleared = this.pendingVictory
-          ? this.activeStage.waves.length
-          : this.waveIndex;
-        const cb = this.callbacks.onExpeditionComplete;
-        this.expeditionEnded = false; // prevent re-firing
-        this.screenState = 'gameover';
-        cb({
-          victory: this.pendingVictory,
-          clearTimeSec: this.expeditionElapsed,
-          wavesCleared,
-          damageDealt: this.damageDealt,
-          bossHpPercentRemaining: this.pendingVictory ? 0 : bossPct,
-          reactionsTriggered: this.reactionsTriggered,
-          ultimatesUsed: this.ultimatesUsed,
-          perfectDodges: this.perfectDodges,
-          maxCombo: this.maxCombo,
-        });
+    if (this.expeditionEnded || this.resultSent) {
+      this.updateEndSequence(dt);
+      if (this.expeditionEnded) {
+        this.endDelayTimer -= dt;
+        if (this.endDelayTimer <= 0) {
+          const boss = this.enemies.find((e) => e.isBoss);
+          const bossPct = boss ? (boss.hp / Math.max(1, boss.maxHp)) * 100 : 0;
+          const wavesCleared = this.pendingVictory
+            ? this.activeStage.waves.length
+            : this.waveIndex;
+          const cb = this.callbacks.onExpeditionComplete;
+          this.expeditionEnded = false;
+          // Le résultat ne part qu'UNE fois : sans ce verrou, la boucle re-détectait la victoire
+          // sous la fenêtre de fin et renvoyait les récompenses en boucle.
+          this.resultSent = true;
+          this.screenState = 'gameover';
+          cb({
+            victory: this.pendingVictory,
+            clearTimeSec: this.expeditionElapsed,
+            wavesCleared,
+            damageDealt: this.damageDealt,
+            bossHpPercentRemaining: this.pendingVictory ? 0 : bossPct,
+            reactionsTriggered: this.reactionsTriggered,
+            ultimatesUsed: this.ultimatesUsed,
+            perfectDodges: this.perfectDodges,
+            maxCombo: this.maxCombo,
+          });
+        }
       }
       return;
     }
 
+    if (this.bossIntroTimer > 0) {
+      // Cinématique d'entrée : la simulation est gelée, seul le boss tombe
+      this.updateBossIntro(dt);
+      simDt = 0;
+    }
     this.expeditionElapsed += simDt;
     if (this.scatterCooldown > 0) this.scatterCooldown = Math.max(0, this.scatterCooldown - simDt);
     if (this.bannerTimer > 0) {
@@ -2078,18 +2462,9 @@ export class VoxelEngine {
       this.updateActorCommon(enemy, dt, simDt);
 
       if (enemy.fainted) {
-        enemy.koDissolveTimer -= dt;
-        enemy.rig.bodyPivot.rotation.z = THREE.MathUtils.damp(enemy.rig.bodyPivot.rotation.z, -Math.PI / 2, 10, dt);
-        const s = Math.max(0.01, enemy.koDissolveTimer / 0.42) * enemy.rig.species.scale * (enemy.isBoss ? 1.48 : 0.96);
-        enemy.rig.root.scale.setScalar(s);
-        if (enemy.koDissolveTimer <= 0) {
-          enemy.removed = true;
-          this.actorsGroup.remove(enemy.rig.root);
-          this.disposeObject(enemy.rig.root);
-        }
+        this.updateEnemyDissolve(enemy, dt);
         continue;
       }
-
       const target = this.findNearestLiving(enemy.x, enemy.z, this.allies);
       if (!target) continue;
 
@@ -2441,6 +2816,8 @@ export class VoxelEngine {
             const strikeRad = 1.9;
             const bx = enemy.x;
             const bz = enemy.z;
+            // Les cercles se chevauchent : chaque allié n'encaisse qu'UN impact par rafale
+            const struck = new Set<string>();
             this.bannerText = 'Foudre en Rafale — sortez de la ligne !';
             this.bannerTimer = 1.4;
             soundFx.playTelegraph();
@@ -2468,8 +2845,13 @@ export class VoxelEngine {
                   this.spawnElementBurst(sx, 0.5, sz, 'electric', 10, 1.2);
                   this.trauma = Math.min(1, this.trauma + 0.14);
                   for (const ally of this.allies) {
-                    if (!ally.fainted && Math.hypot(ally.x - sx, ally.z - sz) <= strikeRad + 0.35) {
+                    if (
+                      !ally.fainted &&
+                      !struck.has(ally.id) &&
+                      Math.hypot(ally.x - sx, ally.z - sz) <= strikeRad + 0.35
+                    ) {
                       const exposed = ally.invulnTimer <= 0;
+                      if (exposed) struck.add(ally.id);
                       this.applyDamageToActor(ally, Math.round(enemy.atk * 1.25), enemy, true, false, '#FACC15');
                       if (exposed && !ally.fainted) this.applyStatusToActor(ally, 'shocked', enemy.atk);
                     }
@@ -2510,7 +2892,7 @@ export class VoxelEngine {
                 for (const ally of this.allies) {
                   if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= eyeRad + 0.4) {
                     const exposed = ally.invulnTimer <= 0;
-                    this.applyDamageToActor(ally, Math.round(enemy.atk * 1.75), enemy, true, false, '#FACC15');
+                    this.applyDamageToActor(ally, Math.round(enemy.atk * 1.4), enemy, true, false, '#FACC15');
                     if (exposed && !ally.fainted) this.applyStatusToActor(ally, 'shocked', enemy.atk);
                   }
                 }
@@ -2547,6 +2929,10 @@ export class VoxelEngine {
       }
 
       this.animateRigPose(enemy.rig, enemy.walkPhase, moved, enemy.squashY, this.elapsedTotal);
+    }
+
+    if (this.bossIntroActor && this.bossDropY > 0) {
+      this.bossIntroActor.rig.root.position.y = this.bossDropY;
     }
 
     // Update projectiles
@@ -2646,10 +3032,11 @@ export class VoxelEngine {
       } else {
         this.expeditionEnded = true;
         this.pendingVictory = true;
-        this.endDelayTimer = 0.7;
+        this.endDelayTimer = 1.7; // le temps de fêter ça : sauts de joie + confettis
+        this.confettiTimer = 0;
         this.bannerText = 'VICTOIRE ! Expédition réussie !';
         this.bannerTimer = 2.0;
-        soundFx.playVictory();
+        soundFx.playFanfare();
         this.emitHudSnapshot();
       }
     }
@@ -2909,9 +3296,19 @@ export class VoxelEngine {
       _vecA.set(Math.sin(ang) * 21.5, 9.6, Math.cos(ang) * 21.5);
       _vecB.set(0.4, 2.5, -1.2);
     } else if (this.playMode === 'camp') {
-      // Scenic Base Camp diorama showing island shoreline, waystone, cauldron & roaming squad
-      _vecA.set(0.6, 11.4, 20.5);
-      _vecB.set(0.4, 1.4, -1.2);
+      if (this.evo) {
+        // Gros plan sur la créature qui évolue
+        _vecA.set(EVO_X + 1.6, 2.9, EVO_Z + 5.4);
+        _vecB.set(EVO_X, 1.2, EVO_Z);
+      } else {
+        // Scenic Base Camp diorama showing island shoreline, waystone, cauldron & roaming squad
+        _vecA.set(0.6, 11.4, 20.5);
+        _vecB.set(0.4, 1.4, -1.2);
+      }
+    } else if (this.bossIntroTimer > 0 && this.bossIntroActor) {
+      // Entrée de boss : la caméra plonge sur lui
+      _vecA.set(this.bossIntroActor.x - 1.5, 6.6, this.bossIntroActor.z + 10.5);
+      _vecB.set(this.bossIntroActor.x, 1.9, this.bossIntroActor.z);
     } else {
       // Expedition tactical isometric follow camera centered on living squad + slight enemy lead
       let sx = 0;
@@ -2932,8 +3329,14 @@ export class VoxelEngine {
       const focusX = nearestEnemy ? sx * 0.72 + nearestEnemy.x * 0.28 : sx;
       const focusZ = nearestEnemy ? sz * 0.72 + nearestEnemy.z * 0.28 : sz;
 
-      _vecA.set(focusX, 15.8, focusZ + 16.5);
-      _vecB.set(focusX, 0.7, focusZ);
+      if (this.pendingVictory && (this.expeditionEnded || this.resultSent)) {
+        // Victoire : la caméra se rapproche de l'escouade en fête
+        _vecA.set(sx, 10.2, sz + 11.5);
+        _vecB.set(sx, 1.0, sz);
+      } else {
+        _vecA.set(focusX, 15.8, focusZ + 16.5);
+        _vecB.set(focusX, 0.7, focusZ);
+      }
     }
 
     const alpha = 1 - Math.exp(-5.5 * dt);
@@ -2982,6 +3385,7 @@ export class VoxelEngine {
       enemiesRemaining: livingEnemies,
       damageDealt: this.damageDealt,
       bannerText: this.bannerText,
+      bossIntro: this.bossIntroTimer > 0 ? this.bossIntroInfo : null,
       boss: boss
         ? {
             name: boss.name,

@@ -17,6 +17,7 @@ import {
   computeSquadPower,
   computeStatusDuration,
   computeUltimateCharge,
+  computeVictoryStars,
   countClaimableRewards,
   createInitialSaveState,
   createOwnedCreature,
@@ -680,4 +681,53 @@ test('Giga: migration v2 -> v3 (sac de pierres, stats, progression intacte)', ()
 
   // Une version inconnue (future) est refusée plutôt que corrompue
   assert.equal(migrateSaveState({ ...v2, version: 4 }), null);
+});
+
+test('Giga: écran de victoire — étoiles et annonce du biome débloqué', () => {
+  const base = { victory: true, reactionsTriggered: 0, ultimatesUsed: 0, perfectDodges: 0 };
+  assert.equal(computeVictoryStars({ ...base, victory: false, reactionsTriggered: 9, ultimatesUsed: 3 }), 0);
+  assert.equal(computeVictoryStars(base), 1);
+  assert.equal(computeVictoryStars({ ...base, reactionsTriggered: 1 }), 1);
+  assert.equal(computeVictoryStars({ ...base, reactionsTriggered: 2 }), 2);
+  assert.equal(computeVictoryStars({ ...base, perfectDodges: 1 }), 2);
+  assert.equal(computeVictoryStars({ ...base, reactionsTriggered: 2, ultimatesUsed: 1 }), 3);
+
+  const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 10, bossHpPercentRemaining: 0 };
+  const fresh = createInitialSaveState('pyrocube', true);
+  const run = (stageId: string, victory = true) => {
+    const stage = STAGES.find((s) => s.id === stageId)!;
+    return applyExpeditionRewards({ ...fresh, highestStageIndex: stage.index }, stage, victory, stats, () => 0.4).outcome;
+  };
+  // Niveau suivant dans le même biome : pas d'annonce de biome
+  assert.equal(run('meadow-1').unlockedBiomeName, null);
+  // Dernier niveau d'un biome : le biome suivant est annoncé
+  assert.equal(run('meadow-3').unlockedBiomeName, 'Rive Azur');
+  assert.equal(run('sanctuary-3').unlockedBiomeName, 'Toundra Boréale');
+  assert.equal(run('tundra-3').unlockedBiomeName, 'Cime des Orages');
+  assert.equal(run('stormpeak-3').unlockedBiomeName, null);
+  assert.equal(run('sanctuary-3', false).unlockedBiomeName, null);
+  // Rejouer un niveau déjà dépassé n'annonce rien
+  const meadow3 = STAGES.find((s) => s.id === 'meadow-3')!;
+  const replay = applyExpeditionRewards({ ...fresh, highestStageIndex: 8 }, meadow3, true, stats, () => 0.4).outcome;
+  assert.equal(replay.unlockedBiomeName, null);
+  assert.equal(replay.unlockedNextStageName, null);
+});
+
+test('Giga: équilibrage des nouveaux biomes — réglé par niveau, anciens niveaux intacts', () => {
+  for (const stage of STAGES) {
+    if (stage.index < FRONTIER_STAGE_INDEX) {
+      // L'équilibrage historique ne bouge pas
+      assert.equal(stage.enemyHpMult, undefined, stage.id);
+      assert.equal(stage.enemyAtkMult, undefined, stage.id);
+      assert.equal(stage.bossHpMult, undefined, stage.id);
+      assert.equal(stage.bossKit, undefined, stage.id);
+    } else {
+      // Combats plus longs (PV) mais coups moins lourds : place aux mécaniques télégraphiées
+      assert.ok((stage.enemyHpMult ?? 1) > 1, stage.id);
+      assert.ok((stage.enemyAtkMult ?? 1) > 0 && (stage.enemyAtkMult ?? 1) < 1, stage.id);
+      assert.equal(stage.bossKit, stage.biomeId === 'tundra' ? 'frost' : 'storm', stage.id);
+      assert.ok((stage.bossHpMult ?? 1) >= 1, stage.id);
+      assert.equal(stage.waves.length, 3, stage.id);
+    }
+  }
 });

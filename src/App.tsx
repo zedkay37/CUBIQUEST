@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { CampHud, type CampDrawerTab } from './components/CampHud';
 import { CodexDrawer } from './components/CodexDrawer';
 import { CookingDrawer } from './components/CookingDrawer';
 import { ExpeditionDrawer } from './components/ExpeditionDrawer';
+import { EvolutionOverlay } from './components/EvolutionOverlay';
 import { ExpeditionHud } from './components/ExpeditionHud';
+import { OutcomeModal } from './components/OutcomeModal';
 import { QuestsDrawer } from './components/QuestsDrawer';
 import { StarterModal } from './components/StarterModal';
-import { OutcomeModal, PauseModal } from './components/StatusModals';
+import { PauseModal } from './components/StatusModals';
 import { TeamDrawer } from './components/TeamDrawer';
 import { TitleOverlay } from './components/TitleOverlay';
 import { soundFx } from './game/audio';
@@ -95,6 +98,10 @@ export default function App() {
   const [outcome, setOutcome] = useState<ExpeditionOutcome | null>(null);
   const [recruitedPreview, setRecruitedPreview] = useState<OwnedCreature | null>(null);
   const [codexHistory, setCodexHistory] = useState<CodexAnswer[]>([]);
+  const [evolution, setEvolution] = useState<{ from: string; to: string; revealed: boolean } | null>(
+    null,
+  );
+  const evolutionGuardRef = useRef(0);
 
   // Refs so Three.js callbacks never stale-close or tear down the canvas
   const saveRef = useRef(save);
@@ -139,6 +146,9 @@ export default function App() {
           result,
         );
         if (!previewRef.current) setSave(nextSave);
+        if (finalOutcome.unlockedBiomeName) {
+          window.setTimeout(() => soundFx.playBiomeUnlock(), 1100);
+        }
         setOutcome(finalOutcome);
         setScreenState('gameover');
       },
@@ -481,20 +491,40 @@ export default function App() {
   };
 
   const handleEvolve = (creatureUid: string) => {
-    setSave((prev) => {
-      const next = evolveCreature(prev, creatureUid);
-      if (next !== prev) {
-        engineRef.current?.loadCampScene(
-          getSquadCreatures(next),
-          next.pot.recipeId,
-          next.pot.status,
-        );
-        engineRef.current?.triggerEvolutionFx();
-      }
-      return next;
+    const prev = saveRef.current;
+    const before = prev.roster.find((c) => c.uid === creatureUid);
+    const next = evolveCreature(prev, creatureUid);
+    const after = next.roster.find((c) => c.uid === creatureUid);
+    if (!before || !after || next === prev) return;
+
+    saveRef.current = next;
+    setSave(next);
+    setActiveDrawer(null);
+    setEvolution({ from: before.speciesId, to: after.speciesId, revealed: false });
+
+    const finish = () => {
+      window.clearTimeout(evolutionGuardRef.current);
+      setEvolution(null);
+      engineRef.current?.loadCampScene(
+        getSquadCreatures(saveRef.current),
+        saveRef.current.pot.recipeId,
+        saveRef.current.pot.status,
+      );
+    };
+    // Filet de sécurité : si la séquence 3D est interrompue, l'habillage ne reste jamais bloqué
+    window.clearTimeout(evolutionGuardRef.current);
+    evolutionGuardRef.current = window.setTimeout(finish, 6500);
+
+    const engine = engineRef.current;
+    if (!engine) {
+      finish();
+      return;
+    }
+    engine.playEvolutionSequence(before.speciesId, after.speciesId, {
+      onReveal: () => setEvolution((cur) => (cur ? { ...cur, revealed: true } : cur)),
+      onDone: finish,
     });
   };
-
   // V0.2 Quests, Achievements & Local Save Import/Reset handlers
   const handleClaimQuest = (questUid: string) => {
     soundFx.playRewardClaim();
@@ -525,6 +555,7 @@ export default function App() {
     : null;
 
   return (
+    <MotionConfig reducedMotion="user">
     <main className="relative w-full h-full overflow-hidden bg-[#181E2A]">
       {/* Isolated WebGL 3D Canvas Mount (never re-created by React HUD state) */}
       <div
@@ -574,6 +605,16 @@ export default function App() {
             }}
           />
 
+          {/* Tiroirs du camp : fondu d'entrée/sortie (motion) + pop du panneau (CSS) */}
+          <AnimatePresence>
+            {activeDrawer && (
+              <motion.div
+                key={activeDrawer}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.16 }}
+              >
           {activeDrawer === 'expeditions' && (
             <ExpeditionDrawer
               save={save}
@@ -630,8 +671,23 @@ export default function App() {
               onClose={() => setActiveDrawer(null)}
             />
           )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
+
+      {/* Habillage de l'animation d'évolution (bloque les clics pendant la séquence) */}
+      <AnimatePresence>
+        {evolution && (
+          <EvolutionOverlay
+            key="evolution"
+            fromSpeciesId={evolution.from}
+            toSpeciesId={evolution.to}
+            revealed={evolution.revealed}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Expedition Active HUD */}
       {playMode === 'expedition' && hudSnapshot && screenState !== 'title' && (
@@ -672,5 +728,6 @@ export default function App() {
         />
       )}
     </main>
+    </MotionConfig>
   );
 }

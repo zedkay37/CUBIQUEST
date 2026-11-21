@@ -1,4 +1,5 @@
 import React from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Pause, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { ELEMENT_META, STATUS_META } from '../game/catalog';
 import type { ControlMode, ExpeditionHudSnapshot } from '../game/types';
@@ -149,9 +150,15 @@ export function ExpeditionHud({
           {(hud.comboCount >= 2 || hud.lastReactionLabel) && (
             <div className="flex items-center gap-2.5 px-3 py-1 rounded-lg bg-[#141A26]/90 border border-[#39445A] w-fit">
               {hud.comboCount >= 2 && (
-                <span className="font-mono-num font-extrabold text-sm text-[#F4B942]">
+                <motion.span
+                  key={hud.comboCount}
+                  initial={{ scale: 1.45 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 520, damping: 16 }}
+                  className="inline-block origin-left font-mono-num font-extrabold text-sm text-[#F4B942]"
+                >
                   ×{hud.comboCount} COMBO
-                </span>
+                </motion.span>
               )}
               {hud.lastReactionLabel && (
                 <span
@@ -213,11 +220,76 @@ export function ExpeditionHud({
       </div>
 
       {/* Transient Wave / Boss Banner */}
-      {hud.bannerText && (
-        <div className="self-center px-5 py-1.5 rounded-lg bg-[#181E2A]/92 border-2 border-[#F4B942] font-display font-bold text-base sm:text-lg text-[#F4B942] tracking-wide">
-          {hud.bannerText}
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {hud.bannerText && !hud.bossIntro && (
+          <motion.div
+            key={hud.bannerText}
+            initial={{ opacity: 0, y: -14, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+            className="self-center px-5 py-1.5 rounded-lg bg-[#181E2A]/92 border-2 border-[#F4B942] font-display font-bold text-base sm:text-lg text-[#F4B942] tracking-wide text-center"
+          >
+            {hud.bannerText}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Entrée de boss : bandes cinéma + carton de présentation */}
+      <AnimatePresence>
+        {hud.bossIntro && (
+          <motion.div
+            key="boss-intro"
+            className="fixed inset-0 z-10 pointer-events-none flex flex-col justify-between"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <motion.div
+              className="h-[12vh] bg-[#0B0F18]"
+              initial={{ y: '-100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '-100%' }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            />
+            <div className="self-center text-center px-6">
+              <motion.p
+                className="text-xs sm:text-sm font-bold uppercase tracking-[0.45em] text-[#F43F5E] hud-text-stroke"
+                initial={{ opacity: 0, letterSpacing: '0.1em' }}
+                animate={{ opacity: 1, letterSpacing: '0.45em' }}
+                transition={{ duration: 0.5 }}
+              >
+                Alerte Boss
+              </motion.p>
+              <motion.h2
+                className="mt-1 font-display text-5xl sm:text-6xl font-extrabold hud-text-stroke"
+                style={{ color: ELEMENT_META[hud.bossIntro.element].color }}
+                initial={{ opacity: 0, scale: 1.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 15, delay: 0.45 }}
+              >
+                {hud.bossIntro.name}
+              </motion.h2>
+              <motion.p
+                className="mt-1 text-sm sm:text-base font-semibold text-[#FAF7F0] hud-text-stroke"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.75 }}
+              >
+                {hud.bossIntro.title}
+              </motion.p>
+            </div>
+            <motion.div
+              className="h-[12vh] bg-[#0B0F18]"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom Perimeter Dock: 3 Squad Cards + Scatter + Ultimate */}
       <div className="flex items-end justify-center gap-2 sm:gap-2.5 pointer-events-auto">

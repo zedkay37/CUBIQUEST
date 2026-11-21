@@ -793,6 +793,12 @@ export function applyExpeditionRewards(
     unlockedNextStageName = STAGES[highestStageIndex].name;
   }
 
+  // Le niveau débloqué ouvre-t-il un nouveau biome ? (mis en avant sur l'écran de victoire)
+  let unlockedBiomeName: string | null = null;
+  if (unlockedNextStageName && STAGES[highestStageIndex].biomeId !== stage.biomeId) {
+    unlockedBiomeName = BIOMES[STAGES[highestStageIndex].biomeId].name;
+  }
+
   const unlockedPotTiers = [...save.unlockedPotTiers];
   let unlockedPotTier: PotTier | null = null;
   if (victory) {
@@ -866,10 +872,25 @@ export function applyExpeditionRewards(
     leveledUpNames,
     potReadyNow,
     unlockedNextStageName,
+    unlockedBiomeName,
     unlockedPotTier,
   };
 
   return { nextSave, outcome };
+}
+
+/**
+ * Étoiles de l'écran de victoire (0 en cas de défaite) :
+ * 1 = victoire, +1 pour au moins 2 réactions élémentaires, +1 pour un Ultime ou une esquive parfaite.
+ * Purement cosmétique : rien n'est stocké dans la sauvegarde.
+ */
+export function computeVictoryStars(
+  outcome: Pick<ExpeditionOutcome, 'victory' | 'reactionsTriggered' | 'ultimatesUsed' | 'perfectDodges'>,
+): 0 | 1 | 2 | 3 {
+  if (!outcome.victory) return 0;
+  const tactical = outcome.reactionsTriggered >= 2 ? 1 : 0;
+  const clutch = outcome.ultimatesUsed >= 1 || outcome.perfectDodges >= 1 ? 1 : 0;
+  return (1 + tactical + clutch) as 1 | 2 | 3;
 }
 
 /**

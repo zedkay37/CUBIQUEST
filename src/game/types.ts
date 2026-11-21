@@ -186,6 +186,15 @@ export interface StageDef {
   dropIngredients: string[];
   stonePowerRange: [number, number];
   xpReward: number;
+  /**
+   * Multiplicateurs de PV / d'attaque des ennemis du niveau (1 par défaut).
+   * Les biomes de la Giga Update allongent les combats (plus de PV, coups moins lourds)
+   * pour que les mécaniques télégraphiées et les phases aient le temps de s'exprimer.
+   */
+  enemyHpMult?: number;
+  enemyAtkMult?: number;
+  /** Multiplicateur de PV supplémentaire réservé au boss (se cumule avec enemyHpMult). */
+  bossHpMult?: number;
   /** Mécaniques de boss propres au biome ('classic' par défaut). */
   bossKit?: BossKit;
 }
@@ -372,6 +381,8 @@ export interface ExpeditionHudSnapshot {
   } | null;
   damageDealt: number;
   bannerText: string | null;
+  /** Renseigné pendant la courte cinématique d'entrée du boss. */
+  bossIntro: { name: string; title: string; element: ElementType } | null;
 }
 
 export interface ExpeditionOutcome {
@@ -395,6 +406,8 @@ export interface ExpeditionOutcome {
   leveledUpNames: string[];
   potReadyNow: boolean;
   unlockedNextStageName: string | null;
+  /** Nom du biome qui vient de s'ouvrir (quand le niveau débloqué est le premier d'un nouveau biome). */
+  unlockedBiomeName: string | null;
   unlockedPotTier: PotTier | null;
 }
 

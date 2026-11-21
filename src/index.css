@@ -53,6 +53,101 @@
   transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 140ms ease, border-color 140ms ease;
 }
 
+/* === Giga Update : transitions d'UI === */
+@keyframes panel-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Tous les panneaux modaux (tiroirs, pause, starter) apparaissent avec un léger rebond */
+.voxel-panel[role='dialog']:not([data-no-pop]) {
+  animation: panel-pop 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0deg);
+  }
+  100% {
+    transform: translate3d(var(--confetti-drift, 0px), 108vh, 0) rotate(720deg);
+  }
+}
+
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  border-radius: 1px;
+  animation: confetti-fall linear infinite both;
+  will-change: transform;
+}
+
+.outcome-victory-glow {
+  border-color: var(--accent-gold);
+  box-shadow:
+    0 0 0 1px rgba(244, 185, 66, 0.35),
+    0 18px 48px rgba(244, 185, 66, 0.22),
+    0 10px 28px rgba(10, 14, 24, 0.45);
+}
+
+@keyframes title-shine {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.outcome-title-shine {
+  background: linear-gradient(100deg, #faf7f0 20%, #f4b942 45%, #fff3c4 55%, #faf7f0 80%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: title-shine 2.6s ease-in-out infinite;
+}
+
+@keyframes unlock-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 185, 66, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(244, 185, 66, 0);
+  }
+}
+
+.outcome-unlock-pulse {
+  animation: unlock-pulse 1.6s ease-in-out infinite;
+}
+
+.evolution-vignette {
+  background: radial-gradient(ellipse at 50% 55%, transparent 30%, rgba(11, 15, 24, 0.55) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voxel-panel[role='dialog'],
+  .outcome-title-shine,
+  .outcome-unlock-pulse {
+    animation: none !important;
+  }
+
+  .confetti-piece {
+    display: none;
+  }
+
+  .outcome-title-shine {
+    background: none;
+    color: var(--text-light);
+  }
+}
+
 .voxel-btn:active:not(:disabled) {
   transform: translateY(2px);
   box-shadow: 0 1px 0 rgba(10, 14, 24, 0.55);
