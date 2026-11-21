@@ -34,6 +34,7 @@ import {
   unequipPowerStone,
 } from './rules';
 import { ACHIEVEMENTS, MOVES, STAGES } from './catalog';
+import { normalizeSettings } from './settings';
 
 test('elemental type effectiveness returns accurate multipliers', () => {
   assert.equal(getTypeEffectiveness('water', 'fire'), 1.5);
@@ -291,4 +292,10 @@ test('V0.2 SaveState v1 -> v2 migration and JSON export/import validation', () =
   assert.equal(badSyntax.ok, false);
   const badStructure = importSaveFromJson(JSON.stringify({ version: 99, foo: 'bar' }));
   assert.equal(badStructure.ok, false);
+});
+
+test('Giga: options de confort normalisées (tremblement de caméra désactivable)', () => {
+  assert.equal(normalizeSettings(null).screenShake, true);
+  assert.equal(normalizeSettings({ screenShake: false }).screenShake, false);
+  assert.equal(normalizeSettings({ screenShake: 'oui' }).screenShake, true);
 });

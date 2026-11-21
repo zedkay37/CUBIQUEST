@@ -9,6 +9,7 @@ import {
   computeStatusDuration,
   computeUltimateCharge,
   getMoveModifiers,
+  getTypeEffectiveness,
   getStatusForElement,
   resolveElementalReaction,
 } from './rules';
@@ -54,7 +55,43 @@ interface ParticleSlot {
   size: number;
   colorHex: string;
   gravity: number;
+  drag: number;
+  stretchY: number;
+  bounce: number;
 }
+
+// Signature visuelle des impacts par élément (couleurs + comportement physique des cubes)
+const ELEMENT_FX: Record<
+  ElementType,
+  {
+    colors: string[];
+    speed: number;
+    vyMin: number;
+    vyMax: number;
+    gravity: number;
+    drag: number;
+    stretchY: number;
+    bounce: number;
+    lifeMin: number;
+    lifeMax: number;
+    sizeMin: number;
+    sizeMax: number;
+    swirl: number;
+  }
+> = {
+  // braises qui montent
+  fire: { colors: ['#FF7043', '#FDBA74', '#FDE047'], speed: 2.6, vyMin: 1.6, vyMax: 4.2, gravity: -3.2, drag: 1.6, stretchY: 1.25, bounce: 0, lifeMin: 0.45, lifeMax: 0.85, sizeMin: 0.12, sizeMax: 0.26, swirl: 0 },
+  // gouttes étirées qui rebondissent
+  water: { colors: ['#38BDF8', '#7DD3FC', '#E0F2FE'], speed: 4.4, vyMin: 3.0, vyMax: 6.2, gravity: 17, drag: 0, stretchY: 1.8, bounce: 0.32, lifeMin: 0.4, lifeMax: 0.7, sizeMin: 0.1, sizeMax: 0.2, swirl: 0 },
+  // feuilles plates qui planent
+  grass: { colors: ['#4ADE80', '#86EFAC', '#FDE68A'], speed: 3.6, vyMin: 2.0, vyMax: 3.8, gravity: 3.4, drag: 2.4, stretchY: 0.35, bounce: 0, lifeMin: 0.7, lifeMax: 1.1, sizeMin: 0.16, sizeMax: 0.28, swirl: 1.4 },
+  // étincelles nerveuses, très brèves
+  electric: { colors: ['#FACC15', '#FEF9C3', '#FFFFFF'], speed: 9.5, vyMin: -1.0, vyMax: 5.0, gravity: 0, drag: 7.5, stretchY: 2.6, bounce: 0, lifeMin: 0.14, lifeMax: 0.32, sizeMin: 0.07, sizeMax: 0.15, swirl: 0 },
+  // éclats lourds
+  rock: { colors: ['#D6A874', '#A98359', '#78716C'], speed: 3.8, vyMin: 3.2, vyMax: 6.0, gravity: 21, drag: 0, stretchY: 1, bounce: 0.45, lifeMin: 0.6, lifeMax: 0.95, sizeMin: 0.2, sizeMax: 0.36, swirl: 0 },
+  // spirale ascendante
+  psychic: { colors: ['#C084FC', '#E9D5FF', '#67E8F9'], speed: 2.4, vyMin: 0.8, vyMax: 2.6, gravity: -1.6, drag: 1.1, stretchY: 1, bounce: 0, lifeMin: 0.6, lifeMax: 1.0, sizeMin: 0.1, sizeMax: 0.2, swirl: 4.2 },
+};
 
 interface ActiveProjectile {
   mesh: THREE.Mesh;
@@ -185,7 +222,7 @@ export interface EngineCallbacks {
   }) => void;
 }
 
-const PARTICLE_POOL_SIZE = 200;
+const PARTICLE_POOL_SIZE = 320; // plafond dur : ring buffer, jamais d'allocation en combat
 const WEATHER_COUNT = 54;
 const ARENA_BOUND = 15.5;
 const MAX_ATTACK_TOKENS = 3;
@@ -230,6 +267,7 @@ export class VoxelEngine {
   private camLook = new THREE.Vector3(0, 1, 0);
   private trauma = 0;
   private hitstopTimer = 0;
+  private shakeEnabled = true;
 
   // Camp props & wanderers
   private potLiquidMesh: THREE.Mesh | null = null;
@@ -357,6 +395,9 @@ export class VoxelEngine {
         size: 0.001,
         colorHex: '#ffffff',
         gravity: 9.8,
+        drag: 0,
+        stretchY: 1,
+        bounce: 0,
       });
       _dummy.position.set(0, -100, 0);
       _dummy.scale.setScalar(0.001);
@@ -368,7 +409,7 @@ export class VoxelEngine {
     this.fxGroup.add(this.particleMesh);
 
     // Zero-GC 3D Floating Combat Text Pool
-    this.floatingText = new FloatingTextPool(this.fxGroup, 20);
+    this.floatingText = new FloatingTextPool(this.fxGroup, 28);
 
     // Pooled Biome Weather InstancedMesh (petals / rain / embers / astral shards)
     const wGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -492,6 +533,12 @@ export class VoxelEngine {
     if (state !== 'playing') {
       this.heldKeys.clear();
     }
+  }
+
+  /** Option de confort : coupe le tremblement de caméra (le hit-stop reste actif). */
+  public setShakeEnabled(enabled: boolean): void {
+    this.shakeEnabled = enabled;
+    if (!enabled) this.trauma = 0;
   }
 
   public setControlMode(mode: ControlMode): void {
@@ -1224,15 +1271,37 @@ export class VoxelEngine {
     if (finalDmg > 0) {
       target.hp = Math.max(0, target.hp - finalDmg);
     }
-    target.flashTimer = 0.065;
+    target.flashTimer = isHeavy || isCrit ? 0.11 : 0.07;
     target.squashY = 0.76;
+    const effectiveness =
+      incomingElement && !target.isAlly
+        ? getTypeEffectiveness(incomingElement, target.rig.species.element)
+        : 1;
 
     // 3D Floating Damage Number
     const numY = target.rig.species.archetype === 'floating' ? 2.2 : 1.85;
     if (finalDmg > 0) {
-      const textColor = target.isAlly ? '#FCA5A5' : isCrit ? '#FFE066' : '#FAF7F0';
+      // Lisible d'un coup d'œil : critique doré, super efficace orange, résisté gris
+      const textColor = target.isAlly
+        ? '#FCA5A5'
+        : isCrit
+          ? '#FFE066'
+          : effectiveness > 1
+            ? '#FDBA74'
+            : effectiveness < 1
+              ? '#94A3B8'
+              : '#FAF7F0';
       const label = isCrit ? `${finalDmg}!` : `${finalDmg}`;
-      this.floatingText.spawn(target.x, numY, target.z, label, textColor, isCrit ? 1.2 : isHeavy ? 1.02 : 0.84, 0.78);
+      const effScale = effectiveness > 1 ? 1.12 : effectiveness < 1 ? 0.9 : 1;
+      this.floatingText.spawn(
+        target.x,
+        numY,
+        target.z,
+        label,
+        textColor,
+        (isCrit ? 1.2 : isHeavy ? 1.02 : 0.84) * effScale,
+        0.78,
+      );
     } else {
       this.floatingText.spawn(target.x, numY, target.z, 'BLOQUÉ', '#FDE047', 0.82, 0.65);
     }
@@ -1270,10 +1339,20 @@ export class VoxelEngine {
     }
 
     soundFx.playHit(isHeavy, isCrit);
-    this.spawnParticleBurst(target.x, 0.85, target.z, isCrit ? '#FFE066' : fxColor, isHeavy ? 14 : 6, isHeavy ? 5.2 : 3.2);
+    if (incomingElement) {
+      soundFx.playElementImpact(incomingElement, isHeavy);
+      this.spawnElementBurst(target.x, 0.85, target.z, incomingElement, isHeavy ? 12 : 5, isHeavy ? 1.15 : 0.8);
+      if (isCrit) this.spawnParticleBurst(target.x, 1.0, target.z, '#FFE066', 6, 4.6);
+    } else {
+      this.spawnParticleBurst(target.x, 0.85, target.z, isCrit ? '#FFE066' : fxColor, isHeavy ? 14 : 6, isHeavy ? 5.2 : 3.2);
+    }
 
     if (isCrit || isHeavy) {
-      this.trauma = Math.min(1, this.trauma + (isCrit ? 0.36 : 0.2));
+      this.trauma = Math.min(1, this.trauma + (isCrit ? 0.3 : 0.18));
+    }
+    if (isCrit && !target.isAlly) {
+      // léger hit-stop sur critique pour faire claquer l'impact
+      this.hitstopTimer = Math.max(this.hitstopTimer, 0.032);
     }
 
     if (target.hp <= 0) {
@@ -1459,6 +1538,48 @@ export class VoxelEngine {
       slot.size = 0.14 + Math.random() * 0.18;
       slot.colorHex = colorHex;
       slot.gravity = 11.5;
+      slot.drag = 0;
+      slot.stretchY = 1;
+      slot.bounce = 0;
+    }
+  }
+
+  /**
+   * Gerbe d'impact propre à chaque élément : braises qui montent, gouttes qui rebondissent,
+   * feuilles qui planent, étincelles nerveuses, éclats de roche lourds, spirale psy.
+   */
+  private spawnElementBurst(
+    x: number,
+    y: number,
+    z: number,
+    element: ElementType,
+    count: number,
+    power = 1,
+  ): void {
+    const fx = ELEMENT_FX[element];
+    for (let i = 0; i < count; i++) {
+      const slot = this.particles[this.particleCursor];
+      this.particleCursor = (this.particleCursor + 1) % PARTICLE_POOL_SIZE;
+      const ang = Math.random() * Math.PI * 2;
+      const spd = (0.4 + Math.random() * 0.6) * fx.speed * power;
+      const cos = Math.cos(ang);
+      const sin = Math.sin(ang);
+      slot.active = true;
+      slot.x = x + cos * 0.25;
+      slot.y = y + Math.random() * 0.4;
+      slot.z = z + sin * 0.25;
+      // swirl : composante tangentielle pour les feuilles et la spirale psy
+      slot.vx = cos * spd - sin * fx.swirl;
+      slot.vz = sin * spd + cos * fx.swirl;
+      slot.vy = fx.vyMin + Math.random() * (fx.vyMax - fx.vyMin);
+      slot.maxLife = fx.lifeMin + Math.random() * (fx.lifeMax - fx.lifeMin);
+      slot.life = slot.maxLife;
+      slot.size = fx.sizeMin + Math.random() * (fx.sizeMax - fx.sizeMin);
+      slot.colorHex = fx.colors[i % fx.colors.length];
+      slot.gravity = fx.gravity;
+      slot.drag = fx.drag;
+      slot.stretchY = fx.stretchY;
+      slot.bounce = fx.bounce;
     }
   }
 
@@ -1477,6 +1598,9 @@ export class VoxelEngine {
     slot.size = 0.22 + Math.random() * 0.14;
     slot.colorHex = colorHex;
     slot.gravity = -0.35;
+    slot.drag = 0;
+    slot.stretchY = 1;
+    slot.bounce = 0;
   }
 
   private findNearestLiving(x: number, z: number, list: CombatActor[]): CombatActor | null {
@@ -2344,13 +2468,29 @@ export class VoxelEngine {
         continue;
       }
       p.vy -= p.gravity * dt;
+      if (p.drag > 0) {
+        const damp = Math.exp(-p.drag * dt);
+        p.vx *= damp;
+        p.vz *= damp;
+        if (p.gravity === 0) p.vy *= damp;
+      }
       p.x += p.vx * dt;
-      p.y = Math.max(0.08, p.y + p.vy * dt);
+      p.y += p.vy * dt;
+      if (p.y < 0.08) {
+        p.y = 0.08;
+        if (p.bounce > 0 && p.vy < 0) p.vy = -p.vy * p.bounce;
+      }
       p.z += p.vz * dt;
       const ratio = p.life / p.maxLife;
+      const s = p.size * ratio;
       _dummy.position.set(p.x, p.y, p.z);
-      _dummy.rotation.set(p.life * 6, p.life * 4, 0);
-      _dummy.scale.setScalar(p.size * ratio);
+      if (p.stretchY > 1.5) {
+        // gouttes / étincelles : alignées sur leur trajectoire au lieu de tournoyer
+        _dummy.rotation.set(0, p.life * 3, Math.atan2(p.vx, Math.abs(p.vy) + 0.5) * -0.6);
+      } else {
+        _dummy.rotation.set(p.life * 6, p.life * 4, 0);
+      }
+      _dummy.scale.set(s, s * p.stretchY, s);
       _dummy.updateMatrix();
       this.particleMesh.setMatrixAt(i, _dummy.matrix);
       this.particleMesh.setColorAt(i, _color.set(p.colorHex));
@@ -2455,12 +2595,14 @@ export class VoxelEngine {
     _vecC.set(0, 0, 0);
     if (this.trauma > 0) {
       this.trauma = Math.max(0, this.trauma - dt * 1.9);
-      const shake = this.trauma * this.trauma * 0.65;
-      _vecC.set(
-        (Math.random() - 0.5) * 2 * shake,
-        (Math.random() - 0.5) * 2 * shake,
-        0,
-      );
+      if (this.shakeEnabled) {
+        const shake = this.trauma * this.trauma * 0.5;
+        _vecC.set(
+          (Math.random() - 0.5) * 2 * shake,
+          (Math.random() - 0.5) * 2 * shake,
+          0,
+        );
+      }
     }
 
     this.camera.position.copy(this.camPos).add(_vecC);

@@ -40,6 +40,7 @@ import type {
   SaveState,
   StageDef,
 } from './game/types';
+import { loadSettings, persistSettings, type GameSettings } from './game/settings';
 import { VoxelEngine } from './game/VoxelEngine';
 
 function hasAutostartParam(): boolean {
@@ -67,6 +68,7 @@ export default function App() {
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [controlMode, setControlMode] = useState<ControlMode>('semi');
   const [muted, setMuted] = useState(false);
+  const [settings, setSettings] = useState<GameSettings>(() => loadSettings());
 
   const [activeStage, setActiveStage] = useState<StageDef | null>(null);
   const [hudSnapshot, setHudSnapshot] = useState<ExpeditionHudSnapshot | null>(null);
@@ -135,6 +137,17 @@ export default function App() {
       engineRef.current = null;
     };
   }, [getSquadCreatures]);
+
+  // Options de confort (tremblement de caméra) : persistance + synchro moteur
+  useEffect(() => {
+    persistSettings(settings);
+    engineRef.current?.setShakeEnabled(settings.screenShake);
+  }, [settings]);
+
+  const handleToggleShake = useCallback(() => {
+    soundFx.playUiClick();
+    setSettings((prev) => ({ ...prev, screenShake: !prev.screenShake }));
+  }, []);
 
   // Sync Camp 3D pot liquid visual whenever pot state changes in Camp
   useEffect(() => {
@@ -500,6 +513,8 @@ export default function App() {
             claimableCount={claimableCount}
             dockCollapsed={dockCollapsed}
             muted={muted}
+            screenShake={settings.screenShake}
+            onToggleShake={handleToggleShake}
             onSelectDrawer={(tab) => {
               soundFx.playUiClick();
               setActiveDrawer((cur) => (cur === tab ? null : tab));
@@ -593,6 +608,8 @@ export default function App() {
       {screenState === 'paused' && activeStage && (
         <PauseModal
           stageName={activeStage.name}
+          screenShake={settings.screenShake}
+          onToggleShake={handleToggleShake}
           onResume={() => setScreenState('playing')}
           onRestart={() => handleLaunchStage(activeStage)}
           onReturnCamp={handleReturnCamp}

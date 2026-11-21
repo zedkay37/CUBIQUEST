@@ -5,6 +5,8 @@ import { StoneIcon } from './Icons';
 
 interface PauseModalProps {
   stageName: string;
+  screenShake: boolean;
+  onToggleShake: () => void;
   onResume: () => void;
   onRestart: () => void;
   onReturnCamp: () => void;
@@ -12,6 +14,8 @@ interface PauseModalProps {
 
 export function PauseModal({
   stageName,
+  screenShake,
+  onToggleShake,
   onResume,
   onRestart,
   onReturnCamp,
@@ -57,6 +61,16 @@ export function PauseModal({
             Retour au Camp de Base
           </button>
         </div>
+
+        <label className="mt-4 flex items-center justify-center gap-2 text-xs text-[#B8C2D1] cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={screenShake}
+            onChange={onToggleShake}
+            className="w-4 h-4 accent-[#F4B942] cursor-pointer"
+          />
+          Tremblement de caméra lors des impacts
+        </label>
       </div>
     </div>
   );

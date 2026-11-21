@@ -3,6 +3,8 @@ import type { ElementType } from './types';
 class ToyboxAudio {
   private ctx: AudioContext | null = null;
   private muted = false;
+  private noiseBuffer: AudioBuffer | null = null;
+  private lastImpactAt = 0;
 
   private ensureContext(): AudioContext | null {
     if (this.muted || typeof window === 'undefined') return null;
@@ -57,6 +59,151 @@ class ToyboxAudio {
     gain.connect(ctx.destination);
     osc.start(now);
     osc.stop(now + duration + 0.02);
+  }
+
+  /** Bruit blanc filtré (souffle, crépitement, tonnerre) — un seul buffer partagé. */
+  private playNoise(
+    duration: number,
+    filterType: BiquadFilterType,
+    freqStart: number,
+    freqEnd: number,
+    gainPeak = 0.1,
+    delay = 0,
+  ): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    if (!this.noiseBuffer) {
+      const len = ctx.sampleRate;
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      this.noiseBuffer = buf;
+    }
+    const now = ctx.currentTime + delay;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    src.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(freqStart, now);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(40, freqEnd), now + duration);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(gainPeak, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    src.start(now);
+    src.stop(now + duration + 0.02);
+  }
+
+  /** Texture sonore d'impact par élément (limitée à ~16/s pour les attaques de zone). */
+  public playElementImpact(element: ElementType, heavy = false): void {
+    const t = typeof performance !== 'undefined' ? performance.now() : 0;
+    if (t - this.lastImpactAt < 60) return;
+    this.lastImpactAt = t;
+    const g = heavy ? 1 : 0.6;
+    switch (element) {
+      case 'fire':
+        this.playNoise(0.18, 'lowpass', 1900, 320, 0.09 * g);
+        break;
+      case 'water':
+        this.playTone(720, 260, 0.1, 'sine', 0.07 * g);
+        this.playNoise(0.12, 'bandpass', 1300, 520, 0.06 * g);
+        break;
+      case 'grass':
+        this.playNoise(0.1, 'highpass', 2400, 4600, 0.05 * g);
+        this.playTone(520, 780, 0.07, 'triangle', 0.04 * g);
+        break;
+      case 'electric':
+        this.playTone(1500, 320, 0.07, 'square', 0.045 * g);
+        this.playNoise(0.06, 'highpass', 5000, 3000, 0.05 * g);
+        break;
+      case 'rock':
+        this.playTone(115, 46, 0.17, 'triangle', 0.12 * g);
+        this.playNoise(0.12, 'lowpass', 520, 130, 0.08 * g);
+        break;
+      case 'psychic':
+        this.playTone(900, 1500, 0.14, 'sine', 0.06 * g);
+        this.playTone(1350, 2250, 0.12, 'sine', 0.035 * g, 0.03);
+        break;
+    }
+  }
+
+  /** Entrée de boss : grondement grave + montée dramatique. */
+  public playBossIntro(): void {
+    this.playTone(70, 48, 1.1, 'sawtooth', 0.13);
+    this.playNoise(0.9, 'lowpass', 300, 90, 0.08);
+    [146.83, 174.61, 220].forEach((n, i) => {
+      this.playTone(n, n * 1.02, 0.34, 'square', 0.06, 0.25 + i * 0.22);
+    });
+    this.playTone(110, 55, 0.5, 'sawtooth', 0.14, 0.95);
+  }
+
+  public playThunder(): void {
+    this.playNoise(1.1, 'lowpass', 1100, 70, 0.14);
+    this.playTone(90, 38, 0.9, 'sawtooth', 0.07, 0.04);
+  }
+
+  public playFrostCrack(): void {
+    this.playNoise(0.14, 'highpass', 3200, 6500, 0.07);
+    this.playTone(1800, 900, 0.1, 'triangle', 0.05, 0.02);
+  }
+
+  /** Montée continue pendant la charge d'évolution (~2 s). */
+  public playEvolutionCharge(): void {
+    const notes = [261.63, 329.63, 392, 523.25, 659.25, 783.99, 1046.5, 1318.5];
+    notes.forEach((n, i) => {
+      this.playTone(n, n * 1.04, 0.2, 'triangle', 0.07 + i * 0.006, i * 0.24);
+    });
+    this.playNoise(2.0, 'bandpass', 400, 3200, 0.03);
+  }
+
+  public playEvolutionBurst(): void {
+    this.playNoise(0.5, 'highpass', 1200, 6000, 0.08);
+    [523.25, 659.25, 783.99, 1046.5, 1567.98].forEach((n, i) => {
+      this.playTone(n, n * 1.01, 0.5, 'triangle', 0.1, i * 0.05);
+    });
+    this.playTone(130.81, 65.4, 0.5, 'sine', 0.14);
+  }
+
+  /** Fanfare de victoire festive (mélodie + basse + scintillement). */
+  public playFanfare(): void {
+    const melody: [number, number][] = [
+      [523.25, 0],
+      [523.25, 0.12],
+      [523.25, 0.24],
+      [659.25, 0.36],
+      [587.33, 0.52],
+      [659.25, 0.64],
+      [783.99, 0.8],
+      [1046.5, 1.0],
+    ];
+    for (const [n, t] of melody) this.playTone(n, n * 1.01, 0.2, 'triangle', 0.11, t);
+    this.playTone(130.81, 130.81, 0.5, 'sine', 0.1, 0);
+    this.playTone(196, 196, 0.5, 'sine', 0.1, 0.5);
+    this.playTone(261.63, 261.63, 0.6, 'sine', 0.1, 1.0);
+    this.playNoise(0.4, 'highpass', 5000, 9000, 0.03, 1.0);
+  }
+
+  public playConfettiPop(): void {
+    const jitter = 0.9 + Math.random() * 0.3;
+    this.playNoise(0.07, 'highpass', 2600 * jitter, 5200, 0.05);
+    this.playTone(1100 * jitter, 1650 * jitter, 0.06, 'sine', 0.04);
+  }
+
+  public playBiomeUnlock(): void {
+    [392, 493.88, 587.33, 783.99, 987.77].forEach((n, i) => {
+      this.playTone(n, n * 1.02, 0.26, 'sine', 0.09, i * 0.1);
+    });
+    this.playNoise(0.7, 'bandpass', 800, 4200, 0.03, 0.2);
+  }
+
+  public playIdleChirp(): void {
+    const base = 880 + Math.random() * 300;
+    this.playTone(base, base * 1.3, 0.07, 'sine', 0.03);
+    this.playTone(base * 1.2, base * 1.5, 0.06, 'sine', 0.025, 0.08);
   }
 
   public playUiClick(): void {

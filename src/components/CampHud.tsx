@@ -8,6 +8,8 @@ import {
   Home,
   Trophy,
   Users,
+  Vibrate,
+  VibrateOff,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -23,6 +25,8 @@ interface CampHudProps {
   claimableCount: number;
   dockCollapsed: boolean;
   muted: boolean;
+  screenShake: boolean;
+  onToggleShake: () => void;
   onSelectDrawer: (tab: CampDrawerTab) => void;
   onToggleCollapse: () => void;
   onToggleMute: () => void;
@@ -35,6 +39,8 @@ export function CampHud({
   claimableCount,
   dockCollapsed,
   muted,
+  screenShake,
+  onToggleShake,
   onSelectDrawer,
   onToggleCollapse,
   onToggleMute,
@@ -82,6 +88,26 @@ export function CampHud({
         </div>
 
         <div className="flex items-center gap-2 pointer-events-auto">
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onToggleShake();
+            }}
+            className={`voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] border-2 border-[#39445A] flex items-center justify-center ${
+              screenShake ? 'text-[#FAF7F0]' : 'text-[#64748B]'
+            }`}
+            aria-label={
+              screenShake
+                ? 'Désactiver le tremblement de caméra'
+                : 'Activer le tremblement de caméra'
+            }
+            aria-pressed={screenShake}
+            title={screenShake ? 'Tremblement de caméra : activé' : 'Tremblement de caméra : désactivé'}
+          >
+            {screenShake ? <Vibrate className="w-4 h-4" /> : <VibrateOff className="w-4 h-4" />}
+          </button>
           <button
             type="button"
             tabIndex={-1}
