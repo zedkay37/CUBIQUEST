@@ -60,7 +60,7 @@ export function ExpeditionDrawer({
         </div>
 
         {/* Biome Tabs */}
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-[#2A3346] overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-[#2A3346]">
           {BIOME_ORDER.map((bId) => {
             const b = BIOMES[bId];
             const unlocked = isBiomeUnlocked(save, bId);
@@ -93,6 +93,11 @@ export function ExpeditionDrawer({
           {/* Left: 3 Stages in Biome */}
           <div className="md:col-span-6 space-y-2.5">
             <p className="text-xs text-[#B8C2D1] mb-2">{activeBiome.subtitle}</p>
+            {!isBiomeUnlocked(save, selectedBiome) && biomeStages[0] && biomeStages[0].index > 0 && (
+              <p className="text-xs font-semibold text-[#F4B942] mb-2">
+                Biome verrouillé : terminez « {STAGES[biomeStages[0].index - 1].name} » pour l’ouvrir.
+              </p>
+            )}
             {biomeStages.map((stage) => {
               const locked = stage.index > save.highestStageIndex;
               const completed = save.completedStageIds.includes(stage.id);

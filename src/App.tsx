@@ -54,10 +54,11 @@ function hasAutostartParam(): boolean {
 
 /**
  * Mode aperçu pour tester un niveau sans toucher à la sauvegarde :
- *   ?stage=tundra-3&squad=givrelin,cryolithe,auroramure&lvl=42
- * (escouade et niveau facultatifs ; aucune récompense n'est enregistrée).
+ *   ?stage=tundra-3&squad=givrelin,cryolithe,auroramure&lvl=42&bonus=1200
+ * (escouade, niveau et bonus facultatifs ; aucune récompense n'est enregistrée).
+ * `bonus` simule les Pierres de Pouvoir : il s'ajoute aux PV et à l'ATQ de chaque créature.
  */
-function getPreviewParams(): { stage: StageDef; squad: string[]; level: number } | null {
+function getPreviewParams(): { stage: StageDef; squad: string[]; level: number; bonus: number } | null {
   if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
   const stage = STAGE_BY_ID[params.get('stage') ?? ''];
@@ -68,7 +69,9 @@ function getPreviewParams(): { stage: StageDef; squad: string[]; level: number }
     .filter((id) => Boolean(SPECIES[id]))
     .slice(0, 3);
   const level = Math.max(1, Math.min(50, Number(params.get('lvl')) || stage.waves[0].enemies[0].level + 5));
-  return { stage, squad, level };
+  const rawBonus = Number(params.get('bonus'));
+  const bonus = Number.isFinite(rawBonus) && rawBonus > 0 ? Math.min(6000, rawBonus) : level * 18;
+  return { stage, squad, level, bonus };
 }
 
 export default function App() {
@@ -163,6 +166,10 @@ export default function App() {
     );
     engine.setScreenState(hasAutostartParam() ? 'playing' : 'title');
 
+    // ?hour=0.8 : règle l'heure du camp (0 aube · 0.3 jour · 0.64 crépuscule · 0.8 nuit)
+    const hourParam = new URLSearchParams(window.location.search).get('hour');
+    if (hourParam !== null) engine.setCampClock(Number(hourParam));
+
     const preview = getPreviewParams();
     if (preview) {
       const speciesIds =
@@ -170,8 +177,7 @@ export default function App() {
           ? preview.squad
           : getSquadCreatures(initialSave).map((c) => c.speciesId);
       const creatures = speciesIds.map((id, i) =>
-        // bonus généreux : simule les Pierres de Pouvoir qu'aurait une vraie escouade à ce stade
-        createOwnedCreature(id, preview.level, preview.level * 18, `preview_${i}`),
+        createOwnedCreature(id, preview.level, preview.bonus, `preview_${i}`),
       );
       previewRef.current = true;
       activeStageRef.current = preview.stage;

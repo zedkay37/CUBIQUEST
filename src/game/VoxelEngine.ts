@@ -220,17 +220,17 @@ const CONFETTI_COLORS = ['#F4B942', '#E85D3F', '#2FB97A', '#38BDF8', '#C084FC', 
 
 // Cycle jour/nuit doux du camp (un tour complet = CAMP_DAY_LENGTH secondes)
 const CAMP_DAY_LENGTH = 150;
-function skyKey(t: number, sky: string, fog: string, key: string, keyI: number, hemiI: number) {
-  return { t, sky: new THREE.Color(sky), fog: new THREE.Color(fog), key: new THREE.Color(key), keyI, hemiI };
+function skyKey(t: number, sky: string, fog: string, key: string, keyI: number, hemiI: number, envI: number) {
+  return { t, sky: new THREE.Color(sky), fog: new THREE.Color(fog), key: new THREE.Color(key), keyI, hemiI, envI };
 }
 const CAMP_SKY_KEYS = [
-  skyKey(0.0, '#F6C9A0', '#F8DDC6', '#FFD2A6', 1.0, 0.46), // aube
-  skyKey(0.1, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52), // jour
-  skyKey(0.52, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52),
-  skyKey(0.64, '#F0A774', '#F3C3A0', '#FFB27A', 1.0, 0.46), // crépuscule
-  skyKey(0.74, '#27345E', '#34437A', '#A9BCFF', 0.5, 0.36), // nuit claire
-  skyKey(0.92, '#27345E', '#34437A', '#A9BCFF', 0.5, 0.36),
-  skyKey(1.0, '#F6C9A0', '#F8DDC6', '#FFD2A6', 1.0, 0.46),
+  skyKey(0.0, '#F6C9A0', '#F8DDC6', '#FFD2A6', 1.0, 0.46, 0.34), // aube
+  skyKey(0.1, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52, 0.42), // jour
+  skyKey(0.52, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52, 0.42),
+  skyKey(0.64, '#F0A774', '#F3C3A0', '#FFB27A', 0.95, 0.42, 0.3), // crépuscule
+  skyKey(0.74, '#27345E', '#34437A', '#A9BCFF', 0.42, 0.28, 0.13), // nuit claire (lune bleutée)
+  skyKey(0.92, '#27345E', '#34437A', '#A9BCFF', 0.42, 0.28, 0.13),
+  skyKey(1.0, '#F6C9A0', '#F8DDC6', '#FFD2A6', 1.0, 0.46, 0.34),
 ];
 
 interface WeatherMote {
@@ -590,6 +590,7 @@ export class VoxelEngine {
     this.keyLight.color.set(light.key);
     this.keyLight.intensity = 1.28;
     this.baseHemiIntensity = 0.52;
+    this.scene.environmentIntensity = 0.42;
     this.lightningFlash = 0;
     this.stormTimer = 3 + Math.random() * 3;
   }
@@ -1155,6 +1156,11 @@ export class VoxelEngine {
     }
   }
 
+  /** Règle l'heure du camp (0 = aube, 0.3 = plein jour, 0.64 = crépuscule, 0.8 = nuit). */
+  public setCampClock(t: number): void {
+    if (Number.isFinite(t)) this.campClock = ((t % 1) + 1) % 1;
+  }
+
   /** Cycle jour/nuit doux du camp : ciel, brume et lumières interpolés entre des clés. */
   private updateDayNight(dt: number): void {
     this.campClock = (this.campClock + dt / CAMP_DAY_LENGTH) % 1;
@@ -1169,6 +1175,7 @@ export class VoxelEngine {
     this.keyLight.color.lerpColors(a.key, b.key, f);
     this.keyLight.intensity = THREE.MathUtils.lerp(a.keyI, b.keyI, f);
     this.baseHemiIntensity = THREE.MathUtils.lerp(a.hemiI, b.hemiI, f);
+    this.scene.environmentIntensity = THREE.MathUtils.lerp(a.envI, b.envI, f);
   }
 
   /**
@@ -1320,7 +1327,12 @@ export class VoxelEngine {
   }
 
   public triggerAllySkill(slotIndex: number): boolean {
-    if (this.playMode !== 'expedition' || this.screenState !== 'playing' || this.expeditionEnded) {
+    if (
+      this.playMode !== 'expedition' ||
+      this.screenState !== 'playing' ||
+      this.expeditionEnded ||
+      this.bossIntroTimer > 0 // cinématique d'entrée : commandes gelées
+    ) {
       return false;
     }
     const unit = this.allies[slotIndex];
@@ -1335,6 +1347,7 @@ export class VoxelEngine {
       this.playMode !== 'expedition' ||
       this.screenState !== 'playing' ||
       this.expeditionEnded ||
+      this.bossIntroTimer > 0 ||
       this.scatterCooldown > 0
     ) {
       return false;
@@ -1407,6 +1420,7 @@ export class VoxelEngine {
       this.playMode !== 'expedition' ||
       this.screenState !== 'playing' ||
       this.expeditionEnded ||
+      this.bossIntroTimer > 0 ||
       this.ultimateCharge < 100
     ) {
       return false;
@@ -2801,11 +2815,11 @@ export class VoxelEngine {
                         }
                       }
                     },
-                    { color: '#7DD3FC' },
+                    { color: '#0284C7' },
                   );
                 }
               },
-              { innerRadius: inner, color: '#7DD3FC' },
+              { innerRadius: inner, color: '#0284C7' }, // bleu soutenu : lisible sur la neige
             );
           } else if (pattern === 4) {
             // Kit ORAGE — Foudre en Rafale : la foudre « marche » du boss vers sa cible.
