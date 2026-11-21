@@ -1,7 +1,10 @@
 import {
   ACHIEVEMENTS,
+  BASE_MOVE_STONE_KINDS,
   BIOMES,
   ELEMENTAL_REACTIONS,
+  FRONTIER_STAGE_INDEX,
+  MOVE_STONE_ORDER,
   ELEMENT_META,
   INGREDIENTS,
   MOVES,
@@ -30,6 +33,7 @@ import type {
   PowerStoneSubstat,
   QuestMetric,
   QuestReward,
+  QuestTemplate,
   RecipeDef,
   SaveState,
   StageDef,
@@ -41,7 +45,9 @@ import type {
 
 export const SAVE_STORAGE_KEY = 'cubiquest_save_v2';
 export const LEGACY_SAVE_STORAGE_KEY = 'cubiquest_save_v1';
-export const SAVE_VERSION = 2;
+// v3 (Giga Update) : sac de Pierres de Capacité étendu (crit_focus, leech) + stats frontierWins/frontierDishes.
+// La clé de stockage reste la même : migrateSaveState accepte les versions 1, 2 et 3.
+export const SAVE_VERSION = 3;
 
 export type RngFn = () => number;
 
@@ -277,11 +283,15 @@ export function getMoveModifiers(moveStones: (MoveStoneKind | null)[]): {
   cooldownMult: number;
   radiusMult: number;
   shareRatio: number;
+  critBonus: number; // points de % ajoutés au taux critique de la compétence
+  leechRatio: number; // part des dégâts de compétence rendue en PV au lanceur
 } {
   let damageMult = 1;
   let cooldownMult = 1;
   let radiusMult = 1;
   let shareRatio = 0;
+  let critBonus = 0;
+  let leechRatio = 0;
 
   for (const ms of moveStones) {
     if (ms === 'broadburst') radiusMult += 0.35;
@@ -291,6 +301,8 @@ export function getMoveModifiers(moveStones: (MoveStoneKind | null)[]): {
       cooldownMult *= 1.15;
     }
     if (ms === 'share') shareRatio += 0.5;
+    if (ms === 'crit_focus') critBonus += 15;
+    if (ms === 'leech') leechRatio += 0.1;
   }
 
   return {
@@ -298,6 +310,8 @@ export function getMoveModifiers(moveStones: (MoveStoneKind | null)[]): {
     cooldownMult: Math.max(0.45, cooldownMult),
     radiusMult,
     shareRatio: Math.min(1, shareRatio),
+    critBonus,
+    leechRatio: Math.min(0.2, leechRatio),
   };
 }
 
@@ -312,7 +326,7 @@ export function calculateDamage(
 ): { damage: number; isCrit: boolean; effectiveness: number } {
   const mods = getMoveModifiers(moveStones);
   const effectiveness = getTypeEffectiveness(move.element, defenderElement);
-  const isCrit = rng() * 100 < critRate;
+  const isCrit = rng() * 100 < critRate + mods.critBonus;
   const critMult = isCrit ? 1.55 : 1.0;
   const variance = 0.94 + rng() * 0.12;
   const raw =
@@ -491,15 +505,30 @@ export function resolveRecipe(ingredientIds: (string | null)[]): RecipeDef | nul
   let mysticCount = 0;
   let sunPollenCount = 0;
   let azureDropCount = 0;
+  const idCounts: Record<string, number> = {};
 
   for (const id of valid) {
     const ing = INGREDIENTS[id];
+    idCounts[id] = (idCounts[id] ?? 0) + 1;
     colorCounts[ing.color] += 1;
     if (ing.rarity === 'rare') rareCount += 1;
     if (ing.rarity === 'mystic') mysticCount += 1;
     if (id === 'sun_pollen') sunPollenCount += 1;
     if (id === 'azure_drop') azureDropCount += 1;
   }
+
+  // Giga Update : les recettes des nouveaux biomes dépendent d'ingrédients précis, donc
+  // elles passent avant les règles génériques par couleur/rareté.
+  const lichen = idCounts.snow_lichen ?? 0;
+  const aurora = idCounts.aurora_petal ?? 0;
+  const pepper = idCounts.storm_pepper ?? 0;
+  const fluff = idCounts.cloud_fluff ?? 0;
+  if (aurora >= 2 && mysticCount >= 1) return RECIPE_BY_ID.aurora_banquet;
+  if (lichen >= 3) return RECIPE_BY_ID.glacier_sorbet;
+  if (lichen >= 2 && (idCounts.pebble_gray ?? 0) >= 2) return RECIPE_BY_ID.permafrost_fondue;
+  if (pepper >= 2) return RECIPE_BY_ID.thunder_tajine;
+  if (fluff >= 3) return RECIPE_BY_ID.cloud_meringue;
+  if (lichen >= 1 && fluff >= 1) return RECIPE_BY_ID.frontier_hotpot;
 
   // Priority order from rarest/most specific to general
   if (mysticCount >= 2) return RECIPE_BY_ID.ambrosia_legends;
@@ -559,7 +588,10 @@ export function startCookingPot(save: SaveState): SaveState {
       expeditionsTotal: recipe.cookExpeditions,
     },
   };
-  return recordPlayerProgress(updated, { dishesCooked: 1 });
+  return recordPlayerProgress(updated, {
+    dishesCooked: 1,
+    frontierDishes: recipe.frontier ? 1 : 0,
+  });
 }
 
 export function rollCreatureFromPot(
@@ -727,7 +759,9 @@ export function applyExpeditionRewards(
   let droppedMoveStone: MoveStoneKind | null = null;
   const nextMoveStoneBag = { ...save.moveStoneBag };
   if (victory && rng() < 0.55) {
-    const kinds: MoveStoneKind[] = ['broadburst', 'wait_less', 'whack_whack', 'share'];
+    // Les Pierres Précision / Sangsue ne tombent que dans les nouveaux biomes
+    const kinds: MoveStoneKind[] =
+      stage.index >= FRONTIER_STAGE_INDEX ? MOVE_STONE_ORDER : BASE_MOVE_STONE_KINDS;
     droppedMoveStone = kinds[Math.floor(rng() * kinds.length)];
     nextMoveStoneBag[droppedMoveStone] = (nextMoveStoneBag[droppedMoveStone] ?? 0) + 1;
   }
@@ -801,6 +835,7 @@ export function applyExpeditionRewards(
   const nextSave = recordPlayerProgress(baseNextSave, {
     expeditionsWon: victory ? 1 : 0,
     bossesDefeated: victory ? 1 : 0,
+    frontierWins: victory && stage.index >= FRONTIER_STAGE_INDEX ? 1 : 0,
     reactionsTriggered,
     ultimatesUsed,
     perfectDodges,
@@ -916,6 +951,8 @@ export function createInitialSaveState(
       wait_less: 1,
       whack_whack: 1,
       share: 1,
+      crit_focus: 0,
+      leech: 0,
     },
     pot: {
       tier: 'iron',
@@ -949,7 +986,17 @@ export function createEmptyStats(): PlayerStats {
     perfectDodges: 0,
     bossesDefeated: 0,
     maxCombo: 0,
+    frontierWins: 0,
+    frontierDishes: 0,
   };
+}
+
+/** Une quête n'est proposée que si le niveau qu'elle exige est débloqué. */
+export function isQuestTemplateAvailable(
+  template: QuestTemplate,
+  save: Pick<SaveState, 'highestStageIndex'>,
+): boolean {
+  return (template.requiresStageIndex ?? 0) <= save.highestStageIndex;
 }
 
 export function createInitialQuests(): ActiveQuest[] {
@@ -979,6 +1026,8 @@ export function recordPlayerProgress(
     perfectDodges: prevStats.perfectDodges + (deltas.perfectDodges ?? 0),
     bossesDefeated: prevStats.bossesDefeated + (deltas.bossesDefeated ?? 0),
     maxCombo: Math.max(prevStats.maxCombo, deltas.maxCombo ?? 0),
+    frontierWins: (prevStats.frontierWins ?? 0) + (deltas.frontierWins ?? 0),
+    frontierDishes: (prevStats.frontierDishes ?? 0) + (deltas.frontierDishes ?? 0),
   };
 
   const nextQuests = (save.activeQuests ?? createInitialQuests()).map((q) => {
@@ -997,7 +1046,11 @@ export function recordPlayerProgress(
                   ? deltas.bossesDefeated ?? 0
                   : q.metric === 'evolutionsDone'
                     ? deltas.evolutionsDone ?? 0
-                    : 0;
+                    : q.metric === 'frontierWins'
+                      ? deltas.frontierWins ?? 0
+                      : q.metric === 'frontierDishes'
+                        ? deltas.frontierDishes ?? 0
+                        : 0;
     if (inc <= 0) return q;
     return {
       ...q,
@@ -1053,10 +1106,12 @@ export function claimQuestReward(
 
   const rewarded = applyRewardToSave(save, quest.reward, rng);
   const currentTemplates = new Set(save.activeQuests.map((q) => q.templateId));
-  const candidates = QUEST_POOL.filter((t) => !currentTemplates.has(t.templateId));
+  // Rotation limitée aux quêtes dont le contenu est déjà accessible au joueur
+  const eligible = QUEST_POOL.filter((t) => isQuestTemplateAvailable(t, save));
+  const candidates = eligible.filter((t) => !currentTemplates.has(t.templateId));
   const nextTpl =
     candidates[Math.floor(rng() * candidates.length)] ??
-    QUEST_POOL[(QUEST_POOL.findIndex((t) => t.templateId === quest.templateId) + 1) % QUEST_POOL.length];
+    eligible[(eligible.findIndex((t) => t.templateId === quest.templateId) + 1) % eligible.length];
 
   const replacement: ActiveQuest = {
     uid: nextId('quest'),
@@ -1098,6 +1153,14 @@ export function getAchievementProgress(save: SaveState, ach: AchievementDef): nu
       return save.discoveredSpeciesIds.length;
     case 'maxCombo':
       return stats.maxCombo;
+    case 'frontierWins':
+      return stats.frontierWins ?? 0;
+    case 'frontierDishes':
+      return stats.frontierDishes ?? 0;
+    case 'tundraStages':
+      return getBiomeProgress(save, 'tundra').completed;
+    case 'stormStages':
+      return getBiomeProgress(save, 'stormpeak').completed;
   }
 }
 
@@ -1129,14 +1192,16 @@ export function countClaimableRewards(save: SaveState): number {
 }
 
 /**
- * Migrate v1 SaveState or normalize v2 SaveState cleanly without losing user progress
+ * Migrate v1 / v2 SaveState or normalize v3 SaveState cleanly without losing user progress.
+ * v2 -> v3 : ajoute les Pierres Précision/Sangsue (0) au sac, les stats frontierWins/frontierDishes (0)
+ * et ouvre la Toundra aux sauvegardes qui avaient déjà vaincu l'ancien dernier niveau.
  */
 export function migrateSaveState(raw: unknown): SaveState | null {
   if (!raw || typeof raw !== 'object') return null;
   const obj = raw as Partial<SaveState>;
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
   if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.ingredients !== 'object') return null;
-  if (obj.version !== 1 && obj.version !== SAVE_VERSION) return null;
+  if (obj.version !== 1 && obj.version !== 2 && obj.version !== SAVE_VERSION) return null;
 
   // Validate roster creatures minimally
   const validRoster = obj.roster.filter(
@@ -1171,6 +1236,8 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     perfectDodges: Number(incomingStats.perfectDodges ?? 0) || 0,
     bossesDefeated: Math.max(expeditionsCompleted, Number(incomingStats.bossesDefeated ?? 0) || 0),
     maxCombo: Number(incomingStats.maxCombo ?? 0) || 0,
+    frontierWins: Number(incomingStats.frontierWins ?? 0) || 0,
+    frontierDishes: Number(incomingStats.frontierDishes ?? 0) || 0,
   };
 
   const activeQuests =
@@ -1194,6 +1261,8 @@ export function migrateSaveState(raw: unknown): SaveState | null {
       wait_less: obj.moveStoneBag?.wait_less ?? 0,
       whack_whack: obj.moveStoneBag?.whack_whack ?? 0,
       share: obj.moveStoneBag?.share ?? 0,
+      crit_focus: obj.moveStoneBag?.crit_focus ?? 0,
+      leech: obj.moveStoneBag?.leech ?? 0,
     },
     pot: {
       tier: obj.pot.tier ?? 'iron',

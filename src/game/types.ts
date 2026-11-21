@@ -17,7 +17,14 @@ export type CreatureArchetype =
 
 export type MoveStyle = 'melee' | 'projectile' | 'aoe' | 'dash' | 'buff';
 
-export type MoveStoneKind = 'broadburst' | 'wait_less' | 'whack_whack' | 'share';
+export type MoveStoneKind =
+  | 'broadburst'
+  | 'wait_less'
+  | 'whack_whack'
+  | 'share'
+  // Giga Update : pierres des nouveaux biomes
+  | 'crit_focus'
+  | 'leech';
 
 export type StoneKind = 'atk' | 'hp';
 export type StoneSlotType = 'atk' | 'hp' | 'flex';
@@ -145,6 +152,8 @@ export interface RecipeDef {
   hint: string;
   targetElement?: ElementType;
   poolSpeciesIds: string[];
+  /** Recette des nouveaux biomes (compte pour la statistique frontierDishes). */
+  frontier?: boolean;
 }
 
 export interface PotState {
@@ -234,7 +243,12 @@ export type QuestMetric =
   | 'evolutionsDone'
   | 'stagesCompleted'
   | 'speciesDiscovered'
-  | 'maxCombo';
+  | 'maxCombo'
+  // Giga Update
+  | 'frontierWins'
+  | 'frontierDishes'
+  | 'tundraStages'
+  | 'stormStages';
 
 export interface QuestReward {
   label: string;
@@ -251,6 +265,8 @@ export interface QuestTemplate {
   metric: QuestMetric;
   target: number;
   reward: QuestReward;
+  /** La quête n'entre dans la rotation qu'une fois ce niveau débloqué. */
+  requiresStageIndex?: number;
 }
 
 export interface ActiveQuest {
@@ -282,6 +298,10 @@ export interface PlayerStats {
   perfectDodges: number;
   bossesDefeated: number;
   maxCombo: number;
+  /** v3 — victoires dans la Toundra Boréale / la Cime des Orages. */
+  frontierWins: number;
+  /** v3 — cuissons lancées avec une recette des nouveaux biomes. */
+  frontierDishes: number;
 }
 
 export interface SaveState {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowUpCircle, Lock, Sparkles, X } from 'lucide-react';
-import { ELEMENT_META, MOVE_STONES, MOVES, SPECIES } from '../game/catalog';
+import { ELEMENT_META, MOVE_STONE_ORDER, MOVE_STONES, MOVES, SPECIES } from '../game/catalog';
 import {
   canEquipStone,
   canEvolve,
@@ -269,7 +269,7 @@ export function TeamDrawer({
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-1">
-                        {(['broadburst', 'wait_less', 'whack_whack', 'share'] as MoveStoneKind[]).map(
+                        {MOVE_STONE_ORDER.map(
                           (kind) => {
                             const qty = save.moveStoneBag[kind] ?? 0;
                             if (qty <= 0) return null;
@@ -280,6 +280,7 @@ export function TeamDrawer({
                                 onClick={() => onEquipMoveStone(creature.uid, mIdx, kind)}
                                 className="cursor-pointer px-1.5 py-0.5 rounded bg-[#151B27] hover:bg-[#2C374F] border border-[#3A4760] text-[10px] font-semibold"
                                 style={{ color: MOVE_STONES[kind].color }}
+                                title={MOVE_STONES[kind].description}
                               >
                                 +{MOVE_STONES[kind].name.replace('Pierre ', '')} ({qty})
                               </button>

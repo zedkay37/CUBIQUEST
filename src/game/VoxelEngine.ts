@@ -1416,6 +1416,11 @@ export class VoxelEngine {
         const heal = Math.max(1, Math.round((finalDmg * attacker.hitHeal) / 100));
         attacker.hp = Math.min(attacker.maxHp, attacker.hp + heal);
       }
+      // Pierre Sangsue : la compétence rend une part des dégâts au lanceur
+      if (isSkillHit && !attacker.fainted && finalDmg > 0 && attacker.moveStones.includes('leech')) {
+        const leech = getMoveModifiers(attacker.moveStones).leechRatio;
+        attacker.hp = Math.min(attacker.maxHp, attacker.hp + Math.max(1, Math.round(finalDmg * leech)));
+      }
     }
 
     // Check Boss Phase Shift!

@@ -13,6 +13,7 @@ import {
   computeHighestUnlockedStageIndex,
   getBiomeProgress,
   isBiomeUnlocked,
+  isQuestTemplateAvailable,
   computeSquadPower,
   computeStatusDuration,
   computeUltimateCharge,
@@ -39,6 +40,10 @@ import {
 import {
   ACHIEVEMENTS,
   BIOME_ORDER,
+  FRONTIER_MOVE_STONE_KINDS,
+  FRONTIER_STAGE_INDEX,
+  MOVE_STONE_ORDER,
+  QUEST_POOL,
   BIOMES,
   INGREDIENTS,
   MOVES,
@@ -469,4 +474,210 @@ test('Giga: lignées à 3 stades — évolutions en chaîne et gain de puissance
     assert.ok(save.discoveredSpeciesIds.includes(midId) && save.discoveredSpeciesIds.includes(finalId));
     assert.equal(save.stats.evolutionsDone, 2);
   }
+});
+
+test('Giga: recettes des nouveaux biomes — résolution, priorités et non-régression', () => {
+  const r = (ids: (string | null)[]) => resolveRecipe(ids)?.id;
+  assert.equal(r(['aurora_petal', 'aurora_petal', 'mystic_shard', 'ruby_berry', 'azure_drop']), 'aurora_banquet');
+  // 2 Éclats + 2 Pétales : le Banquet (plus spécifique) passe avant l'Ambroisie
+  assert.equal(r(['aurora_petal', 'aurora_petal', 'mystic_shard', 'mystic_shard', 'azure_drop']), 'aurora_banquet');
+  assert.equal(r(['snow_lichen', 'snow_lichen', 'snow_lichen', 'ruby_berry', 'sun_pollen']), 'glacier_sorbet');
+  assert.equal(r(['snow_lichen', 'snow_lichen', 'pebble_gray', 'pebble_gray', 'ruby_berry']), 'permafrost_fondue');
+  assert.equal(r(['storm_pepper', 'storm_pepper', 'ruby_berry', 'azure_drop', 'pebble_gray']), 'thunder_tajine');
+  assert.equal(r(['cloud_fluff', 'cloud_fluff', 'cloud_fluff', 'ruby_berry', 'azure_drop']), 'cloud_meringue');
+  assert.equal(r(['snow_lichen', 'cloud_fluff', 'ruby_berry', 'sun_pollen', 'pebble_gray']), 'frontier_hotpot');
+  // 3 Lichens + 2 Galets : le Sorbet l'emporte (règle la plus haute)
+  assert.equal(r(['snow_lichen', 'snow_lichen', 'snow_lichen', 'pebble_gray', 'pebble_gray']), 'glacier_sorbet');
+  // Un seul ingrédient nouveau ne détourne pas les recettes historiques
+  assert.equal(r(['snow_lichen', 'azure_drop', 'azure_drop', 'ruby_berry', 'pebble_gray']), 'ocean_nectar');
+  assert.equal(r(['cloud_fluff', 'pebble_gray', 'pebble_gray', 'ruby_berry', 'azure_drop']), 'mineral_stew');
+  assert.equal(r(['storm_pepper', 'sun_pollen', 'sun_pollen', 'ruby_berry', 'pebble_gray']), 'spark_curry');
+  assert.equal(r(['snow_lichen', 'snow_lichen', 'snow_lichen', 'snow_lichen', null]), undefined);
+
+  for (const recipe of RECIPES.filter((x) => x.frontier)) {
+    assert.ok(recipe.cookExpeditions >= 1 && recipe.poolSpeciesIds.length >= 3, recipe.id);
+  }
+  assert.equal(RECIPES.filter((x) => x.frontier).length, 6);
+  assert.equal(RECIPES[RECIPES.length - 1].id, 'mulligan_stew');
+
+  // Cuisson complète d'une recette des confins : stock, stat dédiée, recrue du bon vivier
+  let save = createInitialSaveState('pyrocube', true);
+  save = {
+    ...save,
+    ingredients: { ...save.ingredients, storm_pepper: 2 },
+    pot: { ...save.pot, slots: ['storm_pepper', 'storm_pepper', 'ruby_berry', 'azure_drop', 'pebble_gray'] },
+  };
+  const cooking = startCookingPot(save);
+  assert.equal(cooking.pot.recipeId, 'thunder_tajine');
+  assert.equal(cooking.ingredients.storm_pepper, 0);
+  assert.equal(cooking.stats.frontierDishes, 1);
+  assert.equal(cooking.stats.dishesCooked, 1);
+  assert.ok(cooking.discoveredRecipeIds.includes('thunder_tajine'));
+  const ready = { ...cooking, pot: { ...cooking.pot, status: 'ready' as const, expeditionsRemaining: 0 } };
+  const { nextSave, creature } = collectCookedCreature(ready, () => 0);
+  assert.equal(creature?.speciesId, 'crepitil');
+  assert.ok(nextSave.discoveredSpeciesIds.includes('crepitil'));
+
+  // Sans stock suffisant, la cuisson ne démarre pas
+  const noStock = startCookingPot({ ...save, ingredients: { ...save.ingredients, storm_pepper: 1 } });
+  assert.equal(noStock.pot.status, 'idle');
+  // Une recette historique n'incrémente pas la stat des confins
+  const classic = startCookingPot({
+    ...save,
+    pot: { ...save.pot, slots: ['ruby_berry', 'azure_drop', 'sun_pollen', 'pebble_gray', 'ruby_berry'] },
+  });
+  assert.equal(classic.stats.frontierDishes, 0);
+});
+
+test('Giga: Pierres Précision et Sangsue — modificateurs, équipement et butin', () => {
+  const none = getMoveModifiers([]);
+  assert.equal(none.critBonus, 0);
+  assert.equal(none.leechRatio, 0);
+  assert.equal(getMoveModifiers(['crit_focus']).critBonus, 15);
+  assert.equal(getMoveModifiers(['crit_focus', 'crit_focus']).critBonus, 30);
+  assert.equal(getMoveModifiers(['leech']).leechRatio, 0.1);
+  assert.equal(getMoveModifiers(['leech', 'leech']).leechRatio, 0.2);
+  // Les anciennes pierres gardent exactement leurs effets
+  assert.equal(getMoveModifiers(['whack_whack']).damageMult, 1.4);
+
+  // rng = 0.1 -> jet de 10 : raté avec 0 % de critique, réussi avec la Pierre Précision (+15)
+  const rng = () => 0.1;
+  assert.equal(calculateDamage(100, MOVES.chain_spark, 'water', 0, [], 1, rng).isCrit, false);
+  const focused = calculateDamage(100, MOVES.chain_spark, 'water', 0, ['crit_focus'], 1, rng);
+  assert.equal(focused.isCrit, true);
+  assert.equal(focused.effectiveness, 1.5);
+
+  // Équipement : il faut en posséder une
+  let save = createInitialSaveState('pyrocube', true);
+  assert.equal(save.moveStoneBag.crit_focus, 0);
+  assert.equal(equipMoveStone(save, save.roster[0].uid, 0, 'crit_focus'), save);
+  save = { ...save, moveStoneBag: { ...save.moveStoneBag, crit_focus: 1 } };
+  const equipped = equipMoveStone(save, save.roster[0].uid, 0, 'crit_focus');
+  assert.equal(equipped.roster[0].moveStones[0], 'crit_focus');
+  assert.equal(equipped.moveStoneBag.crit_focus, 0);
+
+  // Butin : jamais de pierre des confins dans les anciens biomes, possible dans les nouveaux
+  const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 10, bossHpPercentRemaining: 0 };
+  const fresh = createInitialSaveState('pyrocube', true);
+  for (const roll of [0.01, 0.3, 0.52, 0.7, 0.99]) {
+    const old = applyExpeditionRewards(fresh, STAGES[0], true, stats, () => roll).outcome.droppedMoveStone;
+    assert.ok(old === null || !FRONTIER_MOVE_STONE_KINDS.includes(old));
+  }
+  // rng constant < 0.55 : une pierre tombe, tirée dans la liste étendue des confins
+  const tundra1 = STAGES[FRONTIER_STAGE_INDEX];
+  const always = applyExpeditionRewards({ ...fresh, highestStageIndex: tundra1.index }, tundra1, true, stats, () => 0.5399);
+  assert.ok(always.outcome.droppedMoveStone !== null && MOVE_STONE_ORDER.includes(always.outcome.droppedMoveStone));
+  assert.equal(always.nextSave.stats.frontierWins, 1);
+  assert.equal(applyExpeditionRewards(fresh, STAGES[0], true, stats, () => 0.4).nextSave.stats.frontierWins, 0);
+});
+
+test('Giga: quêtes et succès des nouveaux biomes', () => {
+  const ids = new Set(QUEST_POOL.map((q) => q.templateId));
+  assert.equal(ids.size, QUEST_POOL.length);
+  assert.equal(new Set(ACHIEVEMENTS.map((a) => a.id)).size, ACHIEVEMENTS.length);
+  for (const def of [...QUEST_POOL, ...ACHIEVEMENTS]) {
+    for (const id of Object.keys(def.reward.ingredients ?? {})) assert.ok(INGREDIENTS[id], id);
+  }
+  const dexAll = ACHIEVEMENTS.find((a) => a.id === 'ach_dex_all')!;
+  assert.equal(dexAll.target, Object.keys(SPECIES).length);
+  assert.equal(ACHIEVEMENTS.find((a) => a.id === 'ach_stages_18')!.target, STAGES.length);
+
+  // Rotation : aucune quête des confins tant que la Toundra est fermée
+  const frontierTpl = QUEST_POOL.find((q) => q.templateId === 'q_frontier_win_2')!;
+  const early = createInitialSaveState('pyrocube', true);
+  assert.equal(isQuestTemplateAvailable(frontierTpl, early), false);
+  assert.equal(isQuestTemplateAvailable(frontierTpl, { highestStageIndex: FRONTIER_STAGE_INDEX }), true);
+  let rotating = recordPlayerProgress(early, { expeditionsWon: 50, reactionsTriggered: 50, ultimatesUsed: 50, dishesCooked: 50, perfectDodges: 50, bossesDefeated: 50 });
+  for (let i = 0; i < 40; i++) {
+    const done = rotating.activeQuests.find((q) => q.progress >= q.target);
+    if (!done) {
+      rotating = recordPlayerProgress(rotating, { expeditionsWon: 50, reactionsTriggered: 50, ultimatesUsed: 50, dishesCooked: 50, perfectDodges: 50, bossesDefeated: 50 });
+      continue;
+    }
+    rotating = claimQuestReward(rotating, done.uid, () => (i % 10) / 10);
+    assert.equal(rotating.activeQuests.length, 3);
+    for (const q of rotating.activeQuests) {
+      const tpl = QUEST_POOL.find((t) => t.templateId === q.templateId)!;
+      assert.ok(isQuestTemplateAvailable(tpl, rotating), q.templateId);
+    }
+  }
+
+  // Une fois la Toundra ouverte, la quête progresse avec les victoires des confins uniquement
+  const tundra1 = STAGES[FRONTIER_STAGE_INDEX];
+  let save: ReturnType<typeof createInitialSaveState> = {
+    ...early,
+    highestStageIndex: tundra1.index,
+    activeQuests: [
+      { uid: 'q_test', templateId: frontierTpl.templateId, title: frontierTpl.title, description: frontierTpl.description, metric: frontierTpl.metric, progress: 0, target: frontierTpl.target, reward: frontierTpl.reward },
+      ...early.activeQuests.slice(1),
+    ],
+  };
+  const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 10, bossHpPercentRemaining: 0 };
+  save = applyExpeditionRewards(save, STAGES[0], true, stats, () => 0.9).nextSave;
+  assert.equal(save.activeQuests[0].progress, 0);
+  save = applyExpeditionRewards(save, tundra1, true, stats, () => 0.9).nextSave;
+  save = applyExpeditionRewards(save, STAGES[FRONTIER_STAGE_INDEX + 1], true, stats, () => 0.9).nextSave;
+  assert.equal(save.activeQuests[0].progress, 2);
+  const beforeBag = save.moveStoneBag.crit_focus;
+  const claimed = claimQuestReward(save, 'q_test', () => 0.3);
+  assert.equal(claimed.moveStoneBag.crit_focus, beforeBag + 1);
+  assert.equal(claimed.ingredients.snow_lichen, (save.ingredients.snow_lichen ?? 0) + 3);
+
+  // Succès de biome : progression dérivée des niveaux terminés, réclamation unique
+  const tundraAch = ACHIEVEMENTS.find((a) => a.id === 'ach_tundra_clear')!;
+  assert.equal(getAchievementProgress(save, tundraAch), 2);
+  assert.equal(claimAchievementReward(save, tundraAch.id), save);
+  save = applyExpeditionRewards(save, STAGES[FRONTIER_STAGE_INDEX + 2], true, stats, () => 0.9).nextSave;
+  assert.equal(getAchievementProgress(save, tundraAch), 3);
+  const withAch = claimAchievementReward(save, tundraAch.id, () => 0.2);
+  assert.ok(withAch.claimedAchievementIds.includes(tundraAch.id));
+  assert.equal(withAch.moveStoneBag.crit_focus, save.moveStoneBag.crit_focus + 1);
+  assert.equal(claimAchievementReward(withAch, tundraAch.id), withAch);
+  const stormAch = ACHIEVEMENTS.find((a) => a.id === 'ach_storm_clear')!;
+  assert.equal(getAchievementProgress(save, stormAch), 0);
+});
+
+test('Giga: migration v2 -> v3 (sac de pierres, stats, progression intacte)', () => {
+  assert.equal(SAVE_VERSION, 3);
+  const fresh = createInitialSaveState('aquabloc', true);
+  // Sauvegarde v2 réaliste : pas de pierres/stats des confins, quête en cours, créature équipée
+  const { frontierWins: _fw, frontierDishes: _fd, ...v2Stats } = fresh.stats;
+  const v2: Record<string, unknown> = {
+    ...fresh,
+    version: 2,
+    moveStoneBag: { broadburst: 2, wait_less: 0, whack_whack: 3, share: 1 },
+    stats: { ...v2Stats, expeditionsWon: 9, maxCombo: 14 },
+    highestStageIndex: 7,
+    completedStageIds: STAGES.slice(0, 7).map((s) => s.id),
+    expeditionsCompleted: 9,
+    claimedAchievementIds: ['ach_first_win'],
+    activeQuests: fresh.activeQuests.map((q, i) => (i === 0 ? { ...q, progress: 1 } : q)),
+  };
+  const migrated = migrateSaveState(JSON.parse(JSON.stringify(v2)));
+  assert.ok(migrated !== null);
+  assert.equal(migrated.version, 3);
+  assert.deepEqual(migrated.moveStoneBag, { broadburst: 2, wait_less: 0, whack_whack: 3, share: 1, crit_focus: 0, leech: 0 });
+  assert.equal(migrated.stats.frontierWins, 0);
+  assert.equal(migrated.stats.frontierDishes, 0);
+  assert.equal(migrated.stats.expeditionsWon, 9);
+  assert.equal(migrated.stats.maxCombo, 14);
+  assert.equal(migrated.highestStageIndex, 7);
+  assert.equal(migrated.activeQuests[0].progress, 1);
+  assert.deepEqual(migrated.claimedAchievementIds, ['ach_first_win']);
+  assert.equal(migrated.roster[0].stoneBoard[0].stoneId, fresh.roster[0].stoneBoard[0].stoneId);
+  assert.equal(isBiomeUnlocked(migrated, 'tundra'), false);
+
+  // La sauvegarde migrée est jouable : progression et récompenses fonctionnent
+  const played = recordPlayerProgress(migrated, { frontierWins: 1, expeditionsWon: 1 });
+  assert.equal(played.stats.frontierWins, 1);
+  assert.equal(countClaimableRewards(migrated) >= 0, true);
+
+  // Aller-retour export/import en v3 + idempotence de la migration
+  const round = importSaveFromJson(exportSaveToJson(migrated));
+  assert.equal(round.ok, true);
+  if (round.ok) assert.deepEqual(round.save, migrated);
+  assert.deepEqual(migrateSaveState(migrated), migrated);
+
+  // Une version inconnue (future) est refusée plutôt que corrompue
+  assert.equal(migrateSaveState({ ...v2, version: 4 }), null);
 });

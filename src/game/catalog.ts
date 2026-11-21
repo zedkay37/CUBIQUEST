@@ -352,7 +352,30 @@ export const MOVE_STONES: Record<MoveStoneKind, MoveStoneDef> = {
     color: '#C084FC',
     description: 'Partage 50 % des bonus défensifs et soins avec toute l’escouade.',
   },
+  crit_focus: {
+    kind: 'crit_focus',
+    name: 'Pierre Précision',
+    shortLabel: 'Critique +15',
+    color: '#FDE047',
+    description: 'Ajoute 15 points de chance de coup critique à la compétence.',
+  },
+  leech: {
+    kind: 'leech',
+    name: 'Pierre Sangsue',
+    shortLabel: 'Drain 10 %',
+    color: '#F472B6',
+    description: 'La compétence rend au lanceur 10 % des dégâts qu’elle inflige.',
+  },
 };
+
+/** Pierres de Capacité historiques (butin de tous les niveaux). */
+export const BASE_MOVE_STONE_KINDS: MoveStoneKind[] = ['broadburst', 'wait_less', 'whack_whack', 'share'];
+/** Pierres ajoutées par la Giga Update (butin des nouveaux biomes, quêtes et succès). */
+export const FRONTIER_MOVE_STONE_KINDS: MoveStoneKind[] = ['crit_focus', 'leech'];
+export const MOVE_STONE_ORDER: MoveStoneKind[] = [
+  ...BASE_MOVE_STONE_KINDS,
+  ...FRONTIER_MOVE_STONE_KINDS,
+];
 
 export const SPECIES: Record<string, SpeciesDef> = {
   // === FIRE FAMILY ===
@@ -1292,6 +1315,71 @@ export const RECIPES: RecipeDef[] = [
     hint: '5 ingrédients de rareté Rare ou Mystique.',
     poolSpeciesIds: ['flambrix', 'corallix', 'feuilloc', 'sparkube', 'granitox', 'lunabloc'],
   },
+  // === GIGA UPDATE : recettes des nouveaux biomes ===
+  {
+    id: 'aurora_banquet',
+    name: 'Banquet Boréal',
+    soupHex: '#5EEAD4',
+    cookExpeditions: 3,
+    description: 'Un festin phosphorescent qui attire les formes évoluées et rares des confins.',
+    hint: 'Au moins 2 Pétales d’Aurore et 1 Éclat Mystique.',
+    poolSpeciesIds: ['ramurgel', 'cryolithe', 'serpeclair', 'auroramure', 'glaciatitan', 'tempestrix', 'cumulord'],
+    frontier: true,
+  },
+  {
+    id: 'glacier_sorbet',
+    name: 'Sorbet du Glacier',
+    soupHex: '#A5D8F3',
+    cookExpeditions: 2,
+    description: 'Une glace pilée au lichen dont raffolent les cerfs de givre.',
+    hint: 'Au moins 3 Lichens des Neiges.',
+    targetElement: 'water',
+    poolSpeciesIds: ['givrelin', 'ramurgel', 'auroramure'],
+    frontier: true,
+  },
+  {
+    id: 'permafrost_fondue',
+    name: 'Fondue Permafrost',
+    soupHex: '#8FA9C0',
+    cookExpeditions: 2,
+    description: 'Des galets brûlants plongés dans la neige fondue : irrésistible pour les golems de glace.',
+    hint: 'Au moins 2 Lichens des Neiges et 2 Galets Fossiles.',
+    targetElement: 'rock',
+    poolSpeciesIds: ['givrock', 'cryolithe', 'glaciatitan'],
+    frontier: true,
+  },
+  {
+    id: 'thunder_tajine',
+    name: 'Tajine Tonnerre',
+    soupHex: '#F59E0B',
+    cookExpeditions: 2,
+    description: 'Un plat qui crépite dans la marmite et fait accourir les serpents-éclairs.',
+    hint: 'Au moins 2 Poivres d’Orage.',
+    targetElement: 'electric',
+    poolSpeciesIds: ['crepitil', 'serpeclair', 'tempestrix'],
+    frontier: true,
+  },
+  {
+    id: 'cloud_meringue',
+    name: 'Meringue Céleste',
+    soupHex: '#E9E4FB',
+    cookExpeditions: 2,
+    description: 'Une mousse si légère qu’elle flotte hors de la marmite jusqu’aux nuages rêveurs.',
+    hint: 'Au moins 3 Flocons de Nuage.',
+    targetElement: 'psychic',
+    poolSpeciesIds: ['nimbulle', 'nimbulle', 'cumulord'],
+    frontier: true,
+  },
+  {
+    id: 'frontier_hotpot',
+    name: 'Potée des Confins',
+    soupHex: '#94A3B8',
+    cookExpeditions: 1,
+    description: 'La soupe du voyageur : attire les jeunes créatures de la Toundra et de la Cime.',
+    hint: 'Au moins 1 Lichen des Neiges et 1 Flocon de Nuage.',
+    poolSpeciesIds: ['givrelin', 'givrock', 'crepitil', 'nimbulle'],
+    frontier: true,
+  },
   {
     id: 'mulligan_stew',
     name: 'Ragoût Cubique',
@@ -2019,6 +2107,9 @@ export const STAGES: StageDef[] = [
   },
 ];
 
+/** Index du premier niveau des biomes de la Giga Update (Toundra Boréale). */
+export const FRONTIER_STAGE_INDEX = STAGES.findIndex((s) => s.biomeId === 'tundra');
+
 export const STAGE_BY_ID: Record<string, StageDef> = Object.fromEntries(
   STAGES.map((s) => [s.id, s]),
 );
@@ -2241,6 +2332,59 @@ export const QUEST_POOL: QuestTemplate[] = [
       moveStone: 'broadburst',
     },
   },
+
+  // === GIGA UPDATE : quêtes des nouveaux biomes (n'apparaissent qu'une fois la Toundra ouverte) ===
+  {
+    templateId: 'q_frontier_win_2',
+    title: 'Éclaireur des Confins',
+    description: 'Remportez 2 expéditions dans la Toundra Boréale ou la Cime des Orages.',
+    metric: 'frontierWins',
+    target: 2,
+    requiresStageIndex: FRONTIER_STAGE_INDEX,
+    reward: {
+      label: '1× Pierre Précision · 3× Lichen des Neiges',
+      ingredients: { snow_lichen: 3 },
+      moveStone: 'crit_focus',
+    },
+  },
+  {
+    templateId: 'q_frontier_dish_1',
+    title: 'Cuisine des Confins',
+    description: 'Lancez 1 recette des nouveaux biomes dans la Marmite.',
+    metric: 'frontierDishes',
+    target: 1,
+    requiresStageIndex: FRONTIER_STAGE_INDEX,
+    reward: {
+      label: '2× Pétale d’Aurore · 2× Flocon de Nuage',
+      ingredients: { aurora_petal: 2, cloud_fluff: 2 },
+    },
+  },
+  {
+    templateId: 'q_frontier_boss_3',
+    title: 'Dompteur de Tempêtes',
+    description: 'Vainquez 3 boss de la Toundra Boréale ou de la Cime des Orages.',
+    metric: 'frontierWins',
+    target: 3,
+    requiresStageIndex: FRONTIER_STAGE_INDEX + 1,
+    reward: {
+      label: '1× Pierre Sangsue · Pierre Or (+700–950)',
+      moveStone: 'leech',
+      powerStoneRange: [700, 950],
+      guaranteedRarity: 'gold',
+    },
+  },
+  {
+    templateId: 'q_evolve_frontier',
+    title: 'Nouvelle Forme',
+    description: 'Faites évoluer 1 Cubimon au Camp de Base.',
+    metric: 'evolutionsDone',
+    target: 1,
+    requiresStageIndex: FRONTIER_STAGE_INDEX,
+    reward: {
+      label: '2× Poivre d’Orage · 2× Miel Ambré',
+      ingredients: { storm_pepper: 2, amber_honey: 2 },
+    },
+  },
 ];
 
 // === V0.2 PERMANENT ACHIEVEMENTS (12) ===
@@ -2384,6 +2528,93 @@ export const ACHIEVEMENTS: AchievementDef[] = [
       ingredients: { mystic_shard: 5 },
       powerStoneRange: [380, 520],
       guaranteedRarity: 'gold',
+    },
+  },
+
+  // === GIGA UPDATE : succès des nouveaux biomes ===
+  {
+    id: 'ach_tundra_clear',
+    title: 'Brise-Glace',
+    description: 'Terminez les 3 niveaux de la Toundra Boréale.',
+    metric: 'tundraStages',
+    target: 3,
+    reward: {
+      label: '1× Pierre Précision · 3× Pétale d’Aurore',
+      ingredients: { aurora_petal: 3 },
+      moveStone: 'crit_focus',
+    },
+  },
+  {
+    id: 'ach_storm_clear',
+    title: 'Chevaucheur d’Orage',
+    description: 'Terminez les 3 niveaux de la Cime des Orages.',
+    metric: 'stormStages',
+    target: 3,
+    reward: {
+      label: '1× Pierre Sangsue · Pierre Or (+950–1250)',
+      moveStone: 'leech',
+      powerStoneRange: [950, 1250],
+      guaranteedRarity: 'gold',
+    },
+  },
+  {
+    id: 'ach_stages_18',
+    title: 'Maître des Six Biomes',
+    description: 'Triomphez des 18 niveaux jusqu’à l’Œil du Cyclone.',
+    metric: 'stagesCompleted',
+    target: 18,
+    reward: {
+      label: '5× Éclat Mystique · Pierre Or (+1100–1400)',
+      ingredients: { mystic_shard: 5 },
+      powerStoneRange: [1100, 1400],
+      guaranteedRarity: 'gold',
+    },
+  },
+  {
+    id: 'ach_dex_20',
+    title: 'Grand Naturaliste',
+    description: 'Découvrez 20 espèces différentes dans le Bestiaire.',
+    metric: 'speciesDiscovered',
+    target: 20,
+    reward: {
+      label: '3× Pétale d’Aurore · 3× Poivre d’Orage',
+      ingredients: { aurora_petal: 3, storm_pepper: 3 },
+    },
+  },
+  {
+    id: 'ach_dex_all',
+    title: 'Bestiaire Complet',
+    description: 'Découvrez les 29 espèces de l’Île aux Cubes et de ses confins.',
+    metric: 'speciesDiscovered',
+    target: 29,
+    reward: {
+      label: '3× Éclat Mystique · Pierre Or (+1000–1300)',
+      ingredients: { mystic_shard: 3 },
+      powerStoneRange: [1000, 1300],
+      guaranteedRarity: 'gold',
+    },
+  },
+  {
+    id: 'ach_frontier_dish_3',
+    title: 'Chef des Confins',
+    description: 'Préparez 3 recettes des nouveaux biomes.',
+    metric: 'frontierDishes',
+    target: 3,
+    reward: {
+      label: '4× Lichen des Neiges · 4× Flocon de Nuage · 2× Éclat Mystique',
+      ingredients: { snow_lichen: 4, cloud_fluff: 4, mystic_shard: 2 },
+    },
+  },
+  {
+    id: 'ach_evolve_5',
+    title: 'Éleveur Émérite',
+    description: 'Faites évoluer 5 Cubimons.',
+    metric: 'evolutionsDone',
+    target: 5,
+    reward: {
+      label: '1× Pierre Double · 3× Poivre d’Orage',
+      ingredients: { storm_pepper: 3 },
+      moveStone: 'whack_whack',
     },
   },
 ];
