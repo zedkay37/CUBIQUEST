@@ -56,6 +56,11 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   'stormpeak-2': { enemyHpMult: 9.5, enemyAtkMult: 0.385, bossHpMult: 2.92 },
   // avant 10 / 0.45 / 1.9 (70 %, phases 2 et 3 de 4 s)   -> ~74 %, phases 12 / 6,5 / 9 s
   'stormpeak-3': { enemyHpMult: 10, enemyAtkMult: 0.3, bossHpMult: 4.0 },
+  // --- Canyon d'Ambre (session 2, réglé directement avec `npm run sim`) ---
+  // canyon-1 : seuil très raide — attaque 0.70 => 95 %, 0.71 => 0 % ; réglé par les PV du boss (5.0 => 95 %, 5.4 => 56 %)
+  'canyon-1': { enemyHpMult: 10, enemyAtkMult: 0.6, bossHpMult: 5.3 }, // ~78 %, boss ~21 s
+  'canyon-2': { enemyHpMult: 10, enemyAtkMult: 0.338, bossHpMult: 4.0 }, // ~66 %, boss ~26 s
+  'canyon-3': { enemyHpMult: 10, enemyAtkMult: 0.313, bossHpMult: 6.0 }, // ~69 %, phases 16 / 8 / 8 s
 };
 
 /**
@@ -148,6 +153,29 @@ export const BOSS_KITS: Record<BossKit, BossKitDef> = {
   classic: { cycle: [[0], [0, 1, 2]] },
   frost: { cycle: [[3, 0], [3, 1, 0, 2]] },
   storm: { cycle: [[4, 0], [4, 5, 1, 0]] },
+  // Kit « Ambre » (Canyon d'Ambre) : aucune attaque nouvelle. Il recombine l'Anneau du kit Givre,
+  // l'Aspiration du kit Orage et les charges/météores communs, habillés en roche et en sable.
+  // Le statut infligé devient Brise-Armure (statut existant de l'élément Roche).
+  amber: {
+    cycle: [[3, 1], [5, 3, 1, 2]],
+    ring: {
+      label: 'Anneau d’Ambre — collez-vous au boss !',
+      telegraphColor: '#B91C1C', // rouge sombre : lisible sur le sol ocre
+      burstColor: '#F59E0B',
+      aftershockColor: '#FDE68A',
+      shardColor: '#FBBF24',
+      fx: 'rock',
+      statuses: [['sunder'], ['sunder', 'rooted']],
+      sound: 'impact',
+    },
+    eye: {
+      label: 'Tourbillon de Sable — Dispersion pour fuir le centre !',
+      color: '#B91C1C',
+      fx: 'rock',
+      status: 'sunder',
+      lightning: false,
+    },
+  },
 };
 
 /** Kit de boss « Orage » (StageDef.bossKit = 'storm'). Même convention que FROST_KIT. */

@@ -500,7 +500,7 @@ test('Giga: recettes des nouveaux biomes — résolution, priorités et non-rég
   for (const recipe of RECIPES.filter((x) => x.frontier)) {
     assert.ok(recipe.cookExpeditions >= 1 && recipe.poolSpeciesIds.length >= 3, recipe.id);
   }
-  assert.equal(RECIPES.filter((x) => x.frontier).length, 6);
+  assert.equal(RECIPES.filter((x) => x.frontier).length, 7);
   assert.equal(RECIPES[RECIPES.length - 1].id, 'mulligan_stew');
 
   // Cuisson complète d'une recette des confins : stock, stat dédiée, recrue du bon vivier

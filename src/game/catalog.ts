@@ -1501,6 +1501,24 @@ export const INGREDIENTS: Record<string, IngredientDef> = {
     accentHex: '#FFFFFF',
     description: 'Mousse de nuage sucrée, légère comme l’air, prélevée sur la mer de nuages.',
   },
+  mesa_fig: {
+    id: 'mesa_fig',
+    name: 'Figue des Mesas',
+    color: 'red',
+    rarity: 'common',
+    hex: '#C2410C',
+    accentHex: '#FDBA74',
+    description: 'Fruit confit par le soleil du canyon, que les béliers des mesas se disputent.',
+  },
+  amber_resin: {
+    id: 'amber_resin',
+    name: 'Résine d’Ambre',
+    color: 'yellow',
+    rarity: 'rare',
+    hex: '#F59E0B',
+    accentHex: '#FEF3C7',
+    description: 'Goutte dorée qui perle des arches fossiles et parfume toute la marmite.',
+  },
 };
 
 export const INGREDIENT_LIST = Object.values(INGREDIENTS);
@@ -1698,7 +1716,18 @@ export const RECIPES: RecipeDef[] = [
     cookExpeditions: 1,
     description: 'La soupe du voyageur : attire les jeunes créatures de la Toundra et de la Cime.',
     hint: 'Au moins 1 Lichen des Neiges et 1 Flocon de Nuage.',
-    poolSpeciesIds: ['givrelin', 'givrock', 'crepitil', 'nimbulle'],
+    poolSpeciesIds: ['givrelin', 'givrock', 'crepitil', 'nimbulle', 'chevrok'],
+    frontier: true,
+  },
+  {
+    id: 'mesa_roast',
+    name: 'Rôti des Mesas',
+    soupHex: '#C2410C',
+    cookExpeditions: 2,
+    description: 'Des figues rôties sur pierre chaude qui font dévaler les béliers des mesas.',
+    hint: 'Au moins 3 Figues des Mesas.',
+    targetElement: 'rock',
+    poolSpeciesIds: ['chevrok', 'mouflambre', 'belithan'],
     frontier: true,
   },
   {
@@ -1785,6 +1814,18 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     accentHex: '#FACC15',
     waterHex: '#7B8494',
   },
+  canyon: {
+    id: 'canyon',
+    name: 'Canyon d’Ambre',
+    subtitle: 'Mesas ocre et arches fossiles balayées par le sable',
+    dominantElement: 'rock',
+    skyHex: '#F4C58B',
+    fogHex: '#F7D9AE',
+    groundHex: '#D39A5B',
+    groundAltHex: '#C48A4C',
+    accentHex: '#F59E0B',
+    waterHex: '#9C5E33',
+  },
 };
 
 /** Ordre d'affichage et de déblocage des biomes sur la carte des expéditions. */
@@ -1795,6 +1836,7 @@ export const BIOME_ORDER: BiomeId[] = [
   'sanctuary',
   'tundra',
   'stormpeak',
+  'canyon',
 ];
 
 /** Définitions brutes des niveaux ; l'équilibrage des nouveaux niveaux est appliqué plus bas depuis balance.ts. */
@@ -2423,6 +2465,113 @@ const RAW_STAGES: StageDef[] = [
         enemies: [
           { speciesId: 'serpeclair', level: 48, ai: 'kiter' },
           { speciesId: 'tempestrix', level: 50, ai: 'boss', isBoss: true },
+        ],
+      },
+    ],
+  },
+
+  // === CANYON D’AMBRE (débloqué après l’Œil du Cyclone) ===
+  {
+    id: 'canyon-1',
+    index: 18,
+    biomeId: 'canyon',
+    stageNumber: 1,
+    name: 'Piste des Mesas',
+    recommendedPower: 13700,
+    bossSpeciesId: 'mouflambre',
+    bossKit: 'amber',
+    dropIngredients: ['mesa_fig', 'pebble_gray', 'storm_pepper'],
+    stonePowerRange: [1000, 1340],
+    xpReward: 4600,
+    waves: [
+      {
+        enemies: [
+          { speciesId: 'chevrok', level: 52, ai: 'charger' },
+          { speciesId: 'cendrox', level: 52, ai: 'chaser' },
+          { speciesId: 'amanitox', level: 52, ai: 'kiter' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'mouflambre', level: 53, ai: 'chaser' },
+          { speciesId: 'chevrok', level: 53, ai: 'charger' },
+          { speciesId: 'serpeclair', level: 53, ai: 'kiter' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'chevrok', level: 53, ai: 'charger' },
+          { speciesId: 'mouflambre', level: 55, ai: 'boss', isBoss: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'canyon-2',
+    index: 19,
+    biomeId: 'canyon',
+    stageNumber: 2,
+    name: 'Arche des Fossiles',
+    recommendedPower: 15100,
+    bossSpeciesId: 'cendrox',
+    bossKit: 'amber',
+    dropIngredients: ['mesa_fig', 'amber_resin', 'cloud_fluff'],
+    stonePowerRange: [1120, 1500],
+    xpReward: 5400,
+    waves: [
+      {
+        enemies: [
+          { speciesId: 'mouflambre', level: 55, ai: 'chaser' },
+          { speciesId: 'crabastion', level: 55, ai: 'chaser' },
+          { speciesId: 'nimbulle', level: 55, ai: 'kiter' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'mouflambre', level: 56, ai: 'charger' },
+          { speciesId: 'amanitox', level: 56, ai: 'kiter' },
+          { speciesId: 'glaciatitan', level: 56, ai: 'chaser' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'chevrok', level: 56, ai: 'chaser' },
+          { speciesId: 'cendrox', level: 58, ai: 'boss', isBoss: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'canyon-3',
+    index: 20,
+    biomeId: 'canyon',
+    stageNumber: 3,
+    name: 'Trône d’Ambre',
+    recommendedPower: 16600,
+    bossSpeciesId: 'belithan',
+    bossKit: 'amber',
+    dropIngredients: ['amber_resin', 'mesa_fig', 'mystic_shard', 'aurora_petal'],
+    stonePowerRange: [1250, 1680],
+    xpReward: 6300,
+    waves: [
+      {
+        enemies: [
+          { speciesId: 'mouflambre', level: 57, ai: 'charger' },
+          { speciesId: 'cendrox', level: 57, ai: 'chaser' },
+          { speciesId: 'tempestrix', level: 57, ai: 'kiter' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'belithan', level: 58, ai: 'chaser' },
+          { speciesId: 'mouflambre', level: 58, ai: 'charger' },
+          { speciesId: 'cumulord', level: 58, ai: 'kiter' },
+        ],
+      },
+      {
+        enemies: [
+          { speciesId: 'mouflambre', level: 58, ai: 'charger' },
+          { speciesId: 'belithan', level: 60, ai: 'boss', isBoss: true },
         ],
       },
     ],

@@ -528,6 +528,7 @@ export function resolveRecipe(ingredientIds: (string | null)[]): RecipeDef | nul
   const pepper = idCounts.storm_pepper ?? 0;
   const fluff = idCounts.cloud_fluff ?? 0;
   if (aurora >= 2 && mysticCount >= 1) return RECIPE_BY_ID.aurora_banquet;
+  if ((idCounts.mesa_fig ?? 0) >= 3) return RECIPE_BY_ID.mesa_roast;
   if (lichen >= 3) return RECIPE_BY_ID.glacier_sorbet;
   if (lichen >= 2 && (idCounts.pebble_gray ?? 0) >= 2) return RECIPE_BY_ID.permafrost_fondue;
   if (pepper >= 2) return RECIPE_BY_ID.thunder_tajine;

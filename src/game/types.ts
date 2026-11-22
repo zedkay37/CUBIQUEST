@@ -39,10 +39,10 @@ export type PotTier = 'iron' | 'bronze' | 'silver' | 'gold';
 export type IngredientColor = 'red' | 'blue' | 'yellow' | 'gray';
 export type IngredientRarity = 'common' | 'rare' | 'mystic';
 
-export type BiomeId = 'meadow' | 'shore' | 'volcano' | 'sanctuary' | 'tundra' | 'stormpeak';
+export type BiomeId = 'meadow' | 'shore' | 'volcano' | 'sanctuary' | 'tundra' | 'stormpeak' | 'canyon';
 
 /** Jeu de mécaniques télégraphiées d'un boss (voir VoxelEngine, IA 'boss'). */
-export type BossKit = 'classic' | 'frost' | 'storm';
+export type BossKit = 'classic' | 'frost' | 'storm' | 'amber';
 
 export type ControlMode = 'semi' | 'auto' | 'manual';
 

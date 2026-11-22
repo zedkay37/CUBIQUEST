@@ -25,6 +25,9 @@ const EXPLICIT_CONFIGS: Record<string, PreviewConfig> = {
   'stormpeak-1': { squad: ['auroramure', 'glaciatitan', 'raicube'], level: 46, bonus: 1400 },
   'stormpeak-2': { squad: ['tempestrix', 'cryolithe', 'nimbulle'], level: 48, bonus: 1700 },
   'stormpeak-3': { squad: ['serpeclair', 'cumulord', 'glaciatitan'], level: 50, bonus: 2000 },
+  'canyon-1': { squad: ['amanitox', 'crabastion', 'cendrox'], level: 50, bonus: 2300 },
+  'canyon-2': { squad: ['tempestrix', 'glaciatitan', 'cumulord'], level: 50, bonus: 2600 },
+  'canyon-3': { squad: ['auroramure', 'belithan', 'amanitox'], level: 50, bonus: 3000 },
 };
 
 /** Forme d'une lignée qu'aurait une créature de ce niveau (elle évolue dès qu'elle le peut). */

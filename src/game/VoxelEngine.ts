@@ -300,13 +300,17 @@ const BOLT_POOL_SIZE = 6;
 type WeatherKind = 'drift' | 'rain' | 'rise' | 'float' | 'snow';
 
 /** Ambiance particulaire par biome. */
-const WEATHER_PROFILES: Record<BiomeId, { kind: WeatherKind; count: number; colors: string[] }> = {
+const WEATHER_PROFILES: Record<
+  BiomeId,
+  { kind: WeatherKind; count: number; colors: string[]; /** vent latéral ajouté aux particules qui dérivent */ wind?: number }
+> = {
   meadow: { kind: 'drift', count: 54, colors: ['#FEF08A', '#BBF7D0', '#FDE68A'] }, // pollen
   shore: { kind: 'rain', count: 54, colors: ['#E0F2FE', '#7DD3FC', '#BAE6FD'] }, // embruns
   volcano: { kind: 'rise', count: 54, colors: ['#FB923C', '#FDE047', '#EF4444'] }, // braises
   sanctuary: { kind: 'float', count: 54, colors: ['#E9D5FF', '#67E8F9', '#C084FC'] }, // éclats astraux
   tundra: { kind: 'snow', count: 96, colors: ['#FFFFFF', '#E0F2FE', '#F8FAFC'] }, // neige
   stormpeak: { kind: 'rain', count: 96, colors: ['#CBD5E1', '#94A3B8', '#E2E8F0'] }, // pluie battante
+  canyon: { kind: 'drift', count: 80, colors: ['#F2D6A2', '#E8B873', '#FBE8C4'], wind: 3.4 }, // sable porté par le vent
 };
 
 const BIOME_LIGHTING: Record<BiomeId, { sky: string; ground: string; key: string }> = {
@@ -316,6 +320,7 @@ const BIOME_LIGHTING: Record<BiomeId, { sky: string; ground: string; key: string
   sanctuary: { sky: '#D8C4FF', ground: '#3E345C', key: '#EFE4FF' },
   tundra: { sky: '#CFE6FF', ground: '#6F86A8', key: '#EAF6FF' },
   stormpeak: { sky: '#C2CCDA', ground: '#3B4252', key: '#DDE6F2' },
+  canyon: { sky: '#FFE2B8', ground: '#8A5A3A', key: '#FFD9A0' },
 };
 const ARENA_BOUND = 15.5;
 const MAX_ATTACK_TOKENS = 3;
@@ -618,7 +623,7 @@ export class VoxelEngine {
               ? 0.9 + Math.random() * 0.7
               : kind === 'rise'
                 ? (Math.random() - 0.5) * 1.1
-                : (Math.random() - 0.5) * 0.9,
+                : (Math.random() - 0.5) * 0.9 + (profile.wind ?? 0),
         vy:
           kind === 'rain'
             ? (stormy ? -16 : -11.5) - Math.random() * 3

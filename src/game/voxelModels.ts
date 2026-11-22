@@ -978,7 +978,125 @@ const BIOME_DECOR: Record<BiomeId, BiomeDecorStyle> = {
     crownScale: [0.22, 1.5],
     rockTints: ['#4B5563', '#6B7280', '#FACC15'],
   },
+  // Cheminées de fée (piliers coiffés d'une dalle), falaises ocre, mer de sable
+  canyon: {
+    ...TEMPERATE_DECOR,
+    cliff: '#8E5A34',
+    foam: '#F2D6A2',
+    seaRoughness: 0.95,
+    seaEmissive: 0.04,
+    cloud: '#FBE8C4',
+    cloudOpacity: 0.7,
+    trunk: '#A8703F',
+    trunkStretch: 1.3,
+    crownTints: ['#C97F3F', '#B56A30', '#DDA15E', '#9C5A2C'],
+    crownRoughness: 0.9,
+    crownScale: [1.25, 0.5],
+    rockTints: ['#B98045', '#D9A05B', '#F59E0B'],
+  },
 };
+
+/** Décor propre au Canyon d'Ambre : mesas à strates, arches de pierre, cristaux d'ambre, côtes fossiles. */
+function addCanyonDecor(env: THREE.Group, arenaRadius: number): (elapsed: number) => void {
+  const dummy = new THREE.Object3D();
+  const tint = new THREE.Color();
+
+  // Mesas (3 strates empilées) et arches (2 piliers + linteau) : une seule InstancedMesh colorée
+  const strata = ['#B56A30', '#D39A5B', '#E8B873'];
+  const blocks: { x: number; y: number; z: number; sx: number; sy: number; sz: number; rot: number; color: string }[] = [];
+  for (let i = 0; i < 6; i++) {
+    const ang = (i / 6) * Math.PI * 2 + 0.35;
+    const r = arenaRadius - 3.2 + (i % 2) * 1.6;
+    const x = Math.cos(ang) * r;
+    const z = Math.sin(ang) * r;
+    const w = 5.2 + (i % 3) * 1.4;
+    for (let k = 0; k < 3; k++) {
+      blocks.push({ x, y: 1.1 + k * 2.0, z, sx: w - k * 1.3, sy: 2.0, sz: w * 0.8 - k * 1.1, rot: ang + i, color: strata[k] });
+    }
+  }
+  for (const [ax, az, rot] of [
+    [-13.5, -13.5, 0.8],
+    [14.5, -11.5, -0.6],
+  ] as [number, number, number][]) {
+    const dx = Math.cos(rot) * 2.1;
+    const dz = Math.sin(rot) * 2.1;
+    blocks.push({ x: ax - dx, y: 2.0, z: az - dz, sx: 1.2, sy: 4.0, sz: 1.2, rot, color: strata[0] });
+    blocks.push({ x: ax + dx, y: 2.0, z: az + dz, sx: 1.2, sy: 4.0, sz: 1.2, rot, color: strata[0] });
+    blocks.push({ x: ax, y: 4.4, z: az, sx: 6.0, sy: 0.9, sz: 1.4, rot: -rot, color: strata[1] });
+  }
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92 });
+  const rockInst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), rockMat, blocks.length);
+  rockInst.castShadow = true;
+  rockInst.receiveShadow = true;
+  blocks.forEach((b, i) => {
+    dummy.position.set(b.x, b.y, b.z);
+    dummy.scale.set(b.sx, b.sy, b.sz);
+    dummy.rotation.set(0, b.rot, 0);
+    dummy.updateMatrix();
+    rockInst.setMatrixAt(i, dummy.matrix);
+    rockInst.setColorAt(i, tint.set(b.color));
+  });
+  rockInst.computeBoundingSphere();
+  env.add(rockInst);
+
+  // Cristaux d'ambre qui affleurent autour de l'arène
+  const amberMat = new THREE.MeshStandardMaterial({
+    color: '#FBBF24',
+    emissive: new THREE.Color('#F59E0B'),
+    emissiveIntensity: 0.5,
+    roughness: 0.18,
+    metalness: 0.2,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const amberCount = 14;
+  const amber = new THREE.InstancedMesh(new THREE.BoxGeometry(0.6, 1.5, 0.6), amberMat, amberCount);
+  amber.castShadow = true;
+  for (let i = 0; i < amberCount; i++) {
+    const ang = (i / amberCount) * Math.PI * 2 + 0.1;
+    const r = 16.2 + ((i * 37) % 30) / 10;
+    const s = 0.6 + ((i * 23) % 70) / 100;
+    dummy.position.set(Math.cos(ang) * r, 0.6 * s, Math.sin(ang) * r);
+    dummy.scale.set(s, s * (1 + (i % 3) * 0.3), s);
+    dummy.rotation.set(((i % 5) - 2) * 0.12, i * 1.1, ((i % 4) - 1.5) * 0.14);
+    dummy.updateMatrix();
+    amber.setMatrixAt(i, dummy.matrix);
+  }
+  amber.computeBoundingSphere();
+  env.add(amber);
+
+  // Côtes d'un grand fossile à demi ensablé
+  const boneMat = new THREE.MeshStandardMaterial({ color: '#F3E9D2', roughness: 0.7 });
+  const ribCount = 7;
+  const ribs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.34, 2.6, 0.34), boneMat, ribCount * 2 + 1);
+  ribs.castShadow = true;
+  for (let i = 0; i < ribCount; i++) {
+    const h = 0.7 + Math.sin((i / (ribCount - 1)) * Math.PI) * 0.6;
+    for (const side of [-1, 1]) {
+      dummy.position.set(i * 0.95 - 2.85, 1.0 * h, side * 0.9);
+      dummy.scale.set(1, h, 1);
+      dummy.rotation.set(side * 0.5, 0, 0);
+      dummy.updateMatrix();
+      ribs.setMatrixAt(i * 2 + (side === 1 ? 1 : 0), dummy.matrix);
+    }
+  }
+  // colonne vertébrale couchée
+  dummy.position.set(0, 0.2, 0);
+  dummy.scale.set(1, 2.7, 1);
+  dummy.rotation.set(0, 0, Math.PI / 2);
+  dummy.updateMatrix();
+  ribs.setMatrixAt(ribCount * 2, dummy.matrix);
+  ribs.computeBoundingSphere();
+  const fossil = new THREE.Group();
+  fossil.add(ribs);
+  fossil.position.set(12.5, 0, 13.5); // au bord de l'arène, hors de la zone de combat centrale
+  fossil.rotation.y = 0.5;
+  env.add(fossil);
+
+  return (elapsed) => {
+    amberMat.emissiveIntensity = 0.45 + Math.sin(elapsed * 1.6) * 0.2;
+  };
+}
 
 /** Décor propre à la Toundra Boréale : flèches de glace, congères, étangs gelés, igloo, aurores. */
 function addTundraDecor(env: THREE.Group, arenaRadius: number): (elapsed: number) => void {
@@ -1357,6 +1475,7 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
   let animate: ((elapsed: number) => void) | undefined;
   if (biome.id === 'tundra') animate = addTundraDecor(env, arenaRadius);
   else if (biome.id === 'stormpeak') animate = addStormDecor(env, arenaRadius);
+  else if (biome.id === 'canyon') animate = addCanyonDecor(env, arenaRadius);
 
   return { group: env, waterUniform, cloudGroup, animate };
 }
