@@ -54,49 +54,49 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   // --- Douze premiers niveaux (S03 : a minima). Avant : formule d'origine, soit 1 / 1 / 1. ---
   // Mesures : 40 combats x graines 1, 2, 3, en Auto. « boss » = durée moyenne du combat de boss.
   // meadow-1 : avant 21 % (le boss tuait l'escouade de niveau 4 en ~5 s) -> 96 %, boss ~13 s
-  'meadow-1': { enemyHpMult: 1, enemyAtkMult: 0.15, bossHpMult: 9 },
+  'meadow-1': { enemyHpMult: 0.787, enemyAtkMult: 0.087, bossHpMult: 16.2 },
   // avant 100 %, boss 2 s -> 77 %, boss ~13 s (seuil raide : bossHpMult 10.5 => 58 %)
-  'meadow-2': { enemyHpMult: 1, enemyAtkMult: 0.119, bossHpMult: 11 },
+  'meadow-2': { enemyHpMult: 1.129, enemyAtkMult: 0.062, bossHpMult: 19.8 },
   // avant 85 %, boss 3 s -> 88 %, boss ~14 s, attaque annoncée dans les 3 phases
-  'meadow-3': { enemyHpMult: 0.5, enemyAtkMult: 0.144, bossHpMult: 16 },
+  'meadow-3': { enemyHpMult: 0.628, enemyAtkMult: 0.077, bossHpMult: 25 },
   // avant 100 %, boss 2 s -> 88 %, boss ~11 s
   'shore-1': { enemyHpMult: 1, enemyAtkMult: 0.224, bossHpMult: 10 },
   // avant 98 %, boss 3 s -> 82 %, boss ~12 s
   'shore-2': { enemyHpMult: 1, enemyAtkMult: 0.096, bossHpMult: 9 },
   // avant 100 %, boss 0,5 s -> 87 %, boss ~17 s (phase 3 : attaque annoncée dans 93 % des combats)
-  'shore-3': { enemyHpMult: 0.55, enemyAtkMult: 0.094, bossHpMult: 22 },
+  'shore-3': { enemyHpMult: 0.799, enemyAtkMult: 0.101, bossHpMult: 25 },
   // avant 100 %, boss 1 s -> 93 %, boss ~12 s
-  'volcano-1': { enemyHpMult: 1, enemyAtkMult: 0.304, bossHpMult: 13 },
+  'volcano-1': { enemyHpMult: 1.821, enemyAtkMult: 0.138, bossHpMult: 25 },
   // avant 100 %, boss 1 s -> 83 %, boss ~12 s
-  'volcano-2': { enemyHpMult: 1, enemyAtkMult: 0.14, bossHpMult: 12 },
+  'volcano-2': { enemyHpMult: 1.301, enemyAtkMult: 0.065, bossHpMult: 21.6 },
   // avant 100 %, boss 1 s -> 89 %, boss ~15 s
-  'volcano-3': { enemyHpMult: 1, enemyAtkMult: 0.138, bossHpMult: 12 },
+  'volcano-3': { enemyHpMult: 0.94, enemyAtkMult: 0.063, bossHpMult: 18.81 },
   // avant 100 %, boss 0,4 s -> 87 %, boss ~12 s (phase 1 : 98 %)
-  'sanctuary-1': { enemyHpMult: 1, enemyAtkMult: 0.259, bossHpMult: 13 },
+  'sanctuary-1': { enemyHpMult: 1.6, enemyAtkMult: 0.114, bossHpMult: 23.4 },
   // avant 100 %, boss 1 s -> 84 %, boss ~15 s
   'sanctuary-2': { enemyHpMult: 1, enemyAtkMult: 0.126, bossHpMult: 13 },
   // avant 100 %, boss 1,5 s -> 77 %, boss ~12 s. NON ATTEINT : phase 2 trop courte (attaque annoncée
   // dans 60 % des combats) ; allonger le boss fait chuter les victoires sous 50 %. À reprendre en S05.
-  'sanctuary-3': { enemyHpMult: 0.7, enemyAtkMult: 0.124, bossHpMult: 15 },
+  'sanctuary-3': { enemyHpMult: 1.344, enemyAtkMult: 0.053, bossHpMult: 25 },
   // --- Toundra Boréale ---
   // avant 8 / 0.6 / 2.2 (75 %, boss 14 s)                -> ~61 %, boss ~24 s
-  'tundra-1': { enemyHpMult: 8, enemyAtkMult: 0.145, bossHpMult: 3.4 },
+  'tundra-1': { enemyHpMult: 4.571, enemyAtkMult: 0.146, bossHpMult: 8.99 },
   // avant 8.5 / 0.5 / 1.8 (88 %, boss 14 s)              -> ~60 %, boss ~29 s
-  'tundra-2': { enemyHpMult: 8.5, enemyAtkMult: 0.239, bossHpMult: 3.0 },
+  'tundra-2': { enemyHpMult: 8.5, enemyAtkMult: 0.239, bossHpMult: 3 },
   // avant 9 / 0.5 / 1.6 (0 %, phase 3 de 2,5 s)          -> ~70 %, phases 15 / 8 / 9 s
-  'tundra-3': { enemyHpMult: 9, enemyAtkMult: 0.169, bossHpMult: 3.2 },
+  'tundra-3': { enemyHpMult: 9, enemyAtkMult: 0.125, bossHpMult: 4.01 },
   // --- Cime des Orages ---
   // avant 9 / 0.48 / 2.0 (100 %, boss 10 s)              -> ~79 %, boss ~19 s
-  'stormpeak-1': { enemyHpMult: 9, enemyAtkMult: 0.293, bossHpMult: 4.0 },
+  'stormpeak-1': { enemyHpMult: 12, enemyAtkMult: 0.293, bossHpMult: 5.92 },
   // avant 9.5 / 0.45 / 1.8 (83 %, boss 18 s)             -> ~74 %, boss ~29 s
   'stormpeak-2': { enemyHpMult: 9.5, enemyAtkMult: 0.285, bossHpMult: 2.92 },
   // avant 10 / 0.45 / 1.9 (70 %, phases 2 et 3 de 4 s)   -> ~74 %, phases 12 / 6,5 / 9 s
-  'stormpeak-3': { enemyHpMult: 10, enemyAtkMult: 0.123, bossHpMult: 4.0 },
+  'stormpeak-3': { enemyHpMult: 5.305, enemyAtkMult: 0.124, bossHpMult: 16.01 },
   // --- Canyon d'Ambre (session 2, réglé directement avec `npm run sim`) ---
   // canyon-1 : seuil très raide — attaque 0.46 => 85 %, 0.465 => 44 % ; affiné par les PV du boss (5.3 => 85 %, 5.5 => 53 %)
   'canyon-1': { enemyHpMult: 10, enemyAtkMult: 0.248, bossHpMult: 5.4 },
-  'canyon-2': { enemyHpMult: 10, enemyAtkMult: 0.177, bossHpMult: 4.0 },
-  'canyon-3': { enemyHpMult: 10, enemyAtkMult: 0.13, bossHpMult: 6.0 },
+  'canyon-2': { enemyHpMult: 7.18, enemyAtkMult: 0.178, bossHpMult: 6.29 },
+  'canyon-3': { enemyHpMult: 5.078, enemyAtkMult: 0.135, bossHpMult: 22.23 },
 };
 
 /**

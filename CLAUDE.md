@@ -93,10 +93,11 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | `expedition.ts` | Départ, vagues, pas de combat (`updateExpedition`), défaite / victoire, envoi du résultat. |
 | `allies.ts` | Alliés : déplacement, attaque de base, sort automatique. |
 | `enemies.ts` | IA des ennemis : poursuiveur, tireur, chargeur, boss (déplacement, jetons d'attaque). |
-| `boss.ts` | Entrée en scène du boss et attaques télégraphiées (patterns 0 à 5, pilotés par `BOSS_KITS`). |
+| `boss.ts` | Entrée en scène du boss, attaques télégraphiées (patterns 0 à 5, pilotés par `BOSS_KITS`), mini-boss (`bossCycle`), modules Carapace de magma et Satellites. |
 | `skills.ts` | Commandes du joueur : sort d'un allié, Esquive, ultime. |
 | `damage.ts` | Résolution d'un coup : faiblesses, cubes (via `cubes.ts`), boucliers, K.O., phases du boss. |
 | `cubes.ts` | Cubes d'élément : pose, maturation, Éclat (effets de `BURSTS`), Fêlure, Trio, un seul effet par lancer (`CastContext`), ciblage intelligent, `getSkillPreview`, charge du Déchaînement (`gainUltimateCharge`). |
+| `telegraphs.ts` | Grammaire unique des attaques annoncées : disque, couronne, bande, spirale ; couleur `DANGER` (styleGuide.ts) hachurée, remplissage jusqu'au bord à l'impact, contour qui clignote, « tic » commun. |
 | `cubeFx.ts` | Affichage des cubes et des Fêlures : un `InstancedMesh` chacun, atlas de symboles d'élément dessiné par code. |
 | `actors.ts` | État commun des acteurs, pose animée des modèles, recherche de cible, disparition. |
 | `fx.ts` | Particules, projectiles, ondes de choc, télégraphes au sol, confettis. |
@@ -145,6 +146,7 @@ npm run sim -- --stages tundra-3 --set tundra-3=9/0.28/3.2   # essai SANS touche
 npm run sim -- --seed 2 --out docs/sim/mon-tableau.md
 npm run sim -- --profile active                # profil « joueur actif » : sorts et ultime dès que prêts, Esquive sur télégraphe
 npm run sim -- --profile expert                # profil « expert » : piloté par getSkillPreview (Trios, Éclats pleins)
+npm run sim -- --profile kite                  # profil « kite » : mode Manuel, fuir puis revenir (hit and run)
 npm run sim -- --cubes 0                       # cubes d'élément coupés (option d'outil)
 npm run sim -- --scale 1/0.7/1                 # multiplie les réglages de tous les niveaux choisis (essai global)
 ```
@@ -170,6 +172,9 @@ npm run sim -- --scale 1/0.7/1                 # multiplie les réglages de tous
 - Les modules de `engine/` s'importent les uns les autres en cercle : c'est sans danger tant qu'ils n'exécutent rien au chargement. Ne pas y ajouter de code de premier niveau qui appelle un autre module.
 - Le sac de Pierres est limité à 48 : passer par `addPowerStoneToBag`, qui ne retire jamais une pierre équipée.
 - **Site statique** : `vite build` produit un site complet, sans serveur. `base` vient de `BASE_PATH` (défaut `/`) : aucun chemin absolu commençant par `/` dans le code (utiliser `import.meta.env.BASE_URL`). Les clés de `localStorage` passent par `withSaveSlot` (`src/game/saveSlot.ts`) : la version `next/` (`VITE_SAVE_SLOT=next`) partage le domaine de la version validée mais pas sa sauvegarde. L'onglet du Professeur n'existe que si `VITE_AI_CODEX=1` ; sinon le jeu n'appelle jamais `/api`. Le titre de `index.html` est injecté au build depuis `fr.ts` (repère `%GAME_FULL_TITLE%`).
+- **Esquive** (S05) : `DODGE_KIT` (balance.ts). La parfaite se décide à l'IMPACT d'une attaque annoncée (`resolvingHazard` pendant `onComplete`, voir fx.ts et damage.ts), jamais à l'appui. Toute nouvelle attaque de boss doit passer par `spawnEnemyTelegraph` avec `{ phase }` (délai minimal de la phase, test dédié) et infliger ses dégâts dans `onComplete`.
+- **Annonces** : `TELEGRAPH_KIT` ; au plus trois zones à la fois (cinq avec les météores) ; consigne écrite montrée deux fois par attaque (`hazardHintsSeen` dans la sauvegarde v6, `showHazardHint`).
+- **Boss** : un kit par biome (`BIOME_BOSS_KITS`), modules génériques (`BOSS_MODULES`). Les simulations « actif » et « expert » appuient sur Esquive avant l'impact avec un tirage À PART (`dodgeRng` de simFight.ts) : l'aléatoire du jeu n'est pas consommé par le joueur simulé.
 - **Cubes** : la règle (`resolveCubeHit`, `pickSkillTarget`) est pure dans `rules.ts` ; ses réglages dans `CUBE_KIT`, `ULTIMATE_CHARGE`, `ULTIMATE_KIT` (`balance.ts`) et `BURSTS` (`catalog.ts`). Sur un ennemi, le cube remplace les statuts (un seul, de la durée du cube) ; les altérations infligées aux alliés restent des statuts. Tout nouvel état transitoire de combat (`pendingUltHits`, `slowMoTimer`, verrous) se remet à zéro dans `startExpedition` et `loadCampScene`.
 - `catalog.ts` importe `balance.ts` : `balance.ts` ne doit rien importer du catalogue. `i18n/fr.ts` n'importe rien.
 - Deux fichiers de verrouillage coexistent : `package-lock.json` (npm, à jour, utilisé par la CI) et `bun.lock` (hérité, pas régénéré faute de `bun` sur la machine de développement).

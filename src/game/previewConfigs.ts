@@ -21,7 +21,8 @@ export interface PreviewConfig {
 const EXPLICIT_CONFIGS: Record<string, PreviewConfig> = {
   'tundra-1': { squad: ['ignisaur', 'abyssocube', 'bourgeoliath'], level: 38, bonus: 684 },
   'tundra-2': { squad: ['ramurgel', 'givrock', 'ignisaur'], level: 41, bonus: 900 },
-  'tundra-3': { squad: ['ramurgel', 'cryolithe', 'auroramure'], level: 44, bonus: 1100 },
+  // S05.4 : Auroramure (même lignée que Ramurgel) remplacé par Ignisaur : trois éléments, trois lignées
+  'tundra-3': { squad: ['ramurgel', 'cryolithe', 'ignisaur'], level: 44, bonus: 1100 },
   'stormpeak-1': { squad: ['auroramure', 'glaciatitan', 'raicube'], level: 46, bonus: 1400 },
   'stormpeak-2': { squad: ['tempestrix', 'cryolithe', 'nimbulle'], level: 48, bonus: 1700 },
   'stormpeak-3': { squad: ['serpeclair', 'cumulord', 'glaciatitan'], level: 50, bonus: 2000 },

@@ -757,7 +757,7 @@ test('Socle: chaque niveau a une escouade de référence valide (aperçu et simu
   }
   // Les configurations fixées à la main sont celles des URL d'aperçu documentées
   assert.deepEqual(getReferenceConfig(STAGES.find((s) => s.id === 'tundra-3')!), {
-    squad: ['ramurgel', 'cryolithe', 'auroramure'],
+    squad: ['ramurgel', 'cryolithe', 'ignisaur'],
     level: 44,
     bonus: 1100,
   });
@@ -770,4 +770,20 @@ test('Socle: chaque niveau a une escouade de référence valide (aperçu et simu
   // Renvoie une copie : modifier le résultat ne pollue pas la table
   getReferenceConfig(STAGES[12]).squad.push('x');
   assert.equal(getReferenceConfig(STAGES[12]).squad.length, 3);
+});
+
+test('Socle: chaque escouade de référence aligne trois éléments et trois lignées différents', () => {
+  const root = (id: string): string => {
+    let cur = id;
+    for (let guard = 0; guard < 5; guard++) {
+      const parent = Object.values(SPECIES).find((s) => s.evolvesTo === cur);
+      if (!parent) break;
+      cur = parent.id;
+    }
+    return cur;
+  };
+  for (const { stage, config } of listReferenceConfigs()) {
+    assert.equal(new Set(config.squad.map((id) => SPECIES[id].element)).size, 3, `${stage.id} : éléments`);
+    assert.equal(new Set(config.squad.map(root)).size, 3, `${stage.id} : lignées`);
+  }
 });
