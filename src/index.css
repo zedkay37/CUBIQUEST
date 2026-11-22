@@ -370,3 +370,11 @@ textarea:focus-visible {
     overflow-wrap: anywhere;
   }
 }
+
+/* Mobile : aucun bouton de moins de 44 px (cibles tactiles) */
+@media (max-width: 640px) {
+  .voxel-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
