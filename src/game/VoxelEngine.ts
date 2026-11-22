@@ -1,3 +1,10 @@
+/**
+ * Façade du moteur temps réel : état partagé, construction de la scène, API publique appelée par App.tsx.
+ *
+ * La logique vit dans les modules de ./engine, sous forme de fonctions qui reçoivent le moteur (`self`)
+ * en premier argument. Les champs ci-dessous sont donc publics pour ces modules ; l'interface React
+ * et les outils ne doivent utiliser que les méthodes publiques. Carte des modules : voir CLAUDE.md.
+ */
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { soundFx } from './audio';
@@ -10,6 +17,19 @@ import {
   STORM_KIT,
 } from './balance';
 import { BIOMES, MOVES, RECIPE_BY_ID, SPECIES, STATUS_META } from './catalog';
+import type {
+  ActiveProjectile,
+  CampWanderer,
+  CombatActor,
+  CombatTelemetry,
+  EngineCallbacks,
+  EngineOptions,
+  EvolutionSequence,
+  GroundTelegraph,
+  ParticleSlot,
+  WeatherKind,
+  WeatherMote,
+} from './engine/types';
 import {
   calculateDamage,
   computeBossPhase,
@@ -17,8 +37,8 @@ import {
   computeStatusDuration,
   computeUltimateCharge,
   getMoveModifiers,
-  getTypeEffectiveness,
   getStatusForElement,
+  getTypeEffectiveness,
   resolveElementalReaction,
 } from './rules';
 import type {
@@ -26,7 +46,6 @@ import type {
   ControlMode,
   ElementType,
   ExpeditionHudSnapshot,
-  MoveStoneKind,
   OwnedCreature,
   PlayMode,
   PowerStone,
@@ -45,30 +64,14 @@ import {
   type VoxelCreatureRig,
 } from './voxelModels';
 
+export type { CombatTelemetry, EngineCallbacks, EngineOptions } from './engine/types';
+
 // Module-level preallocated math scratch objects (Zero GC inside render loop)
 const _vecA = new THREE.Vector3();
 const _vecB = new THREE.Vector3();
 const _vecC = new THREE.Vector3();
 const _dummy = new THREE.Object3D();
 const _color = new THREE.Color();
-
-interface ParticleSlot {
-  active: boolean;
-  x: number;
-  y: number;
-  z: number;
-  vx: number;
-  vy: number;
-  vz: number;
-  life: number;
-  maxLife: number;
-  size: number;
-  colorHex: string;
-  gravity: number;
-  drag: number;
-  stretchY: number;
-  bounce: number;
-}
 
 // Signature visuelle des impacts par élément (couleurs + comportement physique des cubes)
 const ELEMENT_FX: Record<
@@ -103,121 +106,6 @@ const ELEMENT_FX: Record<
   psychic: { colors: ['#C084FC', '#E9D5FF', '#67E8F9'], speed: 2.4, vyMin: 0.8, vyMax: 2.6, gravity: -1.6, drag: 1.1, stretchY: 1, bounce: 0, lifeMin: 0.6, lifeMax: 1.0, sizeMin: 0.1, sizeMax: 0.2, swirl: 4.2 },
 };
 
-interface ActiveProjectile {
-  mesh: THREE.Mesh;
-  x: number;
-  y: number;
-  z: number;
-  vx: number;
-  vz: number;
-  radius: number;
-  life: number;
-  fromAlly: boolean;
-  damage: number;
-  elementColor: string;
-  elementType?: ElementType;
-  isSkill?: boolean;
-  aoeRadius: number;
-  isCrit: boolean;
-  casterUnit?: CombatActor;
-}
-
-interface GroundTelegraph {
-  mesh: THREE.Mesh;
-  x: number;
-  z: number;
-  radius: number;
-  elapsed: number;
-  duration: number;
-  isLine: boolean;
-  dirX: number;
-  dirZ: number;
-  isEnemyHazard: boolean;
-  onComplete: () => void;
-}
-
-interface ActorStatusInstance {
-  remaining: number;
-  tickTimer: number;
-  sourceAtk: number;
-}
-
-interface CombatActor {
-  id: string;
-  isAlly: boolean;
-  isBoss: boolean;
-  ai: 'ally' | 'chaser' | 'kiter' | 'charger' | 'boss';
-  speciesId: string;
-  name: string;
-  level: number;
-  rig: VoxelCreatureRig;
-  x: number;
-  z: number;
-  vx: number;
-  vz: number;
-  facing: number;
-  hp: number;
-  maxHp: number;
-  shieldHp: number;
-  atk: number;
-  critRate: number;
-  hitHeal: number;
-  statusRes: number;
-  moveSpeed: number;
-  attackRange: number;
-  moveId: string;
-  moveStones: (MoveStoneKind | null)[];
-  basicCooldown: number;
-  skillCooldown: number;
-  skillMaxCooldown: number;
-  buffTimer: number;
-  flashTimer: number;
-  invulnTimer: number;
-  stunTimer: number;
-  scatterTimer: number;
-  scatterDirX: number;
-  scatterDirZ: number;
-  walkPhase: number;
-  squashY: number;
-  fainted: boolean;
-  reviveTimer: number;
-  koDissolveTimer: number; // for enemies
-  removed: boolean;
-  telegraphing: boolean;
-  aiCooldown: number;
-  hasAttackToken: boolean;
-  statuses: Partial<Record<StatusKind, ActorStatusInstance>>;
-  bossPhase: 1 | 2 | 3;
-  bossMaxPhases: 2 | 3;
-  bossPatternIndex: number;
-  pullTimer: number; // Œil du Cyclone : le boss aspire l'escouade tant que > 0
-}
-
-interface CampWanderer {
-  uid: string;
-  rig: VoxelCreatureRig;
-  x: number;
-  z: number;
-  targetX: number;
-  targetZ: number;
-  waitTimer: number;
-  walkPhase: number;
-  facing: number;
-  emoteTimer: number; // délai avant le prochain petit saut de joie
-  emoteT: number; // temps restant du saut en cours
-}
-
-interface EvolutionSequence {
-  t: number;
-  revealed: boolean;
-  rig: VoxelCreatureRig;
-  baseScale: number;
-  toSpeciesId: string;
-  spawnAcc: number;
-  onReveal?: () => void;
-  onDone: () => void;
-}
-
 // Scène d'évolution : devant la marmite, face caméra
 const EVO_X = 0;
 const EVO_Z = 3.2; // assez près du centre pour que la caméra reste devant les arbres du pourtour
@@ -243,68 +131,9 @@ const CAMP_SKY_KEYS = [
   skyKey(1.0, '#F6C9A0', '#F8DDC6', '#FFD2A6', 1.0, 0.46, 0.34),
 ];
 
-interface WeatherMote {
-  x: number;
-  y: number;
-  z: number;
-  vx: number;
-  vy: number;
-  vz: number;
-  sizeX: number;
-  sizeY: number;
-  sizeZ: number;
-  phase: number;
-}
-
-/** Mesures d'un combat lues par l'outil de simulation (`npm run sim`). Temps en secondes de combat. */
-export interface CombatTelemetry {
-  /** Instant où le boss entre en scène (-1 s'il n'est jamais apparu). */
-  bossAppearedAt: number;
-  /** Début de chaque phase du boss : [phase 1, phase 2, phase 3] (-1 si jamais atteinte). */
-  phaseStartedAt: [number, number, number];
-  /** Instant de la mort du boss (-1 s'il a survécu). */
-  bossDefeatedAt: number;
-  /** Nombre d'attaques télégraphiées lancées par le boss dans chaque phase. */
-  castsByPhase: [number, number, number];
-  /** Identifiants des attaques (patterns 0 à 5) vues dans chaque phase. */
-  patternsByPhase: [number[], number[], number[]];
-  bossMaxPhases: number;
-  elapsed: number;
-}
-
-export interface EngineOptions {
-  /**
-   * Sans rendu ni DOM : aucune WebGLRenderer, aucun écouteur, aucune boucle automatique.
-   * La simulation avance uniquement via `stepSimulation(dt)` (outil `npm run sim`).
-   */
-  headless?: boolean;
-  /**
-   * `false` coupe les réactions élémentaires. Réservé aux outils de mesure (`npm run sim`,
-   * `npm run golden`) : le jeu ne passe jamais cette option, les réactions y sont toujours actives.
-   */
-  reactions?: boolean;
-}
-
-export interface EngineCallbacks {
-  onHudUpdate: (snapshot: ExpeditionHudSnapshot) => void;
-  onExpeditionComplete: (result: {
-    victory: boolean;
-    clearTimeSec: number;
-    wavesCleared: number;
-    damageDealt: number;
-    bossHpPercentRemaining: number;
-    reactionsTriggered: number;
-    ultimatesUsed: number;
-    perfectDodges: number;
-    maxCombo: number;
-  }) => void;
-}
-
 const PARTICLE_POOL_SIZE = 320; // plafond dur : ring buffer, jamais d'allocation en combat
 const WEATHER_COUNT = 96; // capacité max de l'InstancedMesh météo (le nombre actif dépend du biome)
 const BOLT_POOL_SIZE = 6;
-
-type WeatherKind = 'drift' | 'rain' | 'rise' | 'float' | 'snow';
 
 /** Ambiance particulaire par biome. */
 const WEATHER_PROFILES: Record<
@@ -333,118 +162,118 @@ const ARENA_BOUND = 15.5;
 const MAX_ATTACK_TOKENS = 3;
 
 export class VoxelEngine {
-  private container: HTMLElement | null;
-  private headless: boolean;
-  private reactionsEnabled: boolean;
-  private renderer: THREE.WebGLRenderer | null;
-  private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private keyLight: THREE.DirectionalLight;
-  private hemiLight: THREE.HemisphereLight;
-  private isSoftwareGl: boolean;
+  container: HTMLElement | null;
+  headless: boolean;
+  reactionsEnabled: boolean;
+  renderer: THREE.WebGLRenderer | null;
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  keyLight: THREE.DirectionalLight;
+  hemiLight: THREE.HemisphereLight;
+  isSoftwareGl: boolean;
 
-  private frameId = 0;
-  private disposed = false;
-  private lastTimeMs = 0;
-  private elapsedTotal = 0;
+  frameId = 0;
+  disposed = false;
+  lastTimeMs = 0;
+  elapsedTotal = 0;
 
   // Groups
-  private worldGroup = new THREE.Group();
-  private actorsGroup = new THREE.Group();
-  private fxGroup = new THREE.Group();
+  worldGroup = new THREE.Group();
+  actorsGroup = new THREE.Group();
+  fxGroup = new THREE.Group();
 
   // Particle pool, floating text pool & biome weather
-  private particleMesh: THREE.InstancedMesh;
-  private particles: ParticleSlot[] = [];
-  private particleCursor = 0;
-  private floatingText: FloatingTextPool;
-  private weatherMesh: THREE.InstancedMesh;
-  private weatherMotes: WeatherMote[] = [];
-  private activeBiomeId: BiomeId = 'meadow';
-  private waterUniform: { value: number } | null = null;
-  private cloudGroup: THREE.Group | null = null;
-  private envAnimate: ((elapsed: number) => void) | null = null;
-  private weatherKind: WeatherKind = 'drift';
-  private weatherCount = 54;
+  particleMesh: THREE.InstancedMesh;
+  particles: ParticleSlot[] = [];
+  particleCursor = 0;
+  floatingText: FloatingTextPool;
+  weatherMesh: THREE.InstancedMesh;
+  weatherMotes: WeatherMote[] = [];
+  activeBiomeId: BiomeId = 'meadow';
+  waterUniform: { value: number } | null = null;
+  cloudGroup: THREE.Group | null = null;
+  envAnimate: ((elapsed: number) => void) | null = null;
+  weatherKind: WeatherKind = 'drift';
+  weatherCount = 54;
 
   // Éclairs (pool fixe) + flash d'orage
-  private bolts: { mesh: THREE.Mesh; life: number }[] = [];
-  private boltCursor = 0;
-  private boltGeo: THREE.BoxGeometry | null = null;
-  private boltMat: THREE.MeshBasicMaterial | null = null;
-  private lightningFlash = 0;
-  private stormTimer = 4;
-  private baseHemiIntensity = 0.52;
+  bolts: { mesh: THREE.Mesh; life: number }[] = [];
+  boltCursor = 0;
+  boltGeo: THREE.BoxGeometry | null = null;
+  boltMat: THREE.MeshBasicMaterial | null = null;
+  lightningFlash = 0;
+  stormTimer = 4;
+  baseHemiIntensity = 0.52;
 
   // Moments forts : cycle jour/nuit, évolution, entrée de boss, fête de victoire
-  private campClock = 0.2;
-  private evo: EvolutionSequence | null = null;
-  private evoRing: THREE.Mesh | null = null;
-  private evoRingT = 0;
-  private bossIntroTimer = 0;
-  private bossIntroActor: CombatActor | null = null;
-  private bossDropY = 0;
-  private bossDropVel = 0;
-  private bossIntroInfo: { name: string; title: string; element: ElementType } | null = null;
-  private resultSent = false;
-  private confettiTimer = 0;
+  campClock = 0.2;
+  evo: EvolutionSequence | null = null;
+  evoRing: THREE.Mesh | null = null;
+  evoRingT = 0;
+  bossIntroTimer = 0;
+  bossIntroActor: CombatActor | null = null;
+  bossDropY = 0;
+  bossDropVel = 0;
+  bossIntroInfo: { name: string; title: string; element: ElementType } | null = null;
+  resultSent = false;
+  confettiTimer = 0;
 
   // Mode & state
-  private screenState: 'title' | 'playing' | 'paused' | 'gameover' = 'title';
-  private playMode: PlayMode = 'camp';
-  private controlMode: ControlMode = 'semi';
+  screenState: 'title' | 'playing' | 'paused' | 'gameover' = 'title';
+  playMode: PlayMode = 'camp';
+  controlMode: ControlMode = 'semi';
 
   // Camera rig
-  private camPos = new THREE.Vector3(0, 14, 18);
-  private camLook = new THREE.Vector3(0, 1, 0);
-  private trauma = 0;
-  private hitstopTimer = 0;
-  private shakeEnabled = true;
+  camPos = new THREE.Vector3(0, 14, 18);
+  camLook = new THREE.Vector3(0, 1, 0);
+  trauma = 0;
+  hitstopTimer = 0;
+  shakeEnabled = true;
 
   // Camp props & wanderers
-  private potLiquidMesh: THREE.Mesh | null = null;
-  private potFireMesh: THREE.Mesh | null = null;
-  private potCookingColor: string | null = null;
-  private potSteamTimer = 0;
-  private potLight: THREE.PointLight | null = null; // lueur chaude du feu, visible la nuit
-  private campStars: THREE.InstancedMesh | null = null;
-  private campWanderers: CampWanderer[] = [];
+  potLiquidMesh: THREE.Mesh | null = null;
+  potFireMesh: THREE.Mesh | null = null;
+  potCookingColor: string | null = null;
+  potSteamTimer = 0;
+  potLight: THREE.PointLight | null = null; // lueur chaude du feu, visible la nuit
+  campStars: THREE.InstancedMesh | null = null;
+  campWanderers: CampWanderer[] = [];
 
   // Expedition runtime
-  private activeStage: StageDef | null = null;
-  private waveIndex = 0;
-  private expeditionElapsed = 0;
-  private damageDealt = 0;
-  private scatterCooldown = 0;
-  private readonly scatterMaxCooldown = 5.0;
-  private ultimateCharge = 0;
-  private comboCount = 0;
-  private comboTimer = 0;
-  private maxCombo = 0;
-  private reactionsTriggered = 0;
-  private ultimatesUsed = 0;
-  private perfectDodges = 0;
-  private lastReactionLabel: string | null = null;
-  private lastReactionColor: string | null = null;
-  private lastReactionTimer = 0;
-  private bannerText: string | null = null;
-  private bannerTimer = 0;
-  private expeditionEnded = false;
-  private endDelayTimer = 0;
-  private pendingVictory = false;
-  private waveSpawnDelay = 0;
+  activeStage: StageDef | null = null;
+  waveIndex = 0;
+  expeditionElapsed = 0;
+  damageDealt = 0;
+  scatterCooldown = 0;
+  readonly scatterMaxCooldown = 5.0;
+  ultimateCharge = 0;
+  comboCount = 0;
+  comboTimer = 0;
+  maxCombo = 0;
+  reactionsTriggered = 0;
+  ultimatesUsed = 0;
+  perfectDodges = 0;
+  lastReactionLabel: string | null = null;
+  lastReactionColor: string | null = null;
+  lastReactionTimer = 0;
+  bannerText: string | null = null;
+  bannerTimer = 0;
+  expeditionEnded = false;
+  endDelayTimer = 0;
+  pendingVictory = false;
+  waveSpawnDelay = 0;
 
-  private allies: CombatActor[] = [];
-  private enemies: CombatActor[] = [];
-  private projectiles: ActiveProjectile[] = [];
-  private telegraphs: GroundTelegraph[] = [];
+  allies: CombatActor[] = [];
+  enemies: CombatActor[] = [];
+  projectiles: ActiveProjectile[] = [];
+  telegraphs: GroundTelegraph[] = [];
 
   // Input state (cleared on blur)
-  private heldKeys = new Set<string>();
-  private hudEmitAccum = 0;
-  private callbacks: EngineCallbacks;
-  private resizeObserver: ResizeObserver | null = null;
-  private telemetry: CombatTelemetry = VoxelEngine.emptyTelemetry();
+  heldKeys = new Set<string>();
+  hudEmitAccum = 0;
+  callbacks: EngineCallbacks;
+  resizeObserver: ResizeObserver | null = null;
+  telemetry: CombatTelemetry = VoxelEngine.emptyTelemetry();
 
   private static emptyTelemetry(): CombatTelemetry {
     return {
@@ -739,21 +568,21 @@ export class VoxelEngine {
     this.renderer.render(this.scene, this.camera);
   }
 
-  private handleKeyDown = (e: KeyboardEvent): void => {
+  handleKeyDown = (e: KeyboardEvent): void => {
     const tag = (e.target as HTMLElement | null)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     this.heldKeys.add(e.code);
   };
 
-  private handleKeyUp = (e: KeyboardEvent): void => {
+  handleKeyUp = (e: KeyboardEvent): void => {
     this.heldKeys.delete(e.code);
   };
 
-  private handleBlur = (): void => {
+  handleBlur = (): void => {
     this.heldKeys.clear();
   };
 
-  private handleVisibility = (): void => {
+  handleVisibility = (): void => {
     if (document.hidden) {
       this.heldKeys.clear();
     }
