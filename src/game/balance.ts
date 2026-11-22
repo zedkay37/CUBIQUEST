@@ -116,6 +116,21 @@ export const CUBE_KIT = {
 };
 
 /**
+ * Charge du Déchaînement (sur 100) par geste. Les Éclats et les Trios en sont la source principale.
+ */
+export const ULTIMATE_CHARGE = {
+  basicHit: 2.8,
+  skillHit: 6.5,
+  burst: CUBE_KIT.burstUltBonus,
+  weakBurst: 2,
+  trio: CUBE_KIT.trioUltBonus,
+  support: 8,
+  perfectDodge: 14,
+  /** Secondes sans aucune charge après un Déchaînement. */
+  lockAfterUltimate: 0,
+};
+
+/**
  * Kit de boss « Givre » (StageDef.bossKit = 'frost').
  * Les tableaux à 3 valeurs sont indexés par phase : [phase 1, phase 2, phase 3].
  * Les dégâts sont des multiples de l'attaque du boss.

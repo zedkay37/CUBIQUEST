@@ -19,11 +19,11 @@ import { fightSeed, runFight, STAGES, type FightResult, type SimProfile } from '
 const FILE = path.join('docs', 'sim', 'golden-master.json');
 const SEED = 1;
 const RUNS = 10;
-const CASES: { key: string; profile: SimProfile; reactions: boolean }[] = [
-  { key: 'auto|reactions', profile: 'auto', reactions: true },
-  { key: 'auto|sans-reactions', profile: 'auto', reactions: false },
-  { key: 'actif|reactions', profile: 'active', reactions: true },
-  { key: 'actif|sans-reactions', profile: 'active', reactions: false },
+const CASES: { key: string; profile: SimProfile; cubes: boolean }[] = [
+  { key: 'auto|cubes', profile: 'auto', cubes: true },
+  { key: 'auto|sans-cubes', profile: 'auto', cubes: false },
+  { key: 'actif|cubes', profile: 'active', cubes: true },
+  { key: 'actif|sans-cubes', profile: 'active', cubes: false },
 ];
 
 interface GoldenFile {
@@ -38,7 +38,7 @@ function play(): GoldenFile {
     for (const stage of STAGES) {
       const list: FightResult[] = [];
       for (let run = 0; run < RUNS; run++) {
-        list.push(runFight(stage, fightSeed(SEED, stage, run), { profile: c.profile, reactions: c.reactions }));
+        list.push(runFight(stage, fightSeed(SEED, stage, run), { profile: c.profile, cubes: c.cubes }));
       }
       fights[c.key][stage.id] = list;
     }

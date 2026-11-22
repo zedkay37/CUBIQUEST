@@ -11,6 +11,8 @@ import { getReferenceConfig } from './previewConfigs';
 import { createOwnedCreature } from './rules';
 import type { OwnedCreature, StageDef } from './types';
 import { VoxelEngine } from './VoxelEngine';
+import { newCast } from './engine/cubes';
+import { applyDamageToActor } from './engine/damage';
 
 installHeadlessDom();
 
@@ -267,14 +269,14 @@ test('diagnostic : getDebugStats compte les entités et ne mesure aucun rendu en
   });
 });
 
-test('outils : l’option reactions=false coupe les réactions, le jeu normal les garde', () => {
-  const play = (reactions: boolean | undefined): number =>
+test('outils : l’option cubes=false coupe les cubes, le jeu normal les garde', () => {
+  const play = (cubes: boolean | undefined): number =>
     withSeededRandom(3, () => {
       let triggered = -1;
       const engine = new VoxelEngine(
         null,
         { onHudUpdate: () => {}, onExpeditionComplete: (r) => (triggered = r.reactionsTriggered) },
-        reactions === undefined ? { headless: true } : { headless: true, reactions },
+        cubes === undefined ? { headless: true } : { headless: true, cubes },
       );
       const stage = STAGE_BY_ID['tundra-1'];
       const cfg = getReferenceConfig(stage);
@@ -290,8 +292,8 @@ test('outils : l’option reactions=false coupe les réactions, le jeu normal le
       return triggered;
     });
   const normal = play(undefined);
-  assert.ok(normal > 0, `le combat de référence doit déclencher des réactions (reçu ${normal})`);
-  assert.equal(play(true), normal, 'reactions=true est le comportement par défaut');
+  assert.ok(normal > 0, `le combat de référence doit déclencher des Éclats (reçu ${normal})`);
+  assert.equal(play(true), normal, 'cubes=true est le comportement par défaut');
   assert.equal(play(false), 0);
 });
 
@@ -371,6 +373,41 @@ test('Victoire: une défaite n’est jamais annoncée comme victoire acquise', (
     h.run(240, () => h.results.length > 0);
     assert.deepEqual(h.results, [{ victory: false }]);
     assert.equal(secured.length, 0);
+    h.engine.dispose();
+  });
+});
+
+test('Cubes: aucun Trio en Auto, des Éclats oui', () => {
+  withSeededRandom(4, () => {
+    const h = makeHarness();
+    h.start('tundra-1');
+    h.run(240, () => h.results.length > 0);
+    assert.ok(h.engine.burstsTriggered + h.engine.weakBurstsTriggered > 0);
+    assert.equal(h.engine.triosTriggered, 0);
+    h.engine.dispose();
+  });
+});
+
+test('Cubes: un sort de zone ne déclenche qu’un Éclat à effet et qu’un Trio', () => {
+  withSeededRandom(5, () => {
+    const h = makeHarness();
+    h.start('tundra-1');
+    h.engine.controlMode = 'semi';
+    h.run(1.5);
+    const enemies = h.engine.enemies.filter((e) => !e.fainted && !e.removed);
+    assert.ok(enemies.length >= 2);
+    const caster = h.engine.allies[0];
+    for (const a of h.engine.allies) a.shieldHp = 0;
+    // cubes mûrs partout : un lancer de Roche les fait tous éclater, mais un seul Rempart
+    for (const e of enemies) e.cube = { element: 'fire', age: 2, remaining: 3 };
+    const cast = newCast();
+    for (const e of enemies) applyDamageToActor(h.engine, e, 10, caster, true, false, '#fff', 'rock', true, cast);
+    assert.equal(h.engine.burstsTriggered, enemies.length);
+    for (const a of h.engine.allies) if (!a.fainted) assert.equal(a.shieldHp, Math.round(a.maxHp * 0.15));
+    // toutes fêlées (feu + roche) : un lancer d'Électrik ne fait qu'un Trio
+    const trioCast = newCast();
+    for (const e of enemies) applyDamageToActor(h.engine, e, 10, caster, true, false, '#fff', 'electric', true, trioCast);
+    assert.equal(h.engine.triosTriggered, 1);
     h.engine.dispose();
   });
 });

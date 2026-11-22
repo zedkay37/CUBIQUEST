@@ -151,6 +151,41 @@ export function resolveCubeHit(
   return cube.age >= (opts.ripenTime ?? CUBE_KIT.ripenTime) ? 'burst' : 'weak';
 }
 
+/** Un ennemi candidat pour le ciblage intelligent. */
+export interface SkillTargetCandidate {
+  id: string;
+  dist: number;
+  isBoss: boolean;
+  state: CubeTargetState;
+}
+
+/**
+ * Ciblage intelligent d'un sort à cible (plan 5.1, règle 8), parmi les ennemis à portée :
+ * 1. un Trio possible ; 2. un Éclat plein possible ; 3. une cible sans cube, à cube du même élément ou
+ * verrouillée (le boss d'abord, puis la plus proche) ; 4. en dernier recours, un cube pas encore mûr.
+ * À égalité dans les rangs 1, 2 et 4 : la plus proche. null si personne n'est à portée.
+ */
+export function pickSkillTarget(
+  candidates: SkillTargetCandidate[],
+  element: ElementType,
+  range: number,
+  allowTrio: boolean,
+): string | null {
+  const rank: Record<CubeOutcome, number> = { trio: 0, burst: 1, cube: 2, refresh: 2, locked: 2, weak: 3 };
+  let best: SkillTargetCandidate | null = null;
+  let bestKey: [number, number, number] = [9, 9, Infinity];
+  for (const c of candidates) {
+    if (c.dist > range) continue;
+    const r = rank[resolveCubeHit(c.state, element, { allowTrio })];
+    const key: [number, number, number] = [r, r === 2 && c.isBoss ? 0 : 1, c.dist];
+    if (key[0] < bestKey[0] || (key[0] === bestKey[0] && (key[1] < bestKey[1] || (key[1] === bestKey[1] && key[2] < bestKey[2])))) {
+      best = c;
+      bestKey = key;
+    }
+  }
+  return best ? best.id : null;
+}
+
 /**
  * Boss phase evaluation (Phase 1 > 50%, Phase 2 <= 50%, Phase 3 <= 25% for final biome bosses)
  */

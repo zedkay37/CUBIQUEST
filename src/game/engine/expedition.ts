@@ -59,6 +59,13 @@ export function startExpedition(
   self.comboTimer = 0;
   self.maxCombo = 0;
   self.reactionsTriggered = 0;
+  self.cubesPlaced = 0;
+  self.ultimateLockTimer = 0;
+  self.burstsTriggered = 0;
+  self.weakBurstsTriggered = 0;
+  self.triosTriggered = 0;
+  self.lastRipeSoundAt = -1;
+  self.firstTimeSeen = new Set<string>();
   self.ultimatesUsed = 0;
   self.perfectDodges = 0;
   self.lastReactionLabel = null;
@@ -161,6 +168,10 @@ export function startExpedition(
       aiCooldown: 0,
       hasAttackToken: false,
       statuses: {},
+      cube: null,
+      crack: null,
+      trioLockTimer: 0,
+      cubeRipeFlash: 0,
       bossPhase: 1,
       bossMaxPhases: 2,
       bossPatternIndex: 0,
@@ -260,6 +271,10 @@ export function spawnWave(self: VoxelEngine, index: number): void {
       aiCooldown: 1.4 + i * 0.5,
       hasAttackToken: false,
       statuses: {},
+      cube: null,
+      crack: null,
+      trioLockTimer: 0,
+      cubeRipeFlash: 0,
       bossPhase: 1,
       bossMaxPhases: isFinalBiomeBoss ? 3 : 2,
       bossPatternIndex: 0,
@@ -310,6 +325,7 @@ export function updateExpedition(self: VoxelEngine, dt: number, simDt: number): 
   }
   self.expeditionElapsed += simDt;
   if (self.dodgeCooldown > 0) self.dodgeCooldown = Math.max(0, self.dodgeCooldown - simDt);
+  if (self.ultimateLockTimer > 0) self.ultimateLockTimer = Math.max(0, self.ultimateLockTimer - simDt);
   if (self.bannerTimer > 0) {
     self.bannerTimer = Math.max(0, self.bannerTimer - dt);
     if (self.bannerTimer === 0) self.bannerText = null;
@@ -354,7 +370,7 @@ function buildExpeditionResult(self: VoxelEngine): ExpeditionResult {
     wavesCleared: self.pendingVictory && stage ? stage.waves.length : self.waveIndex,
     damageDealt: self.damageDealt,
     bossHpPercentRemaining: self.pendingVictory ? 0 : bossPct,
-    reactionsTriggered: self.reactionsTriggered,
+    reactionsTriggered: self.burstsTriggered,
     ultimatesUsed: self.ultimatesUsed,
     perfectDodges: self.perfectDodges,
     maxCombo: self.maxCombo,

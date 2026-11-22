@@ -1,46 +1,22 @@
 /**
- * Résolution d'un coup : faiblesses, statuts, réactions élémentaires, boucliers, K.O., changement de phase du boss.
+ * Résolution d'un coup : faiblesses, cubes d'élément (cubes.ts), boucliers, K.O., changement de phase du boss.
  */
 import { soundFx } from '../audio';
 import {
   computeBossPhase,
   computeUltimateCharge,
   getMoveModifiers,
-  getStatusForElement,
   getTypeEffectiveness,
 } from '../rules';
-import { BURSTS, STATUS_META } from '../catalog';
-import type { ElementType, StatusKind } from '../types';
+import { ULTIMATE_CHARGE } from '../balance';
+import type { ElementType } from '../types';
 import { getRigTopY } from '../voxelModels';
-import { applyStatusToActor, getPrimaryStatus } from './actors';
+import { applyCubeRule, gainUltimateCharge, newCast, type CastContext } from './cubes';
 import { spawnElementBurst, spawnParticleBurst, spawnShockwaveRing } from './fx';
 import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 import { FR } from '../../i18n/fr';
-
-/**
- * PONT TEMPORAIRE (S04.1 -> S04.2) : l'ancienne table des réactions, gardée ici à l'identique le temps
- * que le moteur passe aux cubes, pour que la section des règles pures ne change pas le jeu.
- * Supprimé en S04.2.
- */
-type LegacyEffect = 'burst' | 'aoe_burn' | 'chain_stun' | 'knockback' | 'team_shield' | 'cd_spread';
-function legacyReaction(existing: StatusKind | null, incoming: ElementType): { mult: number; ult: number; effect: LegacyEffect; color: string; name: string } | null {
-  if (!existing) return null;
-  const prev = STATUS_META[existing].element;
-  if (prev === incoming) return null;
-  const pair = new Set<ElementType>([prev, incoming]);
-  const r = (mult: number, ult: number, effect: LegacyEffect) => ({ mult, ult, effect, color: BURSTS[incoming].color, name: BURSTS[incoming].name });
-  if (pair.has('fire') && pair.has('water')) return r(1.65, 18, 'burst');
-  if (pair.has('fire') && pair.has('grass')) return r(1.45, 18, 'aoe_burn');
-  if (pair.has('water') && pair.has('electric')) return r(1.4, 18, 'chain_stun');
-  if (pair.has('fire') && pair.has('electric')) return r(1.5, 18, 'knockback');
-  if (pair.has('rock')) return r(1.25, 16, 'team_shield');
-  if (pair.has('psychic')) return r(1.35, 20, 'cd_spread');
-  if (pair.has('grass') && pair.has('electric')) return r(1.5, 18, 'knockback');
-  if (pair.has('water') && pair.has('grass')) return r(1.45, 18, 'aoe_burn');
-  return null;
-}
 
 export function applyDamageToActor(
   self: VoxelEngine,
@@ -52,6 +28,8 @@ export function applyDamageToActor(
   fxColor: string,
   incomingElement?: ElementType,
   isSkillHit = false,
+  /** Lancer en cours : un seul Éclat à effet et un seul Trio par lancer (voir cubes.ts). */
+  cast?: CastContext,
 ): void {
   if (target.fainted || target.removed || target.invulnTimer > 0) return;
 
@@ -62,81 +40,9 @@ export function applyDamageToActor(
     dmg *= 1.25;
   }
 
-  // Check V0.2 Elemental Reactions when an ally skill hits a target carrying an elemental status
+  // Cubes d'élément : tout coup de sort allié sur un ennemi applique la règle (pose, Éclat, Trio)
   if (attacker?.isAlly && isSkillHit && incomingElement && !target.isAlly) {
-    const existing = getPrimaryStatus(self, target);
-    const reaction = self.reactionsEnabled ? legacyReaction(existing, incomingElement) : null;
-    if (reaction && existing) {
-      delete target.statuses[existing];
-      dmg *= reaction.mult;
-      self.reactionsTriggered += 1;
-      self.ultimateCharge = computeUltimateCharge(self.ultimateCharge, reaction.ult);
-      self.lastReactionLabel = reaction.name;
-      self.lastReactionColor = reaction.color;
-      self.lastReactionTimer = 2.4;
-      soundFx.playReaction();
-      self.hitstopTimer = Math.max(self.hitstopTimer, 0.055);
-      self.trauma = Math.min(1, self.trauma + 0.34);
-      spawnShockwaveRing(self, target.x, target.z, 3.6, reaction.color);
-      spawnParticleBurst(self, target.x, 1.1, target.z, reaction.color, 22, 6.2);
-      self.floatingText.spawn(target.x, 2.55, target.z, reaction.name, reaction.color, 1.25, 1.1);
-
-      // Reaction secondary mechanical effects
-      if (reaction.effect === 'aoe_burn') {
-        for (const other of self.enemies) {
-          if (other.id !== target.id && !other.fainted && !other.removed) {
-            if (Math.hypot(other.x - target.x, other.z - target.z) <= 4.4) {
-              applyStatusToActor(self, other, 'burn', attacker.atk);
-              other.hp = Math.max(1, other.hp - Math.round(rawDamage * 0.45));
-              self.floatingText.spawn(other.x, 1.9, other.z, `-${Math.round(rawDamage * 0.45)}`, '#FB923C', 0.9);
-            }
-          }
-        }
-      } else if (reaction.effect === 'chain_stun') {
-        let chains = 0;
-        for (const other of self.enemies) {
-          if (chains >= 2) break;
-          if (other.id !== target.id && !other.fainted && !other.removed) {
-            if (Math.hypot(other.x - target.x, other.z - target.z) <= 5.5) {
-              chains += 1;
-              applyStatusToActor(self, other, 'shocked', attacker.atk);
-              const chainDmg = Math.round(rawDamage * 0.55);
-              other.hp = Math.max(1, other.hp - chainDmg);
-              spawnParticleBurst(self, other.x, 0.9, other.z, '#FACC15', 10, 4.5);
-              self.floatingText.spawn(other.x, 2.0, other.z, `${chainDmg}`, '#FACC15', 0.95);
-            }
-          }
-        }
-      } else if (reaction.effect === 'knockback') {
-        const dx = target.x - attacker.x;
-        const dz = target.z - attacker.z;
-        const len = Math.max(0.01, Math.hypot(dx, dz));
-        const kb = target.isBoss ? 3.5 : 8.2;
-        target.vx += (dx / len) * kb;
-        target.vz += (dz / len) * kb;
-      } else if (reaction.effect === 'team_shield') {
-        for (const ally of self.allies) {
-          if (!ally.fainted) {
-            const shieldGain = Math.round(ally.maxHp * 0.15);
-            ally.shieldHp = Math.min(Math.round(ally.maxHp * 0.35), ally.shieldHp + shieldGain);
-            spawnParticleBurst(self, ally.x, 0.9, ally.z, '#EAB308', 8, 3.2);
-            self.floatingText.spawn(ally.x, 2.0, ally.z, FR.engine.boucl(shieldGain), '#FDE047', 0.85);
-          }
-        }
-      } else if (reaction.effect === 'cd_spread') {
-        attacker.skillCooldown = Math.max(0.4, attacker.skillCooldown - 1.5);
-        for (const other of self.enemies) {
-          if (other.id !== target.id && !other.fainted && !other.removed) {
-            if (Math.hypot(other.x - target.x, other.z - target.z) <= 4.8) {
-              applyStatusToActor(self, other, existing, attacker.atk);
-            }
-          }
-        }
-      }
-    } else {
-      const applied = getStatusForElement(incomingElement);
-      applyStatusToActor(self, target, applied, attacker.atk);
-    }
+    dmg *= applyCubeRule(self, target, incomingElement, attacker, rawDamage, cast ?? newCast());
   }
 
   const defMult = target.buffTimer > 0 ? 0.65 : 1.0;
@@ -192,7 +98,7 @@ export function applyDamageToActor(
     self.comboCount += 1;
     self.comboTimer = 4.8;
     if (self.comboCount > self.maxCombo) self.maxCombo = self.comboCount;
-    self.ultimateCharge = computeUltimateCharge(self.ultimateCharge, isSkillHit ? 6.5 : 2.8);
+    gainUltimateCharge(self, isSkillHit ? ULTIMATE_CHARGE.skillHit : ULTIMATE_CHARGE.basicHit);
 
     if (attacker.hitHeal > 0 && !attacker.fainted && finalDmg > 0) {
       const heal = Math.max(1, Math.round((finalDmg * attacker.hitHeal) / 100));

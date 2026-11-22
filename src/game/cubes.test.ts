@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CUBE_KIT } from './balance';
 import { BURSTS } from './catalog';
-import { resolveCubeHit, type CubeTargetState } from './rules';
+import { pickSkillTarget, resolveCubeHit, type CubeTargetState } from './rules';
 import type { ElementType } from './types';
 
 const ELEMENTS: ElementType[] = ['fire', 'water', 'grass', 'electric', 'rock', 'psychic'];
@@ -75,4 +75,24 @@ test('Cubes: rien pendant le verrou du Trio', () => {
   const locked: CubeTargetState = { cube: null, crack: { elements: ['fire', 'rock'], remaining: 2 }, trioLock: 0.5 };
   for (const e of ELEMENTS) assert.equal(resolveCubeHit(locked, e, { allowTrio: true }), 'locked');
   assert.equal(resolveCubeHit({ ...ripe('fire'), trioLock: 1 }, 'water', { allowTrio: true }), 'locked');
+});
+
+test('Ciblage intelligent: Trio, puis Éclat, puis boss ou plus proche, puis cube pas mûr', () => {
+  const none = { cube: null, crack: null, trioLock: 0 };
+  const c = (id: string, dist: number, state: CubeTargetState = none, isBoss = false) => ({ id, dist, isBoss, state });
+  const ripeRock: CubeTargetState = { cube: { element: 'rock', age: 2, remaining: 3 }, crack: null, trioLock: 0 };
+  const youngRock: CubeTargetState = { cube: { element: 'rock', age: 0.3, remaining: 4 }, crack: null, trioLock: 0 };
+  const cracked: CubeTargetState = { cube: null, crack: { elements: ['rock', 'water'], remaining: 2 }, trioLock: 0 };
+  // 1. le Trio passe avant tout, même plus loin
+  assert.equal(pickSkillTarget([c('near', 1), c('burst', 3, ripeRock), c('trio', 6, cracked)], 'fire', 8, true), 'trio');
+  // 2. sans Trio possible (Auto), l'Éclat plein passe avant le reste
+  assert.equal(pickSkillTarget([c('near', 1), c('burst', 3, ripeRock), c('trio', 6, cracked)], 'fire', 8, false), 'burst');
+  // 3. sinon le boss d'abord, puis le plus proche
+  assert.equal(pickSkillTarget([c('near', 1), c('boss', 5, none, true)], 'fire', 8, true), 'boss');
+  assert.equal(pickSkillTarget([c('far', 4), c('near', 1)], 'fire', 8, true), 'near');
+  // 4. un cube pas mûr n'est visé qu'en dernier recours
+  assert.equal(pickSkillTarget([c('young', 1, youngRock), c('free', 6)], 'fire', 8, true), 'free');
+  assert.equal(pickSkillTarget([c('young', 1, youngRock)], 'fire', 8, true), 'young');
+  // 5. hors de portée : personne (le moteur reprend alors le plus proche)
+  assert.equal(pickSkillTarget([c('trio', 9, cracked)], 'fire', 8, true), null);
 });

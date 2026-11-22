@@ -322,6 +322,9 @@ export const FR = {
     victoireExpeditionReussie: 'VICTOIRE ! Expédition réussie !',
     esquiveParfaite: 'ESQUIVE PARFAITE !',
     dechainement: 'DÉCHAÎNEMENT !',
+    tropTot: 'Trop tôt !',
+    eclatNomme: (a: string | number) => `ÉCLAT · ${a}`,
+    trio: 'TRIO !',
     pv: (a: string | number) => `+${a} PV`,
   },
   rules: {

@@ -3,6 +3,7 @@
  */
 import * as THREE from 'three';
 import type { ElementType, ExpeditionHudSnapshot, RuneKind, StatusKind } from '../types';
+import type { CrackState, CubeState } from '../rules';
 import type { VoxelCreatureRig } from '../voxelModels';
 
 export interface ParticleSlot {
@@ -107,6 +108,14 @@ export interface CombatActor {
   aiCooldown: number;
   hasAttackToken: boolean;
   statuses: Partial<Record<StatusKind, ActorStatusInstance>>;
+  /** Cube d'élément (ennemis seulement) ; son statut est dans `statuses`. */
+  cube: CubeState | null;
+  /** Fêlure laissée par un Éclat (ennemis seulement). */
+  crack: CrackState | null;
+  /** Verrou après un Trio : pas de cube tant qu'il dure. */
+  trioLockTimer: number;
+  /** Éclair blanc bref quand le cube devient mûr (affichage). */
+  cubeRipeFlash: number;
   bossPhase: 1 | 2 | 3;
   bossMaxPhases: 2 | 3;
   bossPatternIndex: number;
@@ -176,10 +185,10 @@ export interface EngineOptions {
    */
   headless?: boolean;
   /**
-   * `false` coupe les réactions élémentaires. Réservé aux outils de mesure (`npm run sim`,
-   * `npm run golden`) : le jeu ne passe jamais cette option, les réactions y sont toujours actives.
+   * `false` : aucun cube d'élément (ni pose, ni Éclat, ni Trio). Réservé aux outils de mesure
+   * (`npm run sim`, `npm run golden`) : le jeu ne passe jamais cette option.
    */
-  reactions?: boolean;
+  cubes?: boolean;
 }
 
 /** Bilan d'un combat, tel que le moteur le remet à l'interface. */
@@ -195,7 +204,12 @@ export interface ExpeditionResult {
   maxCombo: number;
 }
 
+/** Premières fois montrées au joueur (bulle d'une ligne). */
+export type FirstTimeKind = 'cube' | 'weak' | 'burst' | 'trio';
+
 export interface EngineCallbacks {
+  /** Première fois qu'un geste se produit dans ce combat ; l'interface décide s'il faut l'expliquer. */
+  onFirstTime?: (kind: FirstTimeKind) => void;
   onHudUpdate: (snapshot: ExpeditionHudSnapshot) => void;
   /**
    * Victoire acquise : appelé UNE fois par combat, à l'instant où le dernier ennemi tombe, avec le bilan

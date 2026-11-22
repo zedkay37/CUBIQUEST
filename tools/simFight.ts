@@ -8,7 +8,7 @@
  *               sort lancé dès qu'il est prêt et qu'il reste un ennemi, ultime dès 100 %,
  *               Esquive 0,45 s après l'apparition d'un télégraphe.
  *
- * `reactions: false` coupe les réactions élémentaires par une option du moteur réservée aux outils
+ * `cubes: false` coupe les cubes d’élément par une option du moteur réservée aux outils
  * (le jeu normal ne la passe jamais).
  */
 import { installHeadlessDom, mulberry32 } from './headlessDom';
@@ -26,7 +26,7 @@ export type SimProfile = 'auto' | 'active';
 
 export interface FightOptions {
   profile?: SimProfile;
-  reactions?: boolean;
+  cubes?: boolean;
 }
 
 export const STEP = 1 / 60;
@@ -100,7 +100,7 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
           outcome = result;
         },
       },
-      { headless: true, reactions: opts.reactions ?? true },
+      { headless: true, cubes: opts.cubes ?? true },
     );
     const creatures = config.squad.map((id, i) =>
       createOwnedCreature(id, config.level, config.bonus, `sim_${i}`),

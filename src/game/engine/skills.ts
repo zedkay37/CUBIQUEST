@@ -4,8 +4,10 @@
 import * as THREE from 'three';
 import { soundFx } from '../audio';
 import { MOVES } from '../catalog';
+import { ULTIMATE_CHARGE } from '../balance';
 import { calculateDamage, computeUltimateCharge, getMoveModifiers } from '../rules';
 import { findNearestLiving } from './actors';
+import { applyCubeRule, gainUltimateCharge, isTargetedMove, newCast, pickTargetFor, SUPPORT_RANGE } from './cubes';
 import { ARENA_BOUND } from './constants';
 import { applyDamageToActor } from './damage';
 import { spawnParticleBurst, spawnProjectile, spawnShockwaveRing } from './fx';
@@ -47,7 +49,7 @@ export function triggerDodge(self: VoxelEngine): boolean {
   const activeHazard = self.telegraphs.some((tg) => tg.isEnemyHazard);
   if (activeHazard) {
     self.perfectDodges += 1;
-    self.ultimateCharge = computeUltimateCharge(self.ultimateCharge, 14);
+    gainUltimateCharge(self, ULTIMATE_CHARGE.perfectDodge);
     soundFx.playPerfectDodge();
     const firstAlive = self.allies.find((a) => !a.fainted);
     if (firstAlive) {
@@ -153,6 +155,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
 
     const leadAlly = livingAllies[0];
     const baseUltDmg = Math.round(combinedAtk * 1.35);
+    const cast = newCast();
     for (const enemy of livingEnemies) {
       applyDamageToActor(
         self,
@@ -164,6 +167,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
         '#F4B942',
         leadAlly.rig.species.element,
         true,
+        cast,
       );
     }
   }
@@ -179,14 +183,19 @@ export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
   unit.squashY = 1.28;
   soundFx.playSkill(move.element);
 
-  const target = findNearestLiving(self, unit.x, unit.z, self.enemies);
+  // Ciblage intelligent pour les sorts à cible ; les sorts de mêlée et de zone autour du lanceur
+  // touchent ce qui est à leur portée (la règle des cubes s'applique à chaque ennemi touché).
+  const target = isTargetedMove(unit.moveId)
+    ? pickTargetFor(self, unit, move.range)
+    : findNearestLiving(self, unit.x, unit.z, self.enemies);
   const radius = move.aoeRadius * mods.radiusMult;
+  const cast = newCast();
 
   if (move.style === 'buff') {
     unit.buffTimer = 8.0;
     const healAmt = Math.round(unit.maxHp * 0.14);
     unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
-    self.ultimateCharge = computeUltimateCharge(self.ultimateCharge, 8);
+    gainUltimateCharge(self, ULTIMATE_CHARGE.support);
     spawnParticleBurst(self, unit.x, 0.9, unit.z, move.color, 14, 4.0);
     self.floatingText.spawn(unit.x, 2.0, unit.z, FR.engine.pv(healAmt), '#4ADE80', 0.95);
 
@@ -200,6 +209,11 @@ export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
           self.floatingText.spawn(mate.x, 2.0, mate.z, FR.engine.pv(sharedHeal), '#4ADE80', 0.85);
         }
       }
+    }
+    // Le sort de soutien pose aussi son cube, sans dégâts, sur la cible du ciblage intelligent
+    const supportTarget = pickTargetFor(self, unit, SUPPORT_RANGE);
+    if (supportTarget && Math.hypot(supportTarget.x - unit.x, supportTarget.z - unit.z) <= SUPPORT_RANGE) {
+      applyCubeRule(self, supportTarget, move.element, unit, 0, cast);
     }
     return;
   }
@@ -255,10 +269,12 @@ export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
   spawnParticleBurst(self, centerX, 0.8, centerZ, move.color, 20, 5.6);
 
   let hitAny = false;
-  for (const enemy of self.enemies) {
-    if (enemy.fainted || enemy.removed) continue;
-    const dist = Math.hypot(enemy.x - centerX, enemy.z - centerZ);
-    if (dist <= radius + (enemy.isBoss ? 1.1 : 0.6)) {
+  // L'ennemi le plus proche du centre passe en premier : c'est lui qui reçoit l'Éclat à effet
+  const touched = self.enemies
+    .filter((e) => !e.fainted && !e.removed && Math.hypot(e.x - centerX, e.z - centerZ) <= radius + (e.isBoss ? 1.1 : 0.6))
+    .sort((a, b) => Math.hypot(a.x - centerX, a.z - centerZ) - Math.hypot(b.x - centerX, b.z - centerZ));
+  for (const enemy of touched) {
+    {
       const res = calculateDamage(
         unit.atk,
         move,
@@ -276,6 +292,7 @@ export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
         move.color,
         move.element,
         true,
+        cast,
       );
       hitAny = true;
     }

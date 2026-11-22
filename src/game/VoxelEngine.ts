@@ -44,12 +44,15 @@ import type {
 import { FloatingTextPool } from './voxelModels';
 
 export type { EngineDebugStats } from './engine/debug';
-export type { CombatTelemetry, EngineCallbacks, EngineOptions } from './engine/types';
+export type { CombatTelemetry, EngineCallbacks, EngineOptions, FirstTimeKind } from './engine/types';
+export type { SkillPreview } from './engine/cubes';
+import { getSkillPreview, type SkillPreview } from './engine/cubes';
+import type { FirstTimeKind } from './engine/types';
 
 export class VoxelEngine {
   container: HTMLElement | null;
   headless: boolean;
-  reactionsEnabled: boolean;
+  cubesEnabled: boolean;
   renderer: THREE.WebGLRenderer | null;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -141,6 +144,16 @@ export class VoxelEngine {
   comboTimer = 0;
   maxCombo = 0;
   reactionsTriggered = 0;
+  /** Compteurs des cubes pour ce combat. */
+  cubesPlaced = 0;
+  /** Pas de charge de Déchaînement tant qu'il dure (après un Déchaînement). */
+  ultimateLockTimer = 0;
+  burstsTriggered = 0;
+  weakBurstsTriggered = 0;
+  triosTriggered = 0;
+  lastRipeSoundAt = -1;
+  /** Gestes déjà signalés à l'interface pendant ce combat. */
+  firstTimeSeen = new Set<string>();
   ultimatesUsed = 0;
   perfectDodges = 0;
   lastReactionLabel: string | null = null;
@@ -169,7 +182,7 @@ export class VoxelEngine {
     this.container = container;
     this.callbacks = callbacks;
     this.headless = Boolean(options.headless) || !container;
-    this.reactionsEnabled = options.reactions !== false;
+    this.cubesEnabled = options.cubes !== false;
 
     let width = 1280;
     let height = 720;
@@ -390,6 +403,18 @@ export class VoxelEngine {
 
   public triggerAllySkill(slotIndex: number): boolean {
     return triggerAllySkill(this, slotIndex);
+  }
+
+  /** Ce que ferait le sort de l'allié `slot` maintenant (lecture seule). */
+  public getSkillPreview(slot: number): SkillPreview {
+    return getSkillPreview(this, slot);
+  }
+
+  /** Signale un geste à l'interface, une fois par combat. */
+  firstTimeEvent(kind: FirstTimeKind): void {
+    if (this.firstTimeSeen.has(kind)) return;
+    this.firstTimeSeen.add(kind);
+    this.callbacks.onFirstTime?.(kind);
   }
 
   public triggerDodge(): boolean {

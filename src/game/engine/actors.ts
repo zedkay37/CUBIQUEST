@@ -9,6 +9,7 @@ import type { StatusKind } from '../types';
 import { isHoverArchetype, type VoxelCreatureRig } from '../voxelModels';
 import { disposeObject } from './camp';
 import { ARENA_BOUND } from './constants';
+import { tickCubeState } from './cubes';
 import { spawnParticleBurst } from './fx';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
@@ -64,6 +65,9 @@ export function updateActorCommon(self: VoxelEngine, actor: CombatActor, dt: num
   actor.invulnTimer = Math.max(0, actor.invulnTimer - simDt);
   actor.stunTimer = Math.max(0, actor.stunTimer - simDt);
   actor.squashY = THREE.MathUtils.damp(actor.squashY, 1, 12, dt);
+
+  tickCubeState(self, actor, simDt);
+  if (actor.cubeRipeFlash > 0) actor.cubeRipeFlash = Math.max(0, actor.cubeRipeFlash - dt);
 
   // Tick elemental statuses & Burn DoT
   if (!actor.fainted && !actor.removed && simDt > 0) {

@@ -276,9 +276,28 @@ class ToyboxAudio {
     });
   }
 
-  public playReaction(): void {
-    this.playTone(587.33, 880, 0.12, 'triangle', 0.13, 0);
-    this.playTone(880, 1318.5, 0.14, 'sine', 0.1, 0.05);
+  /** Un cube devient mûr : tintement bref et clair. */
+  public playCubeRipe(): void {
+    this.playTone(1567.98, 1661.22, 0.09, 'sine', 0.07, 0);
+  }
+
+  /** Éclat faible (cube pas mûr) : petit « pop » terne. */
+  public playWeakBurst(): void {
+    this.playTone(330, 220, 0.07, 'square', 0.05, 0);
+  }
+
+  /** Éclat : deux notes montantes, la seconde propre à l'élément qui fait éclater. */
+  public playBurst(element: ElementType): void {
+    const note: Record<ElementType, number> = { fire: 659.25, water: 587.33, grass: 523.25, electric: 783.99, rock: 440, psychic: 698.46 };
+    const n = note[element];
+    this.playTone(n, n * 1.5, 0.12, 'triangle', 0.13, 0);
+    this.playTone(n * 1.5, n * 2, 0.14, 'sine', 0.1, 0.05);
+  }
+
+  /** Trio : accord de trois notes. */
+  public playTrio(): void {
+    [523.25, 659.25, 783.99].forEach((n, i) => this.playTone(n, n * 1.02, 0.36, 'triangle', 0.12, i * 0.04));
+    this.playTone(1046.5, 1046.5, 0.42, 'sine', 0.08, 0.14);
   }
 
   public playUltimate(): void {

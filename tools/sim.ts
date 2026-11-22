@@ -7,7 +7,7 @@
  *   npm run sim -- --json                         # sortie brute
  *   npm run sim -- --brief                        # une ligne par niveau (pratique pour régler)
  *   npm run sim -- --profile active               # profil « joueur actif » (voir tools/simFight.ts)
- *   npm run sim -- --reactions 0                  # réactions élémentaires coupées (option d'outil)
+ *   npm run sim -- --cubes 0                  # cubes d’élément coupés (option d'outil)
  *   npm run sim -- --stages tundra-3 --set tundra-3=14/0.4/1.8
  *        # essaie des multiplicateurs (PV ennemis / attaque / PV boss) SANS toucher à balance.ts
  *
@@ -101,14 +101,14 @@ export function toMarkdown(
   runs: number,
   seed: number,
   profile: SimProfile = 'auto',
-  reactions = true,
+  cubes = true,
 ): string {
   const control =
     profile === 'auto'
       ? 'contrôle « Auto Total » (aucune esquive)'
       : 'profil « joueur actif » (mode Semi : sorts et ultime dès que prêts, Esquive sur télégraphe)';
   const lines = [
-    `Simulation headless — ${runs} combats par niveau, graine ${seed}, ${control}${reactions ? '' : ', réactions élémentaires coupées'}.`,
+    `Simulation headless — ${runs} combats par niveau, graine ${seed}, ${control}${cubes ? '' : ', cubes d’élément coupés'}.`,
     '',
     'Colonnes de phase : durée moyenne (durée minimale) · attaques télégraphiées lancées en moyenne · part des combats où le boss en a lancé au moins une dans cette phase.',
     '',
@@ -136,7 +136,7 @@ function parseArgs(argv: string[]): {
   brief: boolean;
   set: string | null;
   profile: SimProfile;
-  reactions: boolean;
+  cubes: boolean;
 } {
   const get = (name: string): string | null => {
     const i = argv.indexOf(`--${name}`);
@@ -151,7 +151,7 @@ function parseArgs(argv: string[]): {
     brief: argv.includes('--brief'),
     set: get('set'),
     profile: get('profile') === 'active' ? 'active' : 'auto',
-    reactions: get('reactions') !== '0',
+    cubes: get('cubes') !== '0',
   };
 }
 
@@ -198,7 +198,7 @@ for (const stage of selected) {
   const fights: FightResult[] = [];
   for (let run = 0; run < args.runs; run++) {
     fights.push(
-      runFight(stage, fightSeed(args.seed, stage, run), { profile: args.profile, reactions: args.reactions }),
+      runFight(stage, fightSeed(args.seed, stage, run), { profile: args.profile, cubes: args.cubes }),
     );
   }
   summaries.push(summarize(stage, fights));
@@ -210,7 +210,7 @@ if (args.brief) process.exit(0);
 if (args.json) {
   console.log(JSON.stringify(summaries, null, 2));
 } else {
-  const md = toMarkdown(summaries, args.runs, args.seed, args.profile, args.reactions);
+  const md = toMarkdown(summaries, args.runs, args.seed, args.profile, args.cubes);
   console.log(md);
   if (args.out) {
     fs.mkdirSync(path.dirname(args.out), { recursive: true });

@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { soundFx } from '../audio';
 import type { ElementType } from '../types';
 import { _color, _dummy, CONFETTI_COLORS, ELEMENT_FX, PARTICLE_POOL_SIZE } from './constants';
+import { newCast } from './cubes';
 import { applyDamageToActor } from './damage';
 import type { ActiveProjectile } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
@@ -311,9 +312,13 @@ export function updateProjectiles(self: VoxelEngine, dt: number, simDt: number):
 
     if (hit || p.life <= 0) {
       if (hit) {
-        for (const t of targets) {
-          if (t.fainted || t.removed) continue;
-          if (Math.hypot(t.x - p.x, t.z - p.z) <= p.aoeRadius + (t.isBoss ? 1.0 : 0.45)) {
+        // Un seul lancer : l'Éclat à effet et le Trio vont à la cible la plus proche du point d'impact
+        const cast = newCast();
+        const touched = targets
+          .filter((t) => !t.fainted && !t.removed && Math.hypot(t.x - p.x, t.z - p.z) <= p.aoeRadius + (t.isBoss ? 1.0 : 0.45))
+          .sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
+        for (const t of touched) {
+          {
             applyDamageToActor(
               self,
               t,
@@ -324,6 +329,7 @@ export function updateProjectiles(self: VoxelEngine, dt: number, simDt: number):
               p.elementColor,
               p.elementType,
               Boolean(p.isSkill),
+              cast,
             );
           }
         }
