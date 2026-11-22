@@ -15,6 +15,8 @@ export const FORBIDDEN_TERMS: readonly string[] = [
   // S04 : vocabulaire des anciennes réactions
   'évaporation', 'électrocution', 'cristallisation', 'surcharge', 'embrasement', 'trempé', 'vaporize',
   'overload', 'crystallize', 'swirl', 'combo',
+  // S05 : l'élément s'appelle « Foudre » à l'écran (identifiant interne `electric`)
+  'électrik',
 ];
 
 /**

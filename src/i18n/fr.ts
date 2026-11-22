@@ -382,7 +382,7 @@ export const FR = {
         label: 'Plante',
       },
       electric: {
-        label: 'Électrik',
+        label: 'Foudre',
       },
       rock: {
         label: 'Roche',
@@ -714,7 +714,7 @@ export const FR = {
       },
       sun_pollen: {
         name: 'Pollen Solaire',
-        description: 'Poudre dorée sucrée qui attire les créatures Électrik et Plante.',
+        description: 'Poudre dorée sucrée qui attire les créatures Foudre et Plante.',
       },
       amber_honey: {
         name: 'Miel Ambré',
@@ -788,8 +788,8 @@ export const FR = {
         hint: 'Au moins 3 ingrédients bleus (Baie Azur, Cristal Glacé).',
       },
       spark_curry: {
-        name: 'Curry Électrik Doré',
-        description: 'Un plat pétillant aux arômes dorés qui attire les créatures Électrik.',
+        name: 'Curry Foudroyant Doré',
+        description: 'Un plat pétillant aux arômes dorés qui attire les créatures Foudre.',
         hint: 'Au moins 3 ingrédients jaunes (Pollen Solaire, Miel Ambré).',
       },
       mineral_stew: {
@@ -893,7 +893,7 @@ export const FR = {
         name: 'Sentier des Bourgeons',
       },
       'meadow-2': {
-        name: 'Bosquet Électrik',
+        name: 'Bosquet Foudroyé',
       },
       'meadow-3': {
         name: 'Clairière du Colosse',
@@ -989,7 +989,7 @@ export const FR = {
       deflagration: { name: 'Déflagration', description: 'Le Feu fait éclater un cube : explosion de zone qui brûle les ennemis voisins.' },
       deferlante: { name: 'Déferlante', description: 'L’Eau fait éclater un cube : le plus gros coup sur une cible, qui est repoussée.' },
       seve: { name: 'Sève', description: 'La Plante fait éclater un cube : chaque allié récupère 6 % de ses PV max.' },
-      arc: { name: 'Arc', description: 'L’Électrik fait éclater un cube : l’éclair rebondit sur 2 ennemis proches et les étourdit.' },
+      arc: { name: 'Arc', description: 'La Foudre fait éclater un cube : l’éclair rebondit sur 2 ennemis proches et les étourdit.' },
       rempart: { name: 'Rempart', description: 'La Roche fait éclater un cube : bouclier d’escouade de 15 % des PV max.' },
       echo: { name: 'Écho', description: 'Le Psy fait éclater un cube : recharge du lanceur −1,5 s, le cube est recopié sur les voisins.' },
     },

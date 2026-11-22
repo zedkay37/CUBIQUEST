@@ -407,7 +407,7 @@ test('Cubes: un sort de zone ne déclenche qu’un Éclat à effet et qu’un Tr
     for (const e of enemies) applyDamageToActor(h.engine, e, 10, caster, true, false, '#fff', 'rock', true, cast);
     assert.equal(h.engine.burstsTriggered, enemies.length);
     for (const a of h.engine.allies) if (!a.fainted) assert.equal(a.shieldHp, Math.round(a.maxHp * 0.15));
-    // toutes fêlées (feu + roche) : un lancer d'Électrik ne fait qu'un Trio
+    // toutes fêlées (feu + roche) : un lancer de Foudre ne fait qu'un Trio
     const trioCast = newCast();
     for (const e of enemies) applyDamageToActor(h.engine, e, 10, caster, true, false, '#fff', 'electric', true, trioCast);
     assert.equal(h.engine.triosTriggered, 1);

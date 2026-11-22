@@ -1265,7 +1265,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     isRare: true,
   },
 
-  // === GIGA UPDATE — CIME DES ORAGES : lignée du serpent-éclair (Électrik) ===
+  // === GIGA UPDATE — CIME DES ORAGES : lignée du serpent-éclair (Foudre) ===
   crepitil: {
     id: 'crepitil',
     name: FR.catalog.SPECIES.crepitil.name,

@@ -65,7 +65,7 @@ Couleur d'interface de chaque élément (`ELEMENT_META`) et teintes de corps obs
 | Feu | `#E85D3F` | rouges orangés `#EF6442` -> `#DC4329` | jaune flamme `#FFDC4A` |
 | Eau | `#2F8CE8` | bleus `#4DA6E8` -> `#2661A8` ; glace très pâle `#DCEFFA` | cyan clair `#8CE0FF`, `#67E8F9` |
 | Plante | `#35A85C` | verts `#55B87B` -> `#39916E` | vert tendre puis rose fleur `#F06584` |
-| Électrik | `#E5B324` | jaunes dorés `#F5C936` -> `#EFA92C` | rouge joue `#E8523F`, puis bleu électrique `#38BDF8` |
+| Foudre | `#E5B324` | jaunes dorés `#F5C936` -> `#EFA92C` | rouge joue `#E8523F`, puis bleu électrique `#38BDF8` |
 | Roche | `#A98359` | gris-bruns `#9E8C7A` -> `#4B3E3B` ; gris-bleu glacé `#9FB6C9` | ambre `#E0B86A` -> lave `#FF6B2B` ; glace `#7DD3FC` |
 | Psy | `#9B5CE5` | violets `#A87CE8` -> `#8A5AD6` ; lavande pâle `#E9E4FB` | turquoise `#5EEAD4`, or `#F4C95D` |
 
@@ -144,7 +144,7 @@ Un biome est défini par : une couleur de ciel, de brume, deux teintes de sol en
 | Crête Volcanique | Feu | brun sombre / basalte | souches calcinées étirées, roches rougeoyantes, mer de lave | braises qui montent |
 | Sanctuaire Cristallin | Psy | violet nuit / pierre mauve | cristaux hauts et fins, mer astrale | éclats qui flottent |
 | Toundra Boréale | Eau | bleu crépuscule / neige | sapins enneigés, flèches de glace, congères, étangs gelés, igloo, aurores | neige |
-| Cime des Orages | Électrik | gris ardoise / dalle grise | piliers à paratonnerres dorés, monolithes à runes, rochers en lévitation, anneau de nuées | pluie battante, foudre au loin |
+| Cime des Orages | Foudre | gris ardoise / dalle grise | piliers à paratonnerres dorés, monolithes à runes, rochers en lévitation, anneau de nuées | pluie battante, foudre au loin |
 
 Règles communes : l'arène centrale reste dégagée (rayon ~15), le décor vit sur le pourtour ; tout ce qui se répète est instancié ; les deux biomes récents ajoutent un décor « signature » animé très légèrement.
 
