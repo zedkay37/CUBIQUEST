@@ -6,6 +6,17 @@ import type { BiomeId, SaveState, StageDef } from '../game/types';
 import { ElementIcon, VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
 
+/** Position des sept biomes sur la carte de l'île (repère 700 × 118), dans l'ordre de la campagne. */
+const MAP_POINTS: [number, number][] = [
+  [55, 78],
+  [150, 38],
+  [250, 80],
+  [350, 36],
+  [450, 80],
+  [550, 38],
+  [645, 78],
+];
+
 interface ExpeditionDrawerProps {
   save: SaveState;
   onLaunchStage: (stage: StageDef) => void;
@@ -53,41 +64,64 @@ export function ExpeditionDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="voxel-btn cursor-pointer w-9 h-9 rounded-lg bg-[#222A3A] hover:bg-[#2E384E] border border-[#39445A] flex items-center justify-center"
+            className="voxel-btn cursor-pointer w-9 h-9 rounded-lg block-btn-secondary border border-[#39445A] flex items-center justify-center"
             aria-label={FR.ui.expeditionDrawer.fermerLaCarteDesExpeditions}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Biome Tabs */}
-        {/* Petits écrans : une seule ligne défilante au lieu de sept onglets empilés */}
-        <div className="flex sm:flex-wrap items-center gap-2 px-5 py-3 border-b border-[#2A3346] overflow-x-auto sm:overflow-visible cubi-scroll">
-          {BIOME_ORDER.map((bId) => {
-            const b = BIOMES[bId];
-            const unlocked = isBiomeUnlocked(save, bId);
-            const active = selectedBiome === bId;
-            return (
-              <button
-                key={bId}
-                type="button"
-                onClick={() => {
-                  setSelectedBiome(bId);
-                  const firstInBiome = STAGES.find((s) => s.biomeId === bId);
-                  if (firstInBiome) setSelectedStageId(firstInBiome.id);
-                }}
-                className={`cursor-pointer flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold border transition-colors whitespace-nowrap shrink-0 ${
-                  active
-                    ? 'bg-[#2A3449] border-[#F4B942] text-[#FAF7F0]'
-                    : 'bg-[#171D29] border-[#323D52] text-[#B8C2D1] hover:text-[#FAF7F0]'
-                }`}
-              >
-                <ElementIcon element={b.dominantElement} size={16} />
-                <span>{b.name}</span>
-                {!unlocked && <Lock className="w-3.5 h-3.5 text-[#64748B]" />}
-              </button>
-            );
-          })}
+        {/* Carte de l'île : les biomes reliés par un chemin, les verrouillés grisés (défile sur mobile) */}
+        <div className="border-b border-[#2A3346] overflow-x-auto cubi-scroll">
+          <div className="relative mx-auto h-[118px] min-w-[620px] max-w-[860px]" role="tablist" aria-label={FR.ui.expeditionDrawer.carteDesExpeditions}>
+            <svg className="absolute inset-0 h-full w-full" viewBox="0 0 700 118" preserveAspectRatio="none" aria-hidden="true">
+              {BIOME_ORDER.slice(1).map((bId, i) => {
+                const a = MAP_POINTS[i];
+                const b = MAP_POINTS[i + 1];
+                const open = isBiomeUnlocked(save, bId);
+                return (
+                  <path
+                    key={bId}
+                    d={`M ${a[0]} ${a[1]} C ${(a[0] + b[0]) / 2} ${a[1]}, ${(a[0] + b[0]) / 2} ${b[1]}, ${b[0]} ${b[1]}`}
+                    fill="none"
+                    stroke={open ? '#F4B942' : '#39445A'}
+                    strokeWidth={open ? 5 : 4}
+                    strokeDasharray={open ? undefined : '6 7'}
+                    strokeLinecap="round"
+                  />
+                );
+              })}
+            </svg>
+            {BIOME_ORDER.map((bId, i) => {
+              const b = BIOMES[bId];
+              const unlocked = isBiomeUnlocked(save, bId);
+              const active = selectedBiome === bId;
+              const [x, y] = MAP_POINTS[i];
+              return (
+                <button
+                  key={bId}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => {
+                    setSelectedBiome(bId);
+                    const firstInBiome = STAGES.find((s) => s.biomeId === bId);
+                    if (firstInBiome) setSelectedStageId(firstInBiome.id);
+                  }}
+                  className={`voxel-btn absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer flex flex-col items-center gap-0.5 px-2 py-1.5 min-w-[78px] text-[11px] font-bold ${
+                    active ? 'block-btn-gold' : unlocked ? 'block-btn-secondary' : 'block-btn-secondary opacity-60 grayscale'
+                  }`}
+                  style={{ left: `${(x / 700) * 100}%`, top: `${(y / 118) * 100}%`, borderBottomColor: ELEMENT_META[b.dominantElement].color }}
+                >
+                  <span className="flex items-center gap-1">
+                    <ElementIcon element={b.dominantElement} size={16} />
+                    {!unlocked && <Lock className="w-3 h-3" />}
+                  </span>
+                  <span className="whitespace-nowrap">{b.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Body */}
@@ -111,13 +145,14 @@ export function ExpeditionDrawer({
                   type="button"
                   disabled={locked}
                   onClick={() => setSelectedStageId(stage.id)}
-                  className={`w-full text-left rounded-xl p-3.5 border-2 transition-colors flex items-center justify-between gap-3 ${
+                  className={`voxel-btn w-full text-left p-3.5 border-2 flex items-center justify-between gap-3 ${
                     locked
-                      ? 'bg-[#141A25] border-[#263043] opacity-55 cursor-not-allowed'
+                      ? 'bg-[#141A25] border-[#263043] opacity-55 grayscale cursor-not-allowed'
                       : selected
                         ? 'bg-[#263147] border-[#F4B942] cursor-pointer'
-                        : 'bg-[#1D2535] border-[#334057] hover:border-[#64748B] cursor-pointer'
+                        : 'bg-[#1D2535] border-[#334057] cursor-pointer'
                   }`}
+                  style={{ borderLeftColor: ELEMENT_META[boss.element].color, borderLeftWidth: 5 }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <VoxelCreatureAvatar speciesId={boss.id} size={42} className="shrink-0" />
@@ -152,7 +187,7 @@ export function ExpeditionDrawer({
           </div>
 
           {/* Right: Selected Stage Briefing */}
-          <div className="md:col-span-6 rounded-xl bg-[#161C29] border border-[#344056] p-4 flex flex-col justify-between gap-4">
+          <div className="md:col-span-6 voxel-panel p-4 flex flex-col justify-between gap-4">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <VoxelCreatureAvatar speciesId={activeStage.bossSpeciesId} size={56} />
@@ -211,7 +246,7 @@ export function ExpeditionDrawer({
               type="button"
               disabled={isStageLocked || save.squadIds.length === 0}
               onClick={() => onLaunchStage(activeStage)}
-              className="voxel-btn cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full py-3.5 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-display font-bold text-base border-2 border-[#141925] flex items-center justify-center gap-2"
+              className="voxel-btn cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full py-3.5 rounded-xl block-btn-primary font-display font-bold text-base border-2 border-[#141925] flex items-center justify-center gap-2"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>{FR.ui.expeditionDrawer.lancerLExpedition}</span>

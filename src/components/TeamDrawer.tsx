@@ -101,7 +101,7 @@ export function TeamDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="voxel-btn cursor-pointer w-9 h-9 rounded-lg bg-[#222A3A] hover:bg-[#2E384E] border border-[#39445A] flex items-center justify-center"
+            className="voxel-btn cursor-pointer w-9 h-9 rounded-lg block-btn-secondary border border-[#39445A] flex items-center justify-center"
             aria-label={FR.ui.teamDrawer.fermerLaGestionDEquipe}
           >
             <X className="w-4 h-4" />
@@ -129,11 +129,12 @@ export function TeamDrawer({
                       setSelectedUid(c.uid);
                       setSelectedSlotIdx(0);
                     }}
-                    className={`w-full cursor-pointer text-left rounded-xl p-2.5 border-2 transition-colors flex items-center gap-2.5 ${
+                    className={`voxel-btn w-full cursor-pointer text-left p-2.5 border-2 flex items-center gap-2.5 ${
                       selected
                         ? 'bg-[#263249] border-[#F4B942]'
-                        : 'bg-[#192130] border-[#2E3A50] hover:border-[#64748B]'
+                        : 'bg-[#192130] border-[#2E3A50]'
                     }`}
+                    style={{ borderLeftColor: ELEMENT_META[sp.element].color, borderLeftWidth: 5 }}
                   >
                     <VoxelCreatureAvatar speciesId={c.speciesId} size={38} className="shrink-0" />
                     <div className="min-w-0 flex-1">

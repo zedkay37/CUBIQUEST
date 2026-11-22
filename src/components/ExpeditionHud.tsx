@@ -316,9 +316,10 @@ export function ExpeditionHud({
             return (
               <div
                 key={u.uid}
-                className={`voxel-panel rounded-xl p-2 sm:p-2.5 flex flex-col gap-1.5 ${
+                className={`voxel-panel p-2 sm:p-2.5 flex flex-col gap-1.5 ${
                   u.fainted ? 'opacity-65' : ''
                 }`}
+                style={{ borderLeftColor: moveColor, borderLeftWidth: 5 }}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <VoxelCreatureAvatar speciesId={u.speciesId} size={34} className="shrink-0 hidden sm:block" />
@@ -424,7 +425,7 @@ export function ExpeditionHud({
           }}
           className={`voxel-btn relative overflow-hidden cursor-pointer h-14 flex-1 flex-row gap-2 sm:h-[106px] sm:flex-none sm:w-[98px] sm:flex-col sm:gap-1 rounded-xl border-2 flex items-center justify-center shrink-0 ${
             dodgeReady
-              ? 'bg-[#E85D3F] hover:bg-[#F06D50] border-[#141925] text-[#FAF7F0]'
+              ? 'block-btn-primary'
               : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
           }`}
           aria-label={FR.ui.expeditionHud.esquiveDeLEscouade}

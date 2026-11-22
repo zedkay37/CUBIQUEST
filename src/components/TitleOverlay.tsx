@@ -30,7 +30,7 @@ export function TitleOverlay({
               e.currentTarget.blur();
               onStart();
             }}
-            className="voxel-btn cursor-pointer px-8 py-3.5 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-display font-bold text-lg tracking-wide border-2 border-[#181E2A] whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4B942]"
+            className="voxel-btn cursor-pointer px-8 py-3.5 rounded-xl block-btn-primary font-display font-bold text-lg tracking-wide border-2 border-[#181E2A] whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4B942]"
           >
             {hasExistingSave ? FR.ui.titleOverlay.continuerLAventure : FR.ui.titleOverlay.commencerLAventure}
           </button>
@@ -42,7 +42,7 @@ export function TitleOverlay({
                 e.currentTarget.blur();
                 onNewAdventure();
               }}
-              className="voxel-btn cursor-pointer px-5 py-3.5 rounded-xl bg-[#181E2A]/90 hover:bg-[#242D3F] text-[#FAF7F0] font-semibold text-sm border-2 border-[#39445A] whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4B942]"
+              className="voxel-btn cursor-pointer px-5 py-3.5 rounded-xl block-btn-secondary font-semibold text-sm border-2 border-[#39445A] whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4B942]"
             >
               {FR.ui.titleOverlay.nouvelleIle}
             </button>

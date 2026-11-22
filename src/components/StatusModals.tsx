@@ -43,7 +43,7 @@ export function PauseModal({
           <button
             type="button"
             onClick={onResume}
-            className="voxel-btn cursor-pointer w-full py-3 rounded-xl bg-[#2FB97A] hover:bg-[#38C987] text-[#0F172A] font-display font-bold text-base border-2 border-[#141925]"
+            className="voxel-btn cursor-pointer w-full py-3 rounded-xl block-btn-primary font-display font-bold text-base border-2 border-[#141925]"
           >
             {FR.ui.statusModals.reprendre}
           </button>
@@ -51,7 +51,7 @@ export function PauseModal({
           <button
             type="button"
             onClick={onRestart}
-            className="voxel-btn cursor-pointer w-full py-2.5 rounded-xl bg-[#222A3A] hover:bg-[#2B3548] text-[#FAF7F0] font-semibold text-sm border-2 border-[#39445A]"
+            className="voxel-btn cursor-pointer w-full py-2.5 rounded-xl block-btn-secondary font-semibold text-sm border-2 border-[#39445A]"
           >
             {FR.ui.statusModals.recommencerLeNiveau}
           </button>
@@ -60,7 +60,7 @@ export function PauseModal({
           <button
             type="button"
             onClick={onReturnCamp}
-            className="voxel-btn cursor-pointer w-full py-2.5 rounded-xl bg-[#181E2A] hover:bg-[#222A3A] text-[#CBD5E1] font-semibold text-sm border-2 border-[#39445A]"
+            className="voxel-btn cursor-pointer w-full py-2.5 rounded-xl block-btn-secondary font-semibold text-sm border-2 border-[#39445A]"
           >
             {FR.ui.statusModals.retourAuCamp}
           </button>

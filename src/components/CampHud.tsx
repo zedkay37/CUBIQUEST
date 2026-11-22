@@ -161,8 +161,8 @@ export function CampHud({
               onClick={() => onSelectDrawer('expeditions')}
               className={`voxel-btn cursor-pointer px-4 sm:px-5 py-2.5 rounded-xl font-display font-bold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'expeditions'
-                  ? 'bg-[#F06D50] border-[#FAF7F0] text-[#FAF7F0]'
-                  : 'bg-[#E85D3F] hover:bg-[#F06D50] border-[#141925] text-[#FAF7F0]'
+                  ? 'block-btn-primary outline outline-2 outline-[#FAF7F0]'
+                  : 'block-btn-primary'
               }`}
             >
               <Compass className="w-4 h-4" />
@@ -174,8 +174,8 @@ export function CampHud({
               onClick={() => onSelectDrawer('cooking')}
               className={`voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'cooking'
-                  ? 'bg-[#2B374E] border-[#F4B942] text-[#FAF7F0]'
-                  : 'bg-[#202838] hover:bg-[#2A3448] border-[#39445A] text-[#FAF7F0]'
+                  ? 'block-btn-gold'
+                  : 'block-btn-secondary'
               }`}
             >
               <Flame className="w-4 h-4 text-[#F4B942]" />
@@ -192,8 +192,8 @@ export function CampHud({
               onClick={() => onSelectDrawer('team')}
               className={`voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'team'
-                  ? 'bg-[#2B374E] border-[#F4B942] text-[#FAF7F0]'
-                  : 'bg-[#202838] hover:bg-[#2A3448] border-[#39445A] text-[#FAF7F0]'
+                  ? 'block-btn-gold'
+                  : 'block-btn-secondary'
               }`}
             >
               <Users className="w-4 h-4 text-[#38BDF8]" />
@@ -205,15 +205,15 @@ export function CampHud({
               onClick={() => onSelectDrawer('quests')}
               className={`voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'quests'
-                  ? 'bg-[#2B374E] border-[#F4B942] text-[#FAF7F0]'
-                  : 'bg-[#202838] hover:bg-[#2A3448] border-[#39445A] text-[#FAF7F0]'
+                  ? 'block-btn-gold'
+                  : 'block-btn-secondary'
               }`}
             >
               <Trophy className="w-4 h-4 text-[#F4B942]" />
               <span>{FR.ui.campHud.quetes}</span>
               {claimableCount > 0 && (
-                <span className="font-mono-num text-[11px] text-[#2FB97A] font-bold">
-                  · {claimableCount}
+                <span className="ui-new-badge font-mono-num text-[11px] font-bold rounded-[4px] bg-[#F4B942] text-[#1A0E08] px-1.5" aria-label={FR.ui.components.nouveau}>
+                  {claimableCount}
                 </span>
               )}
             </button>
@@ -223,8 +223,8 @@ export function CampHud({
               onClick={() => onSelectDrawer('codex')}
               className={`voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'codex'
-                  ? 'bg-[#2B374E] border-[#F4B942] text-[#FAF7F0]'
-                  : 'bg-[#202838] hover:bg-[#2A3448] border-[#39445A] text-[#FAF7F0]'
+                  ? 'block-btn-gold'
+                  : 'block-btn-secondary'
               }`}
             >
               <BookOpen className="w-4 h-4 text-[#C084FC]" />
