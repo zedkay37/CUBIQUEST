@@ -2594,9 +2594,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'ach_dex_all',
     title: 'Bestiaire Complet',
-    description: 'Découvrez les 29 espèces de l’Île aux Cubes et de ses confins.',
+    // cible calculée : ajouter ou retirer une lignée ne demande aucune retouche ici
+    description: `Découvrez les ${Object.keys(SPECIES).length} espèces de l’Île aux Cubes et de ses confins.`,
     metric: 'speciesDiscovered',
-    target: 29,
+    target: Object.keys(SPECIES).length,
     reward: {
       label: '3× Éclat Mystique · Pierre Or (+1000–1300)',
       ingredients: { mystic_shard: 3 },
