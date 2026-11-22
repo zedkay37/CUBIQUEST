@@ -1,5 +1,5 @@
 /**
- * Camp de base : construction de la scène, marmite, Cubimons qui se promènent.
+ * Le Camp : construction de la scène, marmite, Cubimons qui se promènent.
  */
 import * as THREE from 'three';
 import { soundFx } from '../audio';

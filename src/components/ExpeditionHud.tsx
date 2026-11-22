@@ -429,7 +429,7 @@ export function ExpeditionHud({
           </span>
         </button>
 
-        {/* V0.2 Squad Ultimate Button (Cubi-Déchaînement [R]) */}
+        {/* Bouton d'ultime d'escouade (Déchaînement [R]) */}
         <button
           type="button"
           tabIndex={-1}

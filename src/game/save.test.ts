@@ -72,7 +72,7 @@ test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoy�
   broken.expeditionsCompleted = 'trois';
   broken.completedStageIds = ['meadow-1', 'meadow-1', 'niveau_fantome', 42];
   broken.discoveredSpeciesIds = ['pyrocube', 'pyrocube', 'espece_fantome'];
-  broken.discoveredRecipeIds = ['mulligan_stew', 'recette_fantome'];
+  broken.discoveredRecipeIds = ['camp_stew', 'recette_fantome'];
   broken.claimedAchievementIds = ['ach_first_win', 'ach_first_win', 'succes_fantome'];
   broken.unlockedPotTiers = ['gold', 'platine'];
   broken.highestStageIndex = 'loin';
@@ -94,7 +94,7 @@ test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoy�
   assert.equal(m.discoveredSpeciesIds.includes('espece_fantome'), false);
   assert.equal(new Set(m.discoveredSpeciesIds).size, m.discoveredSpeciesIds.length);
   for (const c of m.roster) assert.ok(m.discoveredSpeciesIds.includes(c.speciesId));
-  assert.deepEqual(m.discoveredRecipeIds, ['mulligan_stew']);
+  assert.deepEqual(m.discoveredRecipeIds, ['camp_stew']);
   assert.deepEqual(m.claimedAchievementIds, ['ach_first_win']);
   assert.deepEqual(m.unlockedPotTiers, ['iron', 'gold']);
 
@@ -126,10 +126,10 @@ test('Sauvegarde: marmite et quêtes incohérentes reviennent à un état jouabl
 
   // cuisson « en cours » mais plus aucune expédition à attendre : le plat est prêt
   const b = clone(fresh);
-  b.pot = { ...b.pot, status: 'cooking', recipeId: 'mulligan_stew', expeditionsRemaining: 0, expeditionsTotal: 1 };
+  b.pot = { ...b.pot, status: 'cooking', recipeId: 'camp_stew', expeditionsRemaining: 0, expeditionsTotal: 1 };
   const mb = migrateSaveState(b)!;
   assert.equal(mb.pot.status, 'ready');
-  assert.equal(mb.pot.recipeId, 'mulligan_stew');
+  assert.equal(mb.pot.recipeId, 'camp_stew');
 
   // état « prêt » valide conservé tel quel
   const c = clone(fresh);

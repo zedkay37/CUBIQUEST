@@ -56,7 +56,7 @@ export function PauseModal({
             onClick={onReturnCamp}
             className="voxel-btn cursor-pointer w-full py-2.5 rounded-xl bg-[#181E2A] hover:bg-[#222A3A] text-[#CBD5E1] font-semibold text-sm border-2 border-[#39445A]"
           >
-            {FR.ui.statusModals.retourAuCampDeBase}
+            {FR.ui.statusModals.retourAuCamp}
           </button>
         </div>
 

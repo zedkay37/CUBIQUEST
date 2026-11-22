@@ -44,7 +44,7 @@ test('Lignée Mycélin -> Amanitox : données, style, évolution, Marmite, renco
   // Marmite : recrutable par la recette de son élément et par la recette de départ
   assert.ok(RECIPE_BY_ID.botanical_broth.poolSpeciesIds.includes('mycelin'));
   assert.ok(RECIPE_BY_ID.botanical_broth.poolSpeciesIds.includes('amanitox'));
-  assert.ok(RECIPE_BY_ID.mulligan_stew.poolSpeciesIds.includes('mycelin'));
+  assert.ok(RECIPE_BY_ID.camp_stew.poolSpeciesIds.includes('mycelin'));
   const pool = RECIPE_BY_ID.botanical_broth.poolSpeciesIds;
   const roll = (pool.indexOf('mycelin') + 0.5) / pool.length;
   assert.equal(rollCreatureFromPot('iron', RECIPE_BY_ID.botanical_broth, () => roll).speciesId, 'mycelin');

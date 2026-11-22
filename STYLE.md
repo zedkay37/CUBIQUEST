@@ -163,13 +163,13 @@ Un nouveau boss se compose en choisissant un kit existant ; il ne reçoit pas d'
 - 12 ingrédients : 4 couleurs (rouge, bleu, jaune, gris), 3 raretés (commun, rare, mystique). Chaque biome récent apporte 2 ingrédients (1 commun, 1 rare).
 - 16 recettes. Une recette = un nom de plat, une couleur de soupe, 1 à 3 expéditions de cuisson, un indice en clair, un vivier de 3 à 7 espèces.
 - Schéma des viviers : recette d'élément ou de lignée = les 3 stades de la lignée, du plus commun au plus rare (les marmites d'argent et d'or favorisent la fin de liste) ; recette « débutant » = 4 à 6 espèces de base ; recette « d'élite » = 6 ou 7 stades avancés.
-- Noms de plats : cuisine familière + touche d'élément ou de lieu (« Soupe Ardente à la Cube », « Tajine Tonnerre », « Meringue Céleste »).
+- Noms de plats : cuisine familière + touche d'élément ou de lieu (« Soupe Ardente », « Tajine Tonnerre », « Meringue Céleste »).
 
 ## 5. Ton des textes
 
 - Français, vouvoiement du joueur dans l'interface (« Placez 5 ingrédients », « Préparez l'Esquive ! »).
 - Registre chaleureux et clair, jamais ironique ni sombre. Vocabulaire du camp, de la cuisine et de l'exploration.
-- Annonces de combat en capitales avec point d'exclamation (« ALERTE BOSS ! », « ÉVAPORATION ! », « CUBI-DÉCHAÎNEMENT ! »).
+- Annonces de combat en capitales avec point d'exclamation (« ALERTE BOSS ! », « ÉVAPORATION ! », « DÉCHAÎNEMENT ! »).
 - Consignes de boss : nom de l'attaque, tiret, action à faire (« Anneau de Givre — collez-vous au boss ! »).
 - Typographie française : espace avant `!` `?` `:`, guillemets « », apostrophe courbe dans les textes du catalogue.
 - Noms propres avec majuscules à chaque mot pour les lieux, plats et sorts (« Trône de la Banquise », « Rune de Précision »).

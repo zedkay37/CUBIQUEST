@@ -43,7 +43,7 @@ import type {
   StoneSlotType,
 } from './types';
 import { FR } from '../i18n/fr';
-import { LEGACY_RUNE_IDS } from './legacyIds';
+import { LEGACY_RECIPE_IDS, LEGACY_RUNE_IDS } from './legacyIds';
 
 export const SAVE_STORAGE_KEY = 'cubiquest_save_v2';
 /** Copie brute d'une sauvegarde stockée mais illisible (JSON cassé, version inconnue) : jamais écrasée en silence. */
@@ -539,7 +539,7 @@ export function resolveRecipe(ingredientIds: (string | null)[]): RecipeDef | nul
   if (lichen >= 1 && fluff >= 1) return RECIPE_BY_ID.frontier_hotpot;
 
   // Priority order from rarest/most specific to general
-  if (mysticCount >= 2) return RECIPE_BY_ID.ambrosia_legends;
+  if (mysticCount >= 2) return RECIPE_BY_ID.summit_feast;
   if (rareCount + mysticCount === 5) return RECIPE_BY_ID.royal_feast;
   if (mysticCount >= 1 || rareCount >= 3) return RECIPE_BY_ID.astral_veloute;
   if (sunPollenCount >= 2 && azureDropCount >= 2) return RECIPE_BY_ID.sweet_crepe;
@@ -550,7 +550,7 @@ export function resolveRecipe(ingredientIds: (string | null)[]): RecipeDef | nul
   if (colorCounts.yellow >= 2 && (colorCounts.red >= 2 || colorCounts.blue >= 2)) {
     return RECIPE_BY_ID.botanical_broth;
   }
-  return RECIPE_BY_ID.mulligan_stew;
+  return RECIPE_BY_ID.camp_stew;
 }
 
 export function getPotIngredientCost(tier: PotTier): number {
@@ -1297,6 +1297,14 @@ function resolveRuneKind(raw: unknown): RuneKind | null {
   return Object.hasOwn(LEGACY_RUNE_IDS, raw) ? LEGACY_RUNE_IDS[raw] : null;
 }
 
+/** Identifiant de recette actuel pour une valeur lue dans une sauvegarde (ancien nom converti) ; null si inconnu. */
+function resolveRecipeId(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  if (RECIPE_BY_ID[raw]) return raw;
+  const renamed = Object.hasOwn(LEGACY_RECIPE_IDS, raw) ? LEGACY_RECIPE_IDS[raw] : undefined;
+  return renamed && RECIPE_BY_ID[renamed] ? renamed : null;
+}
+
 /**
  * Sac de runes : additionne le sac actuel (`runeBag`) et l'ancien (`moveStoneBag`, v1 à v3),
  * anciens noms convertis. Une clé inconnue est ignorée.
@@ -1507,7 +1515,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     const id = Array.isArray(rawPot.slots) ? rawPot.slots[i] : null;
     return typeof id === 'string' && INGREDIENTS[id] ? id : null;
   });
-  const potRecipeId = typeof rawPot.recipeId === 'string' && RECIPE_BY_ID[rawPot.recipeId] ? rawPot.recipeId : null;
+  const potRecipeId = resolveRecipeId(rawPot.recipeId);
   const potRemaining = toCount(rawPot.expeditionsRemaining);
   let potStatus: SaveState['pot']['status'] =
     rawPot.status === 'cooking' || rawPot.status === 'ready' ? rawPot.status : 'idle';
@@ -1545,7 +1553,10 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     ),
     completedStageIds,
     discoveredSpeciesIds,
-    discoveredRecipeIds: uniqueKnown(obj.discoveredRecipeIds, (id) => Boolean(RECIPE_BY_ID[id])),
+    discoveredRecipeIds: uniqueKnown(
+      Array.isArray(obj.discoveredRecipeIds) ? obj.discoveredRecipeIds.map((id) => resolveRecipeId(id) ?? id) : [],
+      (id) => Boolean(RECIPE_BY_ID[id]),
+    ),
     expeditionsCompleted,
     stats,
     activeQuests: normalizeQuests(obj.activeQuests),

@@ -1568,12 +1568,12 @@ export const POT_TIER_META: Record<
 
 export const RECIPES: RecipeDef[] = [
   {
-    id: 'ambrosia_legends',
-    name: FR.catalog.RECIPES.ambrosia_legends.name,
+    id: 'summit_feast',
+    name: FR.catalog.RECIPES.summit_feast.name,
     soupHex: '#A855F7',
     cookExpeditions: 3,
-    description: FR.catalog.RECIPES.ambrosia_legends.description,
-    hint: FR.catalog.RECIPES.ambrosia_legends.hint,
+    description: FR.catalog.RECIPES.summit_feast.description,
+    hint: FR.catalog.RECIPES.summit_feast.hint,
     targetElement: 'psychic',
     poolSpeciesIds: ['aetherion', 'ignisaur', 'abyssocube', 'raicube', 'magmadrake', 'cendrox', 'lunabloc'],
   },
@@ -1732,12 +1732,12 @@ export const RECIPES: RecipeDef[] = [
     frontier: true,
   },
   {
-    id: 'mulligan_stew',
-    name: FR.catalog.RECIPES.mulligan_stew.name,
+    id: 'camp_stew',
+    name: FR.catalog.RECIPES.camp_stew.name,
     soupHex: '#B45309',
     cookExpeditions: 1,
-    description: FR.catalog.RECIPES.mulligan_stew.description,
-    hint: FR.catalog.RECIPES.mulligan_stew.hint,
+    description: FR.catalog.RECIPES.camp_stew.description,
+    hint: FR.catalog.RECIPES.camp_stew.hint,
     poolSpeciesIds: ['pyrocube', 'aquabloc', 'bourgeon', 'voltik', 'cailloc', 'psycube', 'mycelin'],
   },
 ];

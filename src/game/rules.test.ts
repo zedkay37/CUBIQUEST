@@ -68,7 +68,7 @@ test('elemental type effectiveness returns accurate multipliers', () => {
 test('recipe resolution identifies specialty and fallback recipes accurately', () => {
   assert.equal(
     resolveRecipe(['mystic_shard', 'mystic_shard', 'ruby_berry', 'azure_drop', 'sun_pollen'])?.id,
-    'ambrosia_legends',
+    'summit_feast',
   );
   assert.equal(
     resolveRecipe(['ruby_berry', 'ruby_berry', 'ruby_berry', 'pebble_gray', 'sun_pollen'])?.id,
@@ -92,7 +92,7 @@ test('recipe resolution identifies specialty and fallback recipes accurately', (
   );
   assert.equal(
     resolveRecipe(['ruby_berry', 'azure_drop', 'sun_pollen', 'pebble_gray', 'ruby_berry'])?.id,
-    'mulligan_stew',
+    'camp_stew',
   );
   assert.equal(resolveRecipe(['ruby_berry', 'azure_drop', null, null, null]), null);
 });
@@ -175,7 +175,7 @@ test('Cooking Pot consumes ingredients, ticks on expedition, and recruits a crea
 
   const cooking = startCookingPot(save);
   assert.equal(cooking.pot.status, 'cooking');
-  assert.equal(cooking.pot.recipeId, 'mulligan_stew');
+  assert.equal(cooking.pot.recipeId, 'camp_stew');
   assert.equal(cooking.ingredients.ruby_berry, 4); // 6 - 2
 
   const { nextSave: afterExp, outcome } = applyExpeditionRewards(
@@ -288,7 +288,7 @@ test('V0.2 SaveState v1 -> v2 migration and JSON export/import validation', () =
     highestStageIndex: 4,
     completedStageIds: ['meadow-1', 'meadow-2', 'meadow-3', 'shore-1'],
     discoveredSpeciesIds: freshV2.discoveredSpeciesIds,
-    discoveredRecipeIds: ['mulligan_stew'],
+    discoveredRecipeIds: ['camp_stew'],
     expeditionsCompleted: 7,
   };
 
@@ -483,7 +483,7 @@ test('Giga: lignées à 3 stades — évolutions en chaîne et gain de puissance
 test('Giga: recettes des nouveaux biomes — résolution, priorités et non-régression', () => {
   const r = (ids: (string | null)[]) => resolveRecipe(ids)?.id;
   assert.equal(r(['aurora_petal', 'aurora_petal', 'mystic_shard', 'ruby_berry', 'azure_drop']), 'aurora_banquet');
-  // 2 Éclats + 2 Pétales : le Banquet (plus spécifique) passe avant l'Ambroisie
+  // 2 Fragments + 2 Pétales : le Banquet (plus spécifique) passe avant le Festin
   assert.equal(r(['aurora_petal', 'aurora_petal', 'mystic_shard', 'mystic_shard', 'azure_drop']), 'aurora_banquet');
   assert.equal(r(['snow_lichen', 'snow_lichen', 'snow_lichen', 'ruby_berry', 'sun_pollen']), 'glacier_sorbet');
   assert.equal(r(['snow_lichen', 'snow_lichen', 'pebble_gray', 'pebble_gray', 'ruby_berry']), 'permafrost_fondue');
@@ -502,7 +502,7 @@ test('Giga: recettes des nouveaux biomes — résolution, priorités et non-rég
     assert.ok(recipe.cookExpeditions >= 1 && recipe.poolSpeciesIds.length >= 3, recipe.id);
   }
   assert.equal(RECIPES.filter((x) => x.frontier).length, 7);
-  assert.equal(RECIPES[RECIPES.length - 1].id, 'mulligan_stew');
+  assert.equal(RECIPES[RECIPES.length - 1].id, 'camp_stew');
 
   // Cuisson complète d'une recette des confins : stock, stat dédiée, recrue du bon vivier
   let save = createInitialSaveState('pyrocube', true);

@@ -41,10 +41,10 @@ test('Lignée Braizard -> Cendrox : données, style, évolution, Marmite, rencon
   assert.equal(evolved.moveId, 'cinder_wave');
   assert.ok(save.discoveredSpeciesIds.includes('cendrox'));
 
-  // Marmite : recrutable par la recette de son élément , et le stade final par l'Ambroisie des Légendes
+  // Marmite : recrutable par la recette de son élément , et le stade final par le Festin des Cimes
   assert.ok(RECIPE_BY_ID.fiery_soup.poolSpeciesIds.includes('braizard'));
   assert.ok(RECIPE_BY_ID.fiery_soup.poolSpeciesIds.includes('cendrox'));
-  assert.ok(RECIPE_BY_ID.ambrosia_legends.poolSpeciesIds.includes('cendrox'));
+  assert.ok(RECIPE_BY_ID.summit_feast.poolSpeciesIds.includes('cendrox'));
   const pool = RECIPE_BY_ID.fiery_soup.poolSpeciesIds;
   const roll = (pool.indexOf('braizard') + 0.5) / pool.length;
   assert.equal(rollCreatureFromPot('iron', RECIPE_BY_ID.fiery_soup, () => roll).speciesId, 'braizard');

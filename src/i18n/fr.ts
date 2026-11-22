@@ -16,7 +16,7 @@ export const FR = {
     campHud: {
       platPret: 'Plat prêt !',
       cuisson: (a: string | number) => `Cuisson (${a})`,
-      campDeBase: 'Camp de Base',
+      leCamp: 'Le Camp',
       ileAuxCubes: 'Île aux Cubes',
       puissance: 'Puissance',
       desactiverLeTremblementDeCamera: 'Désactiver le tremblement de caméra',
@@ -30,7 +30,7 @@ export const FR = {
       masquerLeDock: ' Masquer le dock',
       expeditions: 'Expéditions',
       marmite: 'Marmite',
-      equipePierres: 'Équipe & Pierres',
+      equipePierres: 'Équipe & Galets',
       quetes: 'Quêtes',
       codexWeb: 'Codex Web',
     },
@@ -42,7 +42,7 @@ export const FR = {
       fermerLaMarmite: 'Fermer la marmite',
       nouvelleRecrueAttireeAuCamp: 'Nouvelle recrue attirée au camp !',
       niv: ' · Niv.',
-      ajouteAVotreReserveEquipezLe: 'Ajouté à votre réserve — équipez-le depuis l’onglet Équipe & Pierres.',
+      ajouteAVotreReserveEquipezLe: 'Ajouté à votre réserve — équipez-le depuis l’onglet Équipe & Galets.',
       super: 'Super !',
       exp: ' exp.',
       astuce: 'Astuce : ',
@@ -99,7 +99,7 @@ export const FR = {
       bossDuNiveau: 'Boss du niveau · ',
       vaguesXpDeBase: ' vagues · XP de base',
       butinIngredients: 'Butin & Ingrédients',
-      pierresDePouvoir: 'Pierres de Pouvoir :',
+      pierresDePouvoir: 'Galets :',
       a: ' à +',
       niveauVerrouilleTerminezDAbord: 'Niveau verrouillé : terminez d’abord « ',
       lancerLExpedition: 'Lancer l’expédition',
@@ -145,7 +145,7 @@ export const FR = {
       expeditionReussie: 'Expédition réussie !',
       escouadeVaincue: 'Escouade vaincue',
       siPresDuButGardezLEsquive: 'Si près du but ! Gardez l\'Esquive pour ses attaques télégraphiées.',
-      renforcezVosPierresDePouvoirOu: 'Renforcez vos Pierres de Pouvoir ou tentez une recrue à la Marmite.',
+      renforcezVosPierresDePouvoirOu: 'Renforcez vos Galets ou tentez une recrue à la Marmite.',
       temps: 'Temps',
       vagues: 'Vagues',
       degats: 'Dégâts',
@@ -157,7 +157,7 @@ export const FR = {
       comboMax: 'Combo max ',
       nouveauBiomeDecouvert: 'Nouveau biome découvert',
       ingredientsRecoltes: 'Ingrédients récoltés',
-      pierre: 'Pierre ',
+      pierre: 'Galet ',
       atq: 'ATQ',
       pv: 'PV',
       monteeDeNiveau: 'Montée de niveau : ',
@@ -174,7 +174,7 @@ export const FR = {
       argent: 'Argent',
       bronze: 'Bronze',
       aleatoire: 'Aléatoire',
-      pierre: (a: string | number) => `Pierre (${a})`,
+      pierre: (a: string | number) => `Galet (${a})`,
       fichierDeSauvegardeTelechargeJson: 'Fichier de sauvegarde téléchargé (.json).',
       sauvegardeCopieeDansLePressePapiers: 'Sauvegarde copiée dans le presse-papiers.',
       impossibleDAccederAuPressePapiers: 'Impossible d’accéder au presse-papiers. Utilisez le bouton Télécharger (.json).',
@@ -202,7 +202,7 @@ export const FR = {
       comboMax: 'Combo Max',
       cubimons: 'Cubimons',
       exporterVotreSauvegardeLocaleV: 'Exporter votre sauvegarde locale (v',
-      conservezUneCopieDeVotreEquipe: 'Conservez une copie de votre équipe, vos pierres, vos ingrédients et vos succès au format JSON.',
+      conservezUneCopieDeVotreEquipe: 'Conservez une copie de votre équipe, vos galets, vos ingrédients et vos succès au format JSON.',
       telechargerJson: 'Télécharger (.json)',
       copie: 'Copié !',
       copierLeJson: 'Copier le JSON',
@@ -218,7 +218,7 @@ export const FR = {
     },
     starterModal: {
       choisissezVotrePremierCubimon: 'Choisissez votre premier Cubimon',
-      deuxEclaireursVousRejoindrontAussitotPour: 'Deux éclaireurs vous rejoindront aussitôt pour former votre escouade de 3 au Camp de Base.',
+      deuxEclaireursVousRejoindrontAussitotPour: 'Deux éclaireurs vous rejoindront aussitôt pour former votre escouade de 3 au Camp.',
       tank: 'Tank',
       distance: 'Distance',
       melee: 'Mêlée',
@@ -231,7 +231,7 @@ export const FR = {
       appuyezSurEchapOuPPour: 'Appuyez sur Échap ou P pour reprendre le combat.',
       reprendre: 'Reprendre',
       recommencerLeNiveau: 'Recommencer le niveau',
-      retourAuCampDeBase: 'Retour au Camp de Base',
+      retourAuCamp: 'Retour au Camp',
       tremblementDeCameraLorsDesImpacts: 'Tremblement de caméra lors des impacts',
     },
     teamDrawer: {
@@ -239,7 +239,7 @@ export const FR = {
       vampirisme: 'Vampirisme',
       vitesse: 'Vitesse',
       resist: 'Résist.',
-      escouadeGrilleDePierresDePouvoir: 'Escouade & Grille de Pierres de Pouvoir',
+      escouadeGrilleDePierresDePouvoir: 'Escouade & Grille de Galets',
       puissanceTotaleDEscouade: 'Puissance totale d’escouade :',
       t3Actifs: '/3 actifs · ',
       compagnonsAuCamp: ' compagnons au camp',
@@ -268,16 +268,16 @@ export const FR = {
       rune: 'Rune ',
       retirer: 'Retirer',
       aucuneEnSac: 'Aucune en sac',
-      grilleDePierresDePouvoir3: 'Grille de Pierres de Pouvoir (3×3)',
-      retirerLaPierre: 'Retirer la pierre',
-      emplacementPierre: (a: string | number, b: string | number) => `Emplacement pierre ${a} (${b})`,
+      grilleDePierresDePouvoir3: 'Grille de Galets (3×3)',
+      retirerLaPierre: 'Retirer le galet',
+      emplacementPierre: (a: string | number, b: string | number) => `Emplacement de galet ${a} (${b})`,
       niv3: 'Niv.',
       mixte: 'Mixte',
-      sacDePierres: 'Sac de Pierres (',
+      sacDePierres: 'Sac de Galets (',
       tout: 'Tout',
-      lEmplacementSelectionneNAcceptePas: 'L’emplacement sélectionné n’accepte pas ce type de pierre (ou il est encore verrouillé).',
-      pierreStandard: 'Pierre standard',
-      equipee: 'Équipée',
+      lEmplacementSelectionneNAcceptePas: 'L’emplacement sélectionné n’accepte pas ce type de galet (ou il est encore verrouillé).',
+      pierreStandard: 'Galet standard',
+      equipee: 'Équipé',
       equiper: 'Équiper',
       mauvaisType: 'Mauvais type',
     },
@@ -302,7 +302,7 @@ export const FR = {
     escouadeKORepliAuCamp: 'Escouade K.O. ! Repli au camp...',
     victoireExpeditionReussie: 'VICTOIRE ! Expédition réussie !',
     esquiveParfaite: 'ESQUIVE PARFAITE !',
-    cubiDechainement: 'CUBI-DÉCHAÎNEMENT !',
+    dechainement: 'DÉCHAÎNEMENT !',
     pv: (a: string | number) => `+${a} PV`,
   },
   rules: {
@@ -674,7 +674,7 @@ export const FR = {
         description: 'Caillou aromatique prisé des créatures Roche et défensives.',
       },
       mystic_shard: {
-        name: 'Éclat Mystique',
+        name: 'Fragment Mystique',
         description: 'Relique prismatique rare capable d’attirer les Cubimons légendaires.',
       },
       snow_lichen: {
@@ -721,13 +721,13 @@ export const FR = {
       },
     },
     RECIPES: {
-      ambrosia_legends: {
-        name: 'Ambroisie des Légendes',
-        description: 'Un bouillon irisé légendaire qui attire les formes rares et mystiques.',
-        hint: 'Utilisez au moins 2 Éclats Mystiques.',
+      summit_feast: {
+        name: 'Festin des Cimes',
+        description: 'Un festin irisé, servi tout en haut, qui attire les formes rares et mystiques.',
+        hint: 'Utilisez au moins 2 Fragments Mystiques.',
       },
       fiery_soup: {
-        name: 'Soupe Ardente à la Cube',
+        name: 'Soupe Ardente',
         description: 'Un potage épicé fumant qui attire les créatures de type Feu.',
         hint: 'Au moins 3 ingrédients rouges (Baie Rubis, Racine Ardente).',
       },
@@ -754,7 +754,7 @@ export const FR = {
       astral_veloute: {
         name: 'Velouté Astral',
         description: 'Recette délicate aux cristaux et miel attirant les créatures Psy.',
-        hint: 'Mélangez au moins 3 ingrédients rares (Cristal, Miel, Racine) ou 1 Éclat Mystique.',
+        hint: 'Mélangez au moins 3 ingrédients rares (Cristal, Miel, Racine) ou 1 Fragment Mystique.',
       },
       sweet_crepe: {
         name: 'Crêpe Douceur Cubique',
@@ -769,7 +769,7 @@ export const FR = {
       aurora_banquet: {
         name: 'Banquet Boréal',
         description: 'Un festin phosphorescent qui attire les formes évoluées et rares des confins.',
-        hint: 'Au moins 2 Pétales d’Aurore et 1 Éclat Mystique.',
+        hint: 'Au moins 2 Pétales d’Aurore et 1 Fragment Mystique.',
       },
       glacier_sorbet: {
         name: 'Sorbet du Glacier',
@@ -801,8 +801,8 @@ export const FR = {
         description: 'Des figues rôties sur pierre chaude qui font dévaler les béliers des mesas.',
         hint: 'Au moins 3 Figues des Mesas.',
       },
-      mulligan_stew: {
-        name: 'Ragoût Cubique',
+      camp_stew: {
+        name: 'Ragoût du Camp',
         description: 'La recette classique de l’Île aux Cubes : attire toutes les espèces de base.',
         hint: 'N’importe quel mélange varié de 5 ingrédients.',
       },
@@ -972,12 +972,12 @@ export const FR = {
         title: 'Alchimiste Élémentaire',
         description: 'Déclenchez 3 réactions élémentaires en combat.',
         reward: {
-          label: 'Pierre de Pouvoir (Argent) · 2× Miel Ambré',
+          label: 'Galet (Argent) · 2× Miel Ambré',
         },
       },
       q_ult_1: {
         title: 'Force Unie',
-        description: 'Déclenchez 1 Cubi-Déchaînement (touche R) en expédition.',
+        description: 'Déclenchez 1 Déchaînement (touche R) en expédition.',
         reward: {
           label: '1× Rune de Cadence · 2× Cristal Glacé',
         },
@@ -1000,7 +1000,7 @@ export const FR = {
         title: 'Chasseur de Boss',
         description: 'Vainquez 2 Boss de fin de niveau.',
         reward: {
-          label: 'Pierre de Pouvoir (Or) · 1× Éclat Mystique',
+          label: 'Galet (Or) · 1× Fragment Mystique',
         },
       },
       q_combos_6: {
@@ -1014,7 +1014,7 @@ export const FR = {
         title: 'Explorateur Infatigable',
         description: 'Terminez 3 expéditions victorieuses.',
         reward: {
-          label: '1× Rune d’Ampleur · 2× Éclat Mystique',
+          label: '1× Rune d’Ampleur · 2× Fragment Mystique',
         },
       },
       q_frontier_win_2: {
@@ -1035,12 +1035,12 @@ export const FR = {
         title: 'Dompteur de Tempêtes',
         description: 'Vainquez 3 boss de la Toundra Boréale ou de la Cime des Orages.',
         reward: {
-          label: '1× Rune de Vigueur · Pierre Or (+700–950)',
+          label: '1× Rune de Vigueur · Galet Or (+700–950)',
         },
       },
       q_evolve_frontier: {
         title: 'Nouvelle Forme',
-        description: 'Faites évoluer 1 Cubimon au Camp de Base.',
+        description: 'Faites évoluer 1 Cubimon au Camp.',
         reward: {
           label: '2× Poivre d’Orage · 2× Miel Ambré',
         },
@@ -1058,7 +1058,7 @@ export const FR = {
         title: 'Escouade Aguerrie',
         description: 'Remportez 5 expéditions victorieuses.',
         reward: {
-          label: 'Pierre Argent (+85–130)',
+          label: 'Galet Argent (+85–130)',
         },
       },
       ach_first_combo: {
@@ -1072,7 +1072,7 @@ export const FR = {
         title: 'Architecte des Combos',
         description: 'Déclenchez 15 réactions élémentaires au total.',
         reward: {
-          label: '1× Rune de Force · 2× Éclat Mystique',
+          label: '1× Rune de Force · 2× Fragment Mystique',
         },
       },
       ach_chain_8: {
@@ -1083,10 +1083,10 @@ export const FR = {
         },
       },
       ach_ult_3: {
-        title: 'Cubi-Déchaînement !',
+        title: 'Déchaînement !',
         description: 'Déclenchez 3 attaques Ultimes d’escouade.',
         reward: {
-          label: 'Pierre Or (+110–170)',
+          label: 'Galet Or (+110–170)',
         },
       },
       ach_dodge_3: {
@@ -1100,7 +1100,7 @@ export const FR = {
         title: 'Toque Cubique',
         description: 'Préparez 3 plats dans la Marmite du Camp.',
         reward: {
-          label: '3× Miel Ambré · 1× Éclat Mystique',
+          label: '3× Miel Ambré · 1× Fragment Mystique',
         },
       },
       ach_evolve_1: {
@@ -1114,21 +1114,21 @@ export const FR = {
         title: 'Naturaliste de l’Île',
         description: 'Découvrez 8 espèces différentes dans le Bestiaire.',
         reward: {
-          label: '2× Éclat Mystique · 3× Cristal Glacé',
+          label: '2× Fragment Mystique · 3× Cristal Glacé',
         },
       },
       ach_stages_6: {
         title: 'Conquérant des Biomes',
         description: 'Terminez 6 niveaux distincts sur la carte des expéditions.',
         reward: {
-          label: 'Pierre Or (+160–240)',
+          label: 'Galet Or (+160–240)',
         },
       },
       ach_stages_12: {
         title: 'Légende de l’Île aux Cubes',
         description: 'Triomphez des 12 niveaux jusqu’au Cœur d’Aetherion.',
         reward: {
-          label: '5× Éclat Mystique · Pierre Or (+380–520)',
+          label: '5× Fragment Mystique · Galet Or (+380–520)',
         },
       },
       ach_tundra_clear: {
@@ -1142,14 +1142,14 @@ export const FR = {
         title: 'Chevaucheur d’Orage',
         description: 'Terminez les 3 niveaux de la Cime des Orages.',
         reward: {
-          label: '1× Rune de Vigueur · Pierre Or (+950–1250)',
+          label: '1× Rune de Vigueur · Galet Or (+950–1250)',
         },
       },
       ach_stages_18: {
         title: 'Maître des Six Biomes',
         description: 'Triomphez des 18 niveaux jusqu’à l’Œil du Cyclone.',
         reward: {
-          label: '5× Éclat Mystique · Pierre Or (+1100–1400)',
+          label: '5× Fragment Mystique · Galet Or (+1100–1400)',
         },
       },
       ach_dex_20: {
@@ -1163,14 +1163,14 @@ export const FR = {
         title: 'Bestiaire Complet',
         description: (a: string | number) => `Découvrez les ${a} espèces de l’Île aux Cubes et de ses confins.`,
         reward: {
-          label: '3× Éclat Mystique · Pierre Or (+1000–1300)',
+          label: '3× Fragment Mystique · Galet Or (+1000–1300)',
         },
       },
       ach_frontier_dish_3: {
         title: 'Chef des Confins',
         description: 'Préparez 3 recettes des nouveaux biomes.',
         reward: {
-          label: '4× Lichen des Neiges · 4× Flocon de Nuage · 2× Éclat Mystique',
+          label: '4× Lichen des Neiges · 4× Flocon de Nuage · 2× Fragment Mystique',
         },
       },
       ach_evolve_5: {

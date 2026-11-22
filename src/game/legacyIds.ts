@@ -16,3 +16,9 @@ export const LEGACY_RUNE_IDS: Readonly<Record<string, RuneKind>> = {
   crit_focus: 'rune_precision',
   leech: 'rune_vigueur',
 };
+
+/** Recettes renommées en v4. */
+export const LEGACY_RECIPE_IDS: Readonly<Record<string, string>> = {
+  mulligan_stew: 'camp_stew',
+  ambrosia_legends: 'summit_feast',
+};

@@ -101,7 +101,7 @@ export function triggerDodge(self: VoxelEngine): boolean {
 }
 
 /**
- * V0.2 Squad Ultimate: Cubi-Déchaînement (KeyR or HUD button at 100% charge)
+ * Ultime d'escouade : Déchaînement (KeyR or HUD button at 100% charge)
  */
 export function triggerUltimate(self: VoxelEngine): boolean {
   if (
@@ -122,7 +122,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
   soundFx.playUltimate();
   self.hitstopTimer = 0.085;
   self.trauma = Math.min(1, self.trauma + 0.7);
-  self.bannerText = FR.engine.cubiDechainement;
+  self.bannerText = FR.engine.dechainement;
   self.bannerTimer = 1.8;
 
   let combinedAtk = 0;
@@ -149,7 +149,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
     cz /= livingEnemies.length;
     spawnShockwaveRing(self, cx, cz, 8.5, '#F4B942');
     spawnParticleBurst(self, cx, 1.2, cz, '#FFE066', 36, 7.4);
-    self.floatingText.spawn(cx, 2.9, cz, FR.engine.cubiDechainement, '#F4B942', 1.4, 1.15);
+    self.floatingText.spawn(cx, 2.9, cz, FR.engine.dechainement, '#F4B942', 1.4, 1.15);
 
     const leadAlly = livingAllies[0];
     const baseUltDmg = Math.round(combinedAtk * 1.35);
