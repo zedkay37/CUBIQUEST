@@ -74,6 +74,7 @@ export function renderGalleryShots(speciesIds: string[], biomes: BiomeDef[]): Ga
     const rig = buildVoxelCreature(id);
     scene.add(rig.root);
     // cadrage sur la boîte englobante réelle : les silhouettes larges (crabe) ou longues ne sont pas rognées
+    rig.root.updateMatrixWorld(true); // prend en compte l'échelle de l'espèce
     const bounds = new THREE.Box3().setFromObject(rig.bodyPivot);
     const size = bounds.getSize(new THREE.Vector3());
     const centerY = (bounds.min.y + bounds.max.y) / 2;
