@@ -16,6 +16,7 @@ import { soundFx } from './game/audio';
 import { INGREDIENT_LIST, RECIPE_BY_ID, SPECIES, STAGE_BY_ID, STAGES } from './game/catalog';
 import {
   applyExpeditionRewards,
+  buildPreviewSave,
   claimAchievementReward,
   claimQuestReward,
   collectCookedCreature,
@@ -114,6 +115,7 @@ export default function App() {
   const saveRef = useRef(save);
   const activeStageRef = useRef(activeStage);
   const previewRef = useRef(false); // true : expédition d'aperçu, rien n'est sauvegardé
+  const previewCreaturesRef = useRef<OwnedCreature[]>([]);
   saveRef.current = save;
   activeStageRef.current = activeStage;
 
@@ -146,8 +148,11 @@ export default function App() {
       onExpeditionComplete: (result) => {
         const stage = activeStageRef.current;
         if (!stage) return;
+        // En aperçu, l'écran de fin est calculé pour l'escouade de l'aperçu (et rien n'est enregistré)
         const { nextSave, outcome: finalOutcome } = applyExpeditionRewards(
-          saveRef.current,
+          previewRef.current
+            ? buildPreviewSave(saveRef.current, previewCreaturesRef.current)
+            : saveRef.current,
           stage,
           result.victory,
           result,
@@ -180,6 +185,7 @@ export default function App() {
         createOwnedCreature(id, preview.level, preview.bonus, `preview_${i}`),
       );
       previewRef.current = true;
+      previewCreaturesRef.current = creatures;
       activeStageRef.current = preview.stage;
       setActiveStage(preview.stage);
       setPlayMode('expedition');

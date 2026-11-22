@@ -458,7 +458,8 @@ export class VoxelEngine {
       renderer.toneMappingExposure = 0.94;
       renderer.setPixelRatio(this.isSoftwareGl ? 1 : Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = !this.isSoftwareGl;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      // PCFSoftShadowMap a été retiré de three (il retombait déjà sur PCFShadowMap avec un avertissement console)
+      renderer.shadowMap.type = THREE.PCFShadowMap;
 
       width = Math.max(1, container.clientWidth);
       height = Math.max(1, container.clientHeight);
@@ -2193,6 +2194,31 @@ export class VoxelEngine {
   public stepSimulation(dt: number): void {
     if (this.disposed) return;
     this.advance(Math.min(Math.max(dt, 0.001), 0.05));
+  }
+
+  /** Accès en lecture pour les tests et outils (fuites mémoire, cohérence d'état). */
+  public getDebugInfo(): {
+    scene: THREE.Scene;
+    worldNodes: number;
+    actorNodes: number;
+    fxNodes: number;
+    telegraphs: number;
+    projectiles: number;
+    bossIntroActive: boolean;
+    evolutionActive: boolean;
+    playMode: PlayMode;
+  } {
+    return {
+      scene: this.scene,
+      worldNodes: this.worldGroup.children.length,
+      actorNodes: this.actorsGroup.children.length,
+      fxNodes: this.fxGroup.children.length,
+      telegraphs: this.telegraphs.length,
+      projectiles: this.projectiles.length,
+      bossIntroActive: this.bossIntroTimer > 0,
+      evolutionActive: this.evo !== null,
+      playMode: this.playMode,
+    };
   }
 
   public getCombatTelemetry(): CombatTelemetry {

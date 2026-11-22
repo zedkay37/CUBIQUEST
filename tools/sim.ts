@@ -22,28 +22,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-// --- Faux DOM minimal : les textures de sol et de texte créent des <canvas>, jamais affichés ici ---
-const noop = (): void => {};
-const ctxStub: unknown = new Proxy(
-  {},
-  {
-    get: (_target, prop) => {
-      if (prop === 'createRadialGradient' || prop === 'createLinearGradient') {
-        return () => ({ addColorStop: noop });
-      }
-      if (prop === 'measureText') return () => ({ width: 0 });
-      return noop;
-    },
-    set: () => true,
-  },
-);
-(globalThis as Record<string, unknown>).document = {
-  createElement: () => ({ width: 0, height: 0, style: {}, getContext: () => ctxStub }),
-  addEventListener: noop,
-  removeEventListener: noop,
-  hidden: false,
-};
+import { installHeadlessDom, withSeededRandom } from './headlessDom';
 
+installHeadlessDom();
+const noop = (): void => {};
 const { STAGES, SPECIES } = await import('../src/game/catalog');
 const { getReferenceConfig } = await import('../src/game/previewConfigs');
 const { createOwnedCreature } = await import('../src/game/rules');
@@ -52,18 +34,6 @@ type StageDef = (typeof STAGES)[number];
 
 const STEP = 1 / 60;
 const MAX_FIGHT_SEC = 300;
-
-/** Générateur déterministe (mulberry32). */
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 interface FightResult {
   victory: boolean;
@@ -80,9 +50,7 @@ interface FightResult {
 
 function runFight(stage: StageDef, seed: number): FightResult {
   const config = getReferenceConfig(stage);
-  const realRandom = Math.random;
-  Math.random = mulberry32(seed);
-  try {
+  return withSeededRandom(seed, () => {
     let outcome: { victory: boolean; bossHpPercentRemaining: number } | null = null;
     const engine = new VoxelEngine(
       null,
@@ -128,9 +96,7 @@ function runFight(stage: StageDef, seed: number): FightResult {
       patternsByPhase: tel.patternsByPhase,
       bossMaxPhases: tel.bossMaxPhases,
     };
-  } finally {
-    Math.random = realRandom;
-  }
+  });
 }
 
 export interface StageSummary {

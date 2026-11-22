@@ -44,6 +44,10 @@ import type {
 } from './types';
 
 export const SAVE_STORAGE_KEY = 'cubiquest_save_v2';
+/** Copie brute d'une sauvegarde stockée mais illisible (JSON cassé, version inconnue) : jamais écrasée en silence. */
+export const SAVE_BACKUP_STORAGE_KEY = 'cubiquest_save_unreadable_backup';
+/** Taille maximale du sac de Pierres de Pouvoir (les pierres équipées ne comptent jamais parmi celles qu'on retire). */
+export const POWER_STONE_BAG_LIMIT = 48;
 export const LEGACY_SAVE_STORAGE_KEY = 'cubiquest_save_v1';
 // v3 (Giga Update) : sac de Pierres de Capacité étendu (crit_focus, leech) + stats frontierWins/frontierDishes.
 // La clé de stockage reste la même : migrateSaveState accepte les versions 1, 2 et 3.
@@ -644,6 +648,41 @@ export function collectCookedCreature(
 }
 
 /**
+ * Ajoute une Pierre de Pouvoir au sac. Au-delà de la limite, on retire les plus ANCIENNES pierres
+ * NON équipées. (Avant : un simple `.slice(0, 48)` pouvait jeter une pierre encore équipée, dont
+ * le bonus disparaissait alors sans prévenir.)
+ */
+export function addPowerStoneToBag(
+  stones: PowerStone[],
+  roster: OwnedCreature[],
+  stone: PowerStone,
+): PowerStone[] {
+  const next = [stone, ...stones];
+  let excess = next.length - POWER_STONE_BAG_LIMIT;
+  if (excess <= 0) return next;
+  const equipped = new Set<string>();
+  for (const c of roster) for (const slot of c.stoneBoard) if (slot.stoneId) equipped.add(slot.stoneId);
+  const kept: PowerStone[] = [];
+  for (let i = next.length - 1; i >= 0; i--) {
+    const candidate = next[i];
+    if (excess > 0 && i !== 0 && !equipped.has(candidate.id)) {
+      excess -= 1;
+      continue;
+    }
+    kept.unshift(candidate);
+  }
+  return kept;
+}
+
+/**
+ * Mode aperçu : sauvegarde fictive dont l'escouade est celle de l'aperçu. Elle sert uniquement à
+ * calculer l'écran de fin (XP, montées de niveau) pour les bonnes créatures ; elle n'est jamais persistée.
+ */
+export function buildPreviewSave(save: SaveState, creatures: OwnedCreature[]): SaveState {
+  return { ...save, roster: creatures, squadIds: creatures.map((c) => c.uid) };
+}
+
+/**
  * Generate a Power Stone drop for a stage
  */
 export function generatePowerStone(
@@ -753,7 +792,7 @@ export function applyExpeditionRewards(
 
   const droppedStone = victory ? generatePowerStone(stage.stonePowerRange, rng) : null;
   const nextPowerStones = droppedStone
-    ? [droppedStone, ...save.powerStones].slice(0, 48)
+    ? addPowerStoneToBag(save.powerStones, save.roster, droppedStone)
     : save.powerStones;
 
   let droppedMoveStone: MoveStoneKind | null = null;
@@ -1106,7 +1145,7 @@ function applyRewardToSave(
   let nextPowerStones = save.powerStones;
   if (reward.powerStoneRange) {
     const stone = generatePowerStone(reward.powerStoneRange, rng, reward.guaranteedRarity);
-    nextPowerStones = [stone, ...save.powerStones].slice(0, 48);
+    nextPowerStones = addPowerStoneToBag(save.powerStones, save.roster, stone);
   }
 
   return {
@@ -1212,102 +1251,281 @@ export function countClaimableRewards(save: SaveState): number {
   return questsReady + achReady;
 }
 
+const ALL_POT_TIERS: PotTier[] = ['iron', 'bronze', 'silver', 'gold'];
+const ALL_STONE_RARITIES: StoneRarity[] = ['common', 'bronze', 'silver', 'gold'];
+const ALL_SUBSTAT_TYPES: PowerStoneSubstat['type'][] = ['critRate', 'hitHeal', 'moveSpeed', 'statusRes'];
+const ALL_QUEST_METRICS: QuestMetric[] = [
+  'expeditionsWon',
+  'reactionsTriggered',
+  'ultimatesUsed',
+  'dishesCooked',
+  'perfectDodges',
+  'bossesDefeated',
+  'evolutionsDone',
+  'stagesCompleted',
+  'speciesDiscovered',
+  'maxCombo',
+  'frontierWins',
+  'frontierDishes',
+  'tundraStages',
+  'stormStages',
+];
+
+/** Entier positif ou nul ; tout le reste (NaN, négatif, texte, null) devient 0. */
+function toCount(value: unknown): number {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function uniqueKnown(list: unknown, isKnown: (id: string) => boolean): string[] {
+  if (!Array.isArray(list)) return [];
+  const out: string[] = [];
+  for (const id of list) {
+    if (typeof id === 'string' && isKnown(id) && !out.includes(id)) out.push(id);
+  }
+  return out;
+}
+
+/** Valide une Pierre de Pouvoir lue depuis une sauvegarde ; null si elle est inutilisable. */
+export function normalizePowerStone(raw: unknown): PowerStone | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const s = raw as Partial<PowerStone>;
+  if (typeof s.id !== 'string' || !s.id) return null;
+  if (s.kind !== 'atk' && s.kind !== 'hp') return null;
+  const power = Math.round(Number(s.power));
+  if (!Number.isFinite(power) || power <= 0) return null;
+  const substats: PowerStoneSubstat[] = [];
+  if (Array.isArray(s.substats)) {
+    for (const sub of s.substats) {
+      if (!sub || typeof sub !== 'object') continue;
+      const value = Number(sub.value);
+      if (ALL_SUBSTAT_TYPES.includes(sub.type) && Number.isFinite(value)) {
+        substats.push({ type: sub.type, value });
+      }
+    }
+  }
+  return {
+    id: s.id,
+    kind: s.kind,
+    power,
+    rarity: ALL_STONE_RARITIES.includes(s.rarity as StoneRarity) ? (s.rarity as StoneRarity) : 'common',
+    substats: substats.slice(0, 3),
+  };
+}
+
+/**
+ * Valide une créature lue depuis une sauvegarde et répare ce qui peut l'être (sorts, emplacements,
+ * compteurs). null si elle est inutilisable (pas d'identifiant ou espèce inconnue).
+ * `freeStoneIds` : pierres existantes pas encore équipées ailleurs ; les ids utilisés en sont retirés.
+ */
+export function normalizeCreature(raw: unknown, freeStoneIds: Set<string>): OwnedCreature | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const c = raw as Partial<OwnedCreature>;
+  if (typeof c.uid !== 'string' || !c.uid) return null;
+  const species = typeof c.speciesId === 'string' ? SPECIES[c.speciesId] : undefined;
+  if (!species) return null;
+
+  const template = createStoneBoardForRole(species.role);
+  const rawBoard = Array.isArray(c.stoneBoard) && c.stoneBoard.length === 9 ? c.stoneBoard : null;
+  const stoneBoard: StoneSlot[] = template.map((slotTemplate, idx) => {
+    const slot = rawBoard?.[idx] as Partial<StoneSlot> | undefined;
+    const type =
+      slot?.type === 'atk' || slot?.type === 'hp' || slot?.type === 'flex' ? slot.type : slotTemplate.type;
+    const unlockLevel = Number.isFinite(Number(slot?.unlockLevel))
+      ? Math.max(1, Math.floor(Number(slot?.unlockLevel)))
+      : slotTemplate.unlockLevel;
+    let stoneId: string | null = null;
+    if (typeof slot?.stoneId === 'string' && freeStoneIds.has(slot.stoneId)) {
+      stoneId = slot.stoneId;
+      freeStoneIds.delete(stoneId); // une pierre ne peut occuper qu'un seul emplacement
+    }
+    return { type, unlockLevel, stoneId };
+  });
+
+  const rawMoveStones = Array.isArray(c.moveStones) ? c.moveStones : [];
+  const moveStones = [0, 1].map((i) =>
+    MOVE_STONE_ORDER.includes(rawMoveStones[i] as MoveStoneKind) ? (rawMoveStones[i] as MoveStoneKind) : null,
+  );
+
+  return {
+    uid: c.uid,
+    speciesId: species.id,
+    level: Math.max(1, Math.min(50, Math.floor(Number(c.level)) || 1)),
+    xp: Math.max(0, Number(c.xp) || 0),
+    potBonus: Math.max(0, Number(c.potBonus) || 0),
+    moveId: typeof c.moveId === 'string' && MOVES[c.moveId] ? c.moveId : species.moveId,
+    moveStones,
+    stoneBoard,
+  };
+}
+
+function normalizeQuests(raw: unknown): ActiveQuest[] {
+  if (!Array.isArray(raw) || raw.length !== 3) return createInitialQuests();
+  const quests: ActiveQuest[] = [];
+  for (const item of raw) {
+    const q = item as Partial<ActiveQuest> | null;
+    const target = Number(q?.target);
+    if (
+      !q ||
+      typeof q.uid !== 'string' ||
+      typeof q.templateId !== 'string' ||
+      typeof q.title !== 'string' ||
+      typeof q.description !== 'string' ||
+      !ALL_QUEST_METRICS.includes(q.metric as QuestMetric) ||
+      !Number.isFinite(target) ||
+      target <= 0 ||
+      !q.reward ||
+      typeof q.reward !== 'object' ||
+      typeof q.reward.label !== 'string'
+    ) {
+      return createInitialQuests();
+    }
+    quests.push({
+      uid: q.uid,
+      templateId: q.templateId,
+      title: q.title,
+      description: q.description,
+      metric: q.metric as QuestMetric,
+      progress: Math.min(target, Math.max(0, Number(q.progress) || 0)),
+      target,
+      reward: q.reward,
+    });
+  }
+  return new Set(quests.map((q) => q.uid)).size === 3 ? quests : createInitialQuests();
+}
+
 /**
  * Migrate v1 / v2 SaveState or normalize v3 SaveState cleanly without losing user progress.
  * v2 -> v3 : ajoute les Pierres Précision/Sangsue (0) au sac, les stats frontierWins/frontierDishes (0)
  * et ouvre la Toundra aux sauvegardes qui avaient déjà vaincu l'ancien dernier niveau.
+ *
+ * Toute sauvegarde (y compris un JSON importé à la main) est aussi NORMALISÉE : chaque champ est
+ * validé et réparé ou ignoré, pour qu'aucune donnée abîmée ne fasse planter le jeu plus tard.
+ * Renvoie null seulement si rien n'est récupérable (pas d'escouade, version inconnue).
  */
 export function migrateSaveState(raw: unknown): SaveState | null {
-  if (!raw || typeof raw !== 'object') return null;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const obj = raw as Partial<SaveState>;
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
-  if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.ingredients !== 'object') return null;
+  if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.pot !== 'object') return null;
+  if (!obj.ingredients || typeof obj.ingredients !== 'object') return null;
   if (obj.version !== 1 && obj.version !== 2 && obj.version !== SAVE_VERSION) return null;
 
-  // Validate roster creatures minimally
-  const validRoster = obj.roster.filter(
-    (c): c is OwnedCreature =>
-      Boolean(
-        c &&
-          typeof c.uid === 'string' &&
-          typeof c.speciesId === 'string' &&
-          SPECIES[c.speciesId] &&
-          typeof c.level === 'number' &&
-          Array.isArray(c.stoneBoard),
-      ),
-  );
+  // Pierres de Pouvoir : valides, identifiants uniques
+  const powerStones: PowerStone[] = [];
+  const stoneIds = new Set<string>();
+  for (const rawStone of Array.isArray(obj.powerStones) ? obj.powerStones : []) {
+    const stone = normalizePowerStone(rawStone);
+    if (stone && !stoneIds.has(stone.id)) {
+      stoneIds.add(stone.id);
+      powerStones.push(stone);
+    }
+  }
+
+  // Créatures : valides, identifiants uniques, emplacements réparés
+  const freeStoneIds = new Set(stoneIds);
+  const validRoster: OwnedCreature[] = [];
+  const rosterIds = new Set<string>();
+  for (const rawCreature of obj.roster) {
+    const creature = normalizeCreature(rawCreature, freeStoneIds);
+    if (creature && !rosterIds.has(creature.uid)) {
+      rosterIds.add(creature.uid);
+      validRoster.push(creature);
+    }
+  }
   if (validRoster.length === 0) return null;
 
-  const rosterIds = new Set(validRoster.map((c) => c.uid));
-  const validSquad = obj.squadIds.filter((id) => typeof id === 'string' && rosterIds.has(id)).slice(0, 3);
+  const validSquad: string[] = [];
+  for (const id of obj.squadIds) {
+    if (typeof id === 'string' && rosterIds.has(id) && !validSquad.includes(id) && validSquad.length < 3) {
+      validSquad.push(id);
+    }
+  }
   if (validSquad.length === 0) validSquad.push(validRoster[0].uid);
 
-  const baseStats = createEmptyStats();
   const incomingStats = (obj.stats ?? {}) as Partial<PlayerStats>;
-  const expeditionsCompleted = Number.isFinite(obj.expeditionsCompleted)
-    ? Math.max(0, Number(obj.expeditionsCompleted))
-    : 0;
+  const expeditionsCompleted = toCount(obj.expeditionsCompleted);
 
   const stats: PlayerStats = {
-    expeditionsWon: Math.max(expeditionsCompleted, Number(incomingStats.expeditionsWon ?? 0) || 0),
-    reactionsTriggered: Number(incomingStats.reactionsTriggered ?? 0) || 0,
-    ultimatesUsed: Number(incomingStats.ultimatesUsed ?? 0) || 0,
-    dishesCooked: Number(incomingStats.dishesCooked ?? 0) || 0,
-    evolutionsDone: Number(incomingStats.evolutionsDone ?? 0) || 0,
-    perfectDodges: Number(incomingStats.perfectDodges ?? 0) || 0,
-    bossesDefeated: Math.max(expeditionsCompleted, Number(incomingStats.bossesDefeated ?? 0) || 0),
-    maxCombo: Number(incomingStats.maxCombo ?? 0) || 0,
-    frontierWins: Number(incomingStats.frontierWins ?? 0) || 0,
-    frontierDishes: Number(incomingStats.frontierDishes ?? 0) || 0,
+    expeditionsWon: Math.max(expeditionsCompleted, toCount(incomingStats.expeditionsWon)),
+    reactionsTriggered: toCount(incomingStats.reactionsTriggered),
+    ultimatesUsed: toCount(incomingStats.ultimatesUsed),
+    dishesCooked: toCount(incomingStats.dishesCooked),
+    evolutionsDone: toCount(incomingStats.evolutionsDone),
+    perfectDodges: toCount(incomingStats.perfectDodges),
+    bossesDefeated: Math.max(expeditionsCompleted, toCount(incomingStats.bossesDefeated)),
+    maxCombo: toCount(incomingStats.maxCombo),
+    frontierWins: toCount(incomingStats.frontierWins),
+    frontierDishes: toCount(incomingStats.frontierDishes),
   };
 
-  const activeQuests =
-    Array.isArray(obj.activeQuests) && obj.activeQuests.length === 3
-      ? obj.activeQuests
-      : createInitialQuests();
+  const ingredients: Record<string, number> = {};
+  for (const [id, qty] of Object.entries(obj.ingredients as Record<string, unknown>)) {
+    if (INGREDIENTS[id]) ingredients[id] = toCount(qty);
+  }
 
-  const claimedAchievementIds = Array.isArray(obj.claimedAchievementIds)
-    ? obj.claimedAchievementIds.filter((id): id is string => typeof id === 'string')
-    : [];
+  const unlockedPotTiers = ALL_POT_TIERS.filter(
+    (tier) => tier === 'iron' || (Array.isArray(obj.unlockedPotTiers) && obj.unlockedPotTiers.includes(tier)),
+  );
+
+  // Marmite : palier débloqué, 5 emplacements d'ingrédients connus, état cohérent
+  const rawPot = obj.pot as Partial<SaveState['pot']>;
+  const potSlots = [0, 1, 2, 3, 4].map((i) => {
+    const id = Array.isArray(rawPot.slots) ? rawPot.slots[i] : null;
+    return typeof id === 'string' && INGREDIENTS[id] ? id : null;
+  });
+  const potRecipeId = typeof rawPot.recipeId === 'string' && RECIPE_BY_ID[rawPot.recipeId] ? rawPot.recipeId : null;
+  const potRemaining = toCount(rawPot.expeditionsRemaining);
+  let potStatus: SaveState['pot']['status'] =
+    rawPot.status === 'cooking' || rawPot.status === 'ready' ? rawPot.status : 'idle';
+  if (!potRecipeId) potStatus = 'idle'; // une cuisson sans recette connue ne peut pas aboutir
+  else if (potStatus === 'cooking' && potRemaining === 0) potStatus = 'ready';
+
+  const completedStageIds = uniqueKnown(obj.completedStageIds, (id) => STAGES.some((s) => s.id === id));
+  const discoveredSpeciesIds = uniqueKnown(
+    Array.isArray(obj.discoveredSpeciesIds)
+      ? [...obj.discoveredSpeciesIds, ...validRoster.map((c) => c.speciesId)]
+      : validRoster.map((c) => c.speciesId),
+    (id) => Boolean(SPECIES[id]),
+  );
 
   return {
     version: SAVE_VERSION,
     starterChosen: Boolean(obj.starterChosen),
     squadIds: validSquad,
     roster: validRoster,
-    ingredients: { ...obj.ingredients },
-    powerStones: Array.isArray(obj.powerStones) ? obj.powerStones : [],
+    ingredients,
+    powerStones,
     moveStoneBag: {
-      broadburst: obj.moveStoneBag?.broadburst ?? 0,
-      wait_less: obj.moveStoneBag?.wait_less ?? 0,
-      whack_whack: obj.moveStoneBag?.whack_whack ?? 0,
-      share: obj.moveStoneBag?.share ?? 0,
-      crit_focus: obj.moveStoneBag?.crit_focus ?? 0,
-      leech: obj.moveStoneBag?.leech ?? 0,
+      broadburst: toCount(obj.moveStoneBag?.broadburst),
+      wait_less: toCount(obj.moveStoneBag?.wait_less),
+      whack_whack: toCount(obj.moveStoneBag?.whack_whack),
+      share: toCount(obj.moveStoneBag?.share),
+      crit_focus: toCount(obj.moveStoneBag?.crit_focus),
+      leech: toCount(obj.moveStoneBag?.leech),
     },
     pot: {
-      tier: obj.pot.tier ?? 'iron',
-      slots: Array.isArray(obj.pot.slots) && obj.pot.slots.length === 5 ? obj.pot.slots : [null, null, null, null, null],
-      status: obj.pot.status ?? 'idle',
-      recipeId: obj.pot.recipeId ?? null,
-      expeditionsRemaining: Number(obj.pot.expeditionsRemaining ?? 0) || 0,
-      expeditionsTotal: Number(obj.pot.expeditionsTotal ?? 0) || 0,
+      tier: unlockedPotTiers.includes(rawPot.tier as PotTier) ? (rawPot.tier as PotTier) : 'iron',
+      slots: potSlots,
+      status: potStatus,
+      recipeId: potStatus === 'idle' ? null : potRecipeId,
+      expeditionsRemaining: potStatus === 'cooking' ? potRemaining : 0,
+      expeditionsTotal: potStatus === 'idle' ? 0 : Math.max(potRemaining, toCount(rawPot.expeditionsTotal)),
     },
-    unlockedPotTiers: Array.isArray(obj.unlockedPotTiers) && obj.unlockedPotTiers.length > 0 ? obj.unlockedPotTiers : ['iron'],
+    unlockedPotTiers,
     highestStageIndex: computeHighestUnlockedStageIndex(
-      Array.isArray(obj.completedStageIds) ? obj.completedStageIds : [],
+      completedStageIds,
       Math.max(0, Math.min(STAGES.length - 1, Number(obj.highestStageIndex ?? 0) || 0)),
     ),
-    completedStageIds: Array.isArray(obj.completedStageIds) ? obj.completedStageIds : [],
-    discoveredSpeciesIds: Array.isArray(obj.discoveredSpeciesIds) ? obj.discoveredSpeciesIds : validRoster.map((c) => c.speciesId),
-    discoveredRecipeIds: Array.isArray(obj.discoveredRecipeIds) ? obj.discoveredRecipeIds : [],
+    completedStageIds,
+    discoveredSpeciesIds,
+    discoveredRecipeIds: uniqueKnown(obj.discoveredRecipeIds, (id) => Boolean(RECIPE_BY_ID[id])),
     expeditionsCompleted,
     stats,
-    activeQuests,
-    claimedAchievementIds,
+    activeQuests: normalizeQuests(obj.activeQuests),
+    claimedAchievementIds: uniqueKnown(obj.claimedAchievementIds, (id) => ACHIEVEMENTS.some((a) => a.id === id)),
   };
 }
-
 export function exportSaveToJson(save: SaveState): string {
   return JSON.stringify(save, null, 2);
 }
@@ -1335,27 +1553,40 @@ export function importSaveFromJson(
   return { ok: true, save: migrated };
 }
 
+/** Lit et migre une sauvegarde stockée ; null si elle est absente ou illisible. */
+function readStoredSave(key: string): { raw: string | null; save: SaveState | null } {
+  const raw = window.localStorage.getItem(key);
+  if (!raw) return { raw: null, save: null };
+  try {
+    return { raw, save: migrateSaveState(JSON.parse(raw)) };
+  } catch {
+    return { raw, save: null };
+  }
+}
+
 export function loadSaveState(): SaveState {
   try {
-    const rawV2 = window.localStorage.getItem(SAVE_STORAGE_KEY);
-    if (rawV2) {
-      const migrated = migrateSaveState(JSON.parse(rawV2));
-      if (migrated) return migrated;
-    }
-    const rawV1 = window.localStorage.getItem(LEGACY_SAVE_STORAGE_KEY);
-    if (rawV1) {
-      const migrated = migrateSaveState(JSON.parse(rawV1));
-      if (migrated) {
-        persistSaveState(migrated);
-        return migrated;
+    const current = readStoredSave(SAVE_STORAGE_KEY);
+    if (current.save) return current.save;
+    if (current.raw) {
+      // Sauvegarde présente mais illisible (JSON cassé ou version plus récente) : le jeu va repartir
+      // d'une partie neuve et l'écraser au premier enregistrement, donc on en garde une copie brute.
+      try {
+        window.localStorage.setItem(SAVE_BACKUP_STORAGE_KEY, current.raw);
+      } catch {
+        // stockage plein : on ne peut rien faire de plus
       }
+    }
+    const legacy = readStoredSave(LEGACY_SAVE_STORAGE_KEY);
+    if (legacy.save) {
+      persistSaveState(legacy.save);
+      return legacy.save;
     }
     return createInitialSaveState('pyrocube', false);
   } catch {
     return createInitialSaveState('pyrocube', false);
   }
 }
-
 export function persistSaveState(save: SaveState): void {
   try {
     window.localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(save));
