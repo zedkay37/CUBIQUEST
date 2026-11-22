@@ -248,3 +248,49 @@ test('Moteur: animation d\'évolution — menée à terme une fois, ou abandonn�
     h.engine.dispose(); // un second dispose ne plante pas
   });
 });
+
+test('diagnostic : getDebugStats compte les entités et ne mesure aucun rendu en headless', () => {
+  withSeededRandom(11, () => {
+    const h = makeHarness();
+    h.engine.loadCampScene(h.squad(STAGE_BY_ID['meadow-1']), null, 'idle');
+    const camp = h.engine.getDebugStats();
+    assert.equal(camp.entities, 3, 'au camp : les 3 Cubimons de l’escouade');
+    assert.equal(camp.drawCalls, 0);
+    assert.equal(camp.frames, 0, 'aucune image affichée sans boucle de rendu');
+
+    h.start('meadow-1');
+    h.run(1);
+    const fight = h.engine.getDebugStats();
+    assert.ok(fight.entities > 3, `alliés + ennemis attendus, reçu ${fight.entities}`);
+    assert.ok(fight.particles >= 0 && fight.particles <= 320);
+    h.engine.dispose();
+  });
+});
+
+test('outils : l’option reactions=false coupe les réactions, le jeu normal les garde', () => {
+  const play = (reactions: boolean | undefined): number =>
+    withSeededRandom(3, () => {
+      let triggered = -1;
+      const engine = new VoxelEngine(
+        null,
+        { onHudUpdate: () => {}, onExpeditionComplete: (r) => (triggered = r.reactionsTriggered) },
+        reactions === undefined ? { headless: true } : { headless: true, reactions },
+      );
+      const stage = STAGE_BY_ID['tundra-1'];
+      const cfg = getReferenceConfig(stage);
+      engine.setScreenState('playing');
+      engine.startExpedition(
+        stage,
+        cfg.squad.map((id, i) => createOwnedCreature(id, cfg.level, cfg.bonus, `r_${i}`)),
+        [],
+        'auto',
+      );
+      for (let t = 0; t < 300 && triggered < 0; t += STEP) engine.stepSimulation(STEP);
+      engine.dispose();
+      return triggered;
+    });
+  const normal = play(undefined);
+  assert.ok(normal > 0, `le combat de référence doit déclencher des réactions (reçu ${normal})`);
+  assert.equal(play(true), normal, 'reactions=true est le comportement par défaut');
+  assert.equal(play(false), 0);
+});
