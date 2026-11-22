@@ -62,7 +62,10 @@ export function tickCubeState(self: VoxelEngine, actor: CombatActor, simDt: numb
   }
   if (actor.crack) {
     actor.crack.remaining -= simDt;
-    if (actor.crack.remaining <= 0) actor.crack = null;
+    if (actor.crack.remaining <= 0) {
+      actor.crack = null;
+      self.cracksExpired += 1;
+    }
   }
   if (actor.trioLockTimer > 0) actor.trioLockTimer = Math.max(0, actor.trioLockTimer - simDt);
 }
@@ -96,6 +99,7 @@ export function applyCubeRule(
   );
   // Un seul Trio par lancer : les autres cibles fêlées reçoivent simplement le cube
   if (outcome === 'trio' && cast.trioUsed) outcome = target.cube ? resolveCubeHit({ cube: target.cube, crack: null, trioLock: 0 }, element, { allowTrio: false }) : 'cube';
+  self.cubeOutcomeCounts[outcome] = (self.cubeOutcomeCounts[outcome] ?? 0) + 1;
 
   switch (outcome) {
     case 'locked':

@@ -58,6 +58,8 @@ export function startExpedition(
   self.slowMoTimer = 0;
   self.lastSlowMoAt = -10;
   self.cubesPlaced = 0;
+  self.cubeOutcomeCounts = {};
+  self.cracksExpired = 0;
   self.ultimateLockTimer = 0;
   self.pendingUltHits = null;
   self.burstsTriggered = 0;

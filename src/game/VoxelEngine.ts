@@ -147,6 +147,9 @@ export class VoxelEngine {
   ultimateCharge = 0;
   /** Compteurs des cubes pour ce combat. */
   cubesPlaced = 0;
+  /** Diagnostic (outils) : issues de la règle des cubes et Fêlures perdues sans Trio. */
+  cubeOutcomeCounts: Record<string, number> = {};
+  cracksExpired = 0;
   /** Pas de charge de Déchaînement tant qu'il dure (après un Déchaînement). */
   ultimateLockTimer = 0;
   /** Déchaînement Eau : coups restants sur la cible, espacés (engine/skills.ts). */
