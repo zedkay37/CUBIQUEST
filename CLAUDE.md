@@ -11,7 +11,7 @@ Le propriétaire dirige la vision. Sans demande explicite de sa part :
 - **Interdit** : nouveaux modes de jeu, nouvelles mécaniques ou systèmes, nouveaux éléments ou statuts, nouveaux menus, musique. Tout nouveau contenu réutilise ce qui existe (6 éléments, 5 styles de sorts, 6 statuts, 6 réactions, attaques télégraphiées et kits de boss existants).
 - Ne pas modifier `server.ts` ni le Codex (prompt Gemini). Aucun asset externe, aucune dépendance payante.
 - Tout nouveau contenu respecte `STYLE.md`.
-- Un commit par lignée de Cubimons et un commit par biome, pour qu'on puisse retirer l'un sans casser le reste.
+- Un commit par lignée de Cubimons et un commit par biome, pour qu'on puisse retirer l'un sans casser le reste. Concrètement : insérer chaque lignée à un endroit DIFFÉRENT des fichiers partagés (jamais deux ajouts sur des lignes voisines), lui donner son propre fichier de test, ne pas la référencer depuis une autre lignée ou un autre biome, puis vérifier avec `git revert --no-commit <hash> && npm run check`.
 
 ## Commandes
 
@@ -41,6 +41,9 @@ src/game/settings.ts       Options de confort (hors SaveState).
 src/game/voxelModels.ts    Modèles voxel procéduraux (créatures par silhouette, décors de biomes, texte flottant).
 src/game/VoxelEngine.ts    Moteur temps réel : scène Three, IA, combats, boss, particules, météo, caméra.
 src/game/audio.ts          Sons synthétisés (WebAudio), aucun fichier audio.
+src/game/styleGuide.ts     Plages chiffrées de STYLE.md, vérifiées par style.test.ts.
+src/game/galleryRenderer.ts Vignettes de la galerie `?gallery=1` (outil de développement).
+src/game/*.test.ts         rules (règles), save (sauvegarde/import), engine (moteur headless), style, lineage-* et biome-* (un fichier par ajout de contenu).
 src/components/            Interface React (HUD, tiroirs du camp, modales). L'état de jeu vit dans App.tsx.
 src/App.tsx                Colle React <-> moteur. Le canvas WebGL est monté une seule fois.
 tools/sim.ts               Outil `npm run sim`.
@@ -70,10 +73,11 @@ npm run sim -- --stages tundra-3 --set tundra-3=9/0.28/3.2   # essai SANS touche
 npm run sim -- --seed 2 --out docs/sim/mon-tableau.md
 ```
 
-- Le vrai `VoxelEngine` tourne sans rendu, à pas fixe de 1/60 s, en contrôle « Auto Total », avec l'escouade de `previewConfigs.ts`. 180 combats prennent environ 20 secondes.
+- Le vrai `VoxelEngine` tourne sans rendu, à pas fixe de 1/60 s, en contrôle « Auto Total », avec l'escouade de `previewConfigs.ts`. La passe complète (21 niveaux x 10 combats) prend environ 11 secondes.
 - L'aléatoire est rendu reproductible en remplaçant `Math.random` dans le processus de l'outil uniquement. Le jeu n'est pas modifié.
 - Cibles pour un nouveau niveau : 50 à 85 % de victoires ; chaque phase de boss assez longue pour qu'il y lance au moins une attaque télégraphiée (colonne « ≥ 1 attaque » à 100 %).
-- Les 12 niveaux historiques (Prairie -> Sanctuaire) ne se rééquilibrent pas : un test vérifie leur signature.
+- Les 12 niveaux historiques (Prairie -> Sanctuaire) ne se rééquilibrent pas : un test vérifie leur signature (puissance, XP, Pierres, boss, niveaux et IA des vagues). Changer l'ESPÈCE d'un ennemi y reste possible, mais remesurer : sur le tout premier niveau, un seul échange faisait passer l'Auto de 20 % à 100 %.
+- Kits de boss : `BOSS_KITS` (balance.ts) décrit la rotation des 6 attaques existantes et leur habillage. Un nouveau kit se compose là, sans toucher au moteur.
 - « Auto Total » n'utilise jamais Dispersion : un joueur qui esquive fait mieux que le tableau.
 
 ## Pièges connus

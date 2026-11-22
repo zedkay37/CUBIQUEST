@@ -181,3 +181,17 @@ Un nouveau boss se compose en choisissant un kit existant ; il ne reçoit pas d'
 - Polices : Bricolage Grotesque (titres), Plus Jakarta Sans (texte), JetBrains Mono (chiffres).
 - Boutons « voxel » : bord épais, ombre portée dure de 3 px qui s'écrase au clic.
 - L'interface occupe le pourtour de l'écran ; le centre reste à la scène 3D.
+
+## 7. Ajouts de la session 2 (conformes aux sections ci-dessus, vérifiés par `style.test.ts`)
+
+Les sections 1 à 6 décrivent l'état du jeu AVANT ces ajouts ; elles restent la référence.
+
+| Silhouette | Lecture immédiate | Blocs | Utilisée par |
+| --- | --- | --- | --- |
+| `fungal` | pied crème, grand chapeau à trois étages et pastilles lumineuses | 17 / 26 | Mycélin → Amanitox (Plante) |
+| `crab` | carapace large et basse, yeux sur tiges, deux pinces ouvertes, six pattes | 21 / 28 | Crabloc → Crabastion (Eau) |
+| `lizard` | corps long au ras du sol, crête de flammes, queue à bout ardent | 18 / 25 | Braizard → Cendrox (Feu) |
+| `ram` | trapu, sans encolure, grosses cornes d'ambre enroulées | 20 / 23 / 30 | Chevrok → Mouflambre → Bélithan (Roche) |
+
+- 7e biome : **Canyon d'Ambre** (Roche) — ciel chaud, sol ocre, cheminées de fée, mesas à strates, arches, cristaux d'ambre, côtes fossiles ; sable porté par le vent. Kit de boss `amber` = Anneau + Aspiration + attaques communes, habillés en roche, statut Brise-Armure.
+- Les plages chiffrées de STYLE.md existent aussi sous forme vérifiable dans `src/game/styleGuide.ts`.

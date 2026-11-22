@@ -735,12 +735,12 @@ test('Giga: équilibrage des nouveaux biomes — réglé par niveau, anciens niv
     .map(
       (s) =>
         `${s.id}:${s.recommendedPower}:${s.xpReward}:${s.stonePowerRange.join('-')}:${s.bossSpeciesId}:` +
-        s.waves.map((w) => w.enemies.map((e) => `${e.level}${e.ai[0]}${e.isBoss ? '!' : ''}`).join('+')).join('/'),
+        s.waves.map((w) => w.enemies.map((e) => `${e.level}${e.ai.slice(0, 4)}${e.isBoss ? '!' : ''}`).join('+')).join('/'),
     )
     .join('|');
   assert.equal(
     signature,
-    'meadow-1:700:95:25-55:feuilloc:2c+2c/3c+3k+3c/3c+5b!|meadow-2:1050:140:45-85:sparkube:5c+5c+5k/6k+6c+6c/6c+8b!|meadow-3:1450:210:70-115:bourgeoliath:8c+8k+8c/9c+9k+9c/9c+11b!|shore-1:1850:270:95-145:corallix:10c+10c+10k/11c+11c+11k/11c+13b!|shore-2:2250:340:120-180:raicube:13k+13c+13c/14c+14k+14c/14k+16b!|shore-3:2700:420:150-220:abyssocube:15c+15k+15c/16c+16k+16c/16c+18b!|volcano-1:3200:510:185-260:granitox:17k+17c+17c/18k+18c+18c/18c+20b!|volcano-2:3750:620:220-310:ignisaur:20k+20c+20c/21k+21c+21k/21k+23b!|volcano-3:4400:760:260-360:magmadrake:22c+22k+22c/23c+23k+23k/23c+25b!|sanctuary-1:5100:920:310-420:lunabloc:25k+25c+25c/26k+26c+26k/26k+28b!|sanctuary-2:5900:1120:360-490:ignisaur:28c+28k+28c/29c+29k+29k/29c+31b!|sanctuary-3:6800:1500:440-620:aetherion:31c+31k+31c/32c+32c+32k/32k+35b!',
+    'meadow-1:700:95:25-55:feuilloc:2chas+2char/3chas+3kite+3chas/3chas+5boss!|meadow-2:1050:140:45-85:sparkube:5char+5chas+5kite/6kite+6chas+6char/6char+8boss!|meadow-3:1450:210:70-115:bourgeoliath:8chas+8kite+8char/9chas+9kite+9chas/9chas+11boss!|shore-1:1850:270:95-145:corallix:10char+10chas+10kite/11chas+11char+11kite/11chas+13boss!|shore-2:2250:340:120-180:raicube:13kite+13chas+13char/14char+14kite+14chas/14kite+16boss!|shore-3:2700:420:150-220:abyssocube:15chas+15kite+15char/16chas+16kite+16chas/16chas+18boss!|volcano-1:3200:510:185-260:granitox:17kite+17chas+17char/18kite+18chas+18char/18chas+20boss!|volcano-2:3750:620:220-310:ignisaur:20kite+20char+20chas/21kite+21chas+21kite/21kite+23boss!|volcano-3:4400:760:260-360:magmadrake:22chas+22kite+22char/23chas+23kite+23kite/23chas+25boss!|sanctuary-1:5100:920:310-420:lunabloc:25kite+25chas+25char/26kite+26chas+26kite/26kite+28boss!|sanctuary-2:5900:1120:360-490:ignisaur:28chas+28kite+28char/29chas+29kite+29kite/29char+31boss!|sanctuary-3:6800:1500:440-620:aetherion:31chas+31kite+31char/32chas+32chas+32kite/32kite+35boss!',
   );
 
   for (const stage of STAGES) {
