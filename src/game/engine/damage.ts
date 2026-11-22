@@ -14,6 +14,7 @@ import type { ElementType } from '../types';
 import { getRigTopY } from '../voxelModels';
 import { applyStatusToActor, getPrimaryStatus } from './actors';
 import { spawnElementBurst, spawnParticleBurst, spawnShockwaveRing } from './fx';
+import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 
@@ -272,5 +273,5 @@ export function onBossPhaseShift(self: VoxelEngine, boss: CombatActor, phase: 2 
     }
   }
   boss.skillCooldown = 1.4;
-  self.emitHudSnapshot();
+  emitHudSnapshot(self);
 }

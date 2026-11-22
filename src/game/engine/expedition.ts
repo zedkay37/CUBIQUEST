@@ -22,6 +22,7 @@ import {
   updateProjectiles,
   updateTelegraphs,
 } from './fx';
+import { emitHudSnapshot } from './hud';
 import { triggerUltimate } from './skills';
 import type { CombatTelemetry } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
@@ -169,7 +170,7 @@ export function startExpedition(
   spawnWave(self, 0);
   self.camPos.set(-4, 15.5, 16.5);
   self.camLook.set(0, 0.8, 0);
-  self.emitHudSnapshot();
+  emitHudSnapshot(self);
 
   if (!self.isSoftwareGl) {
     self.renderer?.compile(self.scene, self.camera);
@@ -288,7 +289,7 @@ export function spawnWave(self: VoxelEngine, index: number): void {
     self.bannerTimer = 0;
     boss.rig.root.position.y = self.bossDropY;
     soundFx.playBossIntro();
-    self.emitHudSnapshot();
+    emitHudSnapshot(self);
   }
 }
 
@@ -385,7 +386,7 @@ export function updateExpeditionProgress(self: VoxelEngine, dt: number, simDt: n
     self.bannerText = 'Escouade K.O. ! Repli au camp...';
     self.bannerTimer = 1.5;
     soundFx.playDefeat();
-    self.emitHudSnapshot();
+    emitHudSnapshot(self);
     return;
   }
 
@@ -406,7 +407,7 @@ export function updateExpeditionProgress(self: VoxelEngine, dt: number, simDt: n
       self.bannerText = 'VICTOIRE ! Expédition réussie !';
       self.bannerTimer = 2.0;
       soundFx.playFanfare();
-      self.emitHudSnapshot();
+      emitHudSnapshot(self);
     }
   }
 
@@ -414,7 +415,7 @@ export function updateExpeditionProgress(self: VoxelEngine, dt: number, simDt: n
   self.hudEmitAccum += dt;
   if (self.hudEmitAccum >= 0.1) {
     self.hudEmitAccum = 0;
-    self.emitHudSnapshot();
+    emitHudSnapshot(self);
   }
 }
 

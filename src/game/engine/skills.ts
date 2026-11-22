@@ -9,6 +9,7 @@ import { findNearestLiving } from './actors';
 import { ARENA_BOUND } from './constants';
 import { applyDamageToActor } from './damage';
 import { spawnParticleBurst, spawnProjectile, spawnShockwaveRing } from './fx';
+import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 
@@ -24,7 +25,7 @@ export function triggerAllySkill(self: VoxelEngine, slotIndex: number): boolean 
   const unit = self.allies[slotIndex];
   if (!unit || unit.fainted || unit.skillCooldown > 0) return false;
   executeAllySkill(self, unit);
-  self.emitHudSnapshot();
+  emitHudSnapshot(self);
   return true;
 }
 
@@ -94,7 +95,7 @@ export function triggerScatter(self: VoxelEngine): boolean {
     spawnParticleBurst(self, ally.x, 0.5, ally.z, activeHazard ? '#38BDF8' : '#FAF7F0', 10, 4.2);
   });
 
-  self.emitHudSnapshot();
+  emitHudSnapshot(self);
   return true;
 }
 
@@ -166,7 +167,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
     }
   }
 
-  self.emitHudSnapshot();
+  emitHudSnapshot(self);
   return true;
 }
 

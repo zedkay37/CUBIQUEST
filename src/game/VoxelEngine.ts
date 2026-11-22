@@ -8,7 +8,6 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { soundFx } from './audio';
-import { BIOMES, MOVES } from './catalog';
 import { configureWeather } from './engine/atmosphere';
 import { fovForAspect, handleResize } from './engine/camera';
 import { clearGroup, loadCampScene, setPotVisual } from './engine/camp';
@@ -16,6 +15,7 @@ import { _color, _dummy, BOLT_POOL_SIZE, PARTICLE_POOL_SIZE, WEATHER_COUNT } fro
 import { playEvolutionSequence } from './engine/evolution';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
+import { emitHudSnapshot } from './engine/hud';
 import { advance, detectSoftwareGl, scheduleNextFrame } from './engine/loop';
 import { triggerAllySkill, triggerScatter, triggerUltimate } from './engine/skills';
 import type {
@@ -35,12 +35,10 @@ import type {
   BiomeId,
   ControlMode,
   ElementType,
-  ExpeditionHudSnapshot,
   OwnedCreature,
   PlayMode,
   PowerStone,
   StageDef,
-  StatusKind,
 } from './types';
 import { FloatingTextPool } from './voxelModels';
 
@@ -346,7 +344,7 @@ export class VoxelEngine {
 
   public setControlMode(mode: ControlMode): void {
     this.controlMode = mode;
-    this.emitHudSnapshot();
+    emitHudSnapshot(this);
   }
 
   public setPotVisual(recipeId: string | null, status: 'idle' | 'cooking' | 'ready'): void {
@@ -446,68 +444,6 @@ export class VoxelEngine {
       ],
       elapsed: this.expeditionElapsed,
     };
-  }
-
-  emitHudSnapshot(): void {
-    if (!this.activeStage || this.playMode !== 'expedition') return;
-    const biome = BIOMES[this.activeStage.biomeId];
-    const boss = this.enemies.find((e) => e.isBoss && !e.removed);
-    const livingEnemies = this.enemies.filter((e) => !e.fainted && !e.removed).length;
-
-    const snapshot: ExpeditionHudSnapshot = {
-      stageId: this.activeStage.id,
-      stageName: this.activeStage.name,
-      biomeName: biome.name,
-      waveIndex: this.waveIndex,
-      totalWaves: this.activeStage.waves.length,
-      elapsedSec: this.expeditionElapsed,
-      scatterCooldown: this.scatterCooldown,
-      scatterMaxCooldown: this.scatterMaxCooldown,
-      ultimateCharge: Math.round(this.ultimateCharge),
-      comboCount: this.comboCount,
-      comboTimer: this.comboTimer,
-      lastReactionLabel: this.lastReactionLabel,
-      lastReactionColor: this.lastReactionColor,
-      controlMode: this.controlMode,
-      enemiesRemaining: livingEnemies,
-      damageDealt: this.damageDealt,
-      bannerText: this.bannerText,
-      bossIntro: this.bossIntroTimer > 0 ? this.bossIntroInfo : null,
-      boss: boss
-        ? {
-            name: boss.name,
-            element: boss.rig.species.element,
-            hp: boss.hp,
-            maxHp: boss.maxHp,
-            phase: boss.bossPhase,
-            maxPhases: boss.bossMaxPhases,
-            telegraphing: boss.telegraphing,
-            statuses: Object.keys(boss.statuses) as StatusKind[],
-          }
-        : null,
-      units: this.allies.map((a) => {
-        const move = MOVES[a.moveId] ?? MOVES.ember_burst;
-        return {
-          uid: a.id,
-          speciesId: a.speciesId,
-          name: a.name,
-          element: a.rig.species.element,
-          level: a.level,
-          hp: a.hp,
-          maxHp: a.maxHp,
-          shieldHp: Math.round(a.shieldHp),
-          fainted: a.fainted,
-          reviveTimer: a.reviveTimer,
-          moveName: move.name,
-          moveElement: move.element,
-          moveCooldown: a.skillCooldown,
-          moveMaxCooldown: a.skillMaxCooldown,
-          buffActive: a.buffTimer > 0,
-          statuses: Object.keys(a.statuses) as StatusKind[],
-        };
-      }),
-    };
-    this.callbacks.onHudUpdate(snapshot);
   }
 
   public dispose(): void {

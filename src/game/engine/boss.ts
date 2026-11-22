@@ -23,6 +23,7 @@ import {
   spawnProjectile,
   spawnShockwaveRing,
 } from './fx';
+import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 
@@ -49,7 +50,7 @@ export function updateBossIntro(self: VoxelEngine, dt: number): void {
     self.bossDropY = 0;
     self.bannerText = 'ALERTE BOSS ! Préparez Dispersion !';
     self.bannerTimer = 2.2;
-    self.emitHudSnapshot();
+    emitHudSnapshot(self);
   }
 }
 
