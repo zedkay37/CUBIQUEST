@@ -95,6 +95,8 @@ export interface FightResult {
   perfects: number;
   bossPerfects: number;
   hazardHits: number;
+  /** Carapace de magma : secondes avant que chaque bouclier soit brisé. */
+  shieldBreaks: number[];
 }
 
 type Engine = InstanceType<typeof VoxelEngine>;
@@ -258,6 +260,7 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
       perfects: engine.perfectDodges,
       bossPerfects: perfectsAtBoss < 0 ? 0 : engine.perfectDodges - perfectsAtBoss,
       hazardHits: engine.hazardHitsTaken,
+      shieldBreaks: [...engine.getCombatTelemetry().shieldBreakSecs],
     };
     engine.dispose();
 
