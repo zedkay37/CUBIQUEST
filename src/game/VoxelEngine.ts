@@ -2420,34 +2420,7 @@ export class VoxelEngine {
     if (!this.activeStage) return;
 
     if (this.expeditionEnded || this.resultSent) {
-      this.updateEndSequence(dt);
-      if (this.expeditionEnded) {
-        this.endDelayTimer -= dt;
-        if (this.endDelayTimer <= 0) {
-          const boss = this.enemies.find((e) => e.isBoss);
-          const bossPct = boss ? (boss.hp / Math.max(1, boss.maxHp)) * 100 : 0;
-          const wavesCleared = this.pendingVictory
-            ? this.activeStage.waves.length
-            : this.waveIndex;
-          const cb = this.callbacks.onExpeditionComplete;
-          this.expeditionEnded = false;
-          // Le résultat ne part qu'UNE fois : sans ce verrou, la boucle re-détectait la victoire
-          // sous la fenêtre de fin et renvoyait les récompenses en boucle.
-          this.resultSent = true;
-          this.screenState = 'gameover';
-          cb({
-            victory: this.pendingVictory,
-            clearTimeSec: this.expeditionElapsed,
-            wavesCleared,
-            damageDealt: this.damageDealt,
-            bossHpPercentRemaining: this.pendingVictory ? 0 : bossPct,
-            reactionsTriggered: this.reactionsTriggered,
-            ultimatesUsed: this.ultimatesUsed,
-            perfectDodges: this.perfectDodges,
-            maxCombo: this.maxCombo,
-          });
-        }
-      }
+      this.finishExpedition(dt);
       return;
     }
 
@@ -2479,6 +2452,53 @@ export class VoxelEngine {
       this.triggerUltimate();
     }
 
+    this.updateAllies(dt, simDt);
+    this.updateEnemies(dt, simDt);
+
+    if (this.bossIntroActor && this.bossDropY > 0) {
+      this.bossIntroActor.rig.root.position.y = this.bossDropY;
+    }
+
+    this.updateProjectiles(dt, simDt);
+    this.updateTelegraphs(simDt);
+    this.updateExpeditionProgress(dt, simDt);
+  }
+
+  /** Fin d'expédition : fête ou repli, puis envoi UNIQUE du résultat à l'interface. */
+  private finishExpedition(dt: number): void {
+    if (!this.activeStage) return;
+    this.updateEndSequence(dt);
+    if (this.expeditionEnded) {
+      this.endDelayTimer -= dt;
+      if (this.endDelayTimer <= 0) {
+        const boss = this.enemies.find((e) => e.isBoss);
+        const bossPct = boss ? (boss.hp / Math.max(1, boss.maxHp)) * 100 : 0;
+        const wavesCleared = this.pendingVictory
+          ? this.activeStage.waves.length
+          : this.waveIndex;
+        const cb = this.callbacks.onExpeditionComplete;
+        this.expeditionEnded = false;
+        // Le résultat ne part qu'UNE fois : sans ce verrou, la boucle re-détectait la victoire
+        // sous la fenêtre de fin et renvoyait les récompenses en boucle.
+        this.resultSent = true;
+        this.screenState = 'gameover';
+        cb({
+          victory: this.pendingVictory,
+          clearTimeSec: this.expeditionElapsed,
+          wavesCleared,
+          damageDealt: this.damageDealt,
+          bossHpPercentRemaining: this.pendingVictory ? 0 : bossPct,
+          reactionsTriggered: this.reactionsTriggered,
+          ultimatesUsed: this.ultimatesUsed,
+          perfectDodges: this.perfectDodges,
+          maxCombo: this.maxCombo,
+        });
+      }
+    }
+  }
+
+  /** Déplacements (clavier, formation, poursuite), attaques de base et sorts automatiques des alliés. */
+  private updateAllies(dt: number, simDt: number): void {
     // Manual WASD / ZQSD / Arrow movement vector for leader
     let moveInputX = 0;
     let moveInputZ = 0;
@@ -2654,7 +2674,10 @@ export class VoxelEngine {
         }
       }
     }
+  }
 
+  /** IA des ennemis : poursuiveur, tireur, chargeur, boss. */
+  private updateEnemies(dt: number, simDt: number): void {
     // Count active attack tokens for fair crowd pacing
     let activeTokens = this.enemies.filter((e) => !e.fainted && !e.removed && e.hasAttackToken).length;
 
@@ -2780,339 +2803,7 @@ export class VoxelEngine {
           enemy.telegraphing = true;
           enemy.hasAttackToken = true;
           activeTokens += 1;
-          // Rotation des attaques selon le kit du boss (données : StageDef.bossKit)
-          const kitDef = BOSS_KITS[this.activeStage.bossKit ?? 'classic'];
-          const cycle = kitDef.cycle[phase === 1 ? 0 : 1];          const pattern = cycle[enemy.bossPatternIndex % cycle.length];
-          this.telemetry.castsByPhase[phase - 1] += 1;
-          if (!this.telemetry.patternsByPhase[phase - 1].includes(pattern)) {
-            this.telemetry.patternsByPhase[phase - 1].push(pattern);
-          }
-          enemy.bossPatternIndex += 1;
-          const cooldownAfter = phase === 3 ? 2.8 : phase === 2 ? 3.4 : 4.6;
-
-          if (pattern === 0) {
-            // Pattern 0: Circular AoE Slam (+ radial projectiles in Phase 2/3)
-            const aoeRad = phase === 3 ? 4.6 : phase === 2 ? 4.2 : 3.6;
-            const windup = phase === 3 ? 0.62 : phase === 2 ? 0.72 : 0.82;
-            const tx = target.x;
-            const tz = target.z;
-            this.spawnEnemyTelegraph(tx, tz, aoeRad, windup, false, 0, 0, () => {
-              enemy.telegraphing = false;
-              enemy.hasAttackToken = false;
-              enemy.skillCooldown = cooldownAfter;
-              if (enemy.fainted || enemy.removed) return;
-              this.spawnShockwaveRing(tx, tz, aoeRad, '#F43F5E');
-              this.spawnParticleBurst(tx, 0.8, tz, '#F43F5E', 24, 6.2);
-              this.trauma = Math.min(1, this.trauma + 0.45);
-              for (const ally of this.allies) {
-                if (!ally.fainted && Math.hypot(ally.x - tx, ally.z - tz) <= aoeRad + 0.4) {
-                  this.applyDamageToActor(ally, Math.round(enemy.atk * 1.65), enemy, true, false, '#F43F5E');
-                }
-              }
-              if (phase >= 2) {
-                const fanHalf = phase === 3 ? 2 : 1;
-                for (let k = -fanHalf; k <= fanHalf; k++) {
-                  const baseAng = Math.atan2(tx - enemy.x, tz - enemy.z) + k * 0.42;
-                  this.spawnProjectile({
-                    x: enemy.x,
-                    y: 0.9,
-                    z: enemy.z,
-                    vx: Math.sin(baseAng) * 8.6,
-                    vz: Math.cos(baseAng) * 8.6,
-                    radius: 0.38,
-                    life: 1.8,
-                    fromAlly: false,
-                    damage: Math.round(enemy.atk * 0.92),
-                    elementColor: phase === 3 ? '#F4B942' : '#F43F5E',
-                    aoeRadius: 1.2,
-                    isCrit: false,
-                    casterUnit: enemy,
-                  });
-                }
-              }
-            });
-          } else if (pattern === 1) {
-            // Pattern 1: Double Cross Line Charge (2 perpendicular red sight-lines!)
-            const dirX = dx / dist;
-            const dirZ = dz / dist;
-            const perpX = -dirZ;
-            const perpZ = dirX;
-            const chargeLen = 8.4;
-            const windup = phase === 3 ? 0.68 : 0.78;
-            const bx = enemy.x;
-            const bz = enemy.z;
-            // Secondary cross beam visual + damage
-            this.spawnEnemyTelegraph(bx, bz, chargeLen * 0.75, windup, true, perpX, perpZ, () => {
-              if (enemy.fainted || enemy.removed) return;
-              this.spawnParticleBurst(bx + perpX * 4, 0.7, bz + perpZ * 4, '#F4B942', 12, 4.8);
-              for (const ally of this.allies) {
-                if (ally.fainted) continue;
-                const relX = ally.x - bx;
-                const relZ = ally.z - bz;
-                const proj = relX * perpX + relZ * perpZ;
-                const side = Math.abs(relX * dirX + relZ * dirZ);
-                if (proj >= -0.6 && proj <= chargeLen * 0.75 + 0.6 && side <= 1.35) {
-                  this.applyDamageToActor(ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F4B942');
-                }
-              }
-            });
-            // Primary forward boss dash
-            this.spawnEnemyTelegraph(bx, bz, chargeLen, windup, true, dirX, dirZ, () => {
-              enemy.telegraphing = false;
-              enemy.hasAttackToken = false;
-              enemy.skillCooldown = cooldownAfter;
-              if (enemy.fainted || enemy.removed) return;
-              const startX = enemy.x;
-              const startZ = enemy.z;
-              enemy.x = THREE.MathUtils.clamp(enemy.x + dirX * Math.min(chargeLen, 6.8), -ARENA_BOUND, ARENA_BOUND);
-              enemy.z = THREE.MathUtils.clamp(enemy.z + dirZ * Math.min(chargeLen, 6.8), -ARENA_BOUND, ARENA_BOUND);
-              this.spawnParticleBurst(enemy.x, 0.8, enemy.z, '#F43F5E', 22, 6.0);
-              this.trauma = Math.min(1, this.trauma + 0.4);
-              for (const ally of this.allies) {
-                if (ally.fainted) continue;
-                const relX = ally.x - startX;
-                const relZ = ally.z - startZ;
-                const proj = relX * dirX + relZ * dirZ;
-                const side = Math.abs(relX * -dirZ + relZ * dirX);
-                if (proj >= -0.5 && proj <= chargeLen + 0.8 && side <= 1.65) {
-                  this.applyDamageToActor(ally, Math.round(enemy.atk * 1.6), enemy, true, false, '#F43F5E');
-                }
-              }
-            });
-          } else if (pattern === 2) {
-            // Pattern 2: Sequential Meteor Volley (3 staggered impact circles on squad!)
-            const living = this.allies.filter((a) => !a.fainted);
-            const meteorCount = phase === 3 ? 4 : 3;
-            for (let m = 0; m < meteorCount; m++) {
-              const focus = living[m % Math.max(1, living.length)] ?? target;
-              const mx = THREE.MathUtils.clamp(focus.x + (Math.random() - 0.5) * 1.8, -ARENA_BOUND + 1, ARENA_BOUND - 1);
-              const mz = THREE.MathUtils.clamp(focus.z + (Math.random() - 0.5) * 1.8, -ARENA_BOUND + 1, ARENA_BOUND - 1);
-              const isLast = m === meteorCount - 1;
-              const meteorRad = 2.6;
-              this.spawnEnemyTelegraph(mx, mz, meteorRad, 0.68 + m * 0.34, false, 0, 0, () => {
-                if (isLast) {
-                  enemy.telegraphing = false;
-                  enemy.hasAttackToken = false;
-                  enemy.skillCooldown = cooldownAfter;
-                }
-                if (enemy.fainted || enemy.removed) return;
-                this.spawnShockwaveRing(mx, mz, meteorRad, '#F97316');
-                this.spawnParticleBurst(mx, 0.8, mz, '#F97316', 18, 5.6);
-                this.trauma = Math.min(1, this.trauma + 0.25);
-                for (const ally of this.allies) {
-                  if (!ally.fainted && Math.hypot(ally.x - mx, ally.z - mz) <= meteorRad + 0.35) {
-                    this.applyDamageToActor(ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F97316');
-                  }
-                }
-              });
-            }
-          } else if (pattern === 3) {
-            // Anneau (kit Givre à l'origine) : couronne autour du boss, habillée par le thème du kit.
-            // Zone sûre = au contact du boss. En phase 2+, un contrecoup central oblige à ressortir.
-            const ringTheme = kitDef.ring ?? DEFAULT_RING_THEME;
-            const ringSound = (): void => {
-              if (ringTheme.sound === 'frost') soundFx.playFrostCrack();
-              else soundFx.playHit(true, false);
-            };
-            const inner = FROST_KIT.safeRadius;
-            const outer = FROST_KIT.ringRadius[phase - 1];
-            const windup = FROST_KIT.ringWindup[phase - 1];
-            const bx = enemy.x;
-            const bz = enemy.z;
-            const hasFollowUp = phase >= 2;
-            this.bannerText = ringTheme.label;
-            this.bannerTimer = 1.4;
-            this.spawnEnemyTelegraph(
-              bx,
-              bz,
-              outer,
-              windup,
-              false,
-              0,
-              0,
-              () => {
-                if (!hasFollowUp) {
-                  enemy.telegraphing = false;
-                  enemy.hasAttackToken = false;
-                  enemy.skillCooldown = cooldownAfter;
-                }
-                if (enemy.fainted || enemy.removed) return;
-                ringSound();
-                this.spawnShockwaveRing(bx, bz, outer, ringTheme.burstColor);
-                this.spawnElementBurst(bx, 0.6, bz, ringTheme.fx, 26, 1.7);
-                this.trauma = Math.min(1, this.trauma + 0.4);
-                for (const ally of this.allies) {
-                  if (ally.fainted) continue;
-                  const d = Math.hypot(ally.x - bx, ally.z - bz);
-                  if (d >= inner && d <= outer + 0.4) {
-                    const exposed = ally.invulnTimer <= 0;
-                    this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.ringDamage), enemy, true, false, ringTheme.burstColor);
-                    if (exposed && !ally.fainted) {
-                      for (const status of ringTheme.statuses[phase === 1 ? 0 : 1]) {
-                        this.applyStatusToActor(ally, status, enemy.atk);
-                      }
-                    }
-                  }
-                }
-                if (hasFollowUp) {
-                  this.bannerText = 'Contrecoup — éloignez-vous !';
-                  this.bannerTimer = 1.0;
-                  this.spawnEnemyTelegraph(
-                    bx,
-                    bz,
-                    inner + FROST_KIT.aftershockMargin,
-                    FROST_KIT.aftershockWindup,
-                    false,
-                    0,
-                    0,
-                    () => {
-                      enemy.telegraphing = false;
-                      enemy.hasAttackToken = false;
-                      enemy.skillCooldown = cooldownAfter;
-                      if (enemy.fainted || enemy.removed) return;
-                      ringSound();
-                      this.spawnShockwaveRing(bx, bz, inner + FROST_KIT.aftershockMargin, ringTheme.aftershockColor);
-                      this.spawnElementBurst(bx, 0.6, bz, 'rock', 16, 1.3);
-                      this.trauma = Math.min(1, this.trauma + 0.3);
-                      for (const ally of this.allies) {
-                        if (
-                          !ally.fainted &&
-                          Math.hypot(ally.x - bx, ally.z - bz) <= inner + FROST_KIT.aftershockMargin + 0.4
-                        ) {
-                          this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.aftershockDamage), enemy, true, false, ringTheme.aftershockColor);
-                        }
-                      }
-                      if (phase === 3) {
-                        // Phase 3 : éclats en étoile
-                        for (let k = 0; k < FROST_KIT.shardCount; k++) {
-                          const shardAng = (k / FROST_KIT.shardCount) * Math.PI * 2 + 0.3;
-                          this.spawnProjectile({
-                            x: bx,
-                            y: 0.9,
-                            z: bz,
-                            vx: Math.sin(shardAng) * 7.4,
-                            vz: Math.cos(shardAng) * 7.4,
-                            radius: 0.36,
-                            life: 1.7,
-                            fromAlly: false,
-                            damage: Math.round(enemy.atk * FROST_KIT.shardDamage),
-                            elementColor: ringTheme.shardColor,
-                            aoeRadius: 1.1,
-                            isCrit: false,
-                            casterUnit: enemy,
-                          });
-                        }
-                      }
-                    },
-                    { color: ringTheme.telegraphColor },
-                  );
-                }
-              },
-              { innerRadius: inner, color: ringTheme.telegraphColor },
-            );
-          } else if (pattern === 4) {
-            // Rafale en ligne (kit Orage à l'origine) : les impacts « marchent » du boss vers sa cible.
-            // On l'évite en sortant de la ligne.
-            const strikeTheme = kitDef.strike ?? DEFAULT_STRIKE_THEME;
-            const dirX = dx / dist;
-            const dirZ = dz / dist;
-            const strikes = STORM_KIT.strikeCount[phase - 1];
-            const strikeRad = STORM_KIT.strikeRadius;
-            const bx = enemy.x;
-            const bz = enemy.z;
-            // Les cercles se chevauchent : chaque allié n'encaisse qu'UN impact par rafale
-            const struck = new Set<string>();
-            this.bannerText = strikeTheme.label;
-            this.bannerTimer = 1.4;
-            soundFx.playTelegraph();
-            for (let k = 0; k < strikes; k++) {
-              const sx = THREE.MathUtils.clamp(bx + dirX * (2.4 + k * 2.3), -ARENA_BOUND, ARENA_BOUND);
-              const sz = THREE.MathUtils.clamp(bz + dirZ * (2.4 + k * 2.3), -ARENA_BOUND, ARENA_BOUND);
-              const isLast = k === strikes - 1;
-              this.spawnEnemyTelegraph(
-                sx,
-                sz,
-                strikeRad,
-                STORM_KIT.strikeFirstDelay + k * STORM_KIT.strikeInterval,
-                false,
-                0,
-                0,
-                () => {
-                  if (isLast) {
-                    enemy.telegraphing = false;
-                    enemy.hasAttackToken = false;
-                    enemy.skillCooldown = cooldownAfter;
-                  }
-                  if (enemy.fainted || enemy.removed) return;
-                  if (strikeTheme.lightning) {
-                    this.spawnBolt(sx, sz);
-                    if (k % 3 === 0) soundFx.playThunder();
-                  } else if (k % 3 === 0) {
-                    soundFx.playHit(true, false);
-                  }
-                  this.spawnElementBurst(sx, 0.5, sz, strikeTheme.fx, 10, 1.2);
-                  this.trauma = Math.min(1, this.trauma + 0.14);
-                  for (const ally of this.allies) {
-                    if (
-                      !ally.fainted &&
-                      !struck.has(ally.id) &&
-                      Math.hypot(ally.x - sx, ally.z - sz) <= strikeRad + 0.35
-                    ) {
-                      const exposed = ally.invulnTimer <= 0;
-                      if (exposed) struck.add(ally.id);
-                      this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.strikeDamage), enemy, true, false, strikeTheme.color);
-                      if (exposed && !ally.fainted) this.applyStatusToActor(ally, strikeTheme.status, enemy.atk);
-                    }
-                  }
-                },
-                { color: strikeTheme.color, silent: true },
-              );
-            }
-          } else {
-            // Aspiration puis détonation (kit Orage à l'origine) : l'escouade est tirée vers le boss.
-            // Réponse attendue : Dispersion (qui annule l'aspiration) pour sortir du cercle.
-            const eyeTheme = kitDef.eye ?? DEFAULT_EYE_THEME;
-            const eyeRad = STORM_KIT.eyeRadius[phase - 1];
-            const windup = STORM_KIT.eyeWindup[phase - 1];
-            const bx = enemy.x;
-            const bz = enemy.z;
-            enemy.pullTimer = windup;
-            this.bannerText = eyeTheme.label;
-            this.bannerTimer = 1.5;
-            this.spawnEnemyTelegraph(
-              bx,
-              bz,
-              eyeRad,
-              windup,
-              false,
-              0,
-              0,
-              () => {
-                enemy.telegraphing = false;
-                enemy.hasAttackToken = false;
-                enemy.skillCooldown = cooldownAfter;
-                enemy.pullTimer = 0;
-                if (enemy.fainted || enemy.removed) return;
-                if (eyeTheme.lightning) {
-                  this.spawnBolt(bx, bz, 14);
-                  soundFx.playThunder();
-                } else {
-                  soundFx.playHit(true, false);
-                }
-                this.spawnShockwaveRing(bx, bz, eyeRad, eyeTheme.color);
-                this.spawnElementBurst(bx, 0.8, bz, eyeTheme.fx, 30, 1.5);
-                this.trauma = Math.min(1, this.trauma + 0.5);
-                for (const ally of this.allies) {
-                  if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= eyeRad + 0.4) {
-                    const exposed = ally.invulnTimer <= 0;
-                    this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.eyeDamage), enemy, true, false, eyeTheme.color);
-                    if (exposed && !ally.fainted) this.applyStatusToActor(ally, eyeTheme.status, enemy.atk);
-                  }
-                }
-              },
-              { color: eyeTheme.color },
-            );
-          }
+          this.castBossPattern(enemy, target, dx, dz, dist);
         } else if (dist > 3.1) {
           enemy.x += (dx / dist) * enemySpeed * simDt;
           enemy.z += (dz / dist) * enemySpeed * simDt;
@@ -3143,11 +2834,351 @@ export class VoxelEngine {
 
       this.animateRigPose(enemy.rig, enemy.walkPhase, moved, enemy.squashY, this.elapsedTotal);
     }
+  }
 
-    if (this.bossIntroActor && this.bossDropY > 0) {
-      this.bossIntroActor.rig.root.position.y = this.bossDropY;
+  /**
+   * Lance la prochaine attaque télégraphiée du boss (patterns 0 à 5), selon le kit du niveau et la phase.
+   * L'appelant a déjà réservé le jeton d'attaque.
+   */
+  private castBossPattern(enemy: CombatActor, target: CombatActor, dx: number, dz: number, dist: number): void {
+    if (!this.activeStage) return;
+    const phase = enemy.bossPhase;
+    // Rotation des attaques selon le kit du boss (données : StageDef.bossKit)
+    const kitDef = BOSS_KITS[this.activeStage.bossKit ?? 'classic'];
+    const cycle = kitDef.cycle[phase === 1 ? 0 : 1];          const pattern = cycle[enemy.bossPatternIndex % cycle.length];
+    this.telemetry.castsByPhase[phase - 1] += 1;
+    if (!this.telemetry.patternsByPhase[phase - 1].includes(pattern)) {
+      this.telemetry.patternsByPhase[phase - 1].push(pattern);
     }
+    enemy.bossPatternIndex += 1;
+    const cooldownAfter = phase === 3 ? 2.8 : phase === 2 ? 3.4 : 4.6;
 
+    if (pattern === 0) {
+      // Pattern 0: Circular AoE Slam (+ radial projectiles in Phase 2/3)
+      const aoeRad = phase === 3 ? 4.6 : phase === 2 ? 4.2 : 3.6;
+      const windup = phase === 3 ? 0.62 : phase === 2 ? 0.72 : 0.82;
+      const tx = target.x;
+      const tz = target.z;
+      this.spawnEnemyTelegraph(tx, tz, aoeRad, windup, false, 0, 0, () => {
+        enemy.telegraphing = false;
+        enemy.hasAttackToken = false;
+        enemy.skillCooldown = cooldownAfter;
+        if (enemy.fainted || enemy.removed) return;
+        this.spawnShockwaveRing(tx, tz, aoeRad, '#F43F5E');
+        this.spawnParticleBurst(tx, 0.8, tz, '#F43F5E', 24, 6.2);
+        this.trauma = Math.min(1, this.trauma + 0.45);
+        for (const ally of this.allies) {
+          if (!ally.fainted && Math.hypot(ally.x - tx, ally.z - tz) <= aoeRad + 0.4) {
+            this.applyDamageToActor(ally, Math.round(enemy.atk * 1.65), enemy, true, false, '#F43F5E');
+          }
+        }
+        if (phase >= 2) {
+          const fanHalf = phase === 3 ? 2 : 1;
+          for (let k = -fanHalf; k <= fanHalf; k++) {
+            const baseAng = Math.atan2(tx - enemy.x, tz - enemy.z) + k * 0.42;
+            this.spawnProjectile({
+              x: enemy.x,
+              y: 0.9,
+              z: enemy.z,
+              vx: Math.sin(baseAng) * 8.6,
+              vz: Math.cos(baseAng) * 8.6,
+              radius: 0.38,
+              life: 1.8,
+              fromAlly: false,
+              damage: Math.round(enemy.atk * 0.92),
+              elementColor: phase === 3 ? '#F4B942' : '#F43F5E',
+              aoeRadius: 1.2,
+              isCrit: false,
+              casterUnit: enemy,
+            });
+          }
+        }
+      });
+    } else if (pattern === 1) {
+      // Pattern 1: Double Cross Line Charge (2 perpendicular red sight-lines!)
+      const dirX = dx / dist;
+      const dirZ = dz / dist;
+      const perpX = -dirZ;
+      const perpZ = dirX;
+      const chargeLen = 8.4;
+      const windup = phase === 3 ? 0.68 : 0.78;
+      const bx = enemy.x;
+      const bz = enemy.z;
+      // Secondary cross beam visual + damage
+      this.spawnEnemyTelegraph(bx, bz, chargeLen * 0.75, windup, true, perpX, perpZ, () => {
+        if (enemy.fainted || enemy.removed) return;
+        this.spawnParticleBurst(bx + perpX * 4, 0.7, bz + perpZ * 4, '#F4B942', 12, 4.8);
+        for (const ally of this.allies) {
+          if (ally.fainted) continue;
+          const relX = ally.x - bx;
+          const relZ = ally.z - bz;
+          const proj = relX * perpX + relZ * perpZ;
+          const side = Math.abs(relX * dirX + relZ * dirZ);
+          if (proj >= -0.6 && proj <= chargeLen * 0.75 + 0.6 && side <= 1.35) {
+            this.applyDamageToActor(ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F4B942');
+          }
+        }
+      });
+      // Primary forward boss dash
+      this.spawnEnemyTelegraph(bx, bz, chargeLen, windup, true, dirX, dirZ, () => {
+        enemy.telegraphing = false;
+        enemy.hasAttackToken = false;
+        enemy.skillCooldown = cooldownAfter;
+        if (enemy.fainted || enemy.removed) return;
+        const startX = enemy.x;
+        const startZ = enemy.z;
+        enemy.x = THREE.MathUtils.clamp(enemy.x + dirX * Math.min(chargeLen, 6.8), -ARENA_BOUND, ARENA_BOUND);
+        enemy.z = THREE.MathUtils.clamp(enemy.z + dirZ * Math.min(chargeLen, 6.8), -ARENA_BOUND, ARENA_BOUND);
+        this.spawnParticleBurst(enemy.x, 0.8, enemy.z, '#F43F5E', 22, 6.0);
+        this.trauma = Math.min(1, this.trauma + 0.4);
+        for (const ally of this.allies) {
+          if (ally.fainted) continue;
+          const relX = ally.x - startX;
+          const relZ = ally.z - startZ;
+          const proj = relX * dirX + relZ * dirZ;
+          const side = Math.abs(relX * -dirZ + relZ * dirX);
+          if (proj >= -0.5 && proj <= chargeLen + 0.8 && side <= 1.65) {
+            this.applyDamageToActor(ally, Math.round(enemy.atk * 1.6), enemy, true, false, '#F43F5E');
+          }
+        }
+      });
+    } else if (pattern === 2) {
+      // Pattern 2: Sequential Meteor Volley (3 staggered impact circles on squad!)
+      const living = this.allies.filter((a) => !a.fainted);
+      const meteorCount = phase === 3 ? 4 : 3;
+      for (let m = 0; m < meteorCount; m++) {
+        const focus = living[m % Math.max(1, living.length)] ?? target;
+        const mx = THREE.MathUtils.clamp(focus.x + (Math.random() - 0.5) * 1.8, -ARENA_BOUND + 1, ARENA_BOUND - 1);
+        const mz = THREE.MathUtils.clamp(focus.z + (Math.random() - 0.5) * 1.8, -ARENA_BOUND + 1, ARENA_BOUND - 1);
+        const isLast = m === meteorCount - 1;
+        const meteorRad = 2.6;
+        this.spawnEnemyTelegraph(mx, mz, meteorRad, 0.68 + m * 0.34, false, 0, 0, () => {
+          if (isLast) {
+            enemy.telegraphing = false;
+            enemy.hasAttackToken = false;
+            enemy.skillCooldown = cooldownAfter;
+          }
+          if (enemy.fainted || enemy.removed) return;
+          this.spawnShockwaveRing(mx, mz, meteorRad, '#F97316');
+          this.spawnParticleBurst(mx, 0.8, mz, '#F97316', 18, 5.6);
+          this.trauma = Math.min(1, this.trauma + 0.25);
+          for (const ally of this.allies) {
+            if (!ally.fainted && Math.hypot(ally.x - mx, ally.z - mz) <= meteorRad + 0.35) {
+              this.applyDamageToActor(ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F97316');
+            }
+          }
+        });
+      }
+    } else if (pattern === 3) {
+      // Anneau (kit Givre à l'origine) : couronne autour du boss, habillée par le thème du kit.
+      // Zone sûre = au contact du boss. En phase 2+, un contrecoup central oblige à ressortir.
+      const ringTheme = kitDef.ring ?? DEFAULT_RING_THEME;
+      const ringSound = (): void => {
+        if (ringTheme.sound === 'frost') soundFx.playFrostCrack();
+        else soundFx.playHit(true, false);
+      };
+      const inner = FROST_KIT.safeRadius;
+      const outer = FROST_KIT.ringRadius[phase - 1];
+      const windup = FROST_KIT.ringWindup[phase - 1];
+      const bx = enemy.x;
+      const bz = enemy.z;
+      const hasFollowUp = phase >= 2;
+      this.bannerText = ringTheme.label;
+      this.bannerTimer = 1.4;
+      this.spawnEnemyTelegraph(
+        bx,
+        bz,
+        outer,
+        windup,
+        false,
+        0,
+        0,
+        () => {
+          if (!hasFollowUp) {
+            enemy.telegraphing = false;
+            enemy.hasAttackToken = false;
+            enemy.skillCooldown = cooldownAfter;
+          }
+          if (enemy.fainted || enemy.removed) return;
+          ringSound();
+          this.spawnShockwaveRing(bx, bz, outer, ringTheme.burstColor);
+          this.spawnElementBurst(bx, 0.6, bz, ringTheme.fx, 26, 1.7);
+          this.trauma = Math.min(1, this.trauma + 0.4);
+          for (const ally of this.allies) {
+            if (ally.fainted) continue;
+            const d = Math.hypot(ally.x - bx, ally.z - bz);
+            if (d >= inner && d <= outer + 0.4) {
+              const exposed = ally.invulnTimer <= 0;
+              this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.ringDamage), enemy, true, false, ringTheme.burstColor);
+              if (exposed && !ally.fainted) {
+                for (const status of ringTheme.statuses[phase === 1 ? 0 : 1]) {
+                  this.applyStatusToActor(ally, status, enemy.atk);
+                }
+              }
+            }
+          }
+          if (hasFollowUp) {
+            this.bannerText = 'Contrecoup — éloignez-vous !';
+            this.bannerTimer = 1.0;
+            this.spawnEnemyTelegraph(
+              bx,
+              bz,
+              inner + FROST_KIT.aftershockMargin,
+              FROST_KIT.aftershockWindup,
+              false,
+              0,
+              0,
+              () => {
+                enemy.telegraphing = false;
+                enemy.hasAttackToken = false;
+                enemy.skillCooldown = cooldownAfter;
+                if (enemy.fainted || enemy.removed) return;
+                ringSound();
+                this.spawnShockwaveRing(bx, bz, inner + FROST_KIT.aftershockMargin, ringTheme.aftershockColor);
+                this.spawnElementBurst(bx, 0.6, bz, 'rock', 16, 1.3);
+                this.trauma = Math.min(1, this.trauma + 0.3);
+                for (const ally of this.allies) {
+                  if (
+                    !ally.fainted &&
+                    Math.hypot(ally.x - bx, ally.z - bz) <= inner + FROST_KIT.aftershockMargin + 0.4
+                  ) {
+                    this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.aftershockDamage), enemy, true, false, ringTheme.aftershockColor);
+                  }
+                }
+                if (phase === 3) {
+                  // Phase 3 : éclats en étoile
+                  for (let k = 0; k < FROST_KIT.shardCount; k++) {
+                    const shardAng = (k / FROST_KIT.shardCount) * Math.PI * 2 + 0.3;
+                    this.spawnProjectile({
+                      x: bx,
+                      y: 0.9,
+                      z: bz,
+                      vx: Math.sin(shardAng) * 7.4,
+                      vz: Math.cos(shardAng) * 7.4,
+                      radius: 0.36,
+                      life: 1.7,
+                      fromAlly: false,
+                      damage: Math.round(enemy.atk * FROST_KIT.shardDamage),
+                      elementColor: ringTheme.shardColor,
+                      aoeRadius: 1.1,
+                      isCrit: false,
+                      casterUnit: enemy,
+                    });
+                  }
+                }
+              },
+              { color: ringTheme.telegraphColor },
+            );
+          }
+        },
+        { innerRadius: inner, color: ringTheme.telegraphColor },
+      );
+    } else if (pattern === 4) {
+      // Rafale en ligne (kit Orage à l'origine) : les impacts « marchent » du boss vers sa cible.
+      // On l'évite en sortant de la ligne.
+      const strikeTheme = kitDef.strike ?? DEFAULT_STRIKE_THEME;
+      const dirX = dx / dist;
+      const dirZ = dz / dist;
+      const strikes = STORM_KIT.strikeCount[phase - 1];
+      const strikeRad = STORM_KIT.strikeRadius;
+      const bx = enemy.x;
+      const bz = enemy.z;
+      // Les cercles se chevauchent : chaque allié n'encaisse qu'UN impact par rafale
+      const struck = new Set<string>();
+      this.bannerText = strikeTheme.label;
+      this.bannerTimer = 1.4;
+      soundFx.playTelegraph();
+      for (let k = 0; k < strikes; k++) {
+        const sx = THREE.MathUtils.clamp(bx + dirX * (2.4 + k * 2.3), -ARENA_BOUND, ARENA_BOUND);
+        const sz = THREE.MathUtils.clamp(bz + dirZ * (2.4 + k * 2.3), -ARENA_BOUND, ARENA_BOUND);
+        const isLast = k === strikes - 1;
+        this.spawnEnemyTelegraph(
+          sx,
+          sz,
+          strikeRad,
+          STORM_KIT.strikeFirstDelay + k * STORM_KIT.strikeInterval,
+          false,
+          0,
+          0,
+          () => {
+            if (isLast) {
+              enemy.telegraphing = false;
+              enemy.hasAttackToken = false;
+              enemy.skillCooldown = cooldownAfter;
+            }
+            if (enemy.fainted || enemy.removed) return;
+            if (strikeTheme.lightning) {
+              this.spawnBolt(sx, sz);
+              if (k % 3 === 0) soundFx.playThunder();
+            } else if (k % 3 === 0) {
+              soundFx.playHit(true, false);
+            }
+            this.spawnElementBurst(sx, 0.5, sz, strikeTheme.fx, 10, 1.2);
+            this.trauma = Math.min(1, this.trauma + 0.14);
+            for (const ally of this.allies) {
+              if (
+                !ally.fainted &&
+                !struck.has(ally.id) &&
+                Math.hypot(ally.x - sx, ally.z - sz) <= strikeRad + 0.35
+              ) {
+                const exposed = ally.invulnTimer <= 0;
+                if (exposed) struck.add(ally.id);
+                this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.strikeDamage), enemy, true, false, strikeTheme.color);
+                if (exposed && !ally.fainted) this.applyStatusToActor(ally, strikeTheme.status, enemy.atk);
+              }
+            }
+          },
+          { color: strikeTheme.color, silent: true },
+        );
+      }
+    } else {
+      // Aspiration puis détonation (kit Orage à l'origine) : l'escouade est tirée vers le boss.
+      // Réponse attendue : Dispersion (qui annule l'aspiration) pour sortir du cercle.
+      const eyeTheme = kitDef.eye ?? DEFAULT_EYE_THEME;
+      const eyeRad = STORM_KIT.eyeRadius[phase - 1];
+      const windup = STORM_KIT.eyeWindup[phase - 1];
+      const bx = enemy.x;
+      const bz = enemy.z;
+      enemy.pullTimer = windup;
+      this.bannerText = eyeTheme.label;
+      this.bannerTimer = 1.5;
+      this.spawnEnemyTelegraph(
+        bx,
+        bz,
+        eyeRad,
+        windup,
+        false,
+        0,
+        0,
+        () => {
+          enemy.telegraphing = false;
+          enemy.hasAttackToken = false;
+          enemy.skillCooldown = cooldownAfter;
+          enemy.pullTimer = 0;
+          if (enemy.fainted || enemy.removed) return;
+          if (eyeTheme.lightning) {
+            this.spawnBolt(bx, bz, 14);
+            soundFx.playThunder();
+          } else {
+            soundFx.playHit(true, false);
+          }
+          this.spawnShockwaveRing(bx, bz, eyeRad, eyeTheme.color);
+          this.spawnElementBurst(bx, 0.8, bz, eyeTheme.fx, 30, 1.5);
+          this.trauma = Math.min(1, this.trauma + 0.5);
+          for (const ally of this.allies) {
+            if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= eyeRad + 0.4) {
+              const exposed = ally.invulnTimer <= 0;
+              this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.eyeDamage), enemy, true, false, eyeTheme.color);
+              if (exposed && !ally.fainted) this.applyStatusToActor(ally, eyeTheme.status, enemy.atk);
+            }
+          }
+        },
+        { color: eyeTheme.color },
+      );
+    }
+  }
+
+  private updateProjectiles(dt: number, simDt: number): void {
     // Update projectiles
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
@@ -3196,7 +3227,9 @@ export class VoxelEngine {
         this.projectiles.splice(i, 1);
       }
     }
+  }
 
+  private updateTelegraphs(simDt: number): void {
     // Update ground telegraphs & shockwaves
     for (let i = this.telegraphs.length - 1; i >= 0; i--) {
       const tg = this.telegraphs[i];
@@ -3219,7 +3252,11 @@ export class VoxelEngine {
         tg.onComplete();
       }
     }
+  }
 
+  /** Défaite, vague suivante ou victoire, puis instantané HUD (10 Hz au plus). */
+  private updateExpeditionProgress(dt: number, simDt: number): void {
+    if (!this.activeStage) return;
     // Check Defeat (all 3 allies fainted simultaneously)
     const livingAllies = this.allies.filter((a) => !a.fainted);
     if (livingAllies.length === 0) {
