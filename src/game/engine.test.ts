@@ -294,3 +294,83 @@ test('outils : l’option reactions=false coupe les réactions, le jeu normal le
   assert.equal(play(true), normal, 'reactions=true est le comportement par défaut');
   assert.equal(play(false), 0);
 });
+
+/** Un combat mené jusqu'à l'instant où le dernier ennemi tombe (bannière « VICTOIRE », résultat pas encore envoyé). */
+function runToVictoryBanner(h: Harness, secured: unknown[]): void {
+  h.start('stormpeak-1');
+  h.run(240, () => h.engine.expeditionEnded && h.engine.pendingVictory);
+  assert.equal(h.engine.pendingVictory, true, 'le combat de référence doit être gagné');
+  assert.equal(h.results.length, 0, 'la fête de victoire n’est pas finie : l’écran de fin n’est pas encore demandé');
+  assert.equal(secured.length, 1, 'la victoire est acquise à l’instant où le dernier ennemi tombe');
+}
+
+function makeVictoryHarness(): { h: Harness; secured: { victory: boolean }[] } {
+  const h = makeHarness();
+  const secured: { victory: boolean }[] = [];
+  h.engine.callbacks.onVictorySecured = (r) => secured.push({ victory: r.victory });
+  return { h, secured };
+}
+
+test('Victoire: pause pendant la bannière puis reprise — récompenses acquises une fois, écran de fin une fois', () => {
+  withSeededRandom(11, () => {
+    const { h, secured } = makeVictoryHarness();
+    runToVictoryBanner(h, secured);
+    h.engine.setScreenState('paused');
+    h.run(5);
+    assert.equal(secured.length, 1);
+    assert.equal(h.results.length, 0, 'en pause, rien n’avance');
+    h.engine.setScreenState('playing');
+    h.run(30);
+    assert.deepEqual(secured, [{ victory: true }]);
+    assert.deepEqual(h.results, [{ victory: true }]);
+    h.engine.dispose();
+  });
+});
+
+test('Victoire: pause pendant la bannière puis abandon — la victoire reste acquise, une seule fois', () => {
+  withSeededRandom(11, () => {
+    const { h, secured } = makeVictoryHarness();
+    const stage = STAGE_BY_ID['stormpeak-1'];
+    // retour au camp
+    runToVictoryBanner(h, secured);
+    h.engine.setScreenState('paused');
+    h.run(2);
+    h.engine.loadCampScene(h.squad(stage), null, 'idle');
+    h.engine.setScreenState('playing');
+    h.run(10);
+    assert.deepEqual(secured, [{ victory: true }], 'quitter après la victoire ne la fait pas perdre');
+    assert.equal(h.results.length, 0, 'pas d’écran de fin pour un combat quitté');
+
+    h.engine.dispose();
+  });
+});
+
+test('Victoire: « recommencer » pendant la bannière — la victoire acquise reste, le combat suivant compte à part', () => {
+  withSeededRandom(11, () => {
+    const { h, secured } = makeVictoryHarness();
+    runToVictoryBanner(h, secured);
+    h.engine.setScreenState('paused');
+    h.start('stormpeak-1');
+    assert.equal(secured.length, 1, 'relancer ne retire ni ne répète la victoire déjà acquise');
+    h.run(240, () => h.results.length > 0);
+    h.run(30);
+    // le second combat se termine une fois, et n'annonce une victoire que s'il est gagné
+    assert.equal(h.results.length, 1);
+    assert.equal(secured.length, 1 + (h.results[0].victory ? 1 : 0));
+    h.engine.dispose();
+  });
+});
+
+test('Victoire: une défaite n’est jamais annoncée comme victoire acquise', () => {
+  withSeededRandom(3, () => {
+    const { h, secured } = makeVictoryHarness();
+    const stage = STAGE_BY_ID['stormpeak-3'];
+    // escouade de niveau 1 : défaite certaine
+    h.engine.setScreenState('playing');
+    h.engine.startExpedition(stage, getReferenceConfig(stage).squad.map((id, i) => createOwnedCreature(id, 1, 0, `faible_${i}`)), [], 'auto');
+    h.run(240, () => h.results.length > 0);
+    assert.deepEqual(h.results, [{ victory: false }]);
+    assert.equal(secured.length, 0);
+    h.engine.dispose();
+  });
+});

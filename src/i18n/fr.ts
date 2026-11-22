@@ -243,6 +243,7 @@ export const FR = {
       sort: 'Sort : ',
     },
     statusModals: {
+      victoireAcquise: 'Victoire acquise : vos récompenses sont déjà enregistrées.',
       expeditionEnPause: 'Expédition en pause',
       appuyezSurEchapOuPPour: 'Appuyez sur Échap ou P pour reprendre le combat.',
       reprendre: 'Reprendre',

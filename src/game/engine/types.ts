@@ -182,17 +182,27 @@ export interface EngineOptions {
   reactions?: boolean;
 }
 
+/** Bilan d'un combat, tel que le moteur le remet à l'interface. */
+export interface ExpeditionResult {
+  victory: boolean;
+  clearTimeSec: number;
+  wavesCleared: number;
+  damageDealt: number;
+  bossHpPercentRemaining: number;
+  reactionsTriggered: number;
+  ultimatesUsed: number;
+  perfectDodges: number;
+  maxCombo: number;
+}
+
 export interface EngineCallbacks {
   onHudUpdate: (snapshot: ExpeditionHudSnapshot) => void;
-  onExpeditionComplete: (result: {
-    victory: boolean;
-    clearTimeSec: number;
-    wavesCleared: number;
-    damageDealt: number;
-    bossHpPercentRemaining: number;
-    reactionsTriggered: number;
-    ultimatesUsed: number;
-    perfectDodges: number;
-    maxCombo: number;
-  }) => void;
+  /**
+   * Victoire acquise : appelé UNE fois par combat, à l'instant où le dernier ennemi tombe, avec le bilan
+   * définitif. C'est là que l'interface attribue les récompenses : rien de ce que le joueur fait ensuite
+   * (pause, retour au camp, relance) ne peut les lui faire perdre.
+   */
+  onVictorySecured?: (result: ExpeditionResult) => void;
+  /** Fin de la fête ou du repli : demande l'écran de fin. N'arrive jamais si le joueur a quitté avant. */
+  onExpeditionComplete: (result: ExpeditionResult) => void;
 }

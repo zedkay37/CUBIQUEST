@@ -4,6 +4,8 @@ import { FR } from '../i18n/fr';
 interface PauseModalProps {
   stageName: string;
   screenShake: boolean;
+  /** Le dernier ennemi est tombé : il n'y a plus rien à abandonner, seulement à reprendre. */
+  victorySecured: boolean;
   onToggleShake: () => void;
   onResume: () => void;
   onRestart: () => void;
@@ -13,6 +15,7 @@ interface PauseModalProps {
 export function PauseModal({
   stageName,
   screenShake,
+  victorySecured,
   onToggleShake,
   onResume,
   onRestart,
@@ -33,7 +36,7 @@ export function PauseModal({
           {stageName}
         </h2>
         <p className="mt-2 text-xs text-[#B8C2D1]">
-          {FR.ui.statusModals.appuyezSurEchapOuPPour}
+          {victorySecured ? FR.ui.statusModals.victoireAcquise : FR.ui.statusModals.appuyezSurEchapOuPPour}
         </p>
 
         <div className="mt-6 flex flex-col gap-2.5">
@@ -44,6 +47,7 @@ export function PauseModal({
           >
             {FR.ui.statusModals.reprendre}
           </button>
+          {!victorySecured && (
           <button
             type="button"
             onClick={onRestart}
@@ -51,6 +55,8 @@ export function PauseModal({
           >
             {FR.ui.statusModals.recommencerLeNiveau}
           </button>
+          )}
+          {!victorySecured && (
           <button
             type="button"
             onClick={onReturnCamp}
@@ -58,6 +64,7 @@ export function PauseModal({
           >
             {FR.ui.statusModals.retourAuCamp}
           </button>
+          )}
         </div>
 
         <label className="mt-4 flex items-center justify-center gap-2 text-xs text-[#B8C2D1] cursor-pointer select-none">

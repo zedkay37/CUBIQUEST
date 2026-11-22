@@ -104,6 +104,8 @@ export class VoxelEngine {
   bossDropVel = 0;
   bossIntroInfo: { name: string; title: string; element: ElementType } | null = null;
   resultSent = false;
+  /** Victoire déjà annoncée à l'interface pour ce combat (`onVictorySecured` ne part qu'une fois). */
+  victorySecured = false;
   confettiTimer = 0;
 
   // Mode & state

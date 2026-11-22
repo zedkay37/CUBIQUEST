@@ -24,7 +24,7 @@ import {
 } from './fx';
 import { emitHudSnapshot } from './hud';
 import { triggerUltimate } from './skills';
-import type { CombatTelemetry } from './types';
+import type { CombatTelemetry, ExpeditionResult } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 import { FR } from '../../i18n/fr';
 
@@ -67,6 +67,7 @@ export function startExpedition(
   self.expeditionEnded = false;
   self.pendingVictory = false;
   self.resultSent = false;
+  self.victorySecured = false;
   self.telemetry = emptyTelemetry();
   self.confettiTimer = 0;
   self.bossIntroTimer = 0;
@@ -342,6 +343,24 @@ export function updateExpedition(self: VoxelEngine, dt: number, simDt: number): 
   updateExpeditionProgress(self, dt, simDt);
 }
 
+/** Bilan du combat. Une fois le combat terminé il ne bouge plus : la simulation est arrêtée. */
+function buildExpeditionResult(self: VoxelEngine): ExpeditionResult {
+  const stage = self.activeStage;
+  const boss = self.enemies.find((e) => e.isBoss);
+  const bossPct = boss ? (boss.hp / Math.max(1, boss.maxHp)) * 100 : 0;
+  return {
+    victory: self.pendingVictory,
+    clearTimeSec: self.expeditionElapsed,
+    wavesCleared: self.pendingVictory && stage ? stage.waves.length : self.waveIndex,
+    damageDealt: self.damageDealt,
+    bossHpPercentRemaining: self.pendingVictory ? 0 : bossPct,
+    reactionsTriggered: self.reactionsTriggered,
+    ultimatesUsed: self.ultimatesUsed,
+    perfectDodges: self.perfectDodges,
+    maxCombo: self.maxCombo,
+  };
+}
+
 /** Fin d'expédition : fête ou repli, puis envoi UNIQUE du résultat à l'interface. */
 export function finishExpedition(self: VoxelEngine, dt: number): void {
   if (!self.activeStage) return;
@@ -349,28 +368,13 @@ export function finishExpedition(self: VoxelEngine, dt: number): void {
   if (self.expeditionEnded) {
     self.endDelayTimer -= dt;
     if (self.endDelayTimer <= 0) {
-      const boss = self.enemies.find((e) => e.isBoss);
-      const bossPct = boss ? (boss.hp / Math.max(1, boss.maxHp)) * 100 : 0;
-      const wavesCleared = self.pendingVictory
-        ? self.activeStage.waves.length
-        : self.waveIndex;
       const cb = self.callbacks.onExpeditionComplete;
       self.expeditionEnded = false;
       // Le résultat ne part qu'UNE fois : sans ce verrou, la boucle re-détectait la victoire
       // sous la fenêtre de fin et renvoyait les récompenses en boucle.
       self.resultSent = true;
       self.screenState = 'gameover';
-      cb({
-        victory: self.pendingVictory,
-        clearTimeSec: self.expeditionElapsed,
-        wavesCleared,
-        damageDealt: self.damageDealt,
-        bossHpPercentRemaining: self.pendingVictory ? 0 : bossPct,
-        reactionsTriggered: self.reactionsTriggered,
-        ultimatesUsed: self.ultimatesUsed,
-        perfectDodges: self.perfectDodges,
-        maxCombo: self.maxCombo,
-      });
+      cb(buildExpeditionResult(self));
     }
   }
 }
@@ -409,6 +413,12 @@ export function updateExpeditionProgress(self: VoxelEngine, dt: number, simDt: n
       self.bannerTimer = 2.0;
       soundFx.playFanfare();
       emitHudSnapshot(self);
+      // La victoire est acquise maintenant, pas à la fin de la fête : l'interface attribue les
+      // récompenses tout de suite. Sans cela, quitter pendant la bannière les faisait perdre.
+      if (!self.victorySecured) {
+        self.victorySecured = true;
+        self.callbacks.onVictorySecured?.(buildExpeditionResult(self));
+      }
     }
   }
 

@@ -10,6 +10,7 @@ import { OutcomeModal } from './components/OutcomeModal';
 import { QuestsDrawer } from './components/QuestsDrawer';
 import { StarterModal } from './components/StarterModal';
 import { PauseModal } from './components/StatusModals';
+import type { ExpeditionResult } from './game/engine/types';
 import { TeamDrawer } from './components/TeamDrawer';
 import { TitleOverlay } from './components/TitleOverlay';
 import { soundFx } from './game/audio';
@@ -120,6 +121,9 @@ export default function App() {
   // Refs so Three.js callbacks never stale-close or tear down the canvas
   const saveRef = useRef(save);
   const activeStageRef = useRef(activeStage);
+  /** Écran de fin d'une victoire déjà récompensée, en attente d'affichage (voir onVictorySecured). */
+  const securedOutcomeRef = useRef<ExpeditionOutcome | null>(null);
+  const [victorySecured, setVictorySecured] = useState(false);
   const previewRef = useRef(false); // true : expédition d'aperçu, rien n'est sauvegardé
   const previewCreaturesRef = useRef<OwnedCreature[]>([]);
   saveRef.current = save;
@@ -147,23 +151,42 @@ export default function App() {
     const mount = canvasMountRef.current;
     if (!mount) return;
 
+    /** Attribue les récompenses d'un combat et renvoie le contenu de l'écran de fin. */
+    const settleExpedition = (stage: StageDef, result: ExpeditionResult): ExpeditionOutcome => {
+      // En aperçu, l'écran de fin est calculé pour l'escouade de l'aperçu (et rien n'est enregistré)
+      const { nextSave, outcome: finalOutcome } = applyExpeditionRewards(
+        previewRef.current
+          ? buildPreviewSave(saveRef.current, previewCreaturesRef.current)
+          : saveRef.current,
+        stage,
+        result.victory,
+        result,
+      );
+      if (!previewRef.current) {
+        saveRef.current = nextSave;
+        setSave(nextSave);
+      }
+      return finalOutcome;
+    };
+
     const engine = new VoxelEngine(mount, {
       onHudUpdate: (snap) => {
         setHudSnapshot(snap);
       },
+      // Victoire acquise (dernier ennemi tombé) : récompenses attribuées tout de suite, une seule fois.
+      // L'écran de fin viendra après la fête ; quitter entre-temps ne fait plus rien perdre.
+      onVictorySecured: (result) => {
+        const stage = activeStageRef.current;
+        if (!stage || securedOutcomeRef.current) return;
+        securedOutcomeRef.current = settleExpedition(stage, result);
+        setVictorySecured(true);
+      },
       onExpeditionComplete: (result) => {
         const stage = activeStageRef.current;
         if (!stage) return;
-        // En aperçu, l'écran de fin est calculé pour l'escouade de l'aperçu (et rien n'est enregistré)
-        const { nextSave, outcome: finalOutcome } = applyExpeditionRewards(
-          previewRef.current
-            ? buildPreviewSave(saveRef.current, previewCreaturesRef.current)
-            : saveRef.current,
-          stage,
-          result.victory,
-          result,
-        );
-        if (!previewRef.current) setSave(nextSave);
+        // Victoire : déjà réglée par onVictorySecured. Défaite : réglée ici.
+        const finalOutcome = securedOutcomeRef.current ?? settleExpedition(stage, result);
+        securedOutcomeRef.current = null;
         if (finalOutcome.unlockedBiomeName) {
           window.setTimeout(() => soundFx.playBiomeUnlock(), 1100);
         }
@@ -267,6 +290,8 @@ export default function App() {
     (stage: StageDef) => {
       soundFx.playUiClick();
       previewRef.current = false;
+      securedOutcomeRef.current = null;
+      setVictorySecured(false);
       setActiveDrawer(null);
       setOutcome(null);
       setActiveStage(stage);
@@ -286,6 +311,8 @@ export default function App() {
   const handleReturnCamp = useCallback(() => {
     soundFx.playUiClick();
     previewRef.current = false;
+    securedOutcomeRef.current = null;
+    setVictorySecured(false);
     setOutcome(null);
     setActiveStage(null);
     setHudSnapshot(null);
@@ -732,6 +759,7 @@ export default function App() {
         <PauseModal
           stageName={activeStage.name}
           screenShake={settings.screenShake}
+          victorySecured={victorySecured}
           onToggleShake={handleToggleShake}
           onResume={() => setScreenState('playing')}
           onRestart={() => handleLaunchStage(activeStage)}
