@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ELEMENT_META, MOVES, SPECIES } from '../game/catalog';
 import { ElementIcon } from './Icons';
 import { FR } from '../i18n/fr';
+import { EvolutionBeforeAfter } from './ui/moments';
 
 interface EvolutionOverlayProps {
   fromSpeciesId: string;
@@ -91,6 +92,10 @@ export function EvolutionOverlay({ fromSpeciesId, toSpeciesId, revealed }: Evolu
                   </span>
                 )}
               </motion.div>
+              {/* Seconde finale : les deux formes côte à côte */}
+              <div className="mt-4">
+                <EvolutionBeforeAfter fromSpeciesId={fromSpeciesId} toSpeciesId={toSpeciesId} />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

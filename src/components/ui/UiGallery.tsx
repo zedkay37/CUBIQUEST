@@ -7,7 +7,9 @@ import { MotionConfig } from 'motion/react';
 import { ELEMENT_META } from '../../game/catalog';
 import type { ElementType } from '../../game/types';
 import { AnimatedBar, BlockButton, BlockPanel, CountUp, CreatureCard, ElementBadge, Modal, NewBadge, Tabs, Toast } from './index';
-import { MOMENT_DEMOS } from './moments';
+import type { ExpeditionOutcome } from '../../game/types';
+import { OutcomeModal } from '../OutcomeModal';
+import { ArrivalScene, EvolutionBeforeAfter, LevelUpBurst, UnlockReveal } from './moments';
 
 const ELEMENTS = Object.keys(ELEMENT_META) as ElementType[];
 
@@ -146,3 +148,59 @@ export function UiGallery() {
     </MotionConfig>
   );
 }
+
+// ------------------------------------------------------------------ démonstrations (?gallery=ui)
+
+interface MomentDemo {
+  id: string;
+  label: string;
+  render: (onDone: () => void) => React.ReactNode;
+}
+
+const demoOutcome = (victory: boolean): ExpeditionOutcome => ({
+  victory,
+  stageId: 'meadow-2',
+  stageName: 'Bosquet Foudroyé',
+  biomeName: 'Prairie Émeraude',
+  clearTimeSec: 47,
+  wavesCleared: victory ? 3 : 2,
+  totalWaves: 3,
+  damageDealt: 18250,
+  bossHpPercentRemaining: victory ? 0 : 23,
+  burstsTriggered: 5,
+  ultimatesUsed: 1,
+  perfectDodges: 2,
+  triosTriggered: victory ? 2 : 0,
+  xpPerUnit: 140,
+  droppedIngredients: [{ id: 'sun_pollen', count: 5 }, { id: 'ruby_berry', count: 2 }],
+  droppedStone: null,
+  droppedRune: 'rune_cadence',
+  leveledUpNames: victory ? ['Pyrocube Niv.8'] : [],
+  levelUps: victory ? [{ speciesId: 'pyrocube', from: 7, to: 8 }] : [],
+  potReadyNow: false,
+  unlockedNextStageName: victory ? 'Clairière du Colosse' : null,
+  unlockedBiomeName: null,
+  unlockedPotTier: null,
+});
+
+const MOMENT_DEMOS: MomentDemo[] = [
+  { id: 'arrival', label: 'Arrivée d’une créature', render: (done) => <ArrivalScene speciesId="voltik" isNew onDone={done} /> },
+  {
+    id: 'evolution',
+    label: 'Évolution : avant, après',
+    render: () => <EvolutionBeforeAfter fromSpeciesId="pyrocube" toSpeciesId="flambrix" />,
+  },
+  {
+    id: 'levelup',
+    label: 'Montée de niveau',
+    render: () => (
+      <div className="flex flex-wrap gap-2">
+        <LevelUpBurst speciesId="pyrocube" from={12} to={13} />
+        <LevelUpBurst speciesId="aquabloc" from={11} to={12} delay={0.2} />
+      </div>
+    ),
+  },
+  { id: 'victory', label: 'Victoire', render: (done) => <OutcomeModal outcome={demoOutcome(true)} hasNextStage onNextStage={done} onRetry={done} onReturnCamp={done} /> },
+  { id: 'defeat', label: 'Défaite', render: (done) => <OutcomeModal outcome={demoOutcome(false)} hasNextStage={false} onNextStage={done} onRetry={done} onReturnCamp={done} /> },
+  { id: 'unlock', label: 'Déblocage', render: () => <UnlockReveal placeName="Rive Azur" isBiome /> },
+];

@@ -29,6 +29,20 @@ export const GAME_FULL_TITLE = `${GAME_TITLE} : L’${WORLD_NAME_BARE}`;
 
 export const FR = {
   ui: {
+    /** Moments forts (src/components/ui/moments.tsx). */
+    moments: {
+      arrivee: (a: string | number) => `Arrivée de ${a}`,
+      nouvelleCreature: 'Nouvelle créature !',
+      ajouteeAuCarnet: 'Ajoutée au Carnet',
+      toucheOuClic: 'Une touche ou un clic pour continuer',
+      avantApres: (a: string | number, b: string | number) => `${a} est devenu ${b}`,
+      nivDe: (a: string | number) => `Niv. ${a} →`,
+      deblocage: (a: string | number) => `${a} s’ouvre`,
+      nouveauNiveau: 'Nouveau niveau ouvert',
+      ceQuiAManque: 'Il restait au boss',
+      vaguesTenues: (a: string | number, b: string | number) => `Vagues tenues : ${a} sur ${b}`,
+      calme: 'Pas de panique : chaque essai fait progresser l’escouade.',
+    },
     /** Bibliothèque de composants (src/components/ui). */
     components: {
       niv: (a: string | number) => `Niv. ${a}`,

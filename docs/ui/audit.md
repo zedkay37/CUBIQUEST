@@ -1,6 +1,6 @@
 # Audit de l'interface — avant le sprint UI
 
-Captures : `docs/captures/ui/avant/<écran>-bureau.png` (1280 × 720) et `<écran>-mobile.png` (360 × 640), prises avec Edge sans interface (rendu logiciel) depuis le site construit. Les écrans sans accès direct ont reçu un paramètre de développement `?ui=` (aucune sauvegarde lue ni écrite).
+Captures : `docs/captures/ui/avant/<écran>-bureau.png` (1280 × 720) et `<écran>-mobile.png` (360 × 640), prises avec Edge sans interface (rendu logiciel) depuis le site construit. Mobile : la page est rendue dans une iframe de 360 px (un navigateur de bureau impose une largeur minimale de fenêtre d’environ 500 px ; une première série de captures mobiles, faite sans iframe, était fausse et a été refaite depuis l’état d’origine). Les écrans sans accès direct ont reçu un paramètre de développement `?ui=` (aucune sauvegarde lue ni écrite).
 
 Constat commun : tous les panneaux sont la même boîte (`.voxel-panel` : fond ardoise translucide, bordure grise de 2 px, ombre floue), tous les boutons le même rectangle arrondi avec une ombre de 3 px. Rien ne rappelle les blocs voxel des créatures. La couleur des éléments n'apparaît que dans de petites icônes.
 
@@ -10,7 +10,7 @@ Constat commun : tous les panneaux sont la même boîte (`.voxel-panel` : fond a
 | Choix du départ | Trois cartes rectangulaires identiques, texte dense | Grandes `CreatureCard` à bordure d'élément, badge d'élément |
 | Camp (jour, nuit) | Dock de cinq boutons plats identiques, sous-titres gris | Boutons en bloc qui s'enfoncent, pastilles « Nouveau » qui pulsent |
 | Carte des expéditions | Onglets de biomes en ligne, liste de niveaux en rectangles : rien d'une carte | Biomes reliés par un chemin, étoiles sous chaque niveau, verrous grisés, détail du niveau en panneau bloc |
-| Équipe | Liste dense ; **sur mobile le tiroir déborde à droite (texte et boutons coupés)** | Cartes de créature en bloc, colonne unique sur mobile |
+| Équipe | Liste dense, mêmes rectangles pour tout ; la fiche de la créature choisie est longue à atteindre sur mobile | Cartes de créature en bloc, liseré d’élément, comparaison claire |
 | Marmite, Quêtes, Codex | Mêmes boîtes, beaucoup de texte | Nouveaux composants seulement (écrans appelés à disparaître) |
 | Combat | HUD lisible mais cartes de sorts plates ; Esquive et Déchaînement de même poids que le reste | Cartes de sorts en bloc à liseré d'élément, gros boutons en bloc pour Esquive et Déchaînement |
 | Pause | Boîte et trois boutons plats | `Modal` en bloc, `BlockButton` |

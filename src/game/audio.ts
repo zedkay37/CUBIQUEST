@@ -276,6 +276,13 @@ class ToyboxAudio {
     });
   }
 
+  /** Étoile de victoire : chaque étoile sonne une note plus haute que la précédente. */
+  public playStar(index: number): void {
+    const n = [659.25, 783.99, 987.77][Math.max(0, Math.min(2, index))];
+    this.playTone(n, n * 1.02, 0.22, 'triangle', 0.12, 0);
+    this.playTone(n * 2, n * 2.02, 0.16, 'sine', 0.05, 0.04);
+  }
+
   /** Le même « tic » pour toutes les attaques annoncées, 0,35 s avant l'impact. */
   public playTelegraphTick(): void {
     this.playTone(1318.5, 1318.5, 0.05, 'square', 0.06, 0);

@@ -417,6 +417,8 @@ export interface ExpeditionOutcome {
   droppedStone: PowerStone | null;
   droppedRune: RuneKind | null;
   leveledUpNames: string[];
+  /** Montées de niveau détaillées (écran de fin). */
+  levelUps: { speciesId: string; from: number; to: number }[];
   potReadyNow: boolean;
   unlockedNextStageName: string | null;
   /** Nom du biome qui vient de s'ouvrir (quand le niveau débloqué est le premier d'un nouveau biome). */

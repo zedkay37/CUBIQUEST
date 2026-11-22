@@ -855,6 +855,7 @@ export function applyExpeditionRewards(
     : Math.max(15, Math.round(stage.xpReward * 0.25 * (stats.wavesCleared / stage.waves.length)));
 
   const leveledUpNames: string[] = [];
+  const levelUps: ExpeditionOutcome['levelUps'] = [];
   const nextRoster = save.roster.map((c) => {
     if (!save.squadIds.includes(c.uid)) return c;
     let level = c.level;
@@ -866,6 +867,7 @@ export function applyExpeditionRewards(
     }
     if (level > startLevel) {
       leveledUpNames.push(FR.rules.niv(SPECIES[c.speciesId]?.name ?? FR.rules.creature, level));
+      levelUps.push({ speciesId: c.speciesId, from: startLevel, to: level });
     }
     return { ...c, level, xp };
   });
@@ -1002,6 +1004,7 @@ export function applyExpeditionRewards(
     droppedStone,
     droppedRune,
     leveledUpNames,
+    levelUps,
     potReadyNow,
     unlockedNextStageName,
     unlockedBiomeName,

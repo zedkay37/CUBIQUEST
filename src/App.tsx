@@ -5,6 +5,7 @@ import { CodexDrawer } from './components/CodexDrawer';
 import { CookingDrawer } from './components/CookingDrawer';
 import { ExpeditionDrawer } from './components/ExpeditionDrawer';
 import { EvolutionOverlay } from './components/EvolutionOverlay';
+import { ArrivalScene } from './components/ui/moments';
 import { ExpeditionHud } from './components/ExpeditionHud';
 import { OutcomeModal } from './components/OutcomeModal';
 import { QuestsDrawer } from './components/QuestsDrawer';
@@ -144,6 +145,8 @@ export default function App() {
   /** Écran de fin d'une victoire déjà récompensée, en attente d'affichage (voir onVictorySecured). */
   const securedOutcomeRef = useRef<ExpeditionOutcome | null>(null);
   const [victorySecured, setVictorySecured] = useState(false);
+  /** Arrivée d'une créature (moment fort, sprint UI). */
+  const [arrival, setArrival] = useState<{ speciesId: string; isNew: boolean } | null>(null);
   /** Bulle « première fois » affichée en combat (S04.3). */
   const [firstTimeTip, setFirstTimeTip] = useState<FirstTimeKind | null>(null);
   useEffect(() => {
@@ -548,10 +551,11 @@ export default function App() {
   };
 
   const handleCollectCreature = () => {
+    const wasKnown = (speciesId: string) => saveRef.current.discoveredSpeciesIds.includes(speciesId);
     const { nextSave, creature } = collectCookedCreature(saveRef.current);
     if (creature) {
-      soundFx.playVictory();
       engineRef.current?.triggerCookBurstFx('#2FB97A');
+      setArrival({ speciesId: creature.speciesId, isNew: !wasKnown(creature.speciesId) });
       setSave(nextSave);
       setRecruitedPreview(creature);
     }
@@ -793,6 +797,11 @@ export default function App() {
           </AnimatePresence>
         </>
       )}
+
+      {/* Arrivée d'une créature : un clic ou une touche pour passer */}
+      <AnimatePresence>
+        {arrival && <ArrivalScene key="arrival" speciesId={arrival.speciesId} isNew={arrival.isNew} onDone={() => setArrival(null)} />}
+      </AnimatePresence>
 
       {/* Habillage de l'animation d'évolution (bloque les clics pendant la séquence) */}
       <AnimatePresence>

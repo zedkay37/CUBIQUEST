@@ -356,3 +356,17 @@ textarea:focus-visible {
 .cubi-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.55);
 }
+
+/* Petits écrans : une fenêtre ne dépasse jamais l'écran, son contenu se replie au lieu de déborder */
+.voxel-panel {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .voxel-panel[role='dialog'] {
+    max-width: calc(100vw - 16px) !important;
+    overflow-x: hidden;
+  }
+  .voxel-panel[role='dialog'] h2 {
+    overflow-wrap: anywhere;
+  }
+}
