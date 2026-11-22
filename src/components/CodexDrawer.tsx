@@ -18,6 +18,9 @@ const PRESET_QUERIES = [
   'Quelles synergies de types élémentaires fonctionnent le mieux pour une équipe de 3 ?',
 ];
 
+/** L'onglet du Professeur interroge un serveur : il n'existe que si le site est construit avec VITE_AI_CODEX=1. */
+const AI_CODEX = import.meta.env.VITE_AI_CODEX === '1';
+
 const ELEMENTS: ElementType[] = ['fire', 'water', 'grass', 'electric', 'rock', 'psychic'];
 
 export function CodexDrawer({
@@ -26,7 +29,7 @@ export function CodexDrawer({
   onSaveAnswer,
   onClose,
 }: CodexDrawerProps) {
-  const [tab, setTab] = useState<'search' | 'dex' | 'types'>('search');
+  const [tab, setTab] = useState<'search' | 'dex' | 'types'>(AI_CODEX ? 'search' : 'dex');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export function CodexDrawer({
 
   const runSearch = async (text: string) => {
     const trimmed = text.trim();
+    if (!AI_CODEX) return;
     if (trimmed.length < 2) {
       setError('Veuillez saisir une question d’au moins 2 caractères.');
       return;
@@ -59,7 +63,7 @@ export function CodexDrawer({
     const currentBiome = BIOMES[currentStage.biomeId].name;
 
     try {
-      const res = await fetch('/api/codex/search', {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/codex/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -99,14 +103,17 @@ export function CodexDrawer({
         <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-[#39445A]">
           <div>
             <h2 id="codex-drawer-title" className="font-display text-xl sm:text-2xl font-bold">
-              Codex & Professeur Cubix
+              {AI_CODEX ? 'Codex & Professeur Cubix' : 'Codex'}
             </h2>
             <p className="text-xs text-[#B8C2D1]">
-              Stratégies vérifiées en direct via Google Search, bestiaire de l’île et affinités.
+              {AI_CODEX
+                ? 'Stratégies vérifiées en direct via Google Search, bestiaire de l’île et affinités.'
+                : 'Bestiaire de l’île et affinités des éléments.'}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 p-1 rounded-lg bg-[#141A26] border border-[#344056]">
+              {AI_CODEX && (
               <button
                 type="button"
                 onClick={() => setTab('search')}
@@ -116,6 +123,7 @@ export function CodexDrawer({
               >
                 Professeur (Web)
               </button>
+              )}
               <button
                 type="button"
                 onClick={() => setTab('dex')}
@@ -148,7 +156,7 @@ export function CodexDrawer({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto cubi-scroll p-5">
-          {tab === 'search' && (
+          {AI_CODEX && tab === 'search' && (
             <div className="space-y-4">
               <form
                 onSubmit={(e) => {

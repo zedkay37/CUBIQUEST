@@ -20,6 +20,7 @@ import {
 } from './rules';
 import type { PowerStone, SaveState } from './types';
 import { SAVE_V3_FIXTURE } from './saveV3.fixture';
+import { withSaveSlot } from './saveSlot';
 import { normalizedTerms, normalizeText } from '../../tools/lexiqueCore';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -357,4 +358,10 @@ test('Sauvegarde: un identifiant inconnu est ignoré sans erreur', () => {
   assert.equal(m.pot.recipeId, null);
   assert.deepEqual(m.discoveredRecipeIds, ['camp_stew', 'fiery_soup', 'summit_feast']);
   assert.equal(m.roster.length, 4);
+});
+
+test('Sauvegarde: sans VITE_SAVE_SLOT (outils, tests), les clés de stockage restent celles d’origine', () => {
+  assert.equal(SAVE_STORAGE_KEY, 'cubiquest_save_v2');
+  assert.equal(SAVE_BACKUP_STORAGE_KEY, 'cubiquest_save_unreadable_backup');
+  assert.equal(withSaveSlot('cle'), 'cle');
 });

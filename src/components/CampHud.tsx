@@ -228,7 +228,7 @@ export function CampHud({
               }`}
             >
               <BookOpen className="w-4 h-4 text-[#C084FC]" />
-              <span>{FR.ui.campHud.codexWeb}</span>
+              <span>{import.meta.env.VITE_AI_CODEX === '1' ? FR.ui.campHud.codexWeb : FR.ui.campHud.codex}</span>
             </button>
           </div>
         )}

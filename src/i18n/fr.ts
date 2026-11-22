@@ -49,6 +49,7 @@ export const FR = {
       equipePierres: 'Équipe & Galets',
       quetes: 'Quêtes',
       codexWeb: 'Codex Web',
+      codex: 'Codex',
     },
     cookingDrawer: {
       marmiteDuCampement: 'Marmite du Campement',
@@ -302,6 +303,7 @@ export const FR = {
       continuerLAventure: 'Continuer l’aventure',
       commencerLAventure: 'Commencer l’aventure',
       nouvelleIle: 'Nouvelle île',
+      versionEnTest: (a: string | number) => `version en test · ${a}`,
       t123SortsEspaceEsquive: '1 / 2 / 3 Sorts · Espace Esquive · R Ultime · ZQSD Déplacer · E Auto · P Pause',
     },
   },

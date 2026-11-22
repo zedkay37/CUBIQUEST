@@ -1,3 +1,5 @@
+import { withSaveSlot } from './saveSlot';
+
 /**
  * Options de confort stockées à part de la sauvegarde de progression
  * (elles ne font pas partie de SaveState et ne nécessitent donc aucune migration).
@@ -6,7 +8,7 @@ export interface GameSettings {
   screenShake: boolean;
 }
 
-export const SETTINGS_STORAGE_KEY = 'cubiquest_settings_v1';
+export const SETTINGS_STORAGE_KEY = withSaveSlot('cubiquest_settings_v1');
 
 export const DEFAULT_SETTINGS: GameSettings = { screenShake: true };
 

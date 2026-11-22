@@ -22,7 +22,9 @@ Le plan se lit dans le dépôt ; une session se lance avec un prompt court (mod�
 | Commande | Rôle |
 | --- | --- |
 | `npm install` | Installation (npm ; `bun` n'est pas requis) |
-| `npm run dev` | Serveur Express + Vite sur http://localhost:3000 |
+| `npm run dev` | Serveur Express + Vite sur http://localhost:3000 (seul moyen d'utiliser l'onglet du Professeur, avec `VITE_AI_CODEX=1`) |
+| `npm run dev:static` | Vite seul, sans serveur : le jeu tel qu'il est mis en ligne |
+| `npm run deploy:pages -- --target next\|root` | Met la branche courante en ligne sur GitHub Pages (`next` : `…/CUBIQUEST/next/`, sauvegarde séparée ; `root` : racine). `--dry-run` pour essayer. Ne touche qu'à la branche `gh-pages`, par un worktree temporaire. |
 | `npm run check` | `tsc --noEmit` + tous les tests + golden master + `vite build`. **À lancer avant chaque commit.** La même commande tourne sur GitHub (`.github/workflows/check.yml`). |
 | `npm test` | Tests seuls (`src/game/*.test.ts`, runner `node:test` via `tsx`) |
 | `npm run golden` | Golden master : rejoue 840 combats à graine fixe, échoue à la moindre différence (voir plus bas) |
@@ -36,7 +38,7 @@ URL utiles en développement (aucune ne touche à la sauvegarde) :
 - `?stage=<id>` : lance un niveau avec son escouade de référence. Options : `&squad=a,b,c&lvl=N&bonus=N`.
 - `?gallery=1` : galerie de revue (toutes les créatures en 3D + aperçu des biomes).
 - `?autostart=1&hour=0.8` : camp à une heure donnée (0 aube · 0.3 jour · 0.66 crépuscule · 0.8 nuit).
-- `?debug=1` : overlay de diagnostic (FPS, temps d'image, draw calls, triangles, géométries, textures, particules, entités). Se combine avec les autres. Détail des lignes dans `README.md`.
+- `?debug=1` : overlay de diagnostic (FPS, temps d'image, draw calls, triangles, géométries, textures, particules, entités). Se combine avec les autres. Détail des lignes dans `src/game/engine/debug.ts`.
 
 ## Architecture
 
@@ -146,7 +148,7 @@ npm run sim -- --reactions 0                   # réactions élémentaires coup�
 - Le vrai `VoxelEngine` tourne sans rendu, à pas fixe de 1/60 s, avec l'escouade de `previewConfigs.ts`. La passe complète (21 niveaux x 10 combats) prend environ 11 secondes.
 - L'aléatoire est rendu reproductible en remplaçant `Math.random` dans le processus de l'outil uniquement. Le jeu n'est pas modifié.
 - Cibles pour un nouveau niveau : 50 à 85 % de victoires en « auto » ; chaque phase de boss assez longue pour qu'il y lance au moins une attaque télégraphiée (colonne « ≥ 1 attaque » à 100 %).
-- Les 12 niveaux historiques (Prairie -> Sanctuaire) ne se rééquilibrent pas : un test vérifie leur signature (puissance, XP, Pierres, boss, niveaux et IA des vagues). Changer l'ESPÈCE d'un ennemi y reste possible, mais remesurer : sur le tout premier niveau, un seul échange faisait passer l'Auto de 20 % à 100 %.
+- Les 21 niveaux ont une entrée `STAGE_TUNING` (S03 : réglage a minima des 12 premiers ; vrai réglage en S05). Un test borne les multiplicateurs (PV ennemis 0,5–12, attaque 0,2–1,5, PV du boss 0,5–25) et garde la signature du contenu des 12 premiers niveaux (puissance, XP, Galets, boss, niveaux et IA des vagues). Changer l'ESPÈCE d'un ennemi reste possible, mais remesurer : sur le tout premier niveau, un seul échange faisait passer l'Auto de 20 % à 100 %.
 - Kits de boss : `BOSS_KITS` (balance.ts) décrit la rotation des 6 attaques existantes et leur habillage. Un nouveau kit se compose là, sans toucher au moteur.
 - « Auto Total » n'utilise jamais l'Esquive : un joueur qui esquive fait mieux que le tableau. Le profil « joueur actif » est un script simple, pas un vrai joueur.
 
@@ -162,6 +164,7 @@ npm run sim -- --reactions 0                   # réactions élémentaires coup�
 - Changer de scène : `loadCampScene` et `startExpedition` doivent remettre à zéro tout état d'animation (entrée de boss, évolution, télégraphes). Tout nouvel état transitoire doit y être réinitialisé, et couvert dans `engine.test.ts`.
 - Les modules de `engine/` s'importent les uns les autres en cercle : c'est sans danger tant qu'ils n'exécutent rien au chargement. Ne pas y ajouter de code de premier niveau qui appelle un autre module.
 - Le sac de Pierres est limité à 48 : passer par `addPowerStoneToBag`, qui ne retire jamais une pierre équipée.
+- **Site statique** : `vite build` produit un site complet, sans serveur. `base` vient de `BASE_PATH` (défaut `/`) : aucun chemin absolu commençant par `/` dans le code (utiliser `import.meta.env.BASE_URL`). Les clés de `localStorage` passent par `withSaveSlot` (`src/game/saveSlot.ts`) : la version `next/` (`VITE_SAVE_SLOT=next`) partage le domaine de la version validée mais pas sa sauvegarde. L'onglet du Professeur n'existe que si `VITE_AI_CODEX=1` ; sinon le jeu n'appelle jamais `/api`. Le titre de `index.html` est injecté au build depuis `fr.ts` (repère `%GAME_FULL_TITLE%`).
 - `catalog.ts` importe `balance.ts` : `balance.ts` ne doit rien importer du catalogue. `i18n/fr.ts` n'importe rien.
 - Deux fichiers de verrouillage coexistent : `package-lock.json` (npm, à jour, utilisé par la CI) et `bun.lock` (hérité, pas régénéré faute de `bun` sur la machine de développement).
 - Sous Windows / Git Bash : ne jamais passer du code contenant des backticks à `node -e "..."` (le shell les exécute). Écrire un fichier de script à la place.

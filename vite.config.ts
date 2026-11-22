@@ -8,6 +8,8 @@ import {GAME_FULL_TITLE} from './src/i18n/fr';
 
 export default defineConfig(() => {
   return {
+    // Sous-dossier de publication (GitHub Pages : /CUBIQUEST/ ou /CUBIQUEST/next/), fixé par tools/deploy.mjs.
+    base: process.env.BASE_PATH || '/',
     plugins: [
       react(),
       tailwindcss(),

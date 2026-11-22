@@ -44,13 +44,14 @@ import type {
 } from './types';
 import { FR } from '../i18n/fr';
 import { LEGACY_RECIPE_IDS, LEGACY_RUNE_IDS } from './legacyIds';
+import { withSaveSlot } from './saveSlot';
 
-export const SAVE_STORAGE_KEY = 'cubiquest_save_v2';
+export const SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v2');
 /** Copie brute d'une sauvegarde stockée mais illisible (JSON cassé, version inconnue) : jamais écrasée en silence. */
-export const SAVE_BACKUP_STORAGE_KEY = 'cubiquest_save_unreadable_backup';
+export const SAVE_BACKUP_STORAGE_KEY = withSaveSlot('cubiquest_save_unreadable_backup');
 /** Taille maximale du sac de Pierres de Pouvoir (les pierres équipées ne comptent jamais parmi celles qu'on retire). */
 export const POWER_STONE_BAG_LIMIT = 48;
-export const LEGACY_SAVE_STORAGE_KEY = 'cubiquest_save_v1';
+export const LEGACY_SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v1');
 // v3 (Giga Update) : sac de runes étendu (rune_precision, rune_vigueur) + stats frontierWins/frontierDishes.
 // v4 (S03) : identifiants renommés (runes, recettes) ; `moveStoneBag` devient `runeBag`, `moveStones` devient `runes`.
 // La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 4.

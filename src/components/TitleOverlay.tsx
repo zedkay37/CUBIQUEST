@@ -52,6 +52,11 @@ export function TitleOverlay({
         <p className="text-xs sm:text-sm font-medium text-[#FAF7F0] hud-text-stroke tracking-wide text-center">
           {FR.ui.titleOverlay.t123SortsEspaceEsquive}
         </p>
+        {import.meta.env.VITE_TEST_BRANCH && (
+          <p className="text-[10px] font-mono-num text-[#B8C2D1] hud-text-stroke tracking-wide">
+            {FR.ui.titleOverlay.versionEnTest(import.meta.env.VITE_TEST_BRANCH)}
+          </p>
+        )}
       </div>
     </div>
   );

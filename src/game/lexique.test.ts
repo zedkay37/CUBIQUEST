@@ -34,7 +34,9 @@ test('Lexique: le titre, le monde et le nom des créatures ne sont écrits qu’
     if (file === 'src/i18n/fr.ts' || file in EXEMPT_FILES) continue;
     fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach((line, i) => {
       // Seule exception : les clés de stockage, qui ne changent jamais (sinon les sauvegardes seraient perdues)
-      if (line.includes('_STORAGE_KEY')) return;
+      if (line.includes('_STORAGE_KEY') || line.includes('withSaveSlot(')) return;
+      // Autre exception : l'adresse du dépôt et de sa page GitHub (…/CUBIQUEST/), qui ne suit pas le titre
+      if (/\/CUBIQUEST\/|zedkay37|cubiquest-pages-/.test(line)) return;
       const text = normalizeText(line);
       for (const name of names) if (text.includes(name)) found.push(`${file}:${i + 1} : « ${name} »`);
     });
