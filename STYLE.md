@@ -195,3 +195,14 @@ Les sections 1 à 6 décrivent l'état du jeu AVANT ces ajouts ; elles restent l
 
 - 7e biome : **Canyon d'Ambre** (Roche) — ciel chaud, sol ocre, cheminées de fée, mesas à strates, arches, cristaux d'ambre, côtes fossiles ; sable porté par le vent. Kit de boss `amber` = Anneau + Aspiration + attaques communes, habillés en roche, statut Brise-Armure.
 - Les plages chiffrées de STYLE.md existent aussi sous forme vérifiable dans `src/game/styleGuide.ts`.
+
+## Interface (sprint UI)
+
+Direction « jouet voxel » : l'interface est faite de blocs, comme les créatures. Jetons : `UI_TOKENS` (`src/game/styleGuide.ts`), mêmes valeurs en variables CSS `--ui-*` (`src/index.css`) ; un test vérifie qu'ils restent identiques. Composants : `src/components/ui/` (démonstration `?gallery=ui`).
+
+- **Panneaux** (`.voxel-panel`, `BlockPanel`) : coins à peine adoucis (6 px), liseré clair en haut, tranche sombre de 5 px en bas pour l'épaisseur, ombre portée nette de 6 px, jamais floue.
+- **Boutons** (`.voxel-btn`, `BlockButton`) : ils s'enfoncent au clic (la tranche disparaît, le bouton descend de 3 px) et montent de 1 px au survol sur bureau. Variantes : principal (corail), secondaire (ardoise), danger, doré ; désactivé grisé. 44 px de haut au moins sur mobile.
+- **Couleur des éléments** : en accent seulement (liseré de carte, bordure de badge, icône), jamais comme couleur de texte sur fond clair.
+- **Textes** : contraste d'au moins 4,5 pour 1 (couples listés dans `UI_TEXT_PAIRS`, test). Titres Bricolage Grotesque, texte Plus Jakarta Sans, chiffres JetBrains Mono.
+- **Mouvement** : rapide 120 ms, normal 220 ms, lent 400 ms ; courbe de sortie douce, rebond pour les fenêtres. Listes en cascade (30 ms, 12 éléments au plus). Avec `prefers-reduced-motion`, tout devient un simple fondu. Aucune animation d'interface n'est liée à la boucle de jeu.
+- **Moments forts** (arrivée d'une créature, évolution, montée de niveau, victoire, défaite, déblocage) : composants de `src/components/ui/moments.tsx`, qu'on passe d'un clic ou d'une touche.

@@ -20,6 +20,7 @@ const EXCEPTIONS: Record<string, string> = {
   'src/components/CodexDrawer.tsx': 'Codex : consigne permanente « ne pas modifier le Codex »',
   'src/components/GalleryPage.tsx': 'outil de développement (?gallery=1), jamais vu par le joueur',
   'src/components/DebugOverlay.tsx': 'outil de développement (?debug=1), jamais vu par le joueur',
+  'src/components/ui/UiGallery.tsx': 'outil de développement (?gallery=ui), jamais vu par le joueur',
 };
 
 const SKIP_ATTRS = new Set([
@@ -42,6 +43,15 @@ function looksVisible(s: string): boolean {
   if (/^#[0-9A-Fa-f]{3,8}$/.test(s)) return false; // couleur
   if (/^[a-z]+([A-Z][a-z0-9]+)+$/.test(s)) return false; // identifiant camelCase
   if (/^[A-Z][A-Z0-9_]*$/.test(s) && s.length <= 6 && /^(GET|POST|PUT|INPUT|TEXTAREA)$/.test(s)) return false;
+  // liste de classes CSS (Tailwind) : jetons sans accent ni majuscule, dont au moins un « technique » (- : [ ])
+  const tokens = s.replace(/\$\{…\}/g, '').trim().split(/\s+/).filter(Boolean);
+  if (
+    tokens.length > 0 &&
+    tokens.every((t) => /^[a-z0-9:\-[\]#/.%()_!,]+$/i.test(t) && !/[A-Z]/.test(t.replace(/\[[^\]]*\]/g, ''))) &&
+    tokens.some((t) => /[-:[]/.test(t))
+  ) {
+    return false;
+  }
   return /[A-ZÀ-ÖØ-Þ]/.test(s) || /[à-öø-ÿœ]/.test(s) || /[!?…«»’]/.test(s) || /\p{L} \p{L}/u.test(s);
 }
 
@@ -117,7 +127,7 @@ const list = (dir: string, ext: string): string[] =>
   fs.existsSync(dir)
     ? fs.readdirSync(dir).filter((f) => f.endsWith(ext) && !f.endsWith('.test.ts')).map((f) => `${dir}/${f}`)
     : [];
-const files = ['src/App.tsx', ...list('src/components', '.tsx')];
+const files = ['src/App.tsx', ...list('src/components', '.tsx'), ...list('src/components/ui', '.tsx')];
 if (args.includes('--all')) files.push(...list('src/game', '.ts'), ...list('src/game/engine', '.ts'), ...list('src/game/models', '.ts'));
 
 let remaining = 0;

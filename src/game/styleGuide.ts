@@ -7,6 +7,63 @@
 import { MOVES, SPECIES } from './catalog';
 import type { CreatureRole, MoveStyle, SpeciesDef } from './types';
 
+/**
+ * JETONS DE L'INTERFACE (sprint UI, direction « jouet voxel »). Les mêmes valeurs existent en variables CSS
+ * dans `src/index.css` (`--ui-…`) ; un test vérifie qu'elles restent identiques, et que chaque couleur de
+ * texte garde un contraste d'au moins 4,5 pour 1 sur les fonds où elle est posée.
+ */
+export const UI_TOKENS = {
+  color: {
+    bg: '#141925',
+    panel: '#1E2636',
+    panelEdge: '#0B0F18',
+    panelLine: '#3A4660',
+    text: '#FAF7F0',
+    textMuted: '#B8C2D1',
+    accent: '#F4B942',
+    primary: '#E85D3F',
+    primaryEdge: '#9E3520',
+    primaryText: '#1A0E08',
+    secondary: '#2B3548',
+    secondaryEdge: '#141A26',
+    danger: '#E5383B',
+    success: '#2FB97A',
+  },
+  /** Rayon des blocs (coins à peine adoucis), épaisseur de la tranche, ombre portée nette. */
+  radius: 6,
+  edge: 5,
+  shadowDrop: 6,
+  /** Échelle d'espacement : multiples de 4 px. */
+  space: [4, 8, 12, 16, 24, 32],
+  fontSize: { small: 12, body: 14, title: 20, hero: 32 },
+  /** Durées d'animation en millisecondes, et courbes. */
+  duration: { fast: 120, normal: 220, slow: 400 },
+  ease: { out: 'cubic-bezier(0.16, 1, 0.3, 1)', bounce: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
+} as const;
+
+/** Couples texte / fond utilisés par l'interface : contraste d'au moins 4,5 pour 1 (test). */
+export const UI_TEXT_PAIRS: [string, string][] = [
+  [UI_TOKENS.color.text, UI_TOKENS.color.panel],
+  [UI_TOKENS.color.text, UI_TOKENS.color.bg],
+  [UI_TOKENS.color.textMuted, UI_TOKENS.color.panel],
+  [UI_TOKENS.color.textMuted, UI_TOKENS.color.bg],
+  [UI_TOKENS.color.accent, UI_TOKENS.color.panel],
+  [UI_TOKENS.color.text, UI_TOKENS.color.secondary],
+  [UI_TOKENS.color.primaryText, UI_TOKENS.color.primary],
+  [UI_TOKENS.color.primaryText, UI_TOKENS.color.accent],
+  [UI_TOKENS.color.success, UI_TOKENS.color.panel],
+];
+
+/** Rapport de contraste WCAG entre deux couleurs « #RRGGBB ». */
+export function contrastRatio(a: string, b: string): number {
+  const lum = (hex: string): number => {
+    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (l1 + 0.05) / (l2 + 0.05);
+}
+
 /** La seule couleur des zones de danger (S05.2, plan 5.3). Les kits de boss ne colorent que les particules. */
 export const DANGER = '#E5383B';
 

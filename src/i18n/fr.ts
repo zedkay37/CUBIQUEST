@@ -29,6 +29,13 @@ export const GAME_FULL_TITLE = `${GAME_TITLE} : L’${WORLD_NAME_BARE}`;
 
 export const FR = {
   ui: {
+    /** Bibliothèque de composants (src/components/ui). */
+    components: {
+      niv: (a: string | number) => `Niv. ${a}`,
+      pv: "Points de vie",
+      xp: "Expérience",
+      nouveau: "Nouveau",
+    },
     /** Mot du Déchaînement selon l'élément du meneur (bouton, écran d'équipe). */
     ultimateWords: {
       fire: 'Explosion',

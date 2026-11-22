@@ -1,6 +1,29 @@
 @import "tailwindcss";
 
 :root {
+  /* Jetons de l'interface « jouet voxel » : mêmes valeurs que UI_TOKENS (styleGuide.ts, test dédié) */
+  --ui-bg: #141925;
+  --ui-panel: #1e2636;
+  --ui-panel-edge: #0b0f18;
+  --ui-panel-line: #3a4660;
+  --ui-text: #faf7f0;
+  --ui-text-muted: #b8c2d1;
+  --ui-accent: #f4b942;
+  --ui-primary: #e85d3f;
+  --ui-primary-edge: #9e3520;
+  --ui-primary-text: #1a0e08;
+  --ui-secondary: #2b3548;
+  --ui-secondary-edge: #141a26;
+  --ui-danger: #e5383b;
+  --ui-success: #2fb97a;
+  --ui-radius: 6px;
+  --ui-edge: 5px;
+  --ui-shadow-drop: 6px;
+  --ui-fast: 120ms;
+  --ui-normal: 220ms;
+  --ui-slow: 400ms;
+  --ui-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ui-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   --bg-parchment: #f4efe6;
   --surface-slate: rgba(24, 30, 42, 0.92);
   --surface-slate-solid: #181e2a;
@@ -42,15 +65,34 @@
     0 0 8px rgba(14, 18, 28, 0.55);
 }
 
+/*
+ * Direction « jouet voxel » : chaque panneau est un bloc. Coins à peine adoucis, liseré clair en haut,
+ * tranche plus sombre en bas (l'épaisseur), ombre portée nette sans flou.
+ * Ces règles hors couche l'emportent sur les arrondis Tailwind : tous les panneaux ont la même forme.
+ */
 .voxel-panel {
-  background: var(--surface-slate);
-  border: 2px solid var(--border-slate);
-  box-shadow: 0 10px 28px rgba(10, 14, 24, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--ui-panel) 96%, transparent);
+  border: 2px solid var(--ui-panel-line);
+  border-radius: var(--ui-radius);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.07),
+    inset 0 calc(var(--ui-edge) * -1) 0 var(--ui-panel-edge),
+    0 var(--ui-shadow-drop) 0 rgba(6, 8, 14, 0.55);
 }
 
+/* Les boutons s'enfoncent : la tranche du bas disparaît et le bouton descend de 3 px */
 .voxel-btn {
-  box-shadow: 0 3px 0 rgba(10, 14, 24, 0.55);
-  transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 140ms ease, border-color 140ms ease;
+  border-radius: var(--ui-radius);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.28),
+    0 4px 0 rgba(6, 8, 14, 0.6);
+  transition:
+    transform var(--ui-fast) var(--ui-ease-out),
+    box-shadow var(--ui-fast) var(--ui-ease-out),
+    background-color 140ms ease,
+    border-color 140ms ease,
+    filter 140ms ease;
 }
 
 /* === Giga Update : transitions d'UI === */
@@ -148,14 +190,16 @@
   }
 }
 
-/* Retours visuels communs : survol, focus clavier, état désactivé */
-.voxel-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 0 rgba(10, 14, 24, 0.55);
+/* Retours visuels communs : survol (bureau seulement), focus clavier, état désactivé */
+@media (hover: hover) {
+  .voxel-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+  }
 }
 
 .voxel-btn:disabled {
-  box-shadow: none;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
 }
 
 button:focus-visible,
@@ -167,8 +211,70 @@ textarea:focus-visible {
 }
 
 .voxel-btn:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 rgba(10, 14, 24, 0.55);
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    0 1px 0 rgba(6, 8, 14, 0.6);
+}
+
+/* Variantes de BlockButton */
+.block-btn-primary {
+  background: var(--ui-primary);
+  color: var(--ui-primary-text);
+  border: 2px solid var(--ui-primary-edge);
+}
+.block-btn-secondary {
+  background: var(--ui-secondary);
+  color: var(--ui-text);
+  border: 2px solid var(--ui-panel-line);
+}
+.block-btn-danger {
+  background: var(--ui-danger);
+  color: var(--ui-primary-text);
+  border: 2px solid #8f1d20;
+}
+.block-btn-gold {
+  background: var(--ui-accent);
+  color: var(--ui-primary-text);
+  border: 2px solid #a87412;
+}
+.voxel-btn:disabled.block-btn-primary,
+.voxel-btn:disabled.block-btn-secondary,
+.voxel-btn:disabled.block-btn-danger,
+.voxel-btn:disabled.block-btn-gold {
+  background: #1a2130;
+  color: #94a3b8;
+  border-color: #2b3548;
+  cursor: not-allowed;
+}
+
+/* Pastille « Nouveau » : pulsation douce, jamais de clignotement */
+@keyframes ui-soft-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.85;
+  }
+}
+.ui-new-badge {
+  animation: ui-soft-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voxel-btn,
+  .voxel-btn:hover:not(:disabled),
+  .voxel-btn:active:not(:disabled) {
+    transform: none !important;
+    transition: background-color 140ms ease;
+  }
+  .ui-new-badge {
+    animation: none;
+  }
 }
 
 /* Custom subtle scrollbars for drawers */
