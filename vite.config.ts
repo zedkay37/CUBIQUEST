@@ -28,6 +28,22 @@ export default defineConfig(() => {
         },
       },
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          // three.js et les bibliothèques d'interface changent rarement : rangées dans leurs propres
+          // fichiers, le navigateur les garde en cache quand seul le code du jeu change, et les
+          // télécharge en parallèle du reste.
+          manualChunks(id: string): string | undefined {
+            if (/[\\/]node_modules[\\/]three[\\/]/.test(id)) return 'three';
+            if (/[\\/]node_modules[\\/](react|react-dom|scheduler|motion|motion-dom|motion-utils|framer-motion|lucide-react)[\\/]/.test(id)) {
+              return 'interface';
+            }
+            return undefined;
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
