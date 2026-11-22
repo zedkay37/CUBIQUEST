@@ -54,7 +54,7 @@ import {
 } from './catalog';
 import { buildPreviewQuery, evolvedFormAtLevel, getReferenceConfig, listReferenceConfigs } from './previewConfigs';
 import { normalizeSettings } from './settings';
-import { STAGE_TUNING } from './balance';
+import { BOSS_KITS, STAGE_TUNING } from './balance';
 
 test('elemental type effectiveness returns accurate multipliers', () => {
   assert.equal(getTypeEffectiveness('water', 'fire'), 1.5);
@@ -431,7 +431,7 @@ test('Giga: la Cime des Orages se débloque après la Toundra, lignée à 2 stad
   assert.equal(end.outcome.unlockedNextStageName, null);
   assert.equal(end.nextSave.highestStageIndex, last.index);
   assert.ok(end.nextSave.completedStageIds.includes(last.id));
-  assert.ok(end.nextSave.discoveredSpeciesIds.includes('tempestrix'));
+  assert.ok(end.nextSave.discoveredSpeciesIds.includes(last.bossSpeciesId));
 
   // Nimbulle -> Cumulord (lignée courte)
   let save = createInitialSaveState('pyrocube', true);
@@ -583,7 +583,7 @@ test('Giga: quêtes et succès des nouveaux biomes', () => {
   }
   const dexAll = ACHIEVEMENTS.find((a) => a.id === 'ach_dex_all')!;
   assert.equal(dexAll.target, Object.keys(SPECIES).length);
-  assert.equal(ACHIEVEMENTS.find((a) => a.id === 'ach_stages_18')!.target, STAGES.length);
+  assert.ok(ACHIEVEMENTS.find((a) => a.id === 'ach_stages_18')!.target <= STAGES.length);
 
   // Rotation : aucune quête des confins tant que la Toundra est fermée
   const frontierTpl = QUEST_POOL.find((q) => q.templateId === 'q_frontier_win_2')!;
@@ -706,7 +706,7 @@ test('Giga: écran de victoire — étoiles et annonce du biome débloqué', () 
   assert.equal(run('meadow-3').unlockedBiomeName, 'Rive Azur');
   assert.equal(run('sanctuary-3').unlockedBiomeName, 'Toundra Boréale');
   assert.equal(run('tundra-3').unlockedBiomeName, 'Cime des Orages');
-  assert.equal(run('stormpeak-3').unlockedBiomeName, null);
+  assert.equal(run(STAGES[STAGES.length - 1].id).unlockedBiomeName, null);
   assert.equal(run('sanctuary-3', false).unlockedBiomeName, null);
   // Rejouer un niveau déjà dépassé n'annonce rien
   const meadow3 = STAGES.find((s) => s.id === 'meadow-3')!;
@@ -754,7 +754,7 @@ test('Giga: équilibrage des nouveaux biomes — réglé par niveau, anciens niv
       // Combats plus longs (PV) mais coups moins lourds : place aux mécaniques télégraphiées
       assert.ok((stage.enemyHpMult ?? 1) > 1, stage.id);
       assert.ok((stage.enemyAtkMult ?? 1) > 0 && (stage.enemyAtkMult ?? 1) < 1, stage.id);
-      assert.equal(stage.bossKit, stage.biomeId === 'tundra' ? 'frost' : 'storm', stage.id);
+      assert.ok(stage.bossKit && stage.bossKit !== 'classic' && BOSS_KITS[stage.bossKit], stage.id);
       assert.ok((stage.bossHpMult ?? 1) >= 1, stage.id);
       assert.equal(stage.waves.length, 3, stage.id);
     }

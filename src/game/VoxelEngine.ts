@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { soundFx } from './audio';
-import { FROST_KIT, STORM_KIT } from './balance';
+import {
+  BOSS_KITS,
+  DEFAULT_EYE_THEME,
+  DEFAULT_RING_THEME,
+  DEFAULT_STRIKE_THEME,
+  FROST_KIT,
+  STORM_KIT,
+} from './balance';
 import { BIOMES, MOVES, RECIPE_BY_ID, SPECIES, STATUS_META } from './catalog';
 import {
   calculateDamage,
@@ -2708,20 +2715,8 @@ export class VoxelEngine {
           enemy.hasAttackToken = true;
           activeTokens += 1;
           // Rotation des attaques selon le kit du boss (données : StageDef.bossKit)
-          const kit = this.activeStage.bossKit ?? 'classic';
-          const cycle =
-            kit === 'frost'
-              ? phase === 1
-                ? [3, 0]
-                : [3, 1, 0, 2]
-              : kit === 'storm'
-                ? phase === 1
-                  ? [4, 0]
-                  : [4, 5, 1, 0]
-                : phase === 1
-                  ? [0]
-                  : [0, 1, 2];
-          const pattern = cycle[enemy.bossPatternIndex % cycle.length];
+          const kitDef = BOSS_KITS[this.activeStage.bossKit ?? 'classic'];
+          const cycle = kitDef.cycle[phase === 1 ? 0 : 1];          const pattern = cycle[enemy.bossPatternIndex % cycle.length];
           this.telemetry.castsByPhase[phase - 1] += 1;
           if (!this.telemetry.patternsByPhase[phase - 1].includes(pattern)) {
             this.telemetry.patternsByPhase[phase - 1].push(pattern);
@@ -2846,15 +2841,20 @@ export class VoxelEngine {
               });
             }
           } else if (pattern === 3) {
-            // Kit GIVRE — Anneau de Givre : couronne glacée autour du boss.
+            // Anneau (kit Givre à l'origine) : couronne autour du boss, habillée par le thème du kit.
             // Zone sûre = au contact du boss. En phase 2+, un contrecoup central oblige à ressortir.
+            const ringTheme = kitDef.ring ?? DEFAULT_RING_THEME;
+            const ringSound = (): void => {
+              if (ringTheme.sound === 'frost') soundFx.playFrostCrack();
+              else soundFx.playHit(true, false);
+            };
             const inner = FROST_KIT.safeRadius;
             const outer = FROST_KIT.ringRadius[phase - 1];
             const windup = FROST_KIT.ringWindup[phase - 1];
             const bx = enemy.x;
             const bz = enemy.z;
             const hasFollowUp = phase >= 2;
-            this.bannerText = 'Anneau de Givre — collez-vous au boss !';
+            this.bannerText = ringTheme.label;
             this.bannerTimer = 1.4;
             this.spawnEnemyTelegraph(
               bx,
@@ -2871,19 +2871,20 @@ export class VoxelEngine {
                   enemy.skillCooldown = cooldownAfter;
                 }
                 if (enemy.fainted || enemy.removed) return;
-                soundFx.playFrostCrack();
-                this.spawnShockwaveRing(bx, bz, outer, '#7DD3FC');
-                this.spawnElementBurst(bx, 0.6, bz, 'water', 26, 1.7);
+                ringSound();
+                this.spawnShockwaveRing(bx, bz, outer, ringTheme.burstColor);
+                this.spawnElementBurst(bx, 0.6, bz, ringTheme.fx, 26, 1.7);
                 this.trauma = Math.min(1, this.trauma + 0.4);
                 for (const ally of this.allies) {
                   if (ally.fainted) continue;
                   const d = Math.hypot(ally.x - bx, ally.z - bz);
                   if (d >= inner && d <= outer + 0.4) {
                     const exposed = ally.invulnTimer <= 0;
-                    this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.ringDamage), enemy, true, false, '#7DD3FC');
+                    this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.ringDamage), enemy, true, false, ringTheme.burstColor);
                     if (exposed && !ally.fainted) {
-                      this.applyStatusToActor(ally, 'soaked', enemy.atk);
-                      if (phase >= 2) this.applyStatusToActor(ally, 'rooted', enemy.atk);
+                      for (const status of ringTheme.statuses[phase === 1 ? 0 : 1]) {
+                        this.applyStatusToActor(ally, status, enemy.atk);
+                      }
                     }
                   }
                 }
@@ -2903,8 +2904,8 @@ export class VoxelEngine {
                       enemy.hasAttackToken = false;
                       enemy.skillCooldown = cooldownAfter;
                       if (enemy.fainted || enemy.removed) return;
-                      soundFx.playFrostCrack();
-                      this.spawnShockwaveRing(bx, bz, inner + FROST_KIT.aftershockMargin, '#E0F2FE');
+                      ringSound();
+                      this.spawnShockwaveRing(bx, bz, inner + FROST_KIT.aftershockMargin, ringTheme.aftershockColor);
                       this.spawnElementBurst(bx, 0.6, bz, 'rock', 16, 1.3);
                       this.trauma = Math.min(1, this.trauma + 0.3);
                       for (const ally of this.allies) {
@@ -2912,11 +2913,11 @@ export class VoxelEngine {
                           !ally.fainted &&
                           Math.hypot(ally.x - bx, ally.z - bz) <= inner + FROST_KIT.aftershockMargin + 0.4
                         ) {
-                          this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.aftershockDamage), enemy, true, false, '#E0F2FE');
+                          this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.aftershockDamage), enemy, true, false, ringTheme.aftershockColor);
                         }
                       }
                       if (phase === 3) {
-                        // Phase 3 : éclats de glace en étoile
+                        // Phase 3 : éclats en étoile
                         for (let k = 0; k < FROST_KIT.shardCount; k++) {
                           const shardAng = (k / FROST_KIT.shardCount) * Math.PI * 2 + 0.3;
                           this.spawnProjectile({
@@ -2929,7 +2930,7 @@ export class VoxelEngine {
                             life: 1.7,
                             fromAlly: false,
                             damage: Math.round(enemy.atk * FROST_KIT.shardDamage),
-                            elementColor: '#A5F3FC',
+                            elementColor: ringTheme.shardColor,
                             aoeRadius: 1.1,
                             isCrit: false,
                             casterUnit: enemy,
@@ -2937,15 +2938,16 @@ export class VoxelEngine {
                         }
                       }
                     },
-                    { color: '#0284C7' },
+                    { color: ringTheme.telegraphColor },
                   );
                 }
               },
-              { innerRadius: inner, color: '#0284C7' }, // bleu soutenu : lisible sur la neige
+              { innerRadius: inner, color: ringTheme.telegraphColor },
             );
           } else if (pattern === 4) {
-            // Kit ORAGE — Foudre en Rafale : la foudre « marche » du boss vers sa cible.
+            // Rafale en ligne (kit Orage à l'origine) : les impacts « marchent » du boss vers sa cible.
             // On l'évite en sortant de la ligne.
+            const strikeTheme = kitDef.strike ?? DEFAULT_STRIKE_THEME;
             const dirX = dx / dist;
             const dirZ = dz / dist;
             const strikes = STORM_KIT.strikeCount[phase - 1];
@@ -2954,7 +2956,7 @@ export class VoxelEngine {
             const bz = enemy.z;
             // Les cercles se chevauchent : chaque allié n'encaisse qu'UN impact par rafale
             const struck = new Set<string>();
-            this.bannerText = 'Foudre en Rafale — sortez de la ligne !';
+            this.bannerText = strikeTheme.label;
             this.bannerTimer = 1.4;
             soundFx.playTelegraph();
             for (let k = 0; k < strikes; k++) {
@@ -2976,9 +2978,13 @@ export class VoxelEngine {
                     enemy.skillCooldown = cooldownAfter;
                   }
                   if (enemy.fainted || enemy.removed) return;
-                  this.spawnBolt(sx, sz);
-                  if (k % 3 === 0) soundFx.playThunder();
-                  this.spawnElementBurst(sx, 0.5, sz, 'electric', 10, 1.2);
+                  if (strikeTheme.lightning) {
+                    this.spawnBolt(sx, sz);
+                    if (k % 3 === 0) soundFx.playThunder();
+                  } else if (k % 3 === 0) {
+                    soundFx.playHit(true, false);
+                  }
+                  this.spawnElementBurst(sx, 0.5, sz, strikeTheme.fx, 10, 1.2);
                   this.trauma = Math.min(1, this.trauma + 0.14);
                   for (const ally of this.allies) {
                     if (
@@ -2988,23 +2994,24 @@ export class VoxelEngine {
                     ) {
                       const exposed = ally.invulnTimer <= 0;
                       if (exposed) struck.add(ally.id);
-                      this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.strikeDamage), enemy, true, false, '#FACC15');
-                      if (exposed && !ally.fainted) this.applyStatusToActor(ally, 'shocked', enemy.atk);
+                      this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.strikeDamage), enemy, true, false, strikeTheme.color);
+                      if (exposed && !ally.fainted) this.applyStatusToActor(ally, strikeTheme.status, enemy.atk);
                     }
                   }
                 },
-                { color: '#FACC15', silent: true },
+                { color: strikeTheme.color, silent: true },
               );
             }
           } else {
-            // Kit ORAGE — Œil du Cyclone : le vent aspire l'escouade vers le boss, puis tout détone.
+            // Aspiration puis détonation (kit Orage à l'origine) : l'escouade est tirée vers le boss.
             // Réponse attendue : Dispersion (qui annule l'aspiration) pour sortir du cercle.
+            const eyeTheme = kitDef.eye ?? DEFAULT_EYE_THEME;
             const eyeRad = STORM_KIT.eyeRadius[phase - 1];
             const windup = STORM_KIT.eyeWindup[phase - 1];
             const bx = enemy.x;
             const bz = enemy.z;
             enemy.pullTimer = windup;
-            this.bannerText = 'Œil du Cyclone — Dispersion pour fuir le centre !';
+            this.bannerText = eyeTheme.label;
             this.bannerTimer = 1.5;
             this.spawnEnemyTelegraph(
               bx,
@@ -3020,20 +3027,24 @@ export class VoxelEngine {
                 enemy.skillCooldown = cooldownAfter;
                 enemy.pullTimer = 0;
                 if (enemy.fainted || enemy.removed) return;
-                this.spawnBolt(bx, bz, 14);
-                soundFx.playThunder();
-                this.spawnShockwaveRing(bx, bz, eyeRad, '#FACC15');
-                this.spawnElementBurst(bx, 0.8, bz, 'electric', 30, 1.5);
+                if (eyeTheme.lightning) {
+                  this.spawnBolt(bx, bz, 14);
+                  soundFx.playThunder();
+                } else {
+                  soundFx.playHit(true, false);
+                }
+                this.spawnShockwaveRing(bx, bz, eyeRad, eyeTheme.color);
+                this.spawnElementBurst(bx, 0.8, bz, eyeTheme.fx, 30, 1.5);
                 this.trauma = Math.min(1, this.trauma + 0.5);
                 for (const ally of this.allies) {
                   if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= eyeRad + 0.4) {
                     const exposed = ally.invulnTimer <= 0;
-                    this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.eyeDamage), enemy, true, false, '#FACC15');
-                    if (exposed && !ally.fainted) this.applyStatusToActor(ally, 'shocked', enemy.atk);
+                    this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.eyeDamage), enemy, true, false, eyeTheme.color);
+                    if (exposed && !ally.fainted) this.applyStatusToActor(ally, eyeTheme.status, enemy.atk);
                   }
                 }
               },
-              { color: '#FACC15' },
+              { color: eyeTheme.color },
             );
           }
         } else if (dist > 3.1) {

@@ -11,6 +11,7 @@
  *
  * Ce fichier ne doit rien importer du catalogue (le catalogue l'importe).
  */
+import type { BossKit, ElementType, StatusKind } from './types';
 
 export interface StageTuning {
   /** Multiplie les PV de tous les ennemis du niveau (boss compris). */
@@ -78,6 +79,76 @@ export const FROST_KIT = {
   shardCount: 6,
   shardDamage: 0.85,
 } as const;
+
+/**
+ * COMPOSITION DES KITS DE BOSS
+ *
+ * Six attaques télégraphiées existent dans le moteur, numérotées :
+ *   0 Frappe circulaire · 1 Double charge en croix · 2 Pluie de météores (communes)
+ *   3 Anneau (zone sûre au contact) + Contrecoup · 4 Rafale en ligne · 5 Aspiration puis détonation
+ *
+ * Un kit ne crée pas d'attaque : il choisit lesquelles enchaîner (`cycle`) et comment les HABILLER
+ * (`theme` : texte de la consigne, couleurs, élément des particules, statut existant infligé).
+ * Les chiffres (rayons, délais, dégâts) restent ceux de FROST_KIT et STORM_KIT.
+ */
+export interface RingTheme {
+  label: string;
+  telegraphColor: string;
+  burstColor: string;
+  aftershockColor: string;
+  shardColor: string;
+  fx: ElementType;
+  /** Statuts infligés par l'anneau : [en phase 1, en phases 2 et 3]. */
+  statuses: [StatusKind[], StatusKind[]];
+  sound: 'frost' | 'impact';
+}
+export interface StrikeTheme {
+  label: string;
+  color: string;
+  fx: ElementType;
+  status: StatusKind;
+  /** true : éclair voxel + tonnerre à chaque impact. */
+  lightning: boolean;
+}
+
+export const DEFAULT_RING_THEME: RingTheme = {
+  label: 'Anneau de Givre — collez-vous au boss !',
+  telegraphColor: '#0284C7', // bleu soutenu : lisible sur la neige
+  burstColor: '#7DD3FC',
+  aftershockColor: '#E0F2FE',
+  shardColor: '#A5F3FC',
+  fx: 'water',
+  statuses: [['soaked'], ['soaked', 'rooted']],
+  sound: 'frost',
+};
+export const DEFAULT_STRIKE_THEME: StrikeTheme = {
+  label: 'Foudre en Rafale — sortez de la ligne !',
+  color: '#FACC15',
+  fx: 'electric',
+  status: 'shocked',
+  lightning: true,
+};
+export const DEFAULT_EYE_THEME: StrikeTheme = {
+  label: 'Œil du Cyclone — Dispersion pour fuir le centre !',
+  color: '#FACC15',
+  fx: 'electric',
+  status: 'shocked',
+  lightning: true,
+};
+
+export interface BossKitDef {
+  /** Rotation des attaques : [en phase 1, en phases 2 et 3]. */
+  cycle: [number[], number[]];
+  ring?: RingTheme;
+  strike?: StrikeTheme;
+  eye?: StrikeTheme;
+}
+
+export const BOSS_KITS: Record<BossKit, BossKitDef> = {
+  classic: { cycle: [[0], [0, 1, 2]] },
+  frost: { cycle: [[3, 0], [3, 1, 0, 2]] },
+  storm: { cycle: [[4, 0], [4, 5, 1, 0]] },
+};
 
 /** Kit de boss « Orage » (StageDef.bossKit = 'storm'). Même convention que FROST_KIT. */
 export const STORM_KIT = {
