@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { soundFx } from '../audio';
 import { MOVES } from '../catalog';
-import { ULTIMATE_CHARGE, ULTIMATE_KIT } from '../balance';
+import { DODGE_KIT, ULTIMATE_CHARGE, ULTIMATE_KIT } from '../balance';
 import { calculateDamage, computeUltimateCharge, getMoveModifiers } from '../rules';
 import { findNearestLiving } from './actors';
 import { applyCubeRule, gainUltimateCharge, isTargetedMove, newCast, pickTargetFor, SUPPORT_RANGE } from './cubes';
@@ -44,20 +44,21 @@ export function triggerDodge(self: VoxelEngine): boolean {
   }
   self.dodgeCooldown = self.dodgeMaxCooldown;
   soundFx.playDodge();
+  // La parfaite se décide à l'impact (damage.ts) : on retient seulement l'instant de l'appui
+  self.lastDodgeAt = self.expeditionElapsed;
+  self.dodgePerfectGiven = false;
+  self.dodgesUsed += 1;
 
-  // Perfect Dodge check: if any enemy hazard telegraph is active right now, reward the squad!
-  const activeHazard = self.telegraphs.some((tg) => tg.isEnemyHazard);
-  if (activeHazard) {
-    self.perfectDodges += 1;
-    gainUltimateCharge(self, ULTIMATE_CHARGE.perfectDodge);
-    soundFx.playPerfectDodge();
-    const firstAlive = self.allies.find((a) => !a.fainted);
-    if (firstAlive) {
-      self.floatingText.spawn(firstAlive.x, 2.4, firstAlive.z, FR.engine.esquiveParfaite, '#38BDF8', 1.25, 1.05);
-    }
-  }
+  // Direction : celle du déplacement en cours si une touche de direction est tenue
+  let inX = 0;
+  let inZ = 0;
+  if (self.heldKeys.has('KeyW') || self.heldKeys.has('KeyZ') || self.heldKeys.has('ArrowUp')) inZ -= 1;
+  if (self.heldKeys.has('KeyS') || self.heldKeys.has('ArrowDown')) inZ += 1;
+  if (self.heldKeys.has('KeyA') || self.heldKeys.has('KeyQ') || self.heldKeys.has('ArrowLeft')) inX -= 1;
+  if (self.heldKeys.has('KeyD') || self.heldKeys.has('ArrowRight')) inX += 1;
+  const held = Math.hypot(inX, inZ);
 
-  // Compute enemy centroid to dash AWAY from danger
+  // Sinon : à l'opposé du centre des ennemis
   let cx = 0;
   let cz = 0;
   const livingEnemies = self.enemies.filter((e) => !e.fainted && !e.removed);
@@ -75,7 +76,10 @@ export function triggerDodge(self: VoxelEngine): boolean {
     let dx = ally.x - cx;
     let dz = ally.z - cz;
     const len = Math.hypot(dx, dz);
-    if (len < 0.2) {
+    if (held > 0) {
+      dx = inX / held;
+      dz = inZ / held;
+    } else if (len < 0.2) {
       const ang = (idx / 3) * Math.PI * 2 + 0.5;
       dx = Math.cos(ang);
       dz = Math.sin(ang);
@@ -93,9 +97,9 @@ export function triggerDodge(self: VoxelEngine): boolean {
     ally.dodgeDirX = dx;
     ally.dodgeDirZ = dz;
     ally.dodgeTimer = 0.42;
-    ally.invulnTimer = activeHazard ? 0.8 : 0.55;
+    ally.invulnTimer = DODGE_KIT.invuln;
     ally.squashY = 1.24;
-    spawnParticleBurst(self, ally.x, 0.5, ally.z, activeHazard ? '#38BDF8' : '#FAF7F0', 10, 4.2);
+    spawnParticleBurst(self, ally.x, 0.5, ally.z, '#FAF7F0', 10, 4.2);
   });
 
   emitHudSnapshot(self);

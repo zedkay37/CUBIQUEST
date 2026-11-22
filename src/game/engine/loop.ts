@@ -88,7 +88,7 @@ export function advance(self: VoxelEngine, dt: number): void {
 
   if (self.screenState !== 'paused') {
     // Hitstop freezes simDt while camera shake, flashes & particles keep ticking in real dt
-    const simDt = self.hitstopTimer > 0 ? 0 : self.slowMoTimer > 0 ? dt * 0.35 : dt;
+    const simDt = self.hitstopTimer > 0 ? 0 : self.slowMoTimer > 0 ? dt * self.slowMoScale : dt;
     if (self.slowMoTimer > 0) self.slowMoTimer = Math.max(0, self.slowMoTimer - dt);
     if (self.hitstopTimer > 0) {
       self.hitstopTimer = Math.max(0, self.hitstopTimer - dt);

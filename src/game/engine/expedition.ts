@@ -69,6 +69,12 @@ export function startExpedition(
   self.firstTimeSeen = new Set<string>();
   self.ultimatesUsed = 0;
   self.perfectDodges = 0;
+  self.lastDodgeAt = -10;
+  self.dodgePerfectGiven = true;
+  self.resolvingHazard = false;
+  self.dodgesUsed = 0;
+  self.hazardsAvoided = 0;
+  self.hazardHitsTaken = 0;
   self.lastBurstLabel = null;
   self.lastBurstColor = null;
   self.lastBurstTimer = 0;

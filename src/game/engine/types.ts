@@ -54,6 +54,8 @@ export interface GroundTelegraph {
   dirX: number;
   dirZ: number;
   isEnemyHazard: boolean;
+  /** Couronne : rayon de la zone sûre au centre (0 sinon). */
+  innerRadius: number;
   onComplete: () => void;
 }
 

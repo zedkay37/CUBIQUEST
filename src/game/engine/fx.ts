@@ -8,7 +8,7 @@ import type { ElementType } from '../types';
 import { _color, _dummy, CONFETTI_COLORS, ELEMENT_FX, PARTICLE_POOL_SIZE } from './constants';
 import { newCast } from './cubes';
 import { applyDamageToActor } from './damage';
-import type { ActiveProjectile } from './types';
+import type { ActiveProjectile, GroundTelegraph } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 
 export function spawnProjectile(self: VoxelEngine, p: Omit<ActiveProjectile, 'mesh'>): void {
@@ -50,6 +50,7 @@ export function spawnShockwaveRing(self: VoxelEngine, x: number, z: number, radi
     dirX: 0,
     dirZ: 0,
     isEnemyHazard: false,
+    innerRadius: 0,
     onComplete: () => {},
   });
 }
@@ -101,8 +102,34 @@ export function spawnEnemyTelegraph(
     dirX,
     dirZ,
     isEnemyHazard: true,
+    innerRadius: opts?.innerRadius ?? 0,
     onComplete,
   });
+}
+
+/** Le point (x, z) est-il dans la zone de cette annonce ? (bande : largeur 1,4 + marge ; couronne : hors du centre) */
+export function isInTelegraph(tg: GroundTelegraph, x: number, z: number, margin = 0.6): boolean {
+  if (tg.isLine) {
+    const rx = x - tg.x;
+    const rz = z - tg.z;
+    const along = rx * tg.dirX + rz * tg.dirZ;
+    const across = Math.abs(rx * tg.dirZ - rz * tg.dirX);
+    return along >= -margin && along <= tg.radius + margin && across <= 0.7 + margin;
+  }
+  const d = Math.hypot(x - tg.x, z - tg.z);
+  return d <= tg.radius + margin && d >= tg.innerRadius - margin * 0.5;
+}
+
+/** Délai avant le prochain impact ennemi annoncé qui toucherait au moins un allié là où il se trouve. */
+export function getNextHazardImpact(self: VoxelEngine): number | null {
+  let next: number | null = null;
+  for (const tg of self.telegraphs) {
+    if (!tg.isEnemyHazard) continue;
+    const left = tg.duration - tg.elapsed;
+    if (next !== null && left >= next) continue;
+    if (self.allies.some((a) => !a.fainted && isInTelegraph(tg, a.x, a.z))) next = left;
+  }
+  return next;
 }
 
 export function clearProjectilesAndTelegraphs(self: VoxelEngine): void {
@@ -365,7 +392,10 @@ export function updateTelegraphs(self: VoxelEngine, simDt: number): void {
       tg.mesh.geometry.dispose();
       mat.dispose();
       self.telegraphs.splice(i, 1);
+      // L'impact d'une attaque annoncée : applyDamageToActor sait alors qu'une esquive peut être parfaite
+      self.resolvingHazard = tg.isEnemyHazard;
       tg.onComplete();
+      self.resolvingHazard = false;
     }
   }
 }

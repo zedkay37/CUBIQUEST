@@ -260,6 +260,7 @@ export function onTrio(self: VoxelEngine, target: CombatActor): void {
   if (self.shakeEnabled && self.elapsedTotal - self.lastSlowMoAt >= 2) {
     self.lastSlowMoAt = self.elapsedTotal;
     self.slowMoTimer = 0.45 + 0.09;
+    self.slowMoScale = 0.35;
   }
   self.trauma = Math.min(1, self.trauma + 0.45);
 }

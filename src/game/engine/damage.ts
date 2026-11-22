@@ -8,7 +8,7 @@ import {
   getMoveModifiers,
   getTypeEffectiveness,
 } from '../rules';
-import { ULTIMATE_CHARGE } from '../balance';
+import { DODGE_KIT, ULTIMATE_CHARGE } from '../balance';
 import type { ElementType } from '../types';
 import { getRigTopY } from '../voxelModels';
 import { applyCubeRule, gainUltimateCharge, newCast, type CastContext } from './cubes';
@@ -31,7 +31,16 @@ export function applyDamageToActor(
   /** Lancer en cours : un seul Éclat à effet et un seul Trio par lancer (voir cubes.ts). */
   cast?: CastContext,
 ): void {
-  if (target.fainted || target.removed || target.invulnTimer > 0) return;
+  if (target.fainted || target.removed) return;
+  // Impact d'une attaque annoncée sur un allié : esquivée (invulnérable) ou subie
+  if (self.resolvingHazard && target.isAlly && attacker && !attacker.isAlly) {
+    if (target.invulnTimer > 0) {
+      onHazardDodged(self, target);
+      return;
+    }
+    self.hazardHitsTaken += 1;
+  }
+  if (target.invulnTimer > 0) return;
 
   let dmg = rawDamage;
 
@@ -168,6 +177,22 @@ export function applyDamageToActor(
     } else {
       target.koDissolveTimer = 0.42;
     }
+  }
+}
+
+/** Une attaque annoncée vient d'être annulée par l'invulnérabilité de l'esquive. Parfaite si l'appui est récent. */
+function onHazardDodged(self: VoxelEngine, ally: CombatActor): void {
+  self.hazardsAvoided += 1;
+  if (self.dodgePerfectGiven || self.expeditionElapsed - self.lastDodgeAt > DODGE_KIT.perfectWindow + 1e-6) return;
+  self.dodgePerfectGiven = true; // une seule fois par appui
+  self.perfectDodges += 1;
+  gainUltimateCharge(self, ULTIMATE_CHARGE.perfectDodge);
+  self.dodgeCooldown = Math.max(0, self.dodgeCooldown - self.dodgeMaxCooldown * DODGE_KIT.perfectRefund);
+  soundFx.playPerfectDodge();
+  self.floatingText.spawn(ally.x, 2.4, ally.z, FR.engine.parfait, '#38BDF8', 1.3, 1.05);
+  if (self.shakeEnabled) {
+    self.slowMoTimer = Math.max(self.slowMoTimer, DODGE_KIT.perfectSlowMo);
+    self.slowMoScale = DODGE_KIT.perfectSlowMoScale;
   }
 }
 

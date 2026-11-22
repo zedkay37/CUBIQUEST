@@ -14,6 +14,8 @@ import { clearGroup, loadCampScene, setPotVisual } from './engine/camp';
 import { _color, _dummy, BOLT_POOL_SIZE, PARTICLE_POOL_SIZE, WEATHER_COUNT } from './engine/constants';
 import { playEvolutionSequence } from './engine/evolution';
 import { createCubeMeshes } from './engine/cubeFx';
+import { DODGE_KIT } from './balance';
+import { getNextHazardImpact } from './engine/fx';
 import type { CastContext } from './engine/cubes';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
@@ -143,7 +145,18 @@ export class VoxelEngine {
   expeditionElapsed = 0;
   damageDealt = 0;
   dodgeCooldown = 0;
-  readonly dodgeMaxCooldown = 5.0;
+  readonly dodgeMaxCooldown = DODGE_KIT.cooldown;
+  /** Instant (temps de jeu) du dernier appui sur Esquive, et parfaite déjà accordée pour cet appui. */
+  lastDodgeAt = -10;
+  dodgePerfectGiven = true;
+  /** Vrai pendant la résolution de l'impact d'une attaque annoncée (engine/fx.ts). */
+  resolvingHazard = false;
+  /** Compteurs d'esquive du combat : appuis, attaques annoncées esquivées et subies. */
+  dodgesUsed = 0;
+  hazardsAvoided = 0;
+  hazardHitsTaken = 0;
+  /** Facteur du ralenti en cours (0,35 pour un Trio, 0,5 pour une esquive parfaite). */
+  slowMoScale = 0.35;
   ultimateCharge = 0;
   /** Compteurs des cubes pour ce combat. */
   cubesPlaced = 0;
@@ -427,6 +440,11 @@ export class VoxelEngine {
     if (this.firstTimeSeen.has(kind)) return;
     this.firstTimeSeen.add(kind);
     this.callbacks.onFirstTime?.(kind);
+  }
+
+  /** Délai avant le prochain impact ennemi annoncé qui toucherait un allié là où il est, ou null. */
+  public getNextHazardImpact(): number | null {
+    return getNextHazardImpact(this);
   }
 
   public triggerDodge(): boolean {

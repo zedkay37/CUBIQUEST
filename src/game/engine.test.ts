@@ -13,6 +13,7 @@ import type { OwnedCreature, StageDef } from './types';
 import { VoxelEngine } from './VoxelEngine';
 import { newCast } from './engine/cubes';
 import { applyDamageToActor } from './engine/damage';
+import { clearProjectilesAndTelegraphs, spawnEnemyTelegraph } from './engine/fx';
 
 installHeadlessDom();
 
@@ -442,6 +443,66 @@ test('Déchaînement: l’effet suit le meneur, plus de soin automatique, pas de
     h.engine.triggerUltimate();
     (psy.rig.species as { element: string }).element = realElement;
     for (const a of h.engine.allies) if (!a.fainted) assert.equal(a.skillCooldown, 0);
+    h.engine.dispose();
+  });
+});
+
+/** Une attaque annoncée qui couvre toute l'arène, d'impact dans `impactIn` secondes ; esquive à `pressBefore` s de l'impact. */
+function dodgeScenario(pressBefore: number): { perfect: number; avoided: number; hits: number } {
+  return withSeededRandom(8, () => {
+    const h = makeHarness();
+    h.start('tundra-1');
+    h.engine.controlMode = 'semi';
+    h.run(2.5);
+    // aucune autre attaque pendant le test : ennemis étourdis, annonces en cours retirées
+    clearProjectilesAndTelegraphs(h.engine);
+    for (const e of h.engine.enemies) e.stunTimer = 30;
+    const boss = h.engine.enemies.find((e) => !e.fainted && !e.removed)!;
+    const impactIn = 1.2;
+    // on ne compte que ce que produit CETTE attaque (mesuré pendant son impact)
+    const r = { perfect: 0, avoided: 0, hits: 0 };
+    spawnEnemyTelegraph(h.engine, 0, 0, 40, impactIn, false, 0, 0, () => {
+      const before = { perfect: h.engine.perfectDodges, avoided: h.engine.hazardsAvoided, hits: h.engine.hazardHitsTaken };
+      for (const ally of h.engine.allies) if (!ally.fainted) applyDamageToActor(h.engine, ally, 5, boss, true, false, '#f00');
+      r.perfect = h.engine.perfectDodges - before.perfect;
+      r.avoided = h.engine.hazardsAvoided - before.avoided;
+      r.hits = h.engine.hazardHitsTaken - before.hits;
+    });
+    h.run(impactIn - pressBefore);
+    assert.equal(h.engine.triggerDodge(), true);
+    h.run(pressBefore + 0.1);
+    h.engine.dispose();
+    return r;
+  });
+}
+
+test('Esquive: appui 0,2 s avant l’impact = parfaite (une seule fois par appui)', () => {
+  const r = dodgeScenario(0.2);
+  assert.equal(r.perfect, 1);
+  assert.ok(r.avoided >= 1);
+  assert.equal(r.hits, 0);
+});
+
+test('Esquive: appui 0,45 s avant l’impact = esquivée, pas parfaite', () => {
+  const r = dodgeScenario(0.45);
+  assert.equal(r.perfect, 0);
+  assert.ok(r.avoided >= 1);
+  assert.equal(r.hits, 0);
+});
+
+test('Esquive: appui 0,8 s avant l’impact et resté dans la zone = touché', () => {
+  const r = dodgeScenario(0.8);
+  assert.equal(r.perfect, 0);
+  assert.equal(r.avoided, 0);
+  assert.ok(r.hits >= 1);
+});
+
+test('Esquive: aucun mode de contrôle n’esquive à la place du joueur', () => {
+  withSeededRandom(9, () => {
+    const h = makeHarness();
+    h.start('tundra-1');
+    h.run(240, () => h.results.length > 0);
+    assert.equal(h.engine.dodgesUsed, 0);
     h.engine.dispose();
   });
 });

@@ -41,7 +41,16 @@ export interface FightOptions {
 
 export const STEP = 1 / 60;
 export const MAX_FIGHT_SEC = 300;
-const ACTIVE_DODGE_DELAY = 0.45;
+/**
+ * Esquive simulée (S05.1) : appui `lead` secondes avant l'impact (loi normale), sur une part `react` des
+ * attaques annoncées qui toucheraient un allié. Tirages dans un générateur À PART : l'aléatoire du jeu
+ * n'est pas consommé par le script du joueur.
+ */
+const DODGE_PROFILE: Record<'active' | 'expert' | 'kite', { lead: number; sd: number; react: number }> = {
+  active: { lead: 0.25, sd: 0.12, react: 0.85 },
+  kite: { lead: 0.25, sd: 0.12, react: 0.85 },
+  expert: { lead: 0.2, sd: 0.06, react: 0.97 },
+};
 
 interface Outcome {
   victory: boolean;
@@ -81,6 +90,11 @@ export interface FightResult {
   trios: number;
   ultimates: number;
   bossUltimates: number;
+  /** Esquive : appuis, parfaites (total et pendant le boss), impacts annoncés subis (par allié touché). */
+  dodges: number;
+  perfects: number;
+  bossPerfects: number;
+  hazardHits: number;
 }
 
 type Engine = InstanceType<typeof VoxelEngine>;
@@ -200,11 +214,17 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
     const kite = { fleeFor: 0 };
 
     let t = 0;
-    let hazardSeenFor = 0;
+    const dodgeRng = mulberry32((seed ^ 0x5bd1e995) >>> 0);
+    const gauss = (): number => Math.sqrt(-2 * Math.log(Math.max(1e-9, dodgeRng()))) * Math.cos(2 * Math.PI * dodgeRng());
+    let plan: { impactAt: number; pressAt: number; react: boolean; done: boolean } | null = null;
+    let perfectsAtBoss = -1;
     let ultimatesAtBoss = -1;
     const readySince = [0, 0, 0];
     while (!outcome && t < MAX_FIGHT_SEC) {
-      if (ultimatesAtBoss < 0 && engine.getCombatTelemetry().bossAppearedAt >= 0) ultimatesAtBoss = engine.ultimatesUsed;
+      if (ultimatesAtBoss < 0 && engine.getCombatTelemetry().bossAppearedAt >= 0) {
+        ultimatesAtBoss = engine.ultimatesUsed;
+        perfectsAtBoss = engine.perfectDodges;
+      }
       if (profile === 'expert' && enemiesRemaining > 0) expertStep(engine, readySince, STEP);
       if (profile === 'kite') kiteStep(engine, kite, STEP);
       if ((profile === 'active' || profile === 'kite') && enemiesRemaining > 0) {
@@ -212,11 +232,16 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
         engine.triggerUltimate();
       }
       if (profile !== 'auto') {
-        if (engine.getDebugInfo().telegraphs > 0) {
-          hazardSeenFor += STEP;
-          if (hazardSeenFor >= ACTIVE_DODGE_DELAY && engine.triggerDodge()) hazardSeenFor = 0;
-        } else {
-          hazardSeenFor = 0;
+        // Le joueur lit l'annonce qui le menace et appuie un peu avant l'impact
+        const dp = DODGE_PROFILE[profile];
+        const now = engine.expeditionElapsed;
+        const impact = engine.getNextHazardImpact();
+        if (impact !== null && (!plan || Math.abs(plan.impactAt - (now + impact)) > 0.05)) {
+          plan = { impactAt: now + impact, pressAt: now + impact - (dp.lead + dp.sd * gauss()), react: dodgeRng() < dp.react, done: false };
+        }
+        if (plan && plan.react && !plan.done && now >= plan.pressAt) {
+          plan.done = true;
+          engine.triggerDodge();
         }
       }
       engine.stepSimulation(STEP);
@@ -229,6 +254,10 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
       trios: engine.triosTriggered,
       ultimates: engine.ultimatesUsed,
       bossUltimates: ultimatesAtBoss < 0 ? 0 : engine.ultimatesUsed - ultimatesAtBoss,
+      dodges: engine.dodgesUsed,
+      perfects: engine.perfectDodges,
+      bossPerfects: perfectsAtBoss < 0 ? 0 : engine.perfectDodges - perfectsAtBoss,
+      hazardHits: engine.hazardHitsTaken,
     };
     engine.dispose();
 

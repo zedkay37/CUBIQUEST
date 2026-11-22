@@ -55,6 +55,10 @@ export interface StageSummary {
   triosAvg: number;
   ultimatesAvg: number;
   bossUltimatesAvg: number;
+  dodgesAvg: number;
+  perfectsAvg: number;
+  bossPerfectsAvg: number;
+  hazardHitsAvg: number;
 }
 
 const avg = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
@@ -96,6 +100,10 @@ function summarize(stage: StageDef, fights: FightResult[]): StageSummary {
     triosAvg: avg(fights.map((f) => f.trios)),
     ultimatesAvg: avg(fights.map((f) => f.ultimates)),
     bossUltimatesAvg: avg(fights.filter((f) => f.bossAppearedAt >= 0).map((f) => f.bossUltimates)),
+    dodgesAvg: avg(fights.map((f) => f.dodges)),
+    perfectsAvg: avg(fights.map((f) => f.perfects)),
+    bossPerfectsAvg: avg(fights.filter((f) => f.bossAppearedAt >= 0).map((f) => f.bossPerfects)),
+    hazardHitsAvg: avg(fights.map((f) => f.hazardHits)),
   };
 }
 
@@ -126,8 +134,8 @@ export function toMarkdown(
     '',
     'Colonnes de phase : durée moyenne (durée minimale) · attaques télégraphiées lancées en moyenne · part des combats où le boss en a lancé au moins une dans cette phase.',
     '',
-    '| Niveau | Escouade de référence | Victoires | Durée totale (min–max) | Combat de boss | Phase 1 | Phase 2 | Phase 3 | PV boss restants (défaites) | Éclats (faibles) · Trios · Déchaînements (boss) par combat |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| Niveau | Escouade de référence | Victoires | Durée totale (min–max) | Combat de boss | Phase 1 | Phase 2 | Phase 3 | PV boss restants (défaites) | Éclats (faibles) · Trios · Déchaînements (boss) par combat | Esquives · parfaites (boss) · annonces subies |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
   ];
   for (const s of summaries) {
     lines.push(
@@ -135,7 +143,7 @@ export function toMarkdown(
         s.bossFightAvg === null ? '—' : sec(s.bossFightAvg)
       } | ${phaseCell(s.phases[0])} | ${phaseCell(s.phases[1])} | ${phaseCell(s.phases[2])} | ${
         s.bossHpOnDefeatAvg === null ? '—' : `${Math.round(s.bossHpOnDefeatAvg)} %`
-      }${s.timeouts ? ` · ${s.timeouts} hors délai` : ''} | ${s.burstsAvg.toFixed(1)} (${s.weakBurstsAvg.toFixed(1)}) · ${s.triosAvg.toFixed(1)} · ${s.ultimatesAvg.toFixed(1)} (${s.bossUltimatesAvg.toFixed(1)}) |`,
+      }${s.timeouts ? ` · ${s.timeouts} hors délai` : ''} | ${s.burstsAvg.toFixed(1)} (${s.weakBurstsAvg.toFixed(1)}) · ${s.triosAvg.toFixed(1)} · ${s.ultimatesAvg.toFixed(1)} (${s.bossUltimatesAvg.toFixed(1)}) | ${s.dodgesAvg.toFixed(1)} · ${s.perfectsAvg.toFixed(1)} (${s.bossPerfectsAvg.toFixed(1)}) · ${s.hazardHitsAvg.toFixed(1)} |`,
     );
   }
   return lines.join('\n') + '\n';
@@ -182,7 +190,7 @@ function briefLine(s: StageSummary): string {
     .join(' | ');
   return `${s.stageId.padEnd(12)} ${pct(s.winRate).padStart(5)}  total ${s.durationAvg.toFixed(1)}s  boss ${
     s.bossFightAvg === null ? '-' : s.bossFightAvg.toFixed(1) + 's'
-  }  ${ph}  | Éclats ${s.burstsAvg.toFixed(1)} (+${s.weakBurstsAvg.toFixed(1)} faibles) Trios ${s.triosAvg.toFixed(1)} Déch. ${s.ultimatesAvg.toFixed(1)} (boss ${s.bossUltimatesAvg.toFixed(1)})${s.bossHpOnDefeatAvg === null ? '' : `  | défaites: boss ${Math.round(s.bossHpOnDefeatAvg)}%`}`;
+  }  ${ph}  | Éclats ${s.burstsAvg.toFixed(1)} (+${s.weakBurstsAvg.toFixed(1)} faibles) Trios ${s.triosAvg.toFixed(1)} Déch. ${s.ultimatesAvg.toFixed(1)} (boss ${s.bossUltimatesAvg.toFixed(1)}) Esq. ${s.dodgesAvg.toFixed(1)} parf. ${s.perfectsAvg.toFixed(1)} (boss ${s.bossPerfectsAvg.toFixed(1)}) subies ${s.hazardHitsAvg.toFixed(1)}${s.bossHpOnDefeatAvg === null ? '' : `  | défaites: boss ${Math.round(s.bossHpOnDefeatAvg)}%`}`;
 }
 
 const args = parseArgs(process.argv.slice(2));

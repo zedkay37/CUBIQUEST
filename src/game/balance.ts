@@ -132,10 +132,27 @@ export const ULTIMATE_CHARGE = {
   weakBurst: 2,
   trio: CUBE_KIT.trioUltBonus,
   support: 3,
-  /** Inchangée en S04 (réglée avec la nouvelle Esquive en S05). */
-  perfectDodge: 14,
+  /** S05 : 14 -> 12 (DODGE_KIT.perfectUlt). */
+  perfectDodge: 12,
   /** Secondes sans aucune charge après un Déchaînement. */
   lockAfterUltimate: 2,
+};
+
+/**
+ * ESQUIVE (S05.1, plan 5.2). Durées en secondes.
+ * Parfaite : une attaque annoncée qui aurait touché un allié est annulée par l'invulnérabilité de l'esquive,
+ * et l'appui date de `perfectWindow` au plus. Elle se décide à l'impact, une seule fois par appui.
+ */
+export const DODGE_KIT = {
+  cooldown: 4,
+  invuln: 0.5,
+  perfectWindow: 0.35,
+  /** Part de la recharge rendue après une esquive parfaite. */
+  perfectRefund: 0.5,
+  perfectUlt: 12,
+  /** Ralenti d'une esquive parfaite. */
+  perfectSlowMo: 0.2,
+  perfectSlowMoScale: 0.5,
 };
 
 /** Déchaînement selon l'élément du meneur (plan 5.4). Dégâts de base = attaque cumulée × baseMult. */

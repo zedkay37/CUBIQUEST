@@ -352,6 +352,7 @@ export const FR = {
     dechainement: 'DÉCHAÎNEMENT !',
     dechainementDe: (a: string | number) => `DÉCHAÎNEMENT · ${a}`,
     tropTot: 'Trop tôt !',
+    parfait: 'PARFAIT !',
     eclatNomme: (a: string | number) => `ÉCLAT · ${a}`,
     trio: 'TRIO !',
     pv: (a: string | number) => `+${a} PV`,
