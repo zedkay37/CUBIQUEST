@@ -29,8 +29,6 @@ import {
   BOSS_INTRO_SEC,
   CAMP_DAY_LENGTH,
   CAMP_SKY_KEYS,
-  CONFETTI_COLORS,
-  ELEMENT_FX,
   EVO_CHARGE_SEC,
   EVO_TOTAL_SEC,
   EVO_X,
@@ -40,6 +38,19 @@ import {
   WEATHER_COUNT,
   WEATHER_PROFILES,
 } from './engine/constants';
+import {
+  clearProjectilesAndTelegraphs,
+  spawnConfetti,
+  spawnElementBurst,
+  spawnEnemyTelegraph,
+  spawnParticleBurst,
+  spawnProjectile,
+  spawnShockwaveRing,
+  spawnSteamCube,
+  updateParticles,
+  updateProjectiles,
+  updateTelegraphs,
+} from './engine/fx';
 import type {
   ActiveProjectile,
   CampWanderer,
@@ -203,7 +214,7 @@ export class VoxelEngine {
   resizeObserver: ResizeObserver | null = null;
   telemetry: CombatTelemetry = VoxelEngine.emptyTelemetry();
 
-  private static emptyTelemetry(): CombatTelemetry {
+  static emptyTelemetry(): CombatTelemetry {
     return {
       bossAppearedAt: -1,
       phaseStartedAt: [-1, -1, -1],
@@ -366,7 +377,7 @@ export class VoxelEngine {
     }
   }
 
-  private configureWeather(biomeId: BiomeId): void {
+  configureWeather(biomeId: BiomeId): void {
     this.activeBiomeId = biomeId;
     const profile = WEATHER_PROFILES[biomeId];
     const kind = profile.kind;
@@ -416,7 +427,7 @@ export class VoxelEngine {
     }
   }
 
-  private applyBiomeLighting(biomeId: BiomeId): void {
+  applyBiomeLighting(biomeId: BiomeId): void {
     const light = BIOME_LIGHTING[biomeId];
     this.hemiLight.color.set(light.sky);
     this.hemiLight.groundColor.set(light.ground);
@@ -429,7 +440,7 @@ export class VoxelEngine {
   }
 
   /** Éclair voxel bref (pool fixe) + flash lumineux. */
-  private spawnBolt(x: number, z: number, height = 11): void {
+  spawnBolt(x: number, z: number, height = 11): void {
     const bolt = this.bolts[this.boltCursor];
     this.boltCursor = (this.boltCursor + 1) % this.bolts.length;
     bolt.mesh.position.set(x, 0, z);
@@ -440,7 +451,7 @@ export class VoxelEngine {
     this.lightningFlash = Math.max(this.lightningFlash, this.shakeEnabled ? 0.55 : 0.2);
   }
 
-  private updateStormAmbience(dt: number): void {
+  updateStormAmbience(dt: number): void {
     for (const bolt of this.bolts) {
       if (bolt.life > 0) {
         bolt.life -= dt;
@@ -466,12 +477,12 @@ export class VoxelEngine {
    * Champ de vision vertical : 42° en paysage (inchangé). En portrait, on l'ouvre progressivement
    * pour que l'escouade et ses adversaires restent dans le cadre d'un écran étroit.
    */
-  private static fovForAspect(aspect: number): number {
+  static fovForAspect(aspect: number): number {
     if (!(aspect < 1)) return 42;
     return THREE.MathUtils.clamp(42 + (1 - aspect) * 46, 42, 72);
   }
 
-  private static detectSoftwareGl(): boolean {
+  static detectSoftwareGl(): boolean {
     try {
       const gl = document.createElement('canvas').getContext('webgl2');
       if (!gl) return true;
@@ -485,7 +496,7 @@ export class VoxelEngine {
     }
   }
 
-  private handleResize(): void {
+  handleResize(): void {
     if (this.disposed || !this.container || !this.renderer) return;
     const w = Math.max(1, this.container.clientWidth);
     const h = Math.max(1, this.container.clientHeight);
@@ -551,7 +562,7 @@ export class VoxelEngine {
     }
   }
 
-  private clearGroup(group: THREE.Group): void {
+  clearGroup(group: THREE.Group): void {
     while (group.children.length > 0) {
       const child = group.children[0];
       group.remove(child);
@@ -560,7 +571,7 @@ export class VoxelEngine {
   }
 
   /** Libère géométries et matériaux d'un sous-arbre retiré de la scène (les textures partagées sont conservées). */
-  private disposeObject(obj: THREE.Object3D): void {
+  disposeObject(obj: THREE.Object3D): void {
     obj.traverse((node) => {
       const mesh = node as THREE.Mesh;
       if (mesh.geometry) mesh.geometry.dispose();
@@ -583,7 +594,7 @@ export class VoxelEngine {
     this.activeStage = null;
     this.allies = [];
     this.enemies = [];
-    this.clearProjectilesAndTelegraphs();
+    clearProjectilesAndTelegraphs(this);
 
     this.clearGroup(this.worldGroup);
     this.clearGroup(this.actorsGroup);
@@ -720,7 +731,7 @@ export class VoxelEngine {
     this.hitstopTimer = 0;
     this.heldKeys.clear();
     this.floatingText.clear();
-    this.clearProjectilesAndTelegraphs();
+    clearProjectilesAndTelegraphs(this);
     this.clearGroup(this.worldGroup);
     this.clearGroup(this.actorsGroup);
     this.campWanderers = [];
@@ -818,7 +829,7 @@ export class VoxelEngine {
     }
   }
 
-  private spawnWave(index: number): void {
+  spawnWave(index: number): void {
     if (!this.activeStage) return;
     const wave = this.activeStage.waves[index];
     if (!wave) return;
@@ -905,7 +916,7 @@ export class VoxelEngine {
         pullTimer: 0,
       });
 
-      this.spawnParticleBurst(spawnX, 0.8, spawnZ, species.palette.accent, isBoss ? 20 : 10, 4.5);
+      spawnParticleBurst(this, spawnX, 0.8, spawnZ, species.palette.accent, isBoss ? 20 : 10, 4.5);
     });
 
     // Entrée de boss : il tombe du ciel pendant une courte cinématique (combat gelé)
@@ -934,7 +945,7 @@ export class VoxelEngine {
     }
   }
 
-  private updateBossIntro(dt: number): void {
+  updateBossIntro(dt: number): void {
     const boss = this.bossIntroActor;
     this.bossIntroTimer = Math.max(0, this.bossIntroTimer - dt);
     if (boss && this.bossDropY > 0) {
@@ -944,9 +955,9 @@ export class VoxelEngine {
         // Atterrissage : onde de choc, poussière, écrasement
         boss.squashY = 0.58;
         this.trauma = Math.min(1, this.trauma + 0.6);
-        this.spawnShockwaveRing(boss.x, boss.z, 5.5, boss.rig.species.palette.accent);
-        this.spawnElementBurst(boss.x, 0.3, boss.z, 'rock', 22, 1.5);
-        this.spawnElementBurst(boss.x, 0.8, boss.z, boss.rig.species.element, 18, 1.4);
+        spawnShockwaveRing(this, boss.x, boss.z, 5.5, boss.rig.species.palette.accent);
+        spawnElementBurst(this, boss.x, 0.3, boss.z, 'rock', 22, 1.5);
+        spawnElementBurst(this, boss.x, 0.8, boss.z, boss.rig.species.element, 18, 1.4);
         soundFx.playHit(true, false);
         soundFx.playElementImpact('rock', true);
       }
@@ -961,7 +972,7 @@ export class VoxelEngine {
     }
   }
 
-  private updateEnemyDissolve(enemy: CombatActor, dt: number): void {
+  updateEnemyDissolve(enemy: CombatActor, dt: number): void {
     enemy.koDissolveTimer -= dt;
     enemy.rig.bodyPivot.rotation.z = THREE.MathUtils.damp(enemy.rig.bodyPivot.rotation.z, -Math.PI / 2, 10, dt);
     const s = Math.max(0.01, enemy.koDissolveTimer / 0.42) * enemy.rig.species.scale * (enemy.isBoss ? 1.48 : 0.96);
@@ -974,7 +985,7 @@ export class VoxelEngine {
   }
 
   /** Après la fin du combat : les K.O. se dissolvent, et en cas de victoire l'escouade fait la fête. */
-  private updateEndSequence(dt: number): void {
+  updateEndSequence(dt: number): void {
     for (const enemy of this.enemies) {
       if (!enemy.removed && enemy.fainted) this.updateEnemyDissolve(enemy, dt);
     }
@@ -1003,32 +1014,8 @@ export class VoxelEngine {
     if (this.confettiTimer <= 0) {
       // rafales denses avant l'écran de résultat, puis pluie légère derrière la fenêtre
       this.confettiTimer = this.resultSent ? 0.5 : 0.14;
-      this.spawnConfetti(cx / n + (Math.random() - 0.5) * 7, 1.2 + Math.random() * 1.5, cz / n + (Math.random() - 0.5) * 5, 9);
+      spawnConfetti(this, cx / n + (Math.random() - 0.5) * 7, 1.2 + Math.random() * 1.5, cz / n + (Math.random() - 0.5) * 5, 9);
       if (!this.resultSent) soundFx.playConfettiPop();
-    }
-  }
-
-  private spawnConfetti(x: number, y: number, z: number, count: number): void {
-    for (let i = 0; i < count; i++) {
-      const slot = this.particles[this.particleCursor];
-      this.particleCursor = (this.particleCursor + 1) % PARTICLE_POOL_SIZE;
-      const ang = Math.random() * Math.PI * 2;
-      const spd = 1.2 + Math.random() * 2.6;
-      slot.active = true;
-      slot.x = x;
-      slot.y = y;
-      slot.z = z;
-      slot.vx = Math.cos(ang) * spd;
-      slot.vy = 4 + Math.random() * 3.4;
-      slot.vz = Math.sin(ang) * spd;
-      slot.maxLife = 1.0 + Math.random() * 0.6;
-      slot.life = slot.maxLife;
-      slot.size = 0.14 + Math.random() * 0.1;
-      slot.colorHex = CONFETTI_COLORS[(i + Math.floor(Math.random() * 6)) % CONFETTI_COLORS.length];
-      slot.gravity = 6.5;
-      slot.drag = 1.3;
-      slot.stretchY = 0.35;
-      slot.bounce = 0;
     }
   }
 
@@ -1038,7 +1025,7 @@ export class VoxelEngine {
   }
 
   /** Cycle jour/nuit doux du camp : ciel, brume et lumières interpolés entre des clés. */
-  private updateDayNight(dt: number): void {
+  updateDayNight(dt: number): void {
     this.campClock = (this.campClock + dt / CAMP_DAY_LENGTH) % 1;
     let idx = 0;
     while (idx < CAMP_SKY_KEYS.length - 2 && this.campClock >= CAMP_SKY_KEYS[idx + 1].t) idx += 1;
@@ -1099,7 +1086,7 @@ export class VoxelEngine {
     soundFx.playEvolutionCharge();
   }
 
-  private clearEvoRing(): void {
+  clearEvoRing(): void {
     if (!this.evoRing) return;
     this.fxGroup.remove(this.evoRing);
     this.evoRing.geometry.dispose();
@@ -1107,7 +1094,7 @@ export class VoxelEngine {
     this.evoRing = null;
   }
 
-  private updateEvolution(dt: number): void {
+  updateEvolution(dt: number): void {
     if (this.evoRing) {
       this.evoRingT += dt;
       const k = Math.min(1, this.evoRingT / 0.6);
@@ -1168,9 +1155,9 @@ export class VoxelEngine {
         evo.baseScale = next.root.scale.x;
         evo.revealed = true;
         soundFx.playEvolutionBurst();
-        this.spawnParticleBurst(EVO_X, 1.3, EVO_Z, '#FFFFFF', 26, 7.5);
-        this.spawnParticleBurst(EVO_X, 1.3, EVO_Z, '#F4B942', 26, 6.0);
-        this.spawnElementBurst(EVO_X, 1.0, EVO_Z, next.species.element, 22, 1.6);
+        spawnParticleBurst(this, EVO_X, 1.3, EVO_Z, '#FFFFFF', 26, 7.5);
+        spawnParticleBurst(this, EVO_X, 1.3, EVO_Z, '#F4B942', 26, 6.0);
+        spawnElementBurst(this, EVO_X, 1.0, EVO_Z, next.species.element, 22, 1.6);
         this.trauma = Math.min(1, this.trauma + 0.35);
         this.lightningFlash = Math.max(this.lightningFlash, this.shakeEnabled ? 0.6 : 0.25);
         this.clearEvoRing();
@@ -1204,7 +1191,7 @@ export class VoxelEngine {
     evo.spawnAcc += dt;
     if (evo.spawnAcc > 0.16) {
       evo.spawnAcc = 0;
-      this.spawnParticleBurst(EVO_X + (Math.random() - 0.5) * 2, 0.4, EVO_Z + (Math.random() - 0.5) * 1.5, '#F4B942', 4, 3.2);
+      spawnParticleBurst(this, EVO_X + (Math.random() - 0.5) * 2, 0.4, EVO_Z + (Math.random() - 0.5) * 1.5, '#F4B942', 4, 3.2);
     }
     if (evo.t >= EVO_TOTAL_SEC) {
       const done = evo.onDone;
@@ -1292,7 +1279,7 @@ export class VoxelEngine {
       ally.scatterTimer = 0.42;
       ally.invulnTimer = activeHazard ? 0.8 : 0.55;
       ally.squashY = 1.24;
-      this.spawnParticleBurst(ally.x, 0.5, ally.z, activeHazard ? '#38BDF8' : '#FAF7F0', 10, 4.2);
+      spawnParticleBurst(this, ally.x, 0.5, ally.z, activeHazard ? '#38BDF8' : '#FAF7F0', 10, 4.2);
     });
 
     this.emitHudSnapshot();
@@ -1331,9 +1318,9 @@ export class VoxelEngine {
       ally.squashY = 1.38;
       const heal = Math.round(ally.maxHp * 0.22);
       ally.hp = Math.min(ally.maxHp, ally.hp + heal);
-      this.spawnParticleBurst(ally.x, 1.0, ally.z, ally.rig.species.palette.accent, 18, 6.2);
+      spawnParticleBurst(this, ally.x, 1.0, ally.z, ally.rig.species.palette.accent, 18, 6.2);
       this.floatingText.spawn(ally.x, 2.1, ally.z, `+${heal} PV`, '#4ADE80', 1.0, 0.9);
-      this.spawnShockwaveRing(ally.x, ally.z, 5.5, ally.rig.species.palette.accent);
+      spawnShockwaveRing(this, ally.x, ally.z, 5.5, ally.rig.species.palette.accent);
     }
 
     const livingEnemies = this.enemies.filter((e) => !e.fainted && !e.removed);
@@ -1346,8 +1333,8 @@ export class VoxelEngine {
       }
       cx /= livingEnemies.length;
       cz /= livingEnemies.length;
-      this.spawnShockwaveRing(cx, cz, 8.5, '#F4B942');
-      this.spawnParticleBurst(cx, 1.2, cz, '#FFE066', 36, 7.4);
+      spawnShockwaveRing(this, cx, cz, 8.5, '#F4B942');
+      spawnParticleBurst(this, cx, 1.2, cz, '#FFE066', 36, 7.4);
       this.floatingText.spawn(cx, 2.9, cz, 'CUBI-DÉCHAÎNEMENT !', '#F4B942', 1.4, 1.15);
 
       const leadAlly = livingAllies[0];
@@ -1372,10 +1359,10 @@ export class VoxelEngine {
 
   public triggerCookBurstFx(colorHex: string): void {
     soundFx.playCookBubble();
-    this.spawnParticleBurst(0, 1.8, -1.2, colorHex, 22, 4.6);
+    spawnParticleBurst(this, 0, 1.8, -1.2, colorHex, 22, 4.6);
   }
 
-  private executeAllySkill(unit: CombatActor): void {
+  executeAllySkill(unit: CombatActor): void {
     const move = MOVES[unit.moveId] ?? MOVES.ember_burst;
     const mods = getMoveModifiers(unit.moveStones);
     unit.skillCooldown = unit.skillMaxCooldown;
@@ -1390,7 +1377,7 @@ export class VoxelEngine {
       const healAmt = Math.round(unit.maxHp * 0.14);
       unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
       this.ultimateCharge = computeUltimateCharge(this.ultimateCharge, 8);
-      this.spawnParticleBurst(unit.x, 0.9, unit.z, move.color, 14, 4.0);
+      spawnParticleBurst(this, unit.x, 0.9, unit.z, move.color, 14, 4.0);
       this.floatingText.spawn(unit.x, 2.0, unit.z, `+${healAmt} PV`, '#4ADE80', 0.95);
 
       if (mods.shareRatio > 0) {
@@ -1399,7 +1386,7 @@ export class VoxelEngine {
             mate.buffTimer = Math.max(mate.buffTimer, 8.0 * mods.shareRatio + 2.0);
             const sharedHeal = Math.round(healAmt * mods.shareRatio);
             mate.hp = Math.min(mate.maxHp, mate.hp + sharedHeal);
-            this.spawnParticleBurst(mate.x, 0.9, mate.z, '#C084FC', 10, 3.4);
+            spawnParticleBurst(this, mate.x, 0.9, mate.z, '#C084FC', 10, 3.4);
             this.floatingText.spawn(mate.x, 2.0, mate.z, `+${sharedHeal} PV`, '#4ADE80', 0.85);
           }
         }
@@ -1420,7 +1407,7 @@ export class VoxelEngine {
         unit.critRate,
         unit.moveStones,
       );
-      this.spawnProjectile({
+      spawnProjectile(this, {
         x: unit.x,
         y: 0.9,
         z: unit.z,
@@ -1448,14 +1435,14 @@ export class VoxelEngine {
       unit.x = THREE.MathUtils.clamp(unit.x + (dx / dist) * dashDist, -ARENA_BOUND, ARENA_BOUND);
       unit.z = THREE.MathUtils.clamp(unit.z + (dz / dist) * dashDist, -ARENA_BOUND, ARENA_BOUND);
       unit.facing = Math.atan2(dx, dz);
-      this.spawnParticleBurst(unit.x, 0.7, unit.z, move.color, 18, 5.4);
+      spawnParticleBurst(this, unit.x, 0.7, unit.z, move.color, 18, 5.4);
     }
 
     // Melee / AoE / Dash arrival impact
     const centerX = move.style === 'aoe' && target && move.range > 5.5 ? target.x : unit.x;
     const centerZ = move.style === 'aoe' && target && move.range > 5.5 ? target.z : unit.z;
-    this.spawnShockwaveRing(centerX, centerZ, radius, move.color);
-    this.spawnParticleBurst(centerX, 0.8, centerZ, move.color, 20, 5.6);
+    spawnShockwaveRing(this, centerX, centerZ, radius, move.color);
+    spawnParticleBurst(this, centerX, 0.8, centerZ, move.color, 20, 5.6);
 
     let hitAny = false;
     for (const enemy of this.enemies) {
@@ -1489,7 +1476,7 @@ export class VoxelEngine {
     }
   }
 
-  private getPrimaryStatus(actor: CombatActor): StatusKind | null {
+  getPrimaryStatus(actor: CombatActor): StatusKind | null {
     const keys = Object.keys(actor.statuses) as StatusKind[];
     for (const k of keys) {
       const inst = actor.statuses[k];
@@ -1498,7 +1485,7 @@ export class VoxelEngine {
     return null;
   }
 
-  private applyStatusToActor(target: CombatActor, kind: StatusKind, sourceAtk: number): void {
+  applyStatusToActor(target: CombatActor, kind: StatusKind, sourceAtk: number): void {
     const duration = computeStatusDuration(kind, target.statusRes);
     target.statuses[kind] = {
       remaining: duration,
@@ -1510,7 +1497,7 @@ export class VoxelEngine {
     }
   }
 
-  private applyDamageToActor(
+  applyDamageToActor(
     target: CombatActor,
     rawDamage: number,
     attacker: CombatActor | undefined,
@@ -1544,8 +1531,8 @@ export class VoxelEngine {
         soundFx.playReaction();
         this.hitstopTimer = Math.max(this.hitstopTimer, 0.055);
         this.trauma = Math.min(1, this.trauma + 0.34);
-        this.spawnShockwaveRing(target.x, target.z, 3.6, reaction.color);
-        this.spawnParticleBurst(target.x, 1.1, target.z, reaction.color, 22, 6.2);
+        spawnShockwaveRing(this, target.x, target.z, 3.6, reaction.color);
+        spawnParticleBurst(this, target.x, 1.1, target.z, reaction.color, 22, 6.2);
         this.floatingText.spawn(target.x, 2.55, target.z, reaction.name, reaction.color, 1.25, 1.1);
 
         // Reaction secondary mechanical effects
@@ -1569,7 +1556,7 @@ export class VoxelEngine {
                 this.applyStatusToActor(other, 'shocked', attacker.atk);
                 const chainDmg = Math.round(rawDamage * 0.55);
                 other.hp = Math.max(1, other.hp - chainDmg);
-                this.spawnParticleBurst(other.x, 0.9, other.z, '#FACC15', 10, 4.5);
+                spawnParticleBurst(this, other.x, 0.9, other.z, '#FACC15', 10, 4.5);
                 this.floatingText.spawn(other.x, 2.0, other.z, `${chainDmg}`, '#FACC15', 0.95);
               }
             }
@@ -1586,7 +1573,7 @@ export class VoxelEngine {
             if (!ally.fainted) {
               const shieldGain = Math.round(ally.maxHp * 0.15);
               ally.shieldHp = Math.min(Math.round(ally.maxHp * 0.35), ally.shieldHp + shieldGain);
-              this.spawnParticleBurst(ally.x, 0.9, ally.z, '#EAB308', 8, 3.2);
+              spawnParticleBurst(this, ally.x, 0.9, ally.z, '#EAB308', 8, 3.2);
               this.floatingText.spawn(ally.x, 2.0, ally.z, `+${shieldGain} BOUCL.`, '#FDE047', 0.85);
             }
           }
@@ -1694,10 +1681,10 @@ export class VoxelEngine {
     soundFx.playHit(isHeavy, isCrit);
     if (incomingElement) {
       soundFx.playElementImpact(incomingElement, isHeavy);
-      this.spawnElementBurst(target.x, 0.85, target.z, incomingElement, isHeavy ? 12 : 5, isHeavy ? 1.15 : 0.8);
-      if (isCrit) this.spawnParticleBurst(target.x, 1.0, target.z, '#FFE066', 6, 4.6);
+      spawnElementBurst(this, target.x, 0.85, target.z, incomingElement, isHeavy ? 12 : 5, isHeavy ? 1.15 : 0.8);
+      if (isCrit) spawnParticleBurst(this, target.x, 1.0, target.z, '#FFE066', 6, 4.6);
     } else {
-      this.spawnParticleBurst(target.x, 0.85, target.z, isCrit ? '#FFE066' : fxColor, isHeavy ? 14 : 6, isHeavy ? 5.2 : 3.2);
+      spawnParticleBurst(this, target.x, 0.85, target.z, isCrit ? '#FFE066' : fxColor, isHeavy ? 14 : 6, isHeavy ? 5.2 : 3.2);
     }
 
     if (isCrit || isHeavy) {
@@ -1717,7 +1704,8 @@ export class VoxelEngine {
       soundFx.playKo();
       this.hitstopTimer = Math.max(this.hitstopTimer, target.isBoss ? 0.075 : 0.04);
       this.trauma = Math.min(1, this.trauma + (target.isBoss ? 0.65 : 0.25));
-      this.spawnParticleBurst(
+      spawnParticleBurst(
+        this,
         target.x,
         0.8,
         target.z,
@@ -1734,7 +1722,7 @@ export class VoxelEngine {
     }
   }
 
-  private onBossPhaseShift(boss: CombatActor, phase: 2 | 3): void {
+  onBossPhaseShift(boss: CombatActor, phase: 2 | 3): void {
     this.telemetry.phaseStartedAt[phase - 1] = this.expeditionElapsed;
     // un saut direct de la phase 1 à la phase 3 fait commencer (et finir) la phase 2 au même instant
     if (phase === 3 && this.telemetry.phaseStartedAt[1] < 0) {
@@ -1747,8 +1735,8 @@ export class VoxelEngine {
     this.bannerTimer = 2.6;
     this.trauma = Math.min(1, this.trauma + 0.55);
     this.hitstopTimer = Math.max(this.hitstopTimer, 0.06);
-    this.spawnShockwaveRing(boss.x, boss.z, 6.2, auraColor);
-    this.spawnParticleBurst(boss.x, 1.3, boss.z, auraColor, 30, 6.8);
+    spawnShockwaveRing(this, boss.x, boss.z, 6.2, auraColor);
+    spawnParticleBurst(this, boss.x, 1.3, boss.z, auraColor, 30, 6.8);
     this.floatingText.spawn(boss.x, 3.0, boss.z, label, auraColor, 1.35, 1.25);
 
     // Gentle non-lethal pushback so player clearly reads the phase transition
@@ -1766,206 +1754,7 @@ export class VoxelEngine {
     this.emitHudSnapshot();
   }
 
-  private spawnProjectile(p: Omit<ActiveProjectile, 'mesh'>): void {
-    const geo = new THREE.BoxGeometry(p.radius * 1.4, p.radius * 1.4, p.radius * 1.4);
-    const mat = new THREE.MeshStandardMaterial({
-      color: p.elementColor,
-      emissive: new THREE.Color(p.elementColor),
-      emissiveIntensity: 0.7,
-      roughness: 0.2,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(p.x, p.y, p.z);
-    this.fxGroup.add(mesh);
-    this.projectiles.push({ ...p, mesh });
-  }
-
-  private spawnShockwaveRing(x: number, z: number, radius: number, colorHex: string): void {
-    const ringGeo = new THREE.RingGeometry(Math.max(0.2, radius * 0.72), radius, 24);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: colorHex,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.75,
-      depthWrite: false,
-    });
-    const mesh = new THREE.Mesh(ringGeo, ringMat);
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(x, 0.06, z);
-    this.fxGroup.add(mesh);
-
-    this.telegraphs.push({
-      mesh,
-      x,
-      z,
-      radius,
-      elapsed: 0,
-      duration: 0.26,
-      isLine: false,
-      dirX: 0,
-      dirZ: 0,
-      isEnemyHazard: false,
-      onComplete: () => {},
-    });
-  }
-
-  private spawnEnemyTelegraph(
-    x: number,
-    z: number,
-    radius: number,
-    duration: number,
-    isLine: boolean,
-    dirX: number,
-    dirZ: number,
-    onComplete: () => void,
-    opts?: { innerRadius?: number; color?: string; silent?: boolean },
-  ): void {
-    if (!opts?.silent) soundFx.playTelegraph();
-    const geo = isLine
-      ? new THREE.PlaneGeometry(1.4, radius)
-      : opts?.innerRadius
-        ? new THREE.RingGeometry(opts.innerRadius, radius, 40) // couronne : zone sûre au centre
-        : new THREE.CircleGeometry(radius, 28);
-    if (isLine) {
-      geo.translate(0, radius / 2, 0);
-    }
-    const mat = new THREE.MeshBasicMaterial({
-      color: opts?.color ?? '#EF4444',
-      transparent: true,
-      opacity: 0.32,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.rotation.x = -Math.PI / 2;
-    if (isLine) {
-      mesh.rotation.z = Math.atan2(dirX, dirZ) - Math.PI;
-    }
-    mesh.position.set(x, 0.05, z);
-    this.fxGroup.add(mesh);
-
-    this.telegraphs.push({
-      mesh,
-      x,
-      z,
-      radius,
-      elapsed: 0,
-      duration,
-      isLine,
-      dirX,
-      dirZ,
-      isEnemyHazard: true,
-      onComplete,
-    });
-  }
-
-  private clearProjectilesAndTelegraphs(): void {
-    for (const p of this.projectiles) {
-      this.fxGroup.remove(p.mesh);
-      p.mesh.geometry.dispose();
-      (p.mesh.material as THREE.Material).dispose();
-    }
-    this.projectiles = [];
-
-    for (const t of this.telegraphs) {
-      this.fxGroup.remove(t.mesh);
-      t.mesh.geometry.dispose();
-      (t.mesh.material as THREE.Material).dispose();
-    }
-    this.telegraphs = [];
-  }
-
-  private spawnParticleBurst(
-    x: number,
-    y: number,
-    z: number,
-    colorHex: string,
-    count: number,
-    speed: number,
-  ): void {
-    for (let i = 0; i < count; i++) {
-      const slot = this.particles[this.particleCursor];
-      this.particleCursor = (this.particleCursor + 1) % PARTICLE_POOL_SIZE;
-      const ang = Math.random() * Math.PI * 2;
-      const spd = (0.35 + Math.random() * 0.65) * speed;
-      slot.active = true;
-      slot.x = x + (Math.random() - 0.5) * 0.4;
-      slot.y = y + Math.random() * 0.3;
-      slot.z = z + (Math.random() - 0.5) * 0.4;
-      slot.vx = Math.cos(ang) * spd;
-      slot.vy = 2.2 + Math.random() * 3.8;
-      slot.vz = Math.sin(ang) * spd;
-      slot.maxLife = 0.35 + Math.random() * 0.35;
-      slot.life = slot.maxLife;
-      slot.size = 0.14 + Math.random() * 0.18;
-      slot.colorHex = colorHex;
-      slot.gravity = 11.5;
-      slot.drag = 0;
-      slot.stretchY = 1;
-      slot.bounce = 0;
-    }
-  }
-
-  /**
-   * Gerbe d'impact propre à chaque élément : braises qui montent, gouttes qui rebondissent,
-   * feuilles qui planent, étincelles nerveuses, éclats de roche lourds, spirale psy.
-   */
-  private spawnElementBurst(
-    x: number,
-    y: number,
-    z: number,
-    element: ElementType,
-    count: number,
-    power = 1,
-  ): void {
-    const fx = ELEMENT_FX[element];
-    for (let i = 0; i < count; i++) {
-      const slot = this.particles[this.particleCursor];
-      this.particleCursor = (this.particleCursor + 1) % PARTICLE_POOL_SIZE;
-      const ang = Math.random() * Math.PI * 2;
-      const spd = (0.4 + Math.random() * 0.6) * fx.speed * power;
-      const cos = Math.cos(ang);
-      const sin = Math.sin(ang);
-      slot.active = true;
-      slot.x = x + cos * 0.25;
-      slot.y = y + Math.random() * 0.4;
-      slot.z = z + sin * 0.25;
-      // swirl : composante tangentielle pour les feuilles et la spirale psy
-      slot.vx = cos * spd - sin * fx.swirl;
-      slot.vz = sin * spd + cos * fx.swirl;
-      slot.vy = fx.vyMin + Math.random() * (fx.vyMax - fx.vyMin);
-      slot.maxLife = fx.lifeMin + Math.random() * (fx.lifeMax - fx.lifeMin);
-      slot.life = slot.maxLife;
-      slot.size = fx.sizeMin + Math.random() * (fx.sizeMax - fx.sizeMin);
-      slot.colorHex = fx.colors[i % fx.colors.length];
-      slot.gravity = fx.gravity;
-      slot.drag = fx.drag;
-      slot.stretchY = fx.stretchY;
-      slot.bounce = fx.bounce;
-    }
-  }
-
-  private spawnSteamCube(x: number, y: number, z: number, colorHex: string): void {
-    const slot = this.particles[this.particleCursor];
-    this.particleCursor = (this.particleCursor + 1) % PARTICLE_POOL_SIZE;
-    slot.active = true;
-    slot.x = x + (Math.random() - 0.5) * 0.8;
-    slot.y = y;
-    slot.z = z + (Math.random() - 0.5) * 0.8;
-    slot.vx = (Math.random() - 0.5) * 0.4;
-    slot.vy = 1.6 + Math.random() * 0.9;
-    slot.vz = (Math.random() - 0.5) * 0.4;
-    slot.maxLife = 1.0 + Math.random() * 0.5;
-    slot.life = slot.maxLife;
-    slot.size = 0.22 + Math.random() * 0.14;
-    slot.colorHex = colorHex;
-    slot.gravity = -0.35;
-    slot.drag = 0;
-    slot.stretchY = 1;
-    slot.bounce = 0;
-  }
-
-  private findNearestLiving(x: number, z: number, list: CombatActor[]): CombatActor | null {
+  findNearestLiving(x: number, z: number, list: CombatActor[]): CombatActor | null {
     let best: CombatActor | null = null;
     let bestDistSq = Infinity;
     for (const a of list) {
@@ -1979,7 +1768,7 @@ export class VoxelEngine {
     return best;
   }
 
-  private scheduleNextFrame(): void {
+  scheduleNextFrame(): void {
     if (this.disposed) return;
     if (this.isSoftwareGl) {
       this.afterDraw(() => this.tick());
@@ -1988,7 +1777,7 @@ export class VoxelEngine {
     }
   }
 
-  private afterDraw(cb: () => void): void {
+  afterDraw(cb: () => void): void {
     if (this.disposed || !this.renderer) return;
     const gl = this.renderer.getContext() as WebGL2RenderingContext;
     const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -2006,7 +1795,7 @@ export class VoxelEngine {
     this.frameId = window.setTimeout(poll, 5);
   }
 
-  private tick(): void {
+  tick(): void {
     if (this.disposed) return;
 
     const now = performance.now();
@@ -2066,7 +1855,7 @@ export class VoxelEngine {
   }
 
   /** Un pas de jeu complet (logique + caméra), commun à la boucle temps réel et au mode headless. */
-  private advance(dt: number): void {
+  advance(dt: number): void {
     this.elapsedTotal += dt;
 
     if (this.waterUniform) {
@@ -2099,7 +1888,7 @@ export class VoxelEngine {
         this.updateExpedition(dt, simDt);
       }
 
-      this.updateParticles(dt);
+      updateParticles(this, dt);
       this.updateWeather(dt);
       this.updateStormAmbience(dt);
       this.floatingText.update(dt);
@@ -2108,7 +1897,7 @@ export class VoxelEngine {
     this.updateCamera(dt);
   }
 
-  private updateCamp(dt: number): void {
+  updateCamp(dt: number): void {
     this.updateDayNight(dt);
     this.updateEvolution(dt);
 
@@ -2120,7 +1909,7 @@ export class VoxelEngine {
     this.potSteamTimer -= dt;
     if (this.potSteamTimer <= 0) {
       this.potSteamTimer = this.potCookingColor ? 0.22 : 0.65;
-      this.spawnSteamCube(0, 1.65, -1.2, this.potCookingColor ?? '#E2F3FF');
+      spawnSteamCube(this, 0, 1.65, -1.2, this.potCookingColor ?? '#E2F3FF');
     }
 
     for (const w of this.campWanderers) {
@@ -2148,7 +1937,7 @@ export class VoxelEngine {
           if (w.emoteT <= 0 && w.emoteTimer <= 0) {
             w.emoteT = 0.55;
             w.emoteTimer = 5 + Math.random() * 7;
-            this.spawnParticleBurst(w.x, 1.5, w.z, w.rig.species.palette.accent, 4, 2.2);
+            spawnParticleBurst(this, w.x, 1.5, w.z, w.rig.species.palette.accent, 4, 2.2);
             if (this.screenState === 'playing') soundFx.playIdleChirp();
           }
           let squash = 1;
@@ -2173,7 +1962,7 @@ export class VoxelEngine {
       w.rig.root.rotation.y = w.facing;
     }
   }
-  private updateExpedition(dt: number, simDt: number): void {
+  updateExpedition(dt: number, simDt: number): void {
     if (!this.activeStage) return;
 
     if (this.expeditionEnded || this.resultSent) {
@@ -2216,13 +2005,13 @@ export class VoxelEngine {
       this.bossIntroActor.rig.root.position.y = this.bossDropY;
     }
 
-    this.updateProjectiles(dt, simDt);
-    this.updateTelegraphs(simDt);
+    updateProjectiles(this, dt, simDt);
+    updateTelegraphs(this, simDt);
     this.updateExpeditionProgress(dt, simDt);
   }
 
   /** Fin d'expédition : fête ou repli, puis envoi UNIQUE du résultat à l'interface. */
-  private finishExpedition(dt: number): void {
+  finishExpedition(dt: number): void {
     if (!this.activeStage) return;
     this.updateEndSequence(dt);
     if (this.expeditionEnded) {
@@ -2255,7 +2044,7 @@ export class VoxelEngine {
   }
 
   /** Déplacements (clavier, formation, poursuite), attaques de base et sorts automatiques des alliés. */
-  private updateAllies(dt: number, simDt: number): void {
+  updateAllies(dt: number, simDt: number): void {
     // Manual WASD / ZQSD / Arrow movement vector for leader
     let moveInputX = 0;
     let moveInputZ = 0;
@@ -2292,7 +2081,7 @@ export class VoxelEngine {
           ally.hp = Math.round(ally.maxHp * 0.55);
           ally.invulnTimer = 1.2;
           ally.rig.bodyPivot.rotation.z = 0;
-          this.spawnParticleBurst(ally.x, 0.8, ally.z, '#2FB97A', 16, 4.5);
+          spawnParticleBurst(this, ally.x, 0.8, ally.z, '#2FB97A', 16, 4.5);
         }
         continue;
       }
@@ -2369,7 +2158,7 @@ export class VoxelEngine {
             const dx = target.x - ally.x;
             const dz = target.z - ally.z;
             const dLen = Math.max(0.01, Math.hypot(dx, dz));
-            this.spawnProjectile({
+            spawnProjectile(this, {
               x: ally.x,
               y: 0.8,
               z: ally.z,
@@ -2434,7 +2223,7 @@ export class VoxelEngine {
   }
 
   /** IA des ennemis : poursuiveur, tireur, chargeur, boss. */
-  private updateEnemies(dt: number, simDt: number): void {
+  updateEnemies(dt: number, simDt: number): void {
     // Count active attack tokens for fair crowd pacing
     let activeTokens = this.enemies.filter((e) => !e.fainted && !e.removed && e.hasAttackToken).length;
 
@@ -2506,7 +2295,7 @@ export class VoxelEngine {
           enemy.squashY = 1.2;
           const jitter = confusedMiss ? (Math.random() - 0.5) * 0.9 : 0;
           const ang = Math.atan2(dx, dz) + jitter;
-          this.spawnProjectile({
+          spawnProjectile(this, {
             x: enemy.x,
             y: 0.85,
             z: enemy.z,
@@ -2531,14 +2320,14 @@ export class VoxelEngine {
           const dirX = dx / dist;
           const dirZ = dz / dist;
           const chargeLen = Math.min(7.5, dist + 2.0);
-          this.spawnEnemyTelegraph(enemy.x, enemy.z, chargeLen, 0.65, true, dirX, dirZ, () => {
+          spawnEnemyTelegraph(this, enemy.x, enemy.z, chargeLen, 0.65, true, dirX, dirZ, () => {
             enemy.telegraphing = false;
             enemy.hasAttackToken = false;
             enemy.aiCooldown = 4.2;
             if (enemy.fainted || enemy.removed) return;
             enemy.x = THREE.MathUtils.clamp(enemy.x + dirX * chargeLen, -ARENA_BOUND, ARENA_BOUND);
             enemy.z = THREE.MathUtils.clamp(enemy.z + dirZ * chargeLen, -ARENA_BOUND, ARENA_BOUND);
-            this.spawnParticleBurst(enemy.x, 0.7, enemy.z, enemy.rig.species.palette.accent, 14, 5.0);
+            spawnParticleBurst(this, enemy.x, 0.7, enemy.z, enemy.rig.species.palette.accent, 14, 5.0);
             for (const ally of this.allies) {
               if (!ally.fainted && Math.hypot(ally.x - enemy.x, ally.z - enemy.z) <= 2.2) {
                 this.applyDamageToActor(ally, Math.round(enemy.atk * 1.45), enemy, true, false, '#EF4444');
@@ -2597,7 +2386,7 @@ export class VoxelEngine {
    * Lance la prochaine attaque télégraphiée du boss (patterns 0 à 5), selon le kit du niveau et la phase.
    * L'appelant a déjà réservé le jeton d'attaque.
    */
-  private castBossPattern(enemy: CombatActor, target: CombatActor, dx: number, dz: number, dist: number): void {
+  castBossPattern(enemy: CombatActor, target: CombatActor, dx: number, dz: number, dist: number): void {
     if (!this.activeStage) return;
     const phase = enemy.bossPhase;
     // Rotation des attaques selon le kit du boss (données : StageDef.bossKit)
@@ -2616,13 +2405,13 @@ export class VoxelEngine {
       const windup = phase === 3 ? 0.62 : phase === 2 ? 0.72 : 0.82;
       const tx = target.x;
       const tz = target.z;
-      this.spawnEnemyTelegraph(tx, tz, aoeRad, windup, false, 0, 0, () => {
+      spawnEnemyTelegraph(this, tx, tz, aoeRad, windup, false, 0, 0, () => {
         enemy.telegraphing = false;
         enemy.hasAttackToken = false;
         enemy.skillCooldown = cooldownAfter;
         if (enemy.fainted || enemy.removed) return;
-        this.spawnShockwaveRing(tx, tz, aoeRad, '#F43F5E');
-        this.spawnParticleBurst(tx, 0.8, tz, '#F43F5E', 24, 6.2);
+        spawnShockwaveRing(this, tx, tz, aoeRad, '#F43F5E');
+        spawnParticleBurst(this, tx, 0.8, tz, '#F43F5E', 24, 6.2);
         this.trauma = Math.min(1, this.trauma + 0.45);
         for (const ally of this.allies) {
           if (!ally.fainted && Math.hypot(ally.x - tx, ally.z - tz) <= aoeRad + 0.4) {
@@ -2633,7 +2422,7 @@ export class VoxelEngine {
           const fanHalf = phase === 3 ? 2 : 1;
           for (let k = -fanHalf; k <= fanHalf; k++) {
             const baseAng = Math.atan2(tx - enemy.x, tz - enemy.z) + k * 0.42;
-            this.spawnProjectile({
+            spawnProjectile(this, {
               x: enemy.x,
               y: 0.9,
               z: enemy.z,
@@ -2662,9 +2451,9 @@ export class VoxelEngine {
       const bx = enemy.x;
       const bz = enemy.z;
       // Secondary cross beam visual + damage
-      this.spawnEnemyTelegraph(bx, bz, chargeLen * 0.75, windup, true, perpX, perpZ, () => {
+      spawnEnemyTelegraph(this, bx, bz, chargeLen * 0.75, windup, true, perpX, perpZ, () => {
         if (enemy.fainted || enemy.removed) return;
-        this.spawnParticleBurst(bx + perpX * 4, 0.7, bz + perpZ * 4, '#F4B942', 12, 4.8);
+        spawnParticleBurst(this, bx + perpX * 4, 0.7, bz + perpZ * 4, '#F4B942', 12, 4.8);
         for (const ally of this.allies) {
           if (ally.fainted) continue;
           const relX = ally.x - bx;
@@ -2677,7 +2466,7 @@ export class VoxelEngine {
         }
       });
       // Primary forward boss dash
-      this.spawnEnemyTelegraph(bx, bz, chargeLen, windup, true, dirX, dirZ, () => {
+      spawnEnemyTelegraph(this, bx, bz, chargeLen, windup, true, dirX, dirZ, () => {
         enemy.telegraphing = false;
         enemy.hasAttackToken = false;
         enemy.skillCooldown = cooldownAfter;
@@ -2686,7 +2475,7 @@ export class VoxelEngine {
         const startZ = enemy.z;
         enemy.x = THREE.MathUtils.clamp(enemy.x + dirX * Math.min(chargeLen, 6.8), -ARENA_BOUND, ARENA_BOUND);
         enemy.z = THREE.MathUtils.clamp(enemy.z + dirZ * Math.min(chargeLen, 6.8), -ARENA_BOUND, ARENA_BOUND);
-        this.spawnParticleBurst(enemy.x, 0.8, enemy.z, '#F43F5E', 22, 6.0);
+        spawnParticleBurst(this, enemy.x, 0.8, enemy.z, '#F43F5E', 22, 6.0);
         this.trauma = Math.min(1, this.trauma + 0.4);
         for (const ally of this.allies) {
           if (ally.fainted) continue;
@@ -2709,15 +2498,15 @@ export class VoxelEngine {
         const mz = THREE.MathUtils.clamp(focus.z + (Math.random() - 0.5) * 1.8, -ARENA_BOUND + 1, ARENA_BOUND - 1);
         const isLast = m === meteorCount - 1;
         const meteorRad = 2.6;
-        this.spawnEnemyTelegraph(mx, mz, meteorRad, 0.68 + m * 0.34, false, 0, 0, () => {
+        spawnEnemyTelegraph(this, mx, mz, meteorRad, 0.68 + m * 0.34, false, 0, 0, () => {
           if (isLast) {
             enemy.telegraphing = false;
             enemy.hasAttackToken = false;
             enemy.skillCooldown = cooldownAfter;
           }
           if (enemy.fainted || enemy.removed) return;
-          this.spawnShockwaveRing(mx, mz, meteorRad, '#F97316');
-          this.spawnParticleBurst(mx, 0.8, mz, '#F97316', 18, 5.6);
+          spawnShockwaveRing(this, mx, mz, meteorRad, '#F97316');
+          spawnParticleBurst(this, mx, 0.8, mz, '#F97316', 18, 5.6);
           this.trauma = Math.min(1, this.trauma + 0.25);
           for (const ally of this.allies) {
             if (!ally.fainted && Math.hypot(ally.x - mx, ally.z - mz) <= meteorRad + 0.35) {
@@ -2742,7 +2531,8 @@ export class VoxelEngine {
       const hasFollowUp = phase >= 2;
       this.bannerText = ringTheme.label;
       this.bannerTimer = 1.4;
-      this.spawnEnemyTelegraph(
+      spawnEnemyTelegraph(
+        this,
         bx,
         bz,
         outer,
@@ -2758,8 +2548,8 @@ export class VoxelEngine {
           }
           if (enemy.fainted || enemy.removed) return;
           ringSound();
-          this.spawnShockwaveRing(bx, bz, outer, ringTheme.burstColor);
-          this.spawnElementBurst(bx, 0.6, bz, ringTheme.fx, 26, 1.7);
+          spawnShockwaveRing(this, bx, bz, outer, ringTheme.burstColor);
+          spawnElementBurst(this, bx, 0.6, bz, ringTheme.fx, 26, 1.7);
           this.trauma = Math.min(1, this.trauma + 0.4);
           for (const ally of this.allies) {
             if (ally.fainted) continue;
@@ -2777,7 +2567,8 @@ export class VoxelEngine {
           if (hasFollowUp) {
             this.bannerText = 'Contrecoup — éloignez-vous !';
             this.bannerTimer = 1.0;
-            this.spawnEnemyTelegraph(
+            spawnEnemyTelegraph(
+              this,
               bx,
               bz,
               inner + FROST_KIT.aftershockMargin,
@@ -2791,8 +2582,8 @@ export class VoxelEngine {
                 enemy.skillCooldown = cooldownAfter;
                 if (enemy.fainted || enemy.removed) return;
                 ringSound();
-                this.spawnShockwaveRing(bx, bz, inner + FROST_KIT.aftershockMargin, ringTheme.aftershockColor);
-                this.spawnElementBurst(bx, 0.6, bz, 'rock', 16, 1.3);
+                spawnShockwaveRing(this, bx, bz, inner + FROST_KIT.aftershockMargin, ringTheme.aftershockColor);
+                spawnElementBurst(this, bx, 0.6, bz, 'rock', 16, 1.3);
                 this.trauma = Math.min(1, this.trauma + 0.3);
                 for (const ally of this.allies) {
                   if (
@@ -2806,7 +2597,7 @@ export class VoxelEngine {
                   // Phase 3 : éclats en étoile
                   for (let k = 0; k < FROST_KIT.shardCount; k++) {
                     const shardAng = (k / FROST_KIT.shardCount) * Math.PI * 2 + 0.3;
-                    this.spawnProjectile({
+                    spawnProjectile(this, {
                       x: bx,
                       y: 0.9,
                       z: bz,
@@ -2849,7 +2640,8 @@ export class VoxelEngine {
         const sx = THREE.MathUtils.clamp(bx + dirX * (2.4 + k * 2.3), -ARENA_BOUND, ARENA_BOUND);
         const sz = THREE.MathUtils.clamp(bz + dirZ * (2.4 + k * 2.3), -ARENA_BOUND, ARENA_BOUND);
         const isLast = k === strikes - 1;
-        this.spawnEnemyTelegraph(
+        spawnEnemyTelegraph(
+          this,
           sx,
           sz,
           strikeRad,
@@ -2870,7 +2662,7 @@ export class VoxelEngine {
             } else if (k % 3 === 0) {
               soundFx.playHit(true, false);
             }
-            this.spawnElementBurst(sx, 0.5, sz, strikeTheme.fx, 10, 1.2);
+            spawnElementBurst(this, sx, 0.5, sz, strikeTheme.fx, 10, 1.2);
             this.trauma = Math.min(1, this.trauma + 0.14);
             for (const ally of this.allies) {
               if (
@@ -2899,7 +2691,8 @@ export class VoxelEngine {
       enemy.pullTimer = windup;
       this.bannerText = eyeTheme.label;
       this.bannerTimer = 1.5;
-      this.spawnEnemyTelegraph(
+      spawnEnemyTelegraph(
+        this,
         bx,
         bz,
         eyeRad,
@@ -2919,8 +2712,8 @@ export class VoxelEngine {
           } else {
             soundFx.playHit(true, false);
           }
-          this.spawnShockwaveRing(bx, bz, eyeRad, eyeTheme.color);
-          this.spawnElementBurst(bx, 0.8, bz, eyeTheme.fx, 30, 1.5);
+          spawnShockwaveRing(this, bx, bz, eyeRad, eyeTheme.color);
+          spawnElementBurst(this, bx, 0.8, bz, eyeTheme.fx, 30, 1.5);
           this.trauma = Math.min(1, this.trauma + 0.5);
           for (const ally of this.allies) {
             if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= eyeRad + 0.4) {
@@ -2935,84 +2728,8 @@ export class VoxelEngine {
     }
   }
 
-  private updateProjectiles(dt: number, simDt: number): void {
-    // Update projectiles
-    for (let i = this.projectiles.length - 1; i >= 0; i--) {
-      const p = this.projectiles[i];
-      p.life -= simDt;
-      p.x += p.vx * simDt;
-      p.z += p.vz * simDt;
-      p.mesh.position.set(p.x, p.y, p.z);
-      p.mesh.rotation.y += dt * 7;
-      p.mesh.rotation.x += dt * 5;
-
-      const targets = p.fromAlly ? this.enemies : this.allies;
-      let hit = false;
-      for (const t of targets) {
-        if (t.fainted || t.removed) continue;
-        const hitRadius = p.radius + (t.isBoss ? 1.2 : 0.72);
-        if (Math.hypot(t.x - p.x, t.z - p.z) <= hitRadius) {
-          hit = true;
-          break;
-        }
-      }
-
-      if (hit || p.life <= 0) {
-        if (hit) {
-          for (const t of targets) {
-            if (t.fainted || t.removed) continue;
-            if (Math.hypot(t.x - p.x, t.z - p.z) <= p.aoeRadius + (t.isBoss ? 1.0 : 0.45)) {
-              this.applyDamageToActor(
-                t,
-                p.damage,
-                p.casterUnit,
-                p.aoeRadius > 1.5,
-                p.isCrit,
-                p.elementColor,
-                p.elementType,
-                Boolean(p.isSkill),
-              );
-            }
-          }
-          if (p.aoeRadius > 1.5) {
-            this.spawnShockwaveRing(p.x, p.z, p.aoeRadius, p.elementColor);
-          }
-        }
-        this.fxGroup.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        (p.mesh.material as THREE.Material).dispose();
-        this.projectiles.splice(i, 1);
-      }
-    }
-  }
-
-  private updateTelegraphs(simDt: number): void {
-    // Update ground telegraphs & shockwaves
-    for (let i = this.telegraphs.length - 1; i >= 0; i--) {
-      const tg = this.telegraphs[i];
-      tg.elapsed += simDt;
-      const ratio = Math.min(1, tg.elapsed / tg.duration);
-      const mat = tg.mesh.material as THREE.MeshBasicMaterial;
-      if (tg.duration <= 0.3) {
-        // Expanding shockwave ring
-        tg.mesh.scale.setScalar(0.5 + ratio * 0.7);
-        mat.opacity = (1 - ratio) * 0.75;
-      } else {
-        // Enemy attack windup telegraph pulsing brighter as impact approaches
-        mat.opacity = 0.22 + ratio * 0.42;
-      }
-      if (tg.elapsed >= tg.duration) {
-        this.fxGroup.remove(tg.mesh);
-        tg.mesh.geometry.dispose();
-        mat.dispose();
-        this.telegraphs.splice(i, 1);
-        tg.onComplete();
-      }
-    }
-  }
-
   /** Défaite, vague suivante ou victoire, puis instantané HUD (10 Hz au plus). */
-  private updateExpeditionProgress(dt: number, simDt: number): void {
+  updateExpeditionProgress(dt: number, simDt: number): void {
     if (!this.activeStage) return;
     // Check Defeat (all 3 allies fainted simultaneously)
     const livingAllies = this.allies.filter((a) => !a.fainted);
@@ -3056,7 +2773,7 @@ export class VoxelEngine {
     }
   }
 
-  private updateActorCommon(actor: CombatActor, dt: number, simDt: number): void {
+  updateActorCommon(actor: CombatActor, dt: number, simDt: number): void {
     // Knockback velocity decay
     if (Math.hypot(actor.vx, actor.vz) > 0.05) {
       actor.x = THREE.MathUtils.clamp(actor.x + actor.vx * simDt, -ARENA_BOUND, ARENA_BOUND);
@@ -3086,7 +2803,7 @@ export class VoxelEngine {
             inst.tickTimer = 1.0;
             const burnDmg = Math.max(6, Math.round(inst.sourceAtk * 0.22));
             actor.hp = Math.max(1, actor.hp - burnDmg);
-            this.spawnParticleBurst(actor.x, 1.0, actor.z, STATUS_META.burn.color, 4, 2.2);
+            spawnParticleBurst(this, actor.x, 1.0, actor.z, STATUS_META.burn.color, 4, 2.2);
             this.floatingText.spawn(actor.x, 1.9, actor.z, `${burnDmg}`, STATUS_META.burn.color, 0.78, 0.65);
             if (!actor.isAlly) this.damageDealt += burnDmg;
           }
@@ -3133,7 +2850,7 @@ export class VoxelEngine {
     }
   }
 
-  private animateRigPose(
+  animateRigPose(
     rig: VoxelCreatureRig,
     walkPhase: number,
     isMoving: boolean,
@@ -3218,58 +2935,8 @@ export class VoxelEngine {
       }
     });
   }
-  private updateParticles(dt: number): void {
-    let dirty = false;
-    for (let i = 0; i < PARTICLE_POOL_SIZE; i++) {
-      const p = this.particles[i];
-      if (!p.active) continue;
-      dirty = true;
-      p.life -= dt;
-      if (p.life <= 0) {
-        p.active = false;
-        _dummy.position.set(0, -100, 0);
-        _dummy.scale.setScalar(0.001);
-        _dummy.updateMatrix();
-        this.particleMesh.setMatrixAt(i, _dummy.matrix);
-        continue;
-      }
-      p.vy -= p.gravity * dt;
-      if (p.drag > 0) {
-        const damp = Math.exp(-p.drag * dt);
-        p.vx *= damp;
-        p.vz *= damp;
-        if (p.gravity === 0) p.vy *= damp;
-      }
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      if (p.y < 0.08) {
-        p.y = 0.08;
-        if (p.bounce > 0 && p.vy < 0) p.vy = -p.vy * p.bounce;
-      }
-      p.z += p.vz * dt;
-      const ratio = p.life / p.maxLife;
-      const s = p.size * ratio;
-      _dummy.position.set(p.x, p.y, p.z);
-      if (p.stretchY > 1.5) {
-        // gouttes / étincelles : alignées sur leur trajectoire au lieu de tournoyer
-        _dummy.rotation.set(0, p.life * 3, Math.atan2(p.vx, Math.abs(p.vy) + 0.5) * -0.6);
-      } else {
-        _dummy.rotation.set(p.life * 6, p.life * 4, 0);
-      }
-      _dummy.scale.set(s, s * p.stretchY, s);
-      _dummy.updateMatrix();
-      this.particleMesh.setMatrixAt(i, _dummy.matrix);
-      this.particleMesh.setColorAt(i, _color.set(p.colorHex));
-    }
-    if (dirty) {
-      this.particleMesh.instanceMatrix.needsUpdate = true;
-      if (this.particleMesh.instanceColor) {
-        this.particleMesh.instanceColor.needsUpdate = true;
-      }
-    }
-  }
 
-  private updateWeather(dt: number): void {
+  updateWeather(dt: number): void {
     const kind = this.weatherKind;
     const isRain = kind === 'rain';
     const sway = isRain ? 0.15 : kind === 'snow' ? 0.9 : 0.65;
@@ -3316,7 +2983,7 @@ export class VoxelEngine {
     }
     this.weatherMesh.instanceMatrix.needsUpdate = true;
   }
-  private updateCamera(dt: number): void {
+  updateCamera(dt: number): void {
     if (this.screenState === 'title') {
       // Atmospheric isometric diorama orbit with upper sky negative space for the Title Lockup
       const ang = this.elapsedTotal * 0.16 + 0.52;
@@ -3388,7 +3055,7 @@ export class VoxelEngine {
     this.camera.lookAt(this.camLook);
   }
 
-  private emitHudSnapshot(): void {
+  emitHudSnapshot(): void {
     if (!this.activeStage || this.playMode !== 'expedition') return;
     const biome = BIOMES[this.activeStage.biomeId];
     const boss = this.enemies.find((e) => e.isBoss && !e.removed);
@@ -3461,7 +3128,7 @@ export class VoxelEngine {
       window.removeEventListener('blur', this.handleBlur);
       document.removeEventListener('visibilitychange', this.handleVisibility);
     }
-    this.clearProjectilesAndTelegraphs();
+    clearProjectilesAndTelegraphs(this);
     this.clearGroup(this.worldGroup);
     this.clearGroup(this.actorsGroup);
     this.floatingText.dispose();
