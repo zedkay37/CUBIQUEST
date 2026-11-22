@@ -93,7 +93,7 @@ export function ExpeditionDrawer({
         {/* Body */}
         <div className="flex-1 overflow-y-auto cubi-scroll p-5 grid grid-cols-1 md:grid-cols-12 gap-5">
           {/* Left: 3 Stages in Biome */}
-          <div className="md:col-span-6 space-y-2.5">
+          <div className="md:col-span-6 space-y-2.5 ui-cascade">
             <p className="text-xs text-[#B8C2D1] mb-2">{activeBiome.subtitle}</p>
             {!isBiomeUnlocked(save, selectedBiome) && biomeStages[0] && biomeStages[0].index > 0 && (
               <p className="text-xs font-semibold text-[#F4B942] mb-2">

@@ -233,7 +233,7 @@ export function QuestsDrawer({
         {/* Scrollable Content */}
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
           {section === 'missions' && (
-            <div className="space-y-3">
+            <div className="space-y-3 ui-cascade">
               <p className="text-xs text-[#B8C2D1]">
                 {FR.ui.questsDrawer.completezDesObjectifsEnExpeditionOu}
               </p>
@@ -327,7 +327,7 @@ export function QuestsDrawer({
                   {FR.ui.questsDrawer.aucunSuccesDansCeFiltrePour}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 ui-cascade">
                   {filteredAchievements.map(({ ach, progress, claimed, ready }) => {
                     const ratio = Math.max(0, Math.min(1, progress / Math.max(1, ach.target)));
                     return (

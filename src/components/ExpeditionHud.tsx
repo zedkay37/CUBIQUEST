@@ -46,7 +46,7 @@ export function ExpeditionHud({
   const timerStr = `${mins}:${secs.toString().padStart(2, '0')}`;
 
   return (
-    <div className="fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-3 sm:p-4">
+    <div className="fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-3 sm:p-4 ui-screen-enter">
       {/* Top Perimeter Row */}
       <div className="flex items-start justify-between gap-3">
         {/* Top-Left: Wave & Stage Telemetry */}

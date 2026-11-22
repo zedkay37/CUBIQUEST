@@ -115,7 +115,7 @@ export function TeamDrawer({
             <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1]">
               {FR.ui.teamDrawer.compagnons}{save.roster.length})
             </p>
-            <div className="space-y-2 max-h-[56vh] overflow-y-auto cubi-scroll pr-1">
+            <div className="space-y-2 max-h-[56vh] overflow-y-auto cubi-scroll pr-1 ui-cascade">
               {save.roster.map((c) => {
                 const sp = SPECIES[c.speciesId];
                 const st = computeCreatureStats(c, save.powerStones);
@@ -412,7 +412,7 @@ export function TeamDrawer({
               </div>
             </div>
 
-            <div className="space-y-2 max-h-[56vh] overflow-y-auto cubi-scroll pr-1">
+            <div className="space-y-2 max-h-[56vh] overflow-y-auto cubi-scroll pr-1 ui-cascade">
               {filteredStones.map((stone) => {
                 const compatible = canEquipStone(creature, selectedSlotIdx, stone);
                 const ownerUid = isStoneEquippedAnywhere(save, stone.id);

@@ -60,7 +60,7 @@ export function CampHud({
         : null;
 
   return (
-    <div className="fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-3 sm:p-4">
+    <div className="fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-3 sm:p-4 ui-screen-enter">
       {/* Top Perimeter Bar: Compact Camp Identity & Utilities */}
       <div className="flex items-start justify-between gap-3">
         <div className="voxel-panel rounded-xl px-4 py-2.5 flex items-center gap-3.5 pointer-events-auto">

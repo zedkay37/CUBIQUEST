@@ -14,7 +14,7 @@ export function TitleOverlay({
   onNewAdventure,
 }: TitleOverlayProps) {
   return (
-    <div className="fixed inset-0 z-20 flex flex-col justify-between pointer-events-none px-6 py-8">
+    <div className="fixed inset-0 z-20 flex flex-col justify-between pointer-events-none px-6 py-8 ui-screen-enter">
       {/* Upper calm negative-space lockup over the sunlit 3D sky */}
       <div className="flex flex-col items-center pt-4 sm:pt-8">
         <TitleLockup />

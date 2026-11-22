@@ -95,22 +95,68 @@
     filter 140ms ease;
 }
 
-/* === Giga Update : transitions d'UI === */
+/* === Transitions d'interface (sprint UI) === */
+/* Les tiroirs et fenêtres entrent depuis le bas avec un léger rebond */
 @keyframes panel-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(32px) scale(0.97);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.005);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.voxel-panel[role='dialog']:not([data-no-pop]) {
+  animation: panel-pop 300ms var(--ui-ease-out) both;
+}
+
+/* Changement d'écran (titre, camp, combat) : glissement plus fondu */
+@keyframes ui-screen-in {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.965);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-
-/* Tous les panneaux modaux (tiroirs, pause, starter) apparaissent avec un léger rebond */
-.voxel-panel[role='dialog']:not([data-no-pop]) {
-  animation: panel-pop 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.ui-screen-enter {
+  animation: ui-screen-in var(--ui-normal) var(--ui-ease-out) both;
 }
+
+/* Listes en cascade : 30 ms d'écart, 12 éléments animés au plus */
+@keyframes ui-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ui-cascade > * {
+  animation: ui-item-in var(--ui-normal) var(--ui-ease-out) both;
+}
+.ui-cascade > :nth-child(2) { animation-delay: 30ms; }
+.ui-cascade > :nth-child(3) { animation-delay: 60ms; }
+.ui-cascade > :nth-child(4) { animation-delay: 90ms; }
+.ui-cascade > :nth-child(5) { animation-delay: 120ms; }
+.ui-cascade > :nth-child(6) { animation-delay: 150ms; }
+.ui-cascade > :nth-child(7) { animation-delay: 180ms; }
+.ui-cascade > :nth-child(8) { animation-delay: 210ms; }
+.ui-cascade > :nth-child(9) { animation-delay: 240ms; }
+.ui-cascade > :nth-child(10) { animation-delay: 270ms; }
+.ui-cascade > :nth-child(11) { animation-delay: 300ms; }
+.ui-cascade > :nth-child(12) { animation-delay: 330ms; }
+.ui-cascade > :nth-child(n + 13) { animation: none; }
 
 @keyframes confetti-fall {
   0% {
@@ -174,7 +220,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .voxel-panel[role='dialog'],
+  /* moins d'animations : un simple fondu */
+  .voxel-panel[role='dialog']:not([data-no-pop]),
+  .ui-screen-enter,
+  .ui-cascade > * {
+    animation: ui-fade-only var(--ui-normal) ease both !important;
+  }
   .outcome-title-shine,
   .outcome-unlock-pulse {
     animation: none !important;
@@ -278,6 +329,15 @@ textarea:focus-visible {
 }
 
 /* Custom subtle scrollbars for drawers */
+@keyframes ui-fade-only {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .cubi-scroll::-webkit-scrollbar {
   width: 6px;
   height: 6px;
