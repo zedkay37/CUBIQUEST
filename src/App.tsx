@@ -65,6 +65,16 @@ const DEBUG_ENABLED =
   typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1';
 const DebugOverlay = lazy(() => import('./components/DebugOverlay'));
 
+/**
+ * `?ui=<écran>` (outil de développement, captures) : ouvre directement un écran sans toucher à la sauvegarde.
+ * Tiroirs du camp : expeditions, team, cooking, quests, codex (avec ?autostart=1). Départ : starter.
+ * Avec ?stage=<id> : pause, victory, defeat. Évolution : evolution (avec ?autostart=1).
+ */
+function getUiParam(): string | null {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('ui');
+}
+
 function hasAutostartParam(): boolean {
   if (typeof window === 'undefined') return false;
   return new URLSearchParams(window.location.search).get('autostart') === '1';
@@ -253,6 +263,30 @@ export default function App() {
       setControlMode('auto');
       engine.startExpedition(preview.stage, creatures, [], 'auto');
       engine.setScreenState('playing');
+    }
+
+    // ?ui=... : écran ouvert d'office, pour les captures (rien n'est enregistré)
+    const ui = getUiParam();
+    if (ui === 'expeditions' || ui === 'team' || ui === 'cooking' || ui === 'quests' || ui === 'codex') {
+      setActiveDrawer(ui);
+    } else if (ui === 'starter') {
+      setScreenState('playing');
+      engine.setScreenState('playing');
+    } else if (ui === 'evolution') {
+      setEvolution({ from: 'pyrocube', to: 'flambrix', revealed: true });
+    } else if (preview && ui === 'pause') {
+      setScreenState('paused');
+    } else if (preview && (ui === 'victory' || ui === 'defeat')) {
+      const won = ui === 'victory';
+      const { outcome: shown } = applyExpeditionRewards(
+        buildPreviewSave(saveRef.current, previewCreaturesRef.current),
+        preview.stage,
+        won,
+        { clearTimeSec: 48, wavesCleared: won ? 3 : 2, damageDealt: 18250, bossHpPercentRemaining: won ? 0 : 23, burstsTriggered: 5, ultimatesUsed: 1, perfectDodges: 2, triosTriggered: 2 },
+        () => 0.3,
+      );
+      setOutcome(shown);
+      setScreenState('gameover');
     }
 
     return () => {
