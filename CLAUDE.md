@@ -95,7 +95,9 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | `enemies.ts` | IA des ennemis : poursuiveur, tireur, chargeur, boss (déplacement, jetons d'attaque). |
 | `boss.ts` | Entrée en scène du boss et attaques télégraphiées (patterns 0 à 5, pilotés par `BOSS_KITS`). |
 | `skills.ts` | Commandes du joueur : sort d'un allié, Esquive, ultime. |
-| `damage.ts` | Résolution d'un coup : faiblesses, statuts, réactions, boucliers, K.O., phases du boss. |
+| `damage.ts` | Résolution d'un coup : faiblesses, cubes (via `cubes.ts`), boucliers, K.O., phases du boss. |
+| `cubes.ts` | Cubes d'élément : pose, maturation, Éclat (effets de `BURSTS`), Fêlure, Trio, un seul effet par lancer (`CastContext`), ciblage intelligent, `getSkillPreview`, charge du Déchaînement (`gainUltimateCharge`). |
+| `cubeFx.ts` | Affichage des cubes et des Fêlures : un `InstancedMesh` chacun, atlas de symboles d'élément dessiné par code. |
 | `actors.ts` | État commun des acteurs, pose animée des modèles, recherche de cible, disparition. |
 | `fx.ts` | Particules, projectiles, ondes de choc, télégraphes au sol, confettis. |
 | `hud.ts` | Instantané de combat envoyé à l'interface. |
@@ -113,12 +115,12 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 
 ## Règle du golden master
 
-`npm run golden` rejoue, à graine fixe, tous les niveaux x 2 profils (« auto », « joueur actif ») x réactions (avec, sans) x 10 combats, et compare chaque combat à `docs/sim/golden-master.json` : vainqueur, durée, PV restants, dégâts, phases de boss, attaques télégraphiées, nombre de tirages aléatoires, somme de contrôle des instantanés HUD.
+`npm run golden` rejoue, à graine fixe, tous les niveaux x 4 séries (« auto », « auto sans cubes », « joueur actif », « expert ») x 10 combats, et compare chaque combat à `docs/sim/golden-master.json` : vainqueur, durée, PV restants, dégâts, phases de boss, attaques télégraphiées, nombre de tirages aléatoires, somme de contrôle des instantanés HUD.
 
 - **Changement technique** (rangement, performance, outillage, textes déplacés) : le golden doit rester identique. S'il change, la modification a changé le jeu : l'annuler (`git checkout .`) et recommencer plus petit.
 - **Changement de jeu voulu** (équilibrage, contenu, règle) : réenregistrer avec `npm run golden -- --record` et committer le fichier AVEC le changement, en le disant dans le message de commit.
 - Le golden ne voit que la simulation. Il ne voit ni le rendu, ni le son, ni les textes : pour ceux-là, captures d'écran et relecture.
-- « Sans réactions » passe par l'option de moteur `reactions: false`, réservée aux outils. Il n'existe pas de paramètre d'URL pour couper les réactions en jeu.
+- « Sans cubes » passe par l'option de moteur `cubes: false`, réservée aux outils. Il n'existe pas de paramètre d'URL pour couper les cubes en jeu.
 
 ## Conventions
 
@@ -142,7 +144,9 @@ npm run sim -- --brief --runs 40 --stages tundra-3,stormpeak-3
 npm run sim -- --stages tundra-3 --set tundra-3=9/0.28/3.2   # essai SANS toucher balance.ts (PV ennemis / attaque / PV boss)
 npm run sim -- --seed 2 --out docs/sim/mon-tableau.md
 npm run sim -- --profile active                # profil « joueur actif » : sorts et ultime dès que prêts, Esquive sur télégraphe
-npm run sim -- --reactions 0                   # réactions élémentaires coupées (option d'outil)
+npm run sim -- --profile expert                # profil « expert » : piloté par getSkillPreview (Trios, Éclats pleins)
+npm run sim -- --cubes 0                       # cubes d'élément coupés (option d'outil)
+npm run sim -- --scale 1/0.7/1                 # multiplie les réglages de tous les niveaux choisis (essai global)
 ```
 
 - Le vrai `VoxelEngine` tourne sans rendu, à pas fixe de 1/60 s, avec l'escouade de `previewConfigs.ts`. La passe complète (21 niveaux x 10 combats) prend environ 11 secondes.
@@ -150,7 +154,8 @@ npm run sim -- --reactions 0                   # réactions élémentaires coup�
 - Cibles pour un nouveau niveau : 50 à 85 % de victoires en « auto » ; chaque phase de boss assez longue pour qu'il y lance au moins une attaque télégraphiée (colonne « ≥ 1 attaque » à 100 %).
 - Les 21 niveaux ont une entrée `STAGE_TUNING` (S03 : réglage a minima des 12 premiers ; vrai réglage en S05). Un test borne les multiplicateurs (PV ennemis 0,5–12, attaque 0,05–1,5, PV du boss 0,5–25) et garde la signature du contenu des 12 premiers niveaux (puissance, XP, Galets, boss, niveaux et IA des vagues). Changer l'ESPÈCE d'un ennemi reste possible, mais remesurer : sur le tout premier niveau, un seul échange faisait passer l'Auto de 20 % à 100 %.
 - Kits de boss : `BOSS_KITS` (balance.ts) décrit la rotation des 6 attaques existantes et leur habillage. Un nouveau kit se compose là, sans toucher au moteur.
-- « Auto Total » n'utilise jamais l'Esquive : un joueur qui esquive fait mieux que le tableau. Le profil « joueur actif » est un script simple, pas un vrai joueur.
+- « Auto Total » n'utilise jamais l'Esquive et ne fait jamais de Trio (règle du jeu) : un joueur qui esquive fait mieux que le tableau. Les profils « joueur actif » et « expert » sont des scripts simples, pas de vrais joueurs ; l'expert lit l'état du moteur (recharges, cubes), ce qu'aucun joueur ne voit aussi précisément.
+- Chaque ligne `--brief` donne aussi, par combat : Éclats (faibles), Trios, Déchaînements (pendant le boss). Cibles S04 : Éclats Auto ≥ 3 et actif ≥ 6 ; Trios expert ≥ 4 ; Déchaînements par combat de boss Auto 0–1, actif 1–2, expert 1–3.
 
 ## Pièges connus
 
@@ -165,6 +170,7 @@ npm run sim -- --reactions 0                   # réactions élémentaires coup�
 - Les modules de `engine/` s'importent les uns les autres en cercle : c'est sans danger tant qu'ils n'exécutent rien au chargement. Ne pas y ajouter de code de premier niveau qui appelle un autre module.
 - Le sac de Pierres est limité à 48 : passer par `addPowerStoneToBag`, qui ne retire jamais une pierre équipée.
 - **Site statique** : `vite build` produit un site complet, sans serveur. `base` vient de `BASE_PATH` (défaut `/`) : aucun chemin absolu commençant par `/` dans le code (utiliser `import.meta.env.BASE_URL`). Les clés de `localStorage` passent par `withSaveSlot` (`src/game/saveSlot.ts`) : la version `next/` (`VITE_SAVE_SLOT=next`) partage le domaine de la version validée mais pas sa sauvegarde. L'onglet du Professeur n'existe que si `VITE_AI_CODEX=1` ; sinon le jeu n'appelle jamais `/api`. Le titre de `index.html` est injecté au build depuis `fr.ts` (repère `%GAME_FULL_TITLE%`).
+- **Cubes** : la règle (`resolveCubeHit`, `pickSkillTarget`) est pure dans `rules.ts` ; ses réglages dans `CUBE_KIT`, `ULTIMATE_CHARGE`, `ULTIMATE_KIT` (`balance.ts`) et `BURSTS` (`catalog.ts`). Sur un ennemi, le cube remplace les statuts (un seul, de la durée du cube) ; les altérations infligées aux alliés restent des statuts. Tout nouvel état transitoire de combat (`pendingUltHits`, `slowMoTimer`, verrous) se remet à zéro dans `startExpedition` et `loadCampScene`.
 - `catalog.ts` importe `balance.ts` : `balance.ts` ne doit rien importer du catalogue. `i18n/fr.ts` n'importe rien.
 - Deux fichiers de verrouillage coexistent : `package-lock.json` (npm, à jour, utilisé par la CI) et `bun.lock` (hérité, pas régénéré faute de `bun` sur la machine de développement).
 - Sous Windows / Git Bash : ne jamais passer du code contenant des backticks à `node -e "..."` (le shell les exécute). Écrire un fichier de script à la place.
