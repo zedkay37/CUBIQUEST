@@ -3,7 +3,7 @@ import type {
   AchievementDef,
   BiomeDef,
   BiomeId,
-  ElementalReactionDef,
+  BurstDef,
   ElementType,
   IngredientDef,
   MoveDef,
@@ -11,7 +11,6 @@ import type {
   RuneKind,
   PotTier,
   QuestTemplate,
-  ReactionId,
   RecipeDef,
   SpeciesDef,
   StageDef,
@@ -2656,62 +2655,18 @@ export const STATUS_META: Record<StatusKind, StatusMeta> = {
   },
 };
 
-// === V0.2 ELEMENTAL REACTIONS ===
-export const ELEMENTAL_REACTIONS: Record<ReactionId, ElementalReactionDef> = {
-  evaporation: {
-    id: 'evaporation',
-    name: FR.catalog.ELEMENTAL_REACTIONS.evaporation.name,
-    color: '#38BDF8',
-    damageMult: 1.65,
-    ultimateBonus: 18,
-    effect: 'burst',
-    description: FR.catalog.ELEMENTAL_REACTIONS.evaporation.description,
-  },
-  ignition: {
-    id: 'ignition',
-    name: FR.catalog.ELEMENTAL_REACTIONS.ignition.name,
-    color: '#F97316',
-    damageMult: 1.45,
-    ultimateBonus: 18,
-    effect: 'aoe_burn',
-    description: FR.catalog.ELEMENTAL_REACTIONS.ignition.description,
-  },
-  electrocution: {
-    id: 'electrocution',
-    name: FR.catalog.ELEMENTAL_REACTIONS.electrocution.name,
-    color: '#FACC15',
-    damageMult: 1.4,
-    ultimateBonus: 18,
-    effect: 'chain_stun',
-    description: FR.catalog.ELEMENTAL_REACTIONS.electrocution.description,
-  },
-  overload: {
-    id: 'overload',
-    name: FR.catalog.ELEMENTAL_REACTIONS.overload.name,
-    color: '#EF4444',
-    damageMult: 1.5,
-    ultimateBonus: 18,
-    effect: 'knockback',
-    description: FR.catalog.ELEMENTAL_REACTIONS.overload.description,
-  },
-  crystallize: {
-    id: 'crystallize',
-    name: FR.catalog.ELEMENTAL_REACTIONS.crystallize.name,
-    color: '#EAB308',
-    damageMult: 1.25,
-    ultimateBonus: 16,
-    effect: 'team_shield',
-    description: FR.catalog.ELEMENTAL_REACTIONS.crystallize.description,
-  },
-  psy_resonance: {
-    id: 'psy_resonance',
-    name: FR.catalog.ELEMENTAL_REACTIONS.psy_resonance.name,
-    color: '#C084FC',
-    damageMult: 1.35,
-    ultimateBonus: 20,
-    effect: 'cd_spread',
-    description: FR.catalog.ELEMENTAL_REACTIONS.psy_resonance.description,
-  },
+// === ÉCLATS (S04) ===
+/**
+ * Indexés par l'élément QUI FAIT ÉCLATER un cube mûr : c'est lui qui décide de l'effet (plan, section 5.1).
+ * Les effets réutilisent les implémentations des anciennes réactions ; `team_heal` (Sève) est nouveau.
+ */
+export const BURSTS: Record<ElementType, BurstDef> = {
+  fire: { id: 'deflagration', element: 'fire', name: FR.catalog.BURSTS.deflagration.name, color: '#F97316', damageMult: 1.45, effect: 'aoe_burn', description: FR.catalog.BURSTS.deflagration.description },
+  water: { id: 'deferlante', element: 'water', name: FR.catalog.BURSTS.deferlante.name, color: '#38BDF8', damageMult: 1.65, effect: 'knockback', description: FR.catalog.BURSTS.deferlante.description },
+  grass: { id: 'seve', element: 'grass', name: FR.catalog.BURSTS.seve.name, color: '#4ADE80', damageMult: 1.3, effect: 'team_heal', description: FR.catalog.BURSTS.seve.description },
+  electric: { id: 'arc', element: 'electric', name: FR.catalog.BURSTS.arc.name, color: '#FACC15', damageMult: 1.4, effect: 'chain_stun', description: FR.catalog.BURSTS.arc.description },
+  rock: { id: 'rempart', element: 'rock', name: FR.catalog.BURSTS.rempart.name, color: '#EAB308', damageMult: 1.25, effect: 'team_shield', description: FR.catalog.BURSTS.rempart.description },
+  psychic: { id: 'echo', element: 'psychic', name: FR.catalog.BURSTS.echo.name, color: '#C084FC', damageMult: 1.35, effect: 'cd_spread', description: FR.catalog.BURSTS.echo.description },
 };
 
 // === V0.2 ROTATING QUEST POOL ===

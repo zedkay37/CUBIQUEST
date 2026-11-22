@@ -94,6 +94,28 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
 };
 
 /**
+ * CUBES D'ÉLÉMENT (S04, plan section 5.1). Durées en secondes.
+ *  - un sort allié pose un cube de son élément (duration), qui mûrit en ripenTime ;
+ *  - un autre élément sur un cube mûr : Éclat (BURSTS, catalog.ts), Fêlure de crackDuration ;
+ *    sur un cube pas mûr : Éclat faible (× weakBurstMult, sans effet) ;
+ *  - un troisième élément sur une cible fêlée : Trio (× trioDamageMult, onde de trioSplashRatio dans
+ *    trioSplashRadius, −trioCooldownRefund sur les trois recharges), puis trioLock sans cube.
+ */
+export const CUBE_KIT = {
+  duration: 5,
+  ripenTime: 1.2,
+  weakBurstMult: 1.15,
+  crackDuration: 3,
+  trioLock: 2,
+  trioDamageMult: 2,
+  trioSplashRatio: 0.5,
+  trioSplashRadius: 5,
+  trioCooldownRefund: 1,
+  burstUltBonus: 8,
+  trioUltBonus: 25,
+};
+
+/**
  * Kit de boss « Givre » (StageDef.bossKit = 'frost').
  * Les tableaux à 3 valeurs sont indexés par phase : [phase 1, phase 2, phase 3].
  * Les dégâts sont des multiples de l'attaque du boss.

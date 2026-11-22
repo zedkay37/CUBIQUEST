@@ -8,9 +8,9 @@ import {
   getMoveModifiers,
   getStatusForElement,
   getTypeEffectiveness,
-  resolveElementalReaction,
 } from '../rules';
-import type { ElementType } from '../types';
+import { BURSTS, STATUS_META } from '../catalog';
+import type { ElementType, StatusKind } from '../types';
 import { getRigTopY } from '../voxelModels';
 import { applyStatusToActor, getPrimaryStatus } from './actors';
 import { spawnElementBurst, spawnParticleBurst, spawnShockwaveRing } from './fx';
@@ -18,6 +18,29 @@ import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 import { FR } from '../../i18n/fr';
+
+/**
+ * PONT TEMPORAIRE (S04.1 -> S04.2) : l'ancienne table des réactions, gardée ici à l'identique le temps
+ * que le moteur passe aux cubes, pour que la section des règles pures ne change pas le jeu.
+ * Supprimé en S04.2.
+ */
+type LegacyEffect = 'burst' | 'aoe_burn' | 'chain_stun' | 'knockback' | 'team_shield' | 'cd_spread';
+function legacyReaction(existing: StatusKind | null, incoming: ElementType): { mult: number; ult: number; effect: LegacyEffect; color: string; name: string } | null {
+  if (!existing) return null;
+  const prev = STATUS_META[existing].element;
+  if (prev === incoming) return null;
+  const pair = new Set<ElementType>([prev, incoming]);
+  const r = (mult: number, ult: number, effect: LegacyEffect) => ({ mult, ult, effect, color: BURSTS[incoming].color, name: BURSTS[incoming].name });
+  if (pair.has('fire') && pair.has('water')) return r(1.65, 18, 'burst');
+  if (pair.has('fire') && pair.has('grass')) return r(1.45, 18, 'aoe_burn');
+  if (pair.has('water') && pair.has('electric')) return r(1.4, 18, 'chain_stun');
+  if (pair.has('fire') && pair.has('electric')) return r(1.5, 18, 'knockback');
+  if (pair.has('rock')) return r(1.25, 16, 'team_shield');
+  if (pair.has('psychic')) return r(1.35, 20, 'cd_spread');
+  if (pair.has('grass') && pair.has('electric')) return r(1.5, 18, 'knockback');
+  if (pair.has('water') && pair.has('grass')) return r(1.45, 18, 'aoe_burn');
+  return null;
+}
 
 export function applyDamageToActor(
   self: VoxelEngine,
@@ -42,12 +65,12 @@ export function applyDamageToActor(
   // Check V0.2 Elemental Reactions when an ally skill hits a target carrying an elemental status
   if (attacker?.isAlly && isSkillHit && incomingElement && !target.isAlly) {
     const existing = getPrimaryStatus(self, target);
-    const reaction = self.reactionsEnabled ? resolveElementalReaction(existing, incomingElement) : null;
+    const reaction = self.reactionsEnabled ? legacyReaction(existing, incomingElement) : null;
     if (reaction && existing) {
       delete target.statuses[existing];
-      dmg *= reaction.damageMult;
+      dmg *= reaction.mult;
       self.reactionsTriggered += 1;
-      self.ultimateCharge = computeUltimateCharge(self.ultimateCharge, reaction.ultimateBonus);
+      self.ultimateCharge = computeUltimateCharge(self.ultimateCharge, reaction.ult);
       self.lastReactionLabel = reaction.name;
       self.lastReactionColor = reaction.color;
       self.lastReactionTimer = 2.4;

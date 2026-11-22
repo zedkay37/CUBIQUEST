@@ -953,31 +953,13 @@ export const FR = {
         description: 'Perturbe les attaques et amplifie la résonance élémentaire.',
       },
     },
-    ELEMENTAL_REACTIONS: {
-      evaporation: {
-        name: 'ÉVAPORATION !',
-        description: 'Eau + Feu : explosion de vapeur infligeant ×1,65 dégâts.',
-      },
-      ignition: {
-        name: 'EMBRASEMENT !',
-        description: 'Feu + Plante : déflagration de zone qui propage Brûlure.',
-      },
-      electrocution: {
-        name: 'ÉLECTROCUTION !',
-        description: 'Eau + Électrik : arc foudroyant en chaîne vers 2 cibles proches.',
-      },
-      overload: {
-        name: 'SURCHARGE !',
-        description: 'Feu + Électrik : onde de choc explosive à fort recul.',
-      },
-      crystallize: {
-        name: 'CRISTALLISATION !',
-        description: 'Roche + Élément : génère un bouclier (+15 % PV max) pour toute l’escouade.',
-      },
-      psy_resonance: {
-        name: 'RÉSONANCE PSY !',
-        description: 'Psy + Élément : réduit la recharge du lanceur de 1,5 s et propage l’effet.',
-      },
+    BURSTS: {
+      deflagration: { name: 'Déflagration', description: 'Le Feu fait éclater un cube : explosion de zone qui brûle les ennemis voisins.' },
+      deferlante: { name: 'Déferlante', description: 'L’Eau fait éclater un cube : le plus gros coup sur une cible, qui est repoussée.' },
+      seve: { name: 'Sève', description: 'La Plante fait éclater un cube : chaque allié récupère 6 % de ses PV max.' },
+      arc: { name: 'Arc', description: 'L’Électrik fait éclater un cube : l’éclair rebondit sur 2 ennemis proches et les étourdit.' },
+      rempart: { name: 'Rempart', description: 'La Roche fait éclater un cube : bouclier d’escouade de 15 % des PV max.' },
+      echo: { name: 'Écho', description: 'Le Psy fait éclater un cube : recharge du lanceur −1,5 s, le cube est recopié sur les voisins.' },
     },
     QUEST_POOL: {
       q_win_1: {

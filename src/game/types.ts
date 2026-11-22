@@ -218,13 +218,9 @@ export interface BiomeDef {
 
 export type StatusKind = 'burn' | 'soaked' | 'rooted' | 'shocked' | 'sunder' | 'confused';
 
-export type ReactionId =
-  | 'evaporation'
-  | 'ignition'
-  | 'electrocution'
-  | 'overload'
-  | 'crystallize'
-  | 'psy_resonance';
+/** Éclats : un par élément, celui QUI FAIT ÉCLATER le cube. */
+export type BurstId = 'deflagration' | 'deferlante' | 'seve' | 'arc' | 'rempart' | 'echo';
+export type BurstEffect = 'aoe_burn' | 'knockback' | 'team_heal' | 'chain_stun' | 'team_shield' | 'cd_spread';
 
 export interface StatusMeta {
   kind: StatusKind;
@@ -236,13 +232,14 @@ export interface StatusMeta {
   description: string;
 }
 
-export interface ElementalReactionDef {
-  id: ReactionId;
+export interface BurstDef {
+  id: BurstId;
+  /** Élément qui fait éclater le cube. */
+  element: ElementType;
   name: string;
   color: string;
   damageMult: number;
-  ultimateBonus: number;
-  effect: 'burst' | 'aoe_burn' | 'chain_stun' | 'knockback' | 'team_shield' | 'cd_spread';
+  effect: BurstEffect;
   description: string;
 }
 

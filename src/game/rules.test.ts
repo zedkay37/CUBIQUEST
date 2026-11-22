@@ -32,7 +32,6 @@ import {
   importSaveFromJson,
   migrateSaveState,
   recordPlayerProgress,
-  resolveElementalReaction,
   resolveRecipe,
   SAVE_VERSION,
   startCookingPot,
@@ -204,19 +203,9 @@ test('createOwnedCreature initializes valid 9-slot board', () => {
   assert.equal(c.potBonus, 35);
 });
 
-test('V0.2 elemental reactions and status resistance compute deterministically', () => {
+test('Statuts : élément -> statut, et résistance aux statuts', () => {
   assert.equal(getStatusForElement('fire'), 'burn');
   assert.equal(getStatusForElement('water'), 'soaked');
-  assert.equal(resolveElementalReaction('burn', 'water')?.id, 'evaporation');
-  assert.equal(resolveElementalReaction('soaked', 'fire')?.id, 'evaporation');
-  assert.equal(resolveElementalReaction('rooted', 'fire')?.id, 'ignition');
-  assert.equal(resolveElementalReaction('soaked', 'electric')?.id, 'electrocution');
-  assert.equal(resolveElementalReaction('burn', 'electric')?.id, 'overload');
-  assert.equal(resolveElementalReaction('sunder', 'fire')?.id, 'crystallize');
-  // Règle voulue : Psy + AUTRE élément (même élément => pas de réaction)
-  assert.equal(resolveElementalReaction('confused', 'fire')?.id, 'psy_resonance');
-  assert.equal(resolveElementalReaction('confused', 'psychic'), null);
-  assert.equal(resolveElementalReaction('burn', 'fire'), null);
 
   const baseDur = computeStatusDuration('burn', 0);
   const resistedDur = computeStatusDuration('burn', 50);

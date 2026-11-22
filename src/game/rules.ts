@@ -2,7 +2,6 @@ import {
   ACHIEVEMENTS,
   BASE_RUNE_KINDS,
   BIOMES,
-  ELEMENTAL_REACTIONS,
   FRONTIER_STAGE_INDEX,
   RUNE_ORDER,
   ELEMENT_META,
@@ -16,12 +15,12 @@ import {
   STAGES,
   STATUS_META,
 } from './catalog';
+import { CUBE_KIT } from './balance';
 import type {
   AchievementDef,
   ActiveQuest,
   BiomeId,
   ComputedCreatureStats,
-  ElementalReactionDef,
   ElementType,
   ExpeditionOutcome,
   MoveDef,
@@ -108,25 +107,48 @@ export function computeStatusDuration(statusKind: StatusKind, statusRes: number)
  * Resolve one of the 6 V0.2 Elemental Reactions when an incoming skill element
  * hits a target carrying an existing elemental status aura.
  */
-export function resolveElementalReaction(
-  existingStatus: StatusKind | null,
-  incomingElement: ElementType,
-): ElementalReactionDef | null {
-  if (!existingStatus) return null;
-  const existingElement = STATUS_META[existingStatus].element;
-  if (existingElement === incomingElement) return null;
+/** Cube posé sur un ennemi : élément, âge (pour la maturation) et temps restant. */
+export interface CubeState {
+  element: ElementType;
+  age: number;
+  remaining: number;
+}
+/** Fêlure laissée par un Éclat : les deux éléments en jeu et le temps restant. */
+export interface CrackState {
+  elements: [ElementType, ElementType];
+  remaining: number;
+}
+export interface CubeTargetState {
+  cube: CubeState | null;
+  crack: CrackState | null;
+  /** Verrou après un Trio : aucun cube tant qu'il dure. */
+  trioLock: number;
+}
+export type CubeOutcome = 'cube' | 'refresh' | 'weak' | 'burst' | 'trio' | 'locked';
 
-  const pair = new Set<ElementType>([existingElement, incomingElement]);
+export function isCubeRipe(cube: CubeState | null, kit: { ripenTime: number } = CUBE_KIT): boolean {
+  return Boolean(cube && cube.remaining > 0 && cube.age >= kit.ripenTime);
+}
 
-  if (pair.has('fire') && pair.has('water')) return ELEMENTAL_REACTIONS.evaporation;
-  if (pair.has('fire') && pair.has('grass')) return ELEMENTAL_REACTIONS.ignition;
-  if (pair.has('water') && pair.has('electric')) return ELEMENTAL_REACTIONS.electrocution;
-  if (pair.has('fire') && pair.has('electric')) return ELEMENTAL_REACTIONS.overload;
-  if (pair.has('rock')) return ELEMENTAL_REACTIONS.crystallize;
-  if (pair.has('psychic')) return ELEMENTAL_REACTIONS.psy_resonance;
-  if (pair.has('grass') && pair.has('electric')) return ELEMENTAL_REACTIONS.overload;
-  if (pair.has('water') && pair.has('grass')) return ELEMENTAL_REACTIONS.ignition;
-  return null;
+/**
+ * Ce que fait un coup de sort d'élément `incoming` sur une cible (plan, section 5.1) :
+ * 'locked' pendant le verrou du Trio ; 'trio' sur une cible fêlée par deux AUTRES éléments (si allowTrio) ;
+ * sinon 'cube' (pose), 'refresh' (même élément : la durée repart, l'âge reste), 'weak' (cube pas mûr)
+ * ou 'burst' (cube mûr d'un autre élément).
+ */
+export function resolveCubeHit(
+  state: CubeTargetState,
+  incoming: ElementType,
+  opts: { allowTrio: boolean; ripenTime?: number },
+): CubeOutcome {
+  if (state.trioLock > 0) return 'locked';
+  if (opts.allowTrio && state.crack && state.crack.remaining > 0 && !state.crack.elements.includes(incoming)) {
+    return 'trio';
+  }
+  const cube = state.cube;
+  if (!cube || cube.remaining <= 0) return 'cube';
+  if (cube.element === incoming) return 'refresh';
+  return cube.age >= (opts.ripenTime ?? CUBE_KIT.ripenTime) ? 'burst' : 'weak';
 }
 
 /**
