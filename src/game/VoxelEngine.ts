@@ -8,17 +8,14 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { soundFx } from './audio';
-import { BIOMES, MOVES, RECIPE_BY_ID, SPECIES } from './catalog';
-import { animateRigPose, updateEnemyDissolve } from './engine/actors';
-import { updateAllies } from './engine/allies';
+import { BIOMES, MOVES, RECIPE_BY_ID } from './catalog';
+import { animateRigPose } from './engine/actors';
 import { applyBiomeLighting, configureWeather, updateDayNight } from './engine/atmosphere';
-import { updateBossIntro } from './engine/boss';
 import { fovForAspect, handleResize } from './engine/camera';
 import {
   _color,
   _dummy,
   BOLT_POOL_SIZE,
-  BOSS_INTRO_SEC,
   EVO_CHARGE_SEC,
   EVO_TOTAL_SEC,
   EVO_X,
@@ -26,15 +23,12 @@ import {
   PARTICLE_POOL_SIZE,
   WEATHER_COUNT,
 } from './engine/constants';
-import { updateEnemies } from './engine/enemies';
+import { emptyTelemetry, startExpedition } from './engine/expedition';
 import {
   clearProjectilesAndTelegraphs,
-  spawnConfetti,
   spawnElementBurst,
   spawnParticleBurst,
   spawnSteamCube,
-  updateProjectiles,
-  updateTelegraphs,
 } from './engine/fx';
 import { advance, detectSoftwareGl, scheduleNextFrame } from './engine/loop';
 import { triggerAllySkill, triggerScatter, triggerUltimate } from './engine/skills';
@@ -51,7 +45,6 @@ import type {
   WeatherKind,
   WeatherMote,
 } from './engine/types';
-import { computeCreatureStats, getMoveModifiers } from './rules';
 import type {
   BiomeId,
   ControlMode,
@@ -64,7 +57,6 @@ import type {
   StatusKind,
 } from './types';
 import {
-  attachWorldHpBar,
   buildBiomeEnvironment,
   buildCampLandmark,
   buildCookingPotProp,
@@ -186,19 +178,7 @@ export class VoxelEngine {
   hudEmitAccum = 0;
   callbacks: EngineCallbacks;
   resizeObserver: ResizeObserver | null = null;
-  telemetry: CombatTelemetry = VoxelEngine.emptyTelemetry();
-
-  static emptyTelemetry(): CombatTelemetry {
-    return {
-      bossAppearedAt: -1,
-      phaseStartedAt: [-1, -1, -1],
-      bossDefeatedAt: -1,
-      castsByPhase: [0, 0, 0],
-      patternsByPhase: [[], [], []],
-      bossMaxPhases: 0,
-      elapsed: 0,
-    };
-  }
+  telemetry: CombatTelemetry = emptyTelemetry();
 
   constructor(container: HTMLElement | null, callbacks: EngineCallbacks, options: EngineOptions = {}) {
     this.container = container;
@@ -542,286 +522,7 @@ export class VoxelEngine {
     allStones: PowerStone[],
     controlMode: ControlMode,
   ): void {
-    this.playMode = 'expedition';
-    this.controlMode = controlMode;
-    this.activeStage = stage;
-    this.waveIndex = 0;
-    this.expeditionElapsed = 0;
-    this.damageDealt = 0;
-    this.scatterCooldown = 0;
-    this.ultimateCharge = 25; // Start with 25% momentum so player reaches Ultimate cleanly
-    this.comboCount = 0;
-    this.comboTimer = 0;
-    this.maxCombo = 0;
-    this.reactionsTriggered = 0;
-    this.ultimatesUsed = 0;
-    this.perfectDodges = 0;
-    this.lastReactionLabel = null;
-    this.lastReactionColor = null;
-    this.lastReactionTimer = 0;
-    this.expeditionEnded = false;
-    this.pendingVictory = false;
-    this.resultSent = false;
-    this.telemetry = VoxelEngine.emptyTelemetry();
-    this.confettiTimer = 0;
-    this.bossIntroTimer = 0;
-    this.bossIntroActor = null;
-    this.bossIntroInfo = null;
-    this.evo = null;
-    this.clearEvoRing();
-    this.endDelayTimer = 0;
-    this.waveSpawnDelay = 0;
-    this.trauma = 0;
-    this.hitstopTimer = 0;
-    this.heldKeys.clear();
-    this.floatingText.clear();
-    clearProjectilesAndTelegraphs(this);
-    this.clearGroup(this.worldGroup);
-    this.clearGroup(this.actorsGroup);
-    this.campWanderers = [];
-    this.potLiquidMesh = null;
-    this.potFireMesh = null;
-    this.potLight = null;
-    this.campStars = null;
-
-    const biome = BIOMES[stage.biomeId];
-    this.scene.background = new THREE.Color(biome.skyHex);
-    this.scene.fog = new THREE.Fog(biome.fogHex, 30, 84);
-    applyBiomeLighting(this, biome.id);
-    const env = buildBiomeEnvironment(biome, false);
-    this.worldGroup.add(env.group);
-    this.waterUniform = env.waterUniform;
-    this.cloudGroup = env.cloudGroup;
-    this.envAnimate = env.animate ?? null;
-    configureWeather(this, stage.biomeId);
-
-    // Spawn 3 allied Cubimons in an open clearing facing forward (+X/-Z toward wave)
-    this.allies = squadCreatures.slice(0, 3).map((c, idx) => {
-      const species = SPECIES[c.speciesId] ?? SPECIES.pyrocube;
-      const stats = computeCreatureStats(c, allStones);
-      const move = MOVES[c.moveId] ?? MOVES.ember_burst;
-      const mods = getMoveModifiers(c.moveStones);
-      const rig = buildVoxelCreature(c.speciesId);
-      attachWorldHpBar(rig, false, false);
-
-      const startX = -7.5 + (idx === 0 ? 1.2 : 0);
-      const startZ = (idx - 1) * 2.8;
-      rig.root.position.set(startX, 0, startZ);
-      this.actorsGroup.add(rig.root);
-
-      const maxCd = Math.max(2.0, move.cooldown * mods.cooldownMult);
-      return {
-        id: c.uid,
-        isAlly: true,
-        isBoss: false,
-        ai: 'ally',
-        speciesId: species.id,
-        name: species.name,
-        level: c.level,
-        rig,
-        x: startX,
-        z: startZ,
-        vx: 0,
-        vz: 0,
-        facing: Math.PI / 2,
-        hp: stats.maxHp,
-        maxHp: stats.maxHp,
-        shieldHp: 0,
-        atk: stats.atk,
-        critRate: stats.critRate,
-        hitHeal: stats.hitHeal,
-        statusRes: stats.statusRes,
-        moveSpeed: species.moveSpeed * stats.moveSpeedMult,
-        attackRange: species.attackRange,
-        moveId: move.id,
-        moveStones: c.moveStones,
-        basicCooldown: 0.3 + idx * 0.15,
-        skillCooldown: 0.6 + idx * 0.25,
-        skillMaxCooldown: maxCd,
-        buffTimer: 0,
-        flashTimer: 0,
-        invulnTimer: 0,
-        stunTimer: 0,
-        scatterTimer: 0,
-        scatterDirX: 0,
-        scatterDirZ: 0,
-        walkPhase: 0,
-        squashY: 1,
-        fainted: false,
-        reviveTimer: 0,
-        koDissolveTimer: 0,
-        removed: false,
-        telegraphing: false,
-        aiCooldown: 0,
-        hasAttackToken: false,
-        statuses: {},
-        bossPhase: 1,
-        bossMaxPhases: 2,
-        bossPatternIndex: 0,
-        pullTimer: 0,
-      };
-    });
-
-    this.enemies = [];
-    this.spawnWave(0);
-    this.camPos.set(-4, 15.5, 16.5);
-    this.camLook.set(0, 0.8, 0);
-    this.emitHudSnapshot();
-
-    if (!this.isSoftwareGl) {
-      this.renderer?.compile(this.scene, this.camera);
-    }
-  }
-
-  spawnWave(index: number): void {
-    if (!this.activeStage) return;
-    const wave = this.activeStage.waves[index];
-    if (!wave) return;
-
-    this.waveIndex = index;
-    const isBossWave = index === this.activeStage.waves.length - 1;
-    this.bannerText = isBossWave
-      ? 'ALERTE BOSS ! Préparez Dispersion !'
-      : `Vague ${index + 1} / ${this.activeStage.waves.length}`;
-    this.bannerTimer = 2.4;
-
-    const stageHpMult = this.activeStage.enemyHpMult ?? 1;
-    const stageAtkMult = this.activeStage.enemyAtkMult ?? 1;
-    const stageBossHpMult = this.activeStage.bossHpMult ?? 1;
-    wave.enemies.forEach((def, i) => {
-      const species = SPECIES[def.speciesId] ?? SPECIES.bourgeon;
-      const isBoss = Boolean(def.isBoss);
-      const scaleMult = isBoss ? 1.48 : 0.96;
-      const rig = buildVoxelCreature(species.id, species.scale * scaleMult);
-      attachWorldHpBar(rig, true, isBoss);
-
-      const spreadZ = (i - (wave.enemies.length - 1) / 2) * 3.8;
-      const spawnX = 8.0 + (isBoss ? 2.2 : (i % 2) * 1.8);
-      const spawnZ = spreadZ;
-      rig.root.position.set(spawnX, 0, spawnZ);
-      this.actorsGroup.add(rig.root);
-
-      // Balanced enemy stats so Level 1 is genuinely winnable and later stages scale meaningfully
-      const levelScale = 1 + (def.level - 1) * 0.14;
-      const maxHp = Math.round(species.baseHp * levelScale * (isBoss ? 3.4 * stageBossHpMult : 1.15) * stageHpMult);
-      const atk = Math.round(
-        species.baseAtk * (0.42 + (def.level - 1) * 0.055) * (isBoss ? 1.45 : 0.9) * stageAtkMult,
-      );
-
-      const isFinalBiomeBoss = isBoss && this.activeStage?.stageNumber === 3;
-      this.enemies.push({
-        id: `enemy_${index}_${i}_${Math.random().toString(36).slice(2, 6)}`,
-        isAlly: false,
-        isBoss,
-        ai: def.ai,
-        speciesId: species.id,
-        name: isBoss ? `Boss ${species.name}` : species.name,
-        level: def.level,
-        rig,
-        x: spawnX,
-        z: spawnZ,
-        vx: 0,
-        vz: 0,
-        facing: -Math.PI / 2,
-        hp: maxHp,
-        maxHp,
-        shieldHp: 0,
-        atk,
-        critRate: 5,
-        hitHeal: 0,
-        statusRes: isBoss ? 25 : 0,
-        moveSpeed: species.moveSpeed * (isBoss ? 0.72 : 0.78),
-        attackRange: isBoss ? 4.4 : def.ai === 'kiter' ? 6.8 : 2.7,
-        moveId: species.moveId,
-        moveStones: [],
-        basicCooldown: 1.0 + i * 0.35,
-        skillCooldown: isBoss ? 3.2 : 4.2,
-        skillMaxCooldown: isBoss ? 5.0 : 5.5,
-        buffTimer: 0,
-        flashTimer: 0,
-        invulnTimer: 0,
-        stunTimer: 0,
-        scatterTimer: 0,
-        scatterDirX: 0,
-        scatterDirZ: 0,
-        walkPhase: 0,
-        squashY: 1,
-        fainted: false,
-        reviveTimer: 0,
-        koDissolveTimer: 0,
-        removed: false,
-        telegraphing: false,
-        aiCooldown: 1.4 + i * 0.5,
-        hasAttackToken: false,
-        statuses: {},
-        bossPhase: 1,
-        bossMaxPhases: isFinalBiomeBoss ? 3 : 2,
-        bossPatternIndex: 0,
-        pullTimer: 0,
-      });
-
-      spawnParticleBurst(this, spawnX, 0.8, spawnZ, species.palette.accent, isBoss ? 20 : 10, 4.5);
-    });
-
-    // Entrée de boss : il tombe du ciel pendant une courte cinématique (combat gelé)
-    const boss = isBossWave ? this.enemies.find((e) => e.isBoss && !e.removed && !e.fainted) : undefined;
-    if (boss) {
-      this.telemetry.bossAppearedAt = this.expeditionElapsed;
-      this.telemetry.phaseStartedAt[0] = this.expeditionElapsed;
-      this.telemetry.bossMaxPhases = boss.bossMaxPhases;
-      this.bossIntroActor = boss;
-      this.bossIntroTimer = BOSS_INTRO_SEC;
-      this.bossDropY = 11;
-      this.bossDropVel = 0;
-      this.bossIntroInfo = {
-        name: boss.rig.species.name,
-        title:
-          this.activeStage.stageNumber === 3
-            ? `Souverain — ${BIOMES[this.activeStage.biomeId].name}`
-            : `Gardien — ${this.activeStage.name}`,
-        element: boss.rig.species.element,
-      };
-      this.bannerText = null;
-      this.bannerTimer = 0;
-      boss.rig.root.position.y = this.bossDropY;
-      soundFx.playBossIntro();
-      this.emitHudSnapshot();
-    }
-  }
-
-  /** Après la fin du combat : les K.O. se dissolvent, et en cas de victoire l'escouade fait la fête. */
-  updateEndSequence(dt: number): void {
-    for (const enemy of this.enemies) {
-      if (!enemy.removed && enemy.fainted) updateEnemyDissolve(this, enemy, dt);
-    }
-    if (!this.pendingVictory) return;
-
-    let cx = 0;
-    let cz = 0;
-    let n = 0;
-    for (let i = 0; i < this.allies.length; i++) {
-      const ally = this.allies[i];
-      if (ally.fainted) continue;
-      const hopT = this.elapsedTotal * 8.5 + i * 1.3;
-      ally.rig.root.position.set(ally.x, 0, ally.z);
-      ally.rig.root.rotation.y = Math.sin(this.elapsedTotal * 3 + i * 2.1) * 0.7;
-      animateRigPose(this, ally.rig, hopT, true, 1 + Math.sin(hopT * 2) * 0.07, this.elapsedTotal);
-      ally.rig.bodyPivot.position.y += Math.abs(Math.sin(hopT)) * 0.4;
-      ally.rig.bodyPivot.rotation.z = 0;
-      if (ally.rig.hpBarBg) ally.rig.hpBarBg.visible = false;
-      cx += ally.x;
-      cz += ally.z;
-      n += 1;
-    }
-    if (n === 0) return;
-
-    this.confettiTimer -= dt;
-    if (this.confettiTimer <= 0) {
-      // rafales denses avant l'écran de résultat, puis pluie légère derrière la fenêtre
-      this.confettiTimer = this.resultSent ? 0.5 : 0.14;
-      spawnConfetti(this, cx / n + (Math.random() - 0.5) * 7, 1.2 + Math.random() * 1.5, cz / n + (Math.random() - 0.5) * 5, 9);
-      if (!this.resultSent) soundFx.playConfettiPop();
-    }
+    return startExpedition(this, stage, squadCreatures, allStones, controlMode);
   }
 
   /** Règle l'heure du camp (0 = aube, 0.3 = plein jour, 0.64 = crépuscule, 0.8 = nuit). */
@@ -1105,131 +806,6 @@ export class VoxelEngine {
       w.rig.bodyPivot.position.y += lift; // l'ombre de contact reste au sol
       w.rig.root.position.set(w.x, 0, w.z);
       w.rig.root.rotation.y = w.facing;
-    }
-  }
-  updateExpedition(dt: number, simDt: number): void {
-    if (!this.activeStage) return;
-
-    if (this.expeditionEnded || this.resultSent) {
-      this.finishExpedition(dt);
-      return;
-    }
-
-    if (this.bossIntroTimer > 0) {
-      // Cinématique d'entrée : la simulation est gelée, seul le boss tombe
-      updateBossIntro(this, dt);
-      simDt = 0;
-    }
-    this.expeditionElapsed += simDt;
-    if (this.scatterCooldown > 0) this.scatterCooldown = Math.max(0, this.scatterCooldown - simDt);
-    if (this.bannerTimer > 0) {
-      this.bannerTimer = Math.max(0, this.bannerTimer - dt);
-      if (this.bannerTimer === 0) this.bannerText = null;
-    }
-    if (this.comboTimer > 0) {
-      this.comboTimer = Math.max(0, this.comboTimer - simDt);
-      if (this.comboTimer === 0) {
-        this.comboCount = 0;
-      }
-    }
-    if (this.lastReactionTimer > 0) {
-      this.lastReactionTimer = Math.max(0, this.lastReactionTimer - dt);
-      if (this.lastReactionTimer === 0) {
-        this.lastReactionLabel = null;
-        this.lastReactionColor = null;
-      }
-    }
-    if (this.controlMode === 'auto' && this.ultimateCharge >= 100 && this.enemies.some((e) => !e.fainted && !e.removed)) {
-      triggerUltimate(this);
-    }
-
-    updateAllies(this, dt, simDt);
-    updateEnemies(this, dt, simDt);
-
-    if (this.bossIntroActor && this.bossDropY > 0) {
-      this.bossIntroActor.rig.root.position.y = this.bossDropY;
-    }
-
-    updateProjectiles(this, dt, simDt);
-    updateTelegraphs(this, simDt);
-    this.updateExpeditionProgress(dt, simDt);
-  }
-
-  /** Fin d'expédition : fête ou repli, puis envoi UNIQUE du résultat à l'interface. */
-  finishExpedition(dt: number): void {
-    if (!this.activeStage) return;
-    this.updateEndSequence(dt);
-    if (this.expeditionEnded) {
-      this.endDelayTimer -= dt;
-      if (this.endDelayTimer <= 0) {
-        const boss = this.enemies.find((e) => e.isBoss);
-        const bossPct = boss ? (boss.hp / Math.max(1, boss.maxHp)) * 100 : 0;
-        const wavesCleared = this.pendingVictory
-          ? this.activeStage.waves.length
-          : this.waveIndex;
-        const cb = this.callbacks.onExpeditionComplete;
-        this.expeditionEnded = false;
-        // Le résultat ne part qu'UNE fois : sans ce verrou, la boucle re-détectait la victoire
-        // sous la fenêtre de fin et renvoyait les récompenses en boucle.
-        this.resultSent = true;
-        this.screenState = 'gameover';
-        cb({
-          victory: this.pendingVictory,
-          clearTimeSec: this.expeditionElapsed,
-          wavesCleared,
-          damageDealt: this.damageDealt,
-          bossHpPercentRemaining: this.pendingVictory ? 0 : bossPct,
-          reactionsTriggered: this.reactionsTriggered,
-          ultimatesUsed: this.ultimatesUsed,
-          perfectDodges: this.perfectDodges,
-          maxCombo: this.maxCombo,
-        });
-      }
-    }
-  }
-
-  /** Défaite, vague suivante ou victoire, puis instantané HUD (10 Hz au plus). */
-  updateExpeditionProgress(dt: number, simDt: number): void {
-    if (!this.activeStage) return;
-    // Check Defeat (all 3 allies fainted simultaneously)
-    const livingAllies = this.allies.filter((a) => !a.fainted);
-    if (livingAllies.length === 0) {
-      this.expeditionEnded = true;
-      this.pendingVictory = false;
-      this.endDelayTimer = 0.65;
-      this.bannerText = 'Escouade K.O. ! Repli au camp...';
-      this.bannerTimer = 1.5;
-      soundFx.playDefeat();
-      this.emitHudSnapshot();
-      return;
-    }
-
-    // Check Wave Clear / Victory
-    const livingEnemies = this.enemies.filter((e) => !e.fainted && !e.removed);
-    if (livingEnemies.length === 0) {
-      if (this.waveIndex + 1 < this.activeStage.waves.length) {
-        this.waveSpawnDelay += simDt;
-        if (this.waveSpawnDelay >= 1.1) {
-          this.waveSpawnDelay = 0;
-          this.spawnWave(this.waveIndex + 1);
-        }
-      } else {
-        this.expeditionEnded = true;
-        this.pendingVictory = true;
-        this.endDelayTimer = 1.7; // le temps de fêter ça : sauts de joie + confettis
-        this.confettiTimer = 0;
-        this.bannerText = 'VICTOIRE ! Expédition réussie !';
-        this.bannerTimer = 2.0;
-        soundFx.playFanfare();
-        this.emitHudSnapshot();
-      }
-    }
-
-    // Throttled React HUD snapshot (<= 10Hz)
-    this.hudEmitAccum += dt;
-    if (this.hudEmitAccum >= 0.1) {
-      this.hudEmitAccum = 0;
-      this.emitHudSnapshot();
     }
   }
 
