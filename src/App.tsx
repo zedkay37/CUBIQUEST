@@ -10,13 +10,22 @@ import { OutcomeModal } from './components/OutcomeModal';
 import { QuestsDrawer } from './components/QuestsDrawer';
 import { StarterModal } from './components/StarterModal';
 import { PauseModal } from './components/StatusModals';
-import type { ExpeditionResult } from './game/engine/types';
+import type { ExpeditionResult, FirstTimeKind } from './game/engine/types';
+import { FR } from './i18n/fr';
+
+const FIRST_TIME_TEXT: Record<FirstTimeKind, string> = {
+  cube: FR.ui.expeditionHud.premiereFoisCube,
+  weak: FR.ui.expeditionHud.premiereFoisFaible,
+  burst: FR.ui.expeditionHud.premiereFoisEclat,
+  trio: FR.ui.expeditionHud.premiereFoisTrio,
+};
 import { TeamDrawer } from './components/TeamDrawer';
 import { TitleOverlay } from './components/TitleOverlay';
 import { soundFx } from './game/audio';
 import { INGREDIENT_LIST, RECIPE_BY_ID, SPECIES, STAGE_BY_ID, STAGES } from './game/catalog';
 import {
   applyExpeditionRewards,
+  markFirstTimeSeen,
   buildPreviewSave,
   claimAchievementReward,
   claimQuestReward,
@@ -124,6 +133,13 @@ export default function App() {
   /** Écran de fin d'une victoire déjà récompensée, en attente d'affichage (voir onVictorySecured). */
   const securedOutcomeRef = useRef<ExpeditionOutcome | null>(null);
   const [victorySecured, setVictorySecured] = useState(false);
+  /** Bulle « première fois » affichée en combat (S04.3). */
+  const [firstTimeTip, setFirstTimeTip] = useState<FirstTimeKind | null>(null);
+  useEffect(() => {
+    if (!firstTimeTip) return;
+    const id = window.setTimeout(() => setFirstTimeTip(null), 3800);
+    return () => window.clearTimeout(id);
+  }, [firstTimeTip]);
   const previewRef = useRef(false); // true : expédition d'aperçu, rien n'est sauvegardé
   const previewCreaturesRef = useRef<OwnedCreature[]>([]);
   saveRef.current = save;
@@ -180,6 +196,14 @@ export default function App() {
         if (!stage || securedOutcomeRef.current) return;
         securedOutcomeRef.current = settleExpedition(stage, result);
         setVictorySecured(true);
+      },
+      // Première fois qu'un geste apparaît : une bulle d'une ligne, une seule fois par sauvegarde
+      onFirstTime: (kind) => {
+        if (previewRef.current || saveRef.current.firstTimesSeen.includes(kind)) return;
+        const next = markFirstTimeSeen(saveRef.current, kind);
+        saveRef.current = next;
+        setSave(next);
+        setFirstTimeTip(kind);
       },
       onExpeditionComplete: (result) => {
         const stage = activeStageRef.current;
@@ -752,6 +776,13 @@ export default function App() {
           onToggleMute={handleToggleMute}
           onPause={() => setScreenState('paused')}
         />
+      )}
+
+      {/* Bulle « première fois » */}
+      {playMode === 'expedition' && firstTimeTip && screenState === 'playing' && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-4 py-2 rounded-xl bg-[#141A26]/92 border border-[#F4B942] text-[#FAF7F0] text-sm font-semibold max-w-[90vw] text-center" role="status">
+          {FIRST_TIME_TEXT[firstTimeTip]}
+        </div>
       )}
 
       {/* Pause Modal */}

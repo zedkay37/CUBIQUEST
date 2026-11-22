@@ -55,10 +55,8 @@ export function startExpedition(
   self.damageDealt = 0;
   self.dodgeCooldown = 0;
   self.ultimateCharge = 25; // Start with 25% momentum so player reaches Ultimate cleanly
-  self.comboCount = 0;
-  self.comboTimer = 0;
-  self.maxCombo = 0;
-  self.reactionsTriggered = 0;
+  self.slowMoTimer = 0;
+  self.lastSlowMoAt = -10;
   self.cubesPlaced = 0;
   self.ultimateLockTimer = 0;
   self.burstsTriggered = 0;
@@ -68,9 +66,9 @@ export function startExpedition(
   self.firstTimeSeen = new Set<string>();
   self.ultimatesUsed = 0;
   self.perfectDodges = 0;
-  self.lastReactionLabel = null;
-  self.lastReactionColor = null;
-  self.lastReactionTimer = 0;
+  self.lastBurstLabel = null;
+  self.lastBurstColor = null;
+  self.lastBurstTimer = 0;
   self.expeditionEnded = false;
   self.pendingVictory = false;
   self.resultSent = false;
@@ -330,17 +328,11 @@ export function updateExpedition(self: VoxelEngine, dt: number, simDt: number): 
     self.bannerTimer = Math.max(0, self.bannerTimer - dt);
     if (self.bannerTimer === 0) self.bannerText = null;
   }
-  if (self.comboTimer > 0) {
-    self.comboTimer = Math.max(0, self.comboTimer - simDt);
-    if (self.comboTimer === 0) {
-      self.comboCount = 0;
-    }
-  }
-  if (self.lastReactionTimer > 0) {
-    self.lastReactionTimer = Math.max(0, self.lastReactionTimer - dt);
-    if (self.lastReactionTimer === 0) {
-      self.lastReactionLabel = null;
-      self.lastReactionColor = null;
+  if (self.lastBurstTimer > 0) {
+    self.lastBurstTimer = Math.max(0, self.lastBurstTimer - dt);
+    if (self.lastBurstTimer === 0) {
+      self.lastBurstLabel = null;
+      self.lastBurstColor = null;
     }
   }
   if (self.controlMode === 'auto' && self.ultimateCharge >= 100 && self.enemies.some((e) => !e.fainted && !e.removed)) {
@@ -370,10 +362,10 @@ function buildExpeditionResult(self: VoxelEngine): ExpeditionResult {
     wavesCleared: self.pendingVictory && stage ? stage.waves.length : self.waveIndex,
     damageDealt: self.damageDealt,
     bossHpPercentRemaining: self.pendingVictory ? 0 : bossPct,
-    reactionsTriggered: self.burstsTriggered,
+    burstsTriggered: self.burstsTriggered,
     ultimatesUsed: self.ultimatesUsed,
     perfectDodges: self.perfectDodges,
-    maxCombo: self.maxCombo,
+    triosTriggered: self.triosTriggered,
   };
 }
 

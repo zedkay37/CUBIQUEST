@@ -42,7 +42,17 @@ import type {
   StoneSlotType,
 } from './types';
 import { FR } from '../i18n/fr';
-import { LEGACY_RECIPE_IDS, LEGACY_RUNE_IDS } from './legacyIds';
+import { LEGACY_ACHIEVEMENT_IDS, LEGACY_QUEST_IDS, LEGACY_RECIPE_IDS, LEGACY_RUNE_IDS, LEGACY_STAT_FIELDS } from './legacyIds';
+
+/** Gestes expliqués une fois par une bulle (S04.3) ; la liste est rangée dans la sauvegarde. */
+export const FIRST_TIME_KINDS = ['cube', 'weak', 'burst', 'trio'] as const;
+export type FirstTimeKindId = (typeof FIRST_TIME_KINDS)[number];
+
+/** Ajoute un geste à ceux déjà expliqués (sans doublon). */
+export function markFirstTimeSeen(save: SaveState, kind: FirstTimeKindId): SaveState {
+  if (save.firstTimesSeen.includes(kind)) return save;
+  return { ...save, firstTimesSeen: [...save.firstTimesSeen, kind] };
+}
 import { withSaveSlot } from './saveSlot';
 
 export const SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v2');
@@ -53,8 +63,10 @@ export const POWER_STONE_BAG_LIMIT = 48;
 export const LEGACY_SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v1');
 // v3 (Giga Update) : sac de runes étendu (rune_precision, rune_vigueur) + stats frontierWins/frontierDishes.
 // v4 (S03) : identifiants renommés (runes, recettes) ; `moveStoneBag` devient `runeBag`, `moveStones` devient `runes`.
-// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 4.
-export const SAVE_VERSION = 4;
+// v5 (S04) : statistique des anciennes réactions -> `burstsTriggered` ; `triosTriggered` (cumul, repart de 0) ;
+//            quêtes et succès renommés (legacyIds.ts) ; `firstTimesSeen` (bulles « première fois »).
+// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 5.
+export const SAVE_VERSION = 5;
 
 export type RngFn = () => number;
 
@@ -811,10 +823,10 @@ export function applyExpeditionRewards(
     wavesCleared: number;
     damageDealt: number;
     bossHpPercentRemaining: number;
-    reactionsTriggered?: number;
+    burstsTriggered?: number;
     ultimatesUsed?: number;
     perfectDodges?: number;
-    maxCombo?: number;
+    triosTriggered?: number;
   },
   rng: RngFn = Math.random,
 ): { nextSave: SaveState; outcome: ExpeditionOutcome } {
@@ -920,10 +932,10 @@ export function applyExpeditionRewards(
     ? save.discoveredSpeciesIds
     : [...save.discoveredSpeciesIds, stage.bossSpeciesId];
 
-  const reactionsTriggered = Math.max(0, Math.round(stats.reactionsTriggered ?? 0));
+  const burstsTriggered = Math.max(0, Math.round(stats.burstsTriggered ?? 0));
   const ultimatesUsed = Math.max(0, Math.round(stats.ultimatesUsed ?? 0));
   const perfectDodges = Math.max(0, Math.round(stats.perfectDodges ?? 0));
-  const maxCombo = Math.max(0, Math.round(stats.maxCombo ?? 0));
+  const triosTriggered = Math.max(0, Math.round(stats.triosTriggered ?? 0));
 
   const baseNextSave: SaveState = {
     ...save,
@@ -943,10 +955,10 @@ export function applyExpeditionRewards(
     expeditionsWon: victory ? 1 : 0,
     bossesDefeated: victory ? 1 : 0,
     frontierWins: victory && stage.index >= FRONTIER_STAGE_INDEX ? 1 : 0,
-    reactionsTriggered,
+    burstsTriggered,
     ultimatesUsed,
     perfectDodges,
-    maxCombo,
+    triosTriggered,
   });
 
   const outcome: ExpeditionOutcome = {
@@ -959,10 +971,10 @@ export function applyExpeditionRewards(
     totalWaves: stage.waves.length,
     damageDealt: Math.round(stats.damageDealt),
     bossHpPercentRemaining: Math.max(0, Math.min(100, Math.round(stats.bossHpPercentRemaining))),
-    reactionsTriggered,
+    burstsTriggered,
     ultimatesUsed,
     perfectDodges,
-    maxCombo,
+    triosTriggered,
     xpPerUnit,
     droppedIngredients: Object.entries(droppedIngredientsMap).map(([id, count]) => ({
       id,
@@ -986,10 +998,10 @@ export function applyExpeditionRewards(
  * Purement cosmétique : rien n'est stocké dans la sauvegarde.
  */
 export function computeVictoryStars(
-  outcome: Pick<ExpeditionOutcome, 'victory' | 'reactionsTriggered' | 'ultimatesUsed' | 'perfectDodges'>,
+  outcome: Pick<ExpeditionOutcome, 'victory' | 'burstsTriggered' | 'ultimatesUsed' | 'perfectDodges'>,
 ): 0 | 1 | 2 | 3 {
   if (!outcome.victory) return 0;
-  const tactical = outcome.reactionsTriggered >= 2 ? 1 : 0;
+  const tactical = outcome.burstsTriggered >= 2 ? 1 : 0;
   const clutch = outcome.ultimatesUsed >= 1 || outcome.perfectDodges >= 1 ? 1 : 0;
   return (1 + tactical + clutch) as 1 | 2 | 3;
 }
@@ -1095,19 +1107,20 @@ export function createInitialSaveState(
     stats: createEmptyStats(),
     activeQuests: createInitialQuests(),
     claimedAchievementIds: [],
+    firstTimesSeen: [],
   };
 }
 
 export function createEmptyStats(): PlayerStats {
   return {
     expeditionsWon: 0,
-    reactionsTriggered: 0,
+    burstsTriggered: 0,
     ultimatesUsed: 0,
     dishesCooked: 0,
     evolutionsDone: 0,
     perfectDodges: 0,
     bossesDefeated: 0,
-    maxCombo: 0,
+    triosTriggered: 0,
     frontierWins: 0,
     frontierDishes: 0,
   };
@@ -1141,13 +1154,13 @@ export function recordPlayerProgress(
   const prevStats = save.stats ?? createEmptyStats();
   const nextStats: PlayerStats = {
     expeditionsWon: prevStats.expeditionsWon + (deltas.expeditionsWon ?? 0),
-    reactionsTriggered: prevStats.reactionsTriggered + (deltas.reactionsTriggered ?? 0),
+    burstsTriggered: prevStats.burstsTriggered + (deltas.burstsTriggered ?? 0),
     ultimatesUsed: prevStats.ultimatesUsed + (deltas.ultimatesUsed ?? 0),
     dishesCooked: prevStats.dishesCooked + (deltas.dishesCooked ?? 0),
     evolutionsDone: prevStats.evolutionsDone + (deltas.evolutionsDone ?? 0),
     perfectDodges: prevStats.perfectDodges + (deltas.perfectDodges ?? 0),
     bossesDefeated: prevStats.bossesDefeated + (deltas.bossesDefeated ?? 0),
-    maxCombo: Math.max(prevStats.maxCombo, deltas.maxCombo ?? 0),
+    triosTriggered: (prevStats.triosTriggered ?? 0) + (deltas.triosTriggered ?? 0),
     frontierWins: (prevStats.frontierWins ?? 0) + (deltas.frontierWins ?? 0),
     frontierDishes: (prevStats.frontierDishes ?? 0) + (deltas.frontierDishes ?? 0),
   };
@@ -1156,8 +1169,8 @@ export function recordPlayerProgress(
     const inc =
       q.metric === 'expeditionsWon'
         ? deltas.expeditionsWon ?? 0
-        : q.metric === 'reactionsTriggered'
-          ? deltas.reactionsTriggered ?? 0
+        : q.metric === 'burstsTriggered'
+          ? deltas.burstsTriggered ?? 0
           : q.metric === 'ultimatesUsed'
             ? deltas.ultimatesUsed ?? 0
             : q.metric === 'dishesCooked'
@@ -1172,7 +1185,9 @@ export function recordPlayerProgress(
                       ? deltas.frontierWins ?? 0
                       : q.metric === 'frontierDishes'
                         ? deltas.frontierDishes ?? 0
-                        : 0;
+                        : q.metric === 'triosTriggered'
+                          ? deltas.triosTriggered ?? 0
+                          : 0;
     if (inc <= 0) return q;
     return {
       ...q,
@@ -1257,8 +1272,8 @@ export function getAchievementProgress(save: SaveState, ach: AchievementDef): nu
   switch (ach.metric) {
     case 'expeditionsWon':
       return Math.max(stats.expeditionsWon, save.expeditionsCompleted);
-    case 'reactionsTriggered':
-      return stats.reactionsTriggered;
+    case 'burstsTriggered':
+      return stats.burstsTriggered;
     case 'ultimatesUsed':
       return stats.ultimatesUsed;
     case 'dishesCooked':
@@ -1273,8 +1288,8 @@ export function getAchievementProgress(save: SaveState, ach: AchievementDef): nu
       return save.completedStageIds.length;
     case 'speciesDiscovered':
       return save.discoveredSpeciesIds.length;
-    case 'maxCombo':
-      return stats.maxCombo;
+    case 'triosTriggered':
+      return stats.triosTriggered;
     case 'frontierWins':
       return stats.frontierWins ?? 0;
     case 'frontierDishes':
@@ -1318,7 +1333,7 @@ const ALL_STONE_RARITIES: StoneRarity[] = ['common', 'bronze', 'silver', 'gold']
 const ALL_SUBSTAT_TYPES: PowerStoneSubstat['type'][] = ['critRate', 'hitHeal', 'moveSpeed', 'statusRes'];
 const ALL_QUEST_METRICS: QuestMetric[] = [
   'expeditionsWon',
-  'reactionsTriggered',
+  'burstsTriggered',
   'ultimatesUsed',
   'dishesCooked',
   'perfectDodges',
@@ -1326,7 +1341,7 @@ const ALL_QUEST_METRICS: QuestMetric[] = [
   'evolutionsDone',
   'stagesCompleted',
   'speciesDiscovered',
-  'maxCombo',
+  'triosTriggered',
   'frontierWins',
   'frontierDishes',
   'tundraStages',
@@ -1464,7 +1479,7 @@ function normalizeQuests(raw: unknown): ActiveQuest[] {
       typeof q.templateId !== 'string' ||
       typeof q.title !== 'string' ||
       typeof q.description !== 'string' ||
-      !ALL_QUEST_METRICS.includes(q.metric as QuestMetric) ||
+      // la métrique est reprise du modèle (elle a pu être renommée, ex. reactionsTriggered en v5)
       !Number.isFinite(target) ||
       target <= 0 ||
       !q.reward ||
@@ -1475,7 +1490,8 @@ function normalizeQuests(raw: unknown): ActiveQuest[] {
     }
     // Les textes et la récompense d'une quête sont copiés dans la sauvegarde : on les reprend du modèle,
     // pour qu'une ancienne sauvegarde n'affiche pas d'ancien nom et ne garde pas d'ancien identifiant.
-    const tpl = QUEST_POOL.find((t) => t.templateId === q.templateId);
+    const templateId = Object.hasOwn(LEGACY_QUEST_IDS, q.templateId) ? LEGACY_QUEST_IDS[q.templateId] : q.templateId;
+    const tpl = QUEST_POOL.find((t) => t.templateId === templateId);
     if (!tpl) return createInitialQuests();
     quests.push({
       uid: q.uid,
@@ -1508,7 +1524,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
   if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.pot !== 'object') return null;
   if (!obj.ingredients || typeof obj.ingredients !== 'object') return null;
-  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== SAVE_VERSION) return null;
+  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== SAVE_VERSION) return null;
 
   // Pierres de Pouvoir : valides, identifiants uniques
   const powerStones: PowerStone[] = [];
@@ -1547,13 +1563,14 @@ export function migrateSaveState(raw: unknown): SaveState | null {
 
   const stats: PlayerStats = {
     expeditionsWon: Math.max(expeditionsCompleted, toCount(incomingStats.expeditionsWon)),
-    reactionsTriggered: toCount(incomingStats.reactionsTriggered),
+    // v1 à v4 : ancien nom de la statistique (legacyIds.ts) ; l'ancien « meilleur enchaînement » ne devient pas des Trios
+    burstsTriggered: toCount(incomingStats.burstsTriggered ?? (incomingStats as Record<string, unknown>)[LEGACY_STAT_FIELDS.bursts]),
     ultimatesUsed: toCount(incomingStats.ultimatesUsed),
     dishesCooked: toCount(incomingStats.dishesCooked),
     evolutionsDone: toCount(incomingStats.evolutionsDone),
     perfectDodges: toCount(incomingStats.perfectDodges),
     bossesDefeated: Math.max(expeditionsCompleted, toCount(incomingStats.bossesDefeated)),
-    maxCombo: toCount(incomingStats.maxCombo),
+    triosTriggered: toCount(incomingStats.triosTriggered),
     frontierWins: toCount(incomingStats.frontierWins),
     frontierDishes: toCount(incomingStats.frontierDishes),
   };
@@ -1618,7 +1635,13 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     expeditionsCompleted,
     stats,
     activeQuests: normalizeQuests(obj.activeQuests),
-    claimedAchievementIds: uniqueKnown(obj.claimedAchievementIds, (id) => ACHIEVEMENTS.some((a) => a.id === id)),
+    claimedAchievementIds: uniqueKnown(
+      Array.isArray(obj.claimedAchievementIds)
+        ? obj.claimedAchievementIds.map((id) => (typeof id === 'string' && Object.hasOwn(LEGACY_ACHIEVEMENT_IDS, id) ? LEGACY_ACHIEVEMENT_IDS[id] : id))
+        : [],
+      (id) => ACHIEVEMENTS.some((a) => a.id === id),
+    ),
+    firstTimesSeen: uniqueKnown(obj.firstTimesSeen, (id) => (FIRST_TIME_KINDS as readonly string[]).includes(id)),
   };
 }
 export function exportSaveToJson(save: SaveState): string {

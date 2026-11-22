@@ -12,6 +12,9 @@ export const FORBIDDEN_TERMS: readonly string[] = [
   'pokemon', 'pokémon', 'nintendo', 'game freak', 'pikachu', 'cubimon', 'à la cube', 'mulligan',
   'ambrosia', 'ambroisie', 'whack', 'wait_less', 'broadburst', 'scattershot', 'stay_strong',
   'scatter', 'dispersion', 'tumblecube', 'gemme-p', 'power charm',
+  // S04 : vocabulaire des anciennes réactions
+  'évaporation', 'électrocution', 'cristallisation', 'surcharge', 'embrasement', 'trempé', 'vaporize',
+  'overload', 'crystallize', 'swirl', 'combo',
 ];
 
 /**

@@ -403,15 +403,15 @@ export function QuestsDrawer({
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#202838] border border-[#39445A] p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.reactions}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.eclats}</p>
                   <p className="font-mono-num text-lg font-bold text-[#F4B942] mt-0.5">
-                    {save.stats.reactionsTriggered}
+                    {save.stats.burstsTriggered}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#202838] border border-[#39445A] p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.comboMax}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.trios}</p>
                   <p className="font-mono-num text-lg font-bold text-[#38BDF8] mt-0.5">
-                    ×{save.stats.maxCombo}
+                    {save.stats.triosTriggered}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#202838] border border-[#39445A] p-3">

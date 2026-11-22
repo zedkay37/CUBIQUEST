@@ -237,10 +237,10 @@ test('V0.2 quests and achievements track progress, grant rewards, and rotate cle
   save = recordPlayerProgress(save, {
     expeditionsWon: 2,
     bossesDefeated: 2,
-    reactionsTriggered: 4,
+    burstsTriggered: 4,
     ultimatesUsed: 1,
     perfectDodges: 2,
-    maxCombo: 18,
+    triosTriggered: 18,
   });
 
   const firstQuest = save.activeQuests[0];
@@ -580,11 +580,11 @@ test('Giga: quêtes et succès des nouveaux biomes', () => {
   const early = createInitialSaveState('pyrocube', true);
   assert.equal(isQuestTemplateAvailable(frontierTpl, early), false);
   assert.equal(isQuestTemplateAvailable(frontierTpl, { highestStageIndex: FRONTIER_STAGE_INDEX }), true);
-  let rotating = recordPlayerProgress(early, { expeditionsWon: 50, reactionsTriggered: 50, ultimatesUsed: 50, dishesCooked: 50, perfectDodges: 50, bossesDefeated: 50 });
+  let rotating = recordPlayerProgress(early, { expeditionsWon: 50, burstsTriggered: 50, ultimatesUsed: 50, dishesCooked: 50, perfectDodges: 50, bossesDefeated: 50 });
   for (let i = 0; i < 40; i++) {
     const done = rotating.activeQuests.find((q) => q.progress >= q.target);
     if (!done) {
-      rotating = recordPlayerProgress(rotating, { expeditionsWon: 50, reactionsTriggered: 50, ultimatesUsed: 50, dishesCooked: 50, perfectDodges: 50, bossesDefeated: 50 });
+      rotating = recordPlayerProgress(rotating, { expeditionsWon: 50, burstsTriggered: 50, ultimatesUsed: 50, dishesCooked: 50, perfectDodges: 50, bossesDefeated: 50 });
       continue;
     }
     rotating = claimQuestReward(rotating, done.uid, () => (i % 10) / 10);
@@ -638,7 +638,7 @@ function oldRuneId(kind: string): string {
 }
 
 test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intacte)', () => {
-  assert.equal(SAVE_VERSION, 4);
+  assert.equal(SAVE_VERSION, 5);
   const fresh = createInitialSaveState('aquabloc', true);
   // Sauvegarde v2 réaliste : pas de pierres/stats des confins, quête en cours, créature équipée
   const { frontierWins: _fw, frontierDishes: _fd, ...v2Stats } = fresh.stats;
@@ -648,7 +648,7 @@ test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intact
     // en v2 le sac s'appelait `moveStoneBag` et portait les anciens noms (table de legacyIds.ts)
     runeBag: undefined,
     moveStoneBag: { [oldRuneId('rune_ampleur')]: 2, [oldRuneId('rune_cadence')]: 0, [oldRuneId('rune_force')]: 3, [oldRuneId('rune_partage')]: 1 },
-    stats: { ...v2Stats, expeditionsWon: 9, maxCombo: 14 },
+    stats: { ...v2Stats, expeditionsWon: 9, triosTriggered: 14 },
     highestStageIndex: 7,
     completedStageIds: STAGES.slice(0, 7).map((s) => s.id),
     expeditionsCompleted: 9,
@@ -662,7 +662,7 @@ test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intact
   assert.equal(migrated.stats.frontierWins, 0);
   assert.equal(migrated.stats.frontierDishes, 0);
   assert.equal(migrated.stats.expeditionsWon, 9);
-  assert.equal(migrated.stats.maxCombo, 14);
+  assert.equal(migrated.stats.triosTriggered, 14);
   assert.equal(migrated.highestStageIndex, 7);
   assert.equal(migrated.activeQuests[0].progress, 1);
   assert.deepEqual(migrated.claimedAchievementIds, ['ach_first_win']);
@@ -685,13 +685,13 @@ test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intact
 });
 
 test('Giga: écran de victoire — étoiles et annonce du biome débloqué', () => {
-  const base = { victory: true, reactionsTriggered: 0, ultimatesUsed: 0, perfectDodges: 0 };
-  assert.equal(computeVictoryStars({ ...base, victory: false, reactionsTriggered: 9, ultimatesUsed: 3 }), 0);
+  const base = { victory: true, burstsTriggered: 0, ultimatesUsed: 0, perfectDodges: 0 };
+  assert.equal(computeVictoryStars({ ...base, victory: false, burstsTriggered: 9, ultimatesUsed: 3 }), 0);
   assert.equal(computeVictoryStars(base), 1);
-  assert.equal(computeVictoryStars({ ...base, reactionsTriggered: 1 }), 1);
-  assert.equal(computeVictoryStars({ ...base, reactionsTriggered: 2 }), 2);
+  assert.equal(computeVictoryStars({ ...base, burstsTriggered: 1 }), 1);
+  assert.equal(computeVictoryStars({ ...base, burstsTriggered: 2 }), 2);
   assert.equal(computeVictoryStars({ ...base, perfectDodges: 1 }), 2);
-  assert.equal(computeVictoryStars({ ...base, reactionsTriggered: 2, ultimatesUsed: 1 }), 3);
+  assert.equal(computeVictoryStars({ ...base, burstsTriggered: 2, ultimatesUsed: 1 }), 3);
 
   const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 10, bossHpPercentRemaining: 0 };
   const fresh = createInitialSaveState('pyrocube', true);

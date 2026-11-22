@@ -128,10 +128,18 @@ export const FR = {
       vague: 'Vague',
       temps: 'Temps',
       p: 'P',
-      surcharge: ' · SURCHARGE',
+      dernierSursaut: ' · DERNIER SURSAUT',
       fureur: ' · FUREUR',
       attaqueEsquivez: 'ATTAQUE ! ESQUIVEZ !',
-      combo: ' COMBO',
+      premiereFoisCube: 'Un sort pose un cube : attends qu’il s’allume, puis fais-le éclater avec un autre élément.',
+      premiereFoisFaible: 'Attends que le cube s’allume.',
+      premiereFoisEclat: 'Éclat ! L’élément qui fait éclater décide de l’effet.',
+      premiereFoisTrio: 'TRIO ! Un troisième élément sur un ennemi fêlé.',
+      eclatsTrios: (a: string | number, b: string | number) => `Éclats ${a} · Trios ${b}`,
+      previewTrio: 'TRIO',
+      previewEclat: 'ÉCLAT',
+      previewMurit: '…',
+      previewLoin: 'trop loin',
       changerLeModeDeControle: 'Changer le mode de contrôle',
       activerLeSon: 'Activer le son',
       couperLeSon: 'Couper le son',
@@ -156,7 +164,7 @@ export const FR = {
     },
     outcomeModal: {
       victoire: 'Victoire',
-      t2ReactionsElementaires: '2 réactions élémentaires',
+      t2Eclats: '2 Éclats',
       ultimeOuEsquiveParfaite: 'Ultime ou esquive parfaite',
       etoileSur3: (a: string | number, b: string | number) => `${a} étoile${b} sur 3`,
       expeditionReussie: 'Expédition réussie !',
@@ -168,10 +176,10 @@ export const FR = {
       degats: 'Dégâts',
       xpUnite: 'XP / Unité',
       pvBoss: 'PV Boss',
-      reactions: 'Réactions ',
-      ultimes: 'Ultimes ',
+      eclats: 'Éclats ',
+      trios: 'Trios ',
+      dechainements: 'Déchaînements ',
       esquivesParfaites: 'Esquives parfaites ',
-      comboMax: 'Combo max ',
       nouveauBiomeDecouvert: 'Nouveau biome découvert',
       ingredientsRecoltes: 'Ingrédients récoltés',
       pierre: 'Galet ',
@@ -215,8 +223,8 @@ export const FR = {
       obtenu: ' Obtenu',
       verrouille: 'Verrouillé',
       expeditions: 'Expéditions',
-      reactions: 'Réactions',
-      comboMax: 'Combo Max',
+      eclats: 'Éclats',
+      trios: 'Trios',
       creatures: CREATURE_NOUN.plural,
       exporterVotreSauvegardeLocaleV: 'Exporter votre sauvegarde locale (v',
       conservezUneCopieDeVotreEquipe: 'Conservez une copie de votre équipe, vos galets, vos ingrédients et vos succès au format JSON.',
@@ -312,7 +320,7 @@ export const FR = {
     contrecoupEloignezVous: 'Contrecoup — éloignez-vous !',
     boucl: (a: string | number) => `+${a} BOUCL.`,
     bloque: 'BLOQUÉ',
-    phase3Surcharge: 'PHASE 3 : SURCHARGE !',
+    phase3DernierSursaut: 'PHASE 3 : DERNIER SURSAUT !',
     phase2Fureur: 'PHASE 2 : FUREUR !',
     vague: (a: string | number, b: string | number) => `Vague ${a} / ${b}`,
     boss: (a: string | number) => `Boss ${a}`,
@@ -449,7 +457,7 @@ export const FR = {
       },
       frost_charge: {
         name: 'Ruée Givrée',
-        description: 'Charge bois en avant en laissant une traînée de givre qui trempe les ennemis.',
+        description: 'Charge bois en avant en laissant une traînée de givre qui glace les ennemis.',
       },
       aurora_blizzard: {
         name: 'Blizzard Boréal',
@@ -583,7 +591,7 @@ export const FR = {
       },
       raicube: {
         name: 'Raicube',
-        dexNote: `L’oiseau-éclair de ${WORLD_NAME} : un battement d’ailes suffit à surcharger l’air.`,
+        dexNote: `L’oiseau-éclair de ${WORLD_NAME} : un battement d’ailes suffit à charger l’air d’éclairs.`,
       },
       cailloc: {
         name: 'Cailloc',
@@ -931,7 +939,7 @@ export const FR = {
         description: 'Inflige des dégâts de feu continus chaque seconde.',
       },
       soaked: {
-        label: 'Trempé',
+        label: 'Mouillé',
         shortTag: 'EAU',
         description: 'Ralentit les déplacements et attaques de 25 %.',
       },
@@ -943,7 +951,7 @@ export const FR = {
       shocked: {
         label: 'Électrifié',
         shortTag: 'ÉLEC',
-        description: 'Étourdit brièvement la cible et la rend vulnérable aux combos.',
+        description: 'Étourdit brièvement la cible.',
       },
       sunder: {
         label: 'Brise-Armure',
@@ -972,9 +980,9 @@ export const FR = {
           label: '3× Baie Rubis · 3× Baie Azur',
         },
       },
-      q_combos_3: {
+      q_bursts_3: {
         title: 'Alchimiste Élémentaire',
-        description: 'Déclenchez 3 réactions élémentaires en combat.',
+        description: 'Déclenchez 3 Éclats en combat.',
         reward: {
           label: 'Galet (Argent) · 2× Miel Ambré',
         },
@@ -1007,9 +1015,9 @@ export const FR = {
           label: 'Galet (Or) · 1× Fragment Mystique',
         },
       },
-      q_combos_6: {
+      q_bursts_6: {
         title: 'Maître des Synergies',
-        description: 'Déclenchez 6 réactions élémentaires cumulées.',
+        description: 'Déclenchez 6 Éclats au total.',
         reward: {
           label: '1× Rune de Force · 2× Racine Ardente',
         },
@@ -1065,23 +1073,23 @@ export const FR = {
           label: 'Galet Argent (+85–130)',
         },
       },
-      ach_first_combo: {
+      ach_first_burst: {
         title: 'Étincelle Tactique',
-        description: 'Déclenchez votre première réaction élémentaire.',
+        description: 'Déclenchez votre premier Éclat.',
         reward: {
           label: '2× Cristal Glacé · 2× Racine Ardente',
         },
       },
-      ach_combo_master: {
-        title: 'Architecte des Combos',
-        description: 'Déclenchez 15 réactions élémentaires au total.',
+      ach_burst_master: {
+        title: 'Architecte des Éclats',
+        description: 'Déclenchez 15 Éclats au total.',
         reward: {
           label: '1× Rune de Force · 2× Fragment Mystique',
         },
       },
-      ach_chain_8: {
+      ach_trios_5: {
         title: 'Cadence Infernale',
-        description: 'Atteignez un combo d’escouade de ×8 en un seul combat.',
+        description: 'Réussissez 5 Trios au total.',
         reward: {
           label: '1× Rune de Cadence · 3× Miel Ambré',
         },

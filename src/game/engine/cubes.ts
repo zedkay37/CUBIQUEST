@@ -103,6 +103,7 @@ export function applyCubeRule(
     case 'cube':
       setCube(self, target, element, attacker.atk);
       self.cubesPlaced += 1;
+      self.firstTimeEvent('cube');
       return 1;
     case 'refresh':
       setCube(self, target, element, attacker.atk, true);
@@ -131,9 +132,9 @@ export function applyCubeRule(
       if (!cast.burstEffectUsed) {
         cast.burstEffectUsed = true;
         applyBurstEffect(self, target, element, previous, attacker, rawDamage);
-        self.lastReactionLabel = burst.name;
-        self.lastReactionColor = burst.color;
-        self.lastReactionTimer = 2.4;
+        self.lastBurstLabel = burst.name;
+        self.lastBurstColor = burst.color;
+        self.lastBurstTimer = 2.4;
         self.floatingText.spawn(target.x, 2.75, target.z, FR.engine.eclatNomme(burst.name), burst.color, 1.2, 1.1);
         soundFx.playBurst(element);
         self.hitstopTimer = Math.max(self.hitstopTimer, 0.055);
@@ -251,6 +252,11 @@ export function onTrio(self: VoxelEngine, target: CombatActor): void {
   spawnShockwaveRing(self, target.x, target.z, CUBE_KIT.trioSplashRadius, '#F4B942');
   soundFx.playTrio();
   self.hitstopTimer = Math.max(self.hitstopTimer, 0.09);
+  // Ralenti : jamais plus d'un toutes les 2 s, et coupé avec le réglage de secousse
+  if (self.shakeEnabled && self.elapsedTotal - self.lastSlowMoAt >= 2) {
+    self.lastSlowMoAt = self.elapsedTotal;
+    self.slowMoTimer = 0.45 + 0.09;
+  }
   self.trauma = Math.min(1, self.trauma + 0.45);
 }
 

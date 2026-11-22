@@ -48,7 +48,7 @@ export function applyDamageToActor(
   const defMult = target.buffTimer > 0 ? 0.65 : 1.0;
   let finalDmg = Math.max(1, Math.round(dmg * defMult));
 
-  // Absorb damage with Crystallize shield if present
+  // Le bouclier (Rempart, Déchaînement Roche) absorbe d'abord les dégâts
   if (target.shieldHp > 0) {
     const absorbed = Math.min(target.shieldHp, finalDmg);
     target.shieldHp -= absorbed;
@@ -95,9 +95,6 @@ export function applyDamageToActor(
 
   if (attacker?.isAlly && !target.isAlly) {
     self.damageDealt += finalDmg;
-    self.comboCount += 1;
-    self.comboTimer = 4.8;
-    if (self.comboCount > self.maxCombo) self.maxCombo = self.comboCount;
     gainUltimateCharge(self, isSkillHit ? ULTIMATE_CHARGE.skillHit : ULTIMATE_CHARGE.basicHit);
 
     if (attacker.hitHeal > 0 && !attacker.fainted && finalDmg > 0) {
@@ -181,7 +178,7 @@ export function onBossPhaseShift(self: VoxelEngine, boss: CombatActor, phase: 2 
     self.telemetry.phaseStartedAt[1] = self.expeditionElapsed;
   }
   soundFx.playBossPhase();
-  const label = phase === 3 ? FR.engine.phase3Surcharge : FR.engine.phase2Fureur;
+  const label = phase === 3 ? FR.engine.phase3DernierSursaut : FR.engine.phase2Fureur;
   const auraColor = phase === 3 ? '#F4B942' : '#F43F5E';
   self.bannerText = `${boss.name} — ${label}`;
   self.bannerTimer = 2.6;

@@ -39,10 +39,10 @@ interface Outcome {
   wavesCleared: number;
   damageDealt: number;
   bossHpPercentRemaining: number;
-  reactionsTriggered: number;
+  burstsTriggered: number;
   ultimatesUsed: number;
   perfectDodges: number;
-  maxCombo: number;
+  triosTriggered: number;
 }
 
 export interface FightResult {
@@ -91,7 +91,7 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
           hudUpdates += 1;
           enemiesRemaining = snap.enemiesRemaining;
           allyHp = snap.units.map((u) => u.hp);
-          let sum = snap.damageDealt + snap.enemiesRemaining * 7 + snap.ultimateCharge * 3 + snap.comboCount;
+          let sum = snap.damageDealt + snap.enemiesRemaining * 7 + snap.ultimateCharge * 3 + snap.burstsTriggered * 5 + snap.triosTriggered * 17;
           for (const u of snap.units) sum += u.hp + u.shieldHp * 5 + u.moveCooldown;
           if (snap.boss) sum += snap.boss.hp * 11 + snap.boss.phase * 13;
           hudChecksum += sum;

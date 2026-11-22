@@ -169,7 +169,7 @@ Un nouveau boss se compose en choisissant un kit existant ; il ne reçoit pas d'
 
 - Français, vouvoiement du joueur dans l'interface (« Placez 5 ingrédients », « Préparez l'Esquive ! »).
 - Registre chaleureux et clair, jamais ironique ni sombre. Vocabulaire du camp, de la cuisine et de l'exploration.
-- Annonces de combat en capitales avec point d'exclamation (« ALERTE BOSS ! », « ÉVAPORATION ! », « DÉCHAÎNEMENT ! »).
+- Annonces de combat en capitales avec point d'exclamation (« ALERTE BOSS ! », « TRIO ! », « DÉCHAÎNEMENT ! »).
 - Consignes de boss : nom de l'attaque, tiret, action à faire (« Anneau de Givre — collez-vous au boss ! »).
 - Typographie française : espace avant `!` `?` `:`, guillemets « », apostrophe courbe dans les textes du catalogue.
 - Noms propres avec majuscules à chaque mot pour les lieux, plats et sorts (« Trône de la Banquise », « Rune de Précision »).

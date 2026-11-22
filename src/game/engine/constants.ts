@@ -33,21 +33,21 @@ export const ELEMENT_FX: Record<
     lifeMax: number;
     sizeMin: number;
     sizeMax: number;
-    swirl: number;
+    spin: number;
   }
 > = {
   // braises qui montent
-  fire: { colors: ['#FF7043', '#FDBA74', '#FDE047'], speed: 2.6, vyMin: 1.6, vyMax: 4.2, gravity: -3.2, drag: 1.6, stretchY: 1.25, bounce: 0, lifeMin: 0.45, lifeMax: 0.85, sizeMin: 0.12, sizeMax: 0.26, swirl: 0 },
+  fire: { colors: ['#FF7043', '#FDBA74', '#FDE047'], speed: 2.6, vyMin: 1.6, vyMax: 4.2, gravity: -3.2, drag: 1.6, stretchY: 1.25, bounce: 0, lifeMin: 0.45, lifeMax: 0.85, sizeMin: 0.12, sizeMax: 0.26, spin: 0 },
   // gouttes étirées qui rebondissent
-  water: { colors: ['#38BDF8', '#7DD3FC', '#E0F2FE'], speed: 4.4, vyMin: 3.0, vyMax: 6.2, gravity: 17, drag: 0, stretchY: 1.8, bounce: 0.32, lifeMin: 0.4, lifeMax: 0.7, sizeMin: 0.1, sizeMax: 0.2, swirl: 0 },
+  water: { colors: ['#38BDF8', '#7DD3FC', '#E0F2FE'], speed: 4.4, vyMin: 3.0, vyMax: 6.2, gravity: 17, drag: 0, stretchY: 1.8, bounce: 0.32, lifeMin: 0.4, lifeMax: 0.7, sizeMin: 0.1, sizeMax: 0.2, spin: 0 },
   // feuilles plates qui planent
-  grass: { colors: ['#4ADE80', '#86EFAC', '#FDE68A'], speed: 3.6, vyMin: 2.0, vyMax: 3.8, gravity: 3.4, drag: 2.4, stretchY: 0.35, bounce: 0, lifeMin: 0.7, lifeMax: 1.1, sizeMin: 0.16, sizeMax: 0.28, swirl: 1.4 },
+  grass: { colors: ['#4ADE80', '#86EFAC', '#FDE68A'], speed: 3.6, vyMin: 2.0, vyMax: 3.8, gravity: 3.4, drag: 2.4, stretchY: 0.35, bounce: 0, lifeMin: 0.7, lifeMax: 1.1, sizeMin: 0.16, sizeMax: 0.28, spin: 1.4 },
   // étincelles nerveuses, très brèves
-  electric: { colors: ['#FACC15', '#FEF9C3', '#FFFFFF'], speed: 9.5, vyMin: -1.0, vyMax: 5.0, gravity: 0, drag: 7.5, stretchY: 2.6, bounce: 0, lifeMin: 0.14, lifeMax: 0.32, sizeMin: 0.07, sizeMax: 0.15, swirl: 0 },
+  electric: { colors: ['#FACC15', '#FEF9C3', '#FFFFFF'], speed: 9.5, vyMin: -1.0, vyMax: 5.0, gravity: 0, drag: 7.5, stretchY: 2.6, bounce: 0, lifeMin: 0.14, lifeMax: 0.32, sizeMin: 0.07, sizeMax: 0.15, spin: 0 },
   // éclats lourds
-  rock: { colors: ['#D6A874', '#A98359', '#78716C'], speed: 3.8, vyMin: 3.2, vyMax: 6.0, gravity: 21, drag: 0, stretchY: 1, bounce: 0.45, lifeMin: 0.6, lifeMax: 0.95, sizeMin: 0.2, sizeMax: 0.36, swirl: 0 },
+  rock: { colors: ['#D6A874', '#A98359', '#78716C'], speed: 3.8, vyMin: 3.2, vyMax: 6.0, gravity: 21, drag: 0, stretchY: 1, bounce: 0.45, lifeMin: 0.6, lifeMax: 0.95, sizeMin: 0.2, sizeMax: 0.36, spin: 0 },
   // spirale ascendante
-  psychic: { colors: ['#C084FC', '#E9D5FF', '#67E8F9'], speed: 2.4, vyMin: 0.8, vyMax: 2.6, gravity: -1.6, drag: 1.1, stretchY: 1, bounce: 0, lifeMin: 0.6, lifeMax: 1.0, sizeMin: 0.1, sizeMax: 0.2, swirl: 4.2 },
+  psychic: { colors: ['#C084FC', '#E9D5FF', '#67E8F9'], speed: 2.4, vyMin: 0.8, vyMax: 2.6, gravity: -1.6, drag: 1.1, stretchY: 1, bounce: 0, lifeMin: 0.6, lifeMax: 1.0, sizeMin: 0.1, sizeMax: 0.2, spin: 4.2 },
 };
 
 // Scène d'évolution : devant la marmite, face caméra

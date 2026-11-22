@@ -245,7 +245,7 @@ export interface BurstDef {
 
 export type QuestMetric =
   | 'expeditionsWon'
-  | 'reactionsTriggered'
+  | 'burstsTriggered'
   | 'ultimatesUsed'
   | 'dishesCooked'
   | 'perfectDodges'
@@ -253,7 +253,7 @@ export type QuestMetric =
   | 'evolutionsDone'
   | 'stagesCompleted'
   | 'speciesDiscovered'
-  | 'maxCombo'
+  | 'triosTriggered'
   // Giga Update
   | 'frontierWins'
   | 'frontierDishes'
@@ -301,13 +301,13 @@ export interface AchievementDef {
 
 export interface PlayerStats {
   expeditionsWon: number;
-  reactionsTriggered: number;
+  burstsTriggered: number;
   ultimatesUsed: number;
   dishesCooked: number;
   evolutionsDone: number;
   perfectDodges: number;
   bossesDefeated: number;
-  maxCombo: number;
+  triosTriggered: number;
   /** v3 — victoires dans la Toundra Boréale / la Cime des Orages. */
   frontierWins: number;
   /** v3 — cuissons lancées avec une recette des nouveaux biomes. */
@@ -332,6 +332,8 @@ export interface SaveState {
   stats: PlayerStats;
   activeQuests: ActiveQuest[];
   claimedAchievementIds: string[];
+  /** Gestes déjà expliqués par une bulle « première fois » (cube, Éclat faible, Éclat, Trio). */
+  firstTimesSeen: string[];
 }
 
 export interface ExpeditionUnitHud {
@@ -363,10 +365,15 @@ export interface ExpeditionHudSnapshot {
   dodgeCooldown: number;
   dodgeMaxCooldown: number;
   ultimateCharge: number; // 0..100
-  comboCount: number;
-  comboTimer: number;
-  lastReactionLabel: string | null;
-  lastReactionColor: string | null;
+  /** Éclats et Trios de ce combat. */
+  burstsTriggered: number;
+  triosTriggered: number;
+  lastBurstLabel: string | null;
+  lastBurstColor: string | null;
+  /** Ce que ferait le sort de chaque compagnon maintenant (cartes du HUD). */
+  skillPreviews: ('trio' | 'burst' | 'ripening' | 'cube' | 'far')[];
+  /** Élément du meneur (premier compagnon vivant) : couleur et effet du Déchaînement. */
+  leaderElement: ElementType | null;
   controlMode: ControlMode;
   units: ExpeditionUnitHud[];
   enemiesRemaining: number;
@@ -396,10 +403,10 @@ export interface ExpeditionOutcome {
   totalWaves: number;
   damageDealt: number;
   bossHpPercentRemaining: number;
-  reactionsTriggered: number;
+  burstsTriggered: number;
   ultimatesUsed: number;
   perfectDodges: number;
-  maxCombo: number;
+  triosTriggered: number;
   xpPerUnit: number;
   droppedIngredients: { id: string; count: number }[];
   droppedStone: PowerStone | null;

@@ -275,7 +275,7 @@ test('outils : l’option cubes=false coupe les cubes, le jeu normal les garde',
       let triggered = -1;
       const engine = new VoxelEngine(
         null,
-        { onHudUpdate: () => {}, onExpeditionComplete: (r) => (triggered = r.reactionsTriggered) },
+        { onHudUpdate: () => {}, onExpeditionComplete: (r) => (triggered = r.burstsTriggered) },
         cubes === undefined ? { headless: true } : { headless: true, cubes },
       );
       const stage = STAGE_BY_ID['tundra-1'];
@@ -299,7 +299,7 @@ test('outils : l’option cubes=false coupe les cubes, le jeu normal les garde',
 
 /** Un combat mené jusqu'à l'instant où le dernier ennemi tombe (bannière « VICTOIRE », résultat pas encore envoyé). */
 function runToVictoryBanner(h: Harness, secured: unknown[]): void {
-  h.start('stormpeak-1');
+  h.start('volcano-1');
   h.run(240, () => h.engine.expeditionEnded && h.engine.pendingVictory);
   assert.equal(h.engine.pendingVictory, true, 'le combat de référence doit être gagné');
   assert.equal(h.results.length, 0, 'la fête de victoire n’est pas finie : l’écran de fin n’est pas encore demandé');
@@ -332,7 +332,7 @@ test('Victoire: pause pendant la bannière puis reprise — récompenses acquise
 test('Victoire: pause pendant la bannière puis abandon — la victoire reste acquise, une seule fois', () => {
   withSeededRandom(11, () => {
     const { h, secured } = makeVictoryHarness();
-    const stage = STAGE_BY_ID['stormpeak-1'];
+    const stage = STAGE_BY_ID['volcano-1'];
     // retour au camp
     runToVictoryBanner(h, secured);
     h.engine.setScreenState('paused');
@@ -352,7 +352,7 @@ test('Victoire: « recommencer » pendant la bannière — la victoire acquise r
     const { h, secured } = makeVictoryHarness();
     runToVictoryBanner(h, secured);
     h.engine.setScreenState('paused');
-    h.start('stormpeak-1');
+    h.start('volcano-1');
     assert.equal(secured.length, 1, 'relancer ne retire ni ne répète la victoire déjà acquise');
     h.run(240, () => h.results.length > 0);
     h.run(30);

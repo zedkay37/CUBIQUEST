@@ -4,6 +4,7 @@
 import { BIOMES, MOVES } from '../catalog';
 import type { ExpeditionHudSnapshot, StatusKind } from '../types';
 import type { VoxelEngine } from '../VoxelEngine';
+import { getSkillPreview } from './cubes';
 
 export function emitHudSnapshot(self: VoxelEngine): void {
   if (!self.activeStage || self.playMode !== 'expedition') return;
@@ -21,10 +22,12 @@ export function emitHudSnapshot(self: VoxelEngine): void {
     dodgeCooldown: self.dodgeCooldown,
     dodgeMaxCooldown: self.dodgeMaxCooldown,
     ultimateCharge: Math.round(self.ultimateCharge),
-    comboCount: self.comboCount,
-    comboTimer: self.comboTimer,
-    lastReactionLabel: self.lastReactionLabel,
-    lastReactionColor: self.lastReactionColor,
+    burstsTriggered: self.burstsTriggered,
+    triosTriggered: self.triosTriggered,
+    lastBurstLabel: self.lastBurstLabel,
+    lastBurstColor: self.lastBurstColor,
+    skillPreviews: [0, 1, 2].map((slot) => getSkillPreview(self, slot)),
+    leaderElement: self.allies.find((a) => !a.fainted)?.rig.species.element ?? null,
     controlMode: self.controlMode,
     enemiesRemaining: livingEnemies,
     damageDealt: self.damageDealt,

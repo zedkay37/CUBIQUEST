@@ -198,10 +198,10 @@ export interface ExpeditionResult {
   wavesCleared: number;
   damageDealt: number;
   bossHpPercentRemaining: number;
-  reactionsTriggered: number;
+  burstsTriggered: number;
   ultimatesUsed: number;
   perfectDodges: number;
-  maxCombo: number;
+  triosTriggered: number;
 }
 
 /** Premières fois montrées au joueur (bulle d'une ligne). */

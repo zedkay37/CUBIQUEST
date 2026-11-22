@@ -10,6 +10,7 @@ import {
   createOwnedCreature,
   importSaveFromJson,
   loadSaveState,
+  markFirstTimeSeen,
   migrateSaveState,
   normalizeCreature,
   normalizePowerStone,
@@ -21,6 +22,7 @@ import {
 import type { PowerStone, SaveState } from './types';
 import { SAVE_V3_FIXTURE } from './saveV3.fixture';
 import { withSaveSlot } from './saveSlot';
+import { LEGACY_QUEST_IDS, LEGACY_STAT_FIELDS } from './legacyIds';
 import { normalizedTerms, normalizeText } from '../../tools/lexiqueCore';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -71,7 +73,7 @@ test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoy�
   ];
   broken.ingredients = { ruby_berry: -4, azure_drop: 'douze', sun_pollen: 3.9, ingredient_fantome: 50, pebble_gray: null };
   broken.runeBag = { rune_ampleur: -2, rune_cadence: 'x', rune_partage: 2.7 };
-  broken.stats = { expeditionsWon: -3, maxCombo: 'beaucoup', reactionsTriggered: 4 };
+  broken.stats = { expeditionsWon: -3, triosTriggered: 'beaucoup', burstsTriggered: 4 };
   broken.expeditionsCompleted = 'trois';
   broken.completedStageIds = ['meadow-1', 'meadow-1', 'niveau_fantome', 42];
   broken.discoveredSpeciesIds = ['pyrocube', 'pyrocube', 'espece_fantome'];
@@ -89,8 +91,8 @@ test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoy�
   assert.deepEqual(m.ingredients, { ruby_berry: 0, azure_drop: 0, sun_pollen: 3, pebble_gray: 0 });
   assert.deepEqual(m.runeBag, { rune_ampleur: 0, rune_cadence: 0, rune_force: 0, rune_partage: 2, rune_precision: 0, rune_vigueur: 0 });
   assert.equal(m.stats.expeditionsWon, 0);
-  assert.equal(m.stats.maxCombo, 0);
-  assert.equal(m.stats.reactionsTriggered, 4);
+  assert.equal(m.stats.triosTriggered, 0);
+  assert.equal(m.stats.burstsTriggered, 4);
   assert.equal(m.expeditionsCompleted, 0);
   assert.deepEqual(m.completedStageIds, ['meadow-1']);
   assert.equal(m.highestStageIndex, 1); // déduit du niveau terminé
@@ -286,13 +288,13 @@ test('Chargement: une sauvegarde illisible est copiée avant que le jeu ne repar
   }
 });
 
-test('Sauvegarde: une sauvegarde v3 réaliste se charge en v4 sans perte, identifiants renommés', () => {
+test('Sauvegarde: une sauvegarde v3 réaliste se charge en v5 sans perte, identifiants renommés', () => {
   const v3 = clone(SAVE_V3_FIXTURE) as Record<string, any>;
   assert.equal(v3.version, 3);
   const m = migrateSaveState(clone(v3));
   assert.ok(m !== null);
   assert.equal(m.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 4);
+  assert.equal(SAVE_VERSION, 5);
 
   // escouade et créatures : rien ne bouge, sauf le nom du champ des runes équipées
   assert.deepEqual(m.squadIds, v3.squadIds);
@@ -317,7 +319,12 @@ test('Sauvegarde: une sauvegarde v3 réaliste se charge en v4 sans perte, identi
   assert.deepEqual(m.completedStageIds, v3.completedStageIds);
   assert.equal(m.highestStageIndex, v3.highestStageIndex);
   assert.equal(m.expeditionsCompleted, v3.expeditionsCompleted);
-  assert.deepEqual(m.stats, v3.stats);
+  // statistiques : anciennes réactions -> Éclats (même nombre) ; l'ancien meilleur enchaînement est abandonné
+  const otherStats = { ...v3.stats };
+  delete otherStats[LEGACY_STAT_FIELDS.bursts];
+  delete otherStats[LEGACY_STAT_FIELDS.bestChain];
+  assert.deepEqual(m.stats, { ...otherStats, burstsTriggered: v3.stats[LEGACY_STAT_FIELDS.bursts], triosTriggered: 0 });
+  assert.deepEqual(m.firstTimesSeen, []);
   assert.deepEqual(m.discoveredSpeciesIds, v3.discoveredSpeciesIds);
   assert.deepEqual(m.claimedAchievementIds, v3.claimedAchievementIds);
   assert.deepEqual(m.unlockedPotTiers, v3.unlockedPotTiers);
@@ -328,7 +335,7 @@ test('Sauvegarde: une sauvegarde v3 réaliste se charge en v4 sans perte, identi
 
   // quêtes : mêmes quêtes, même avancement, récompense au nouveau format
   assert.deepEqual(m.activeQuests.map((q) => [q.uid, q.templateId, q.progress, q.target]),
-    v3.activeQuests.map((q: any) => [q.uid, q.templateId, q.progress, q.target]));
+    v3.activeQuests.map((q: any) => [q.uid, LEGACY_QUEST_IDS[q.templateId] ?? q.templateId, q.progress, q.target]));
   const runeQuest = m.activeQuests.find((q) => q.templateId === 'q_ult_1');
   assert.equal(runeQuest?.reward.rune, 'rune_cadence');
 
@@ -364,4 +371,13 @@ test('Sauvegarde: sans VITE_SAVE_SLOT (outils, tests), les clés de stockage res
   assert.equal(SAVE_STORAGE_KEY, 'cubiquest_save_v2');
   assert.equal(SAVE_BACKUP_STORAGE_KEY, 'cubiquest_save_unreadable_backup');
   assert.equal(withSaveSlot('cle'), 'cle');
+});
+
+test('Sauvegarde: les bulles « première fois » sont rangées une fois, les valeurs inconnues ignorées', () => {
+  const fresh = createInitialSaveState('pyrocube', true);
+  assert.deepEqual(fresh.firstTimesSeen, []);
+  const once = markFirstTimeSeen(fresh, 'burst');
+  assert.deepEqual(markFirstTimeSeen(once, 'burst').firstTimesSeen, ['burst']);
+  const m = migrateSaveState({ ...clone(once), firstTimesSeen: ['burst', 'trio', 'inconnu', 3, 'trio'] });
+  assert.deepEqual(m?.firstTimesSeen, ['burst', 'trio']);
 });

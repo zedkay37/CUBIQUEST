@@ -178,9 +178,9 @@ export function spawnElementBurst(
     slot.x = x + cos * 0.25;
     slot.y = y + Math.random() * 0.4;
     slot.z = z + sin * 0.25;
-    // swirl : composante tangentielle pour les feuilles et la spirale psy
-    slot.vx = cos * spd - sin * fx.swirl;
-    slot.vz = sin * spd + cos * fx.swirl;
+    // spin : composante tangentielle pour les feuilles et la spirale psy
+    slot.vx = cos * spd - sin * fx.spin;
+    slot.vz = sin * spd + cos * fx.spin;
     slot.vy = fx.vyMin + Math.random() * (fx.vyMax - fx.vyMin);
     slot.maxLife = fx.lifeMin + Math.random() * (fx.lifeMax - fx.lifeMin);
     slot.life = slot.maxLife;

@@ -100,7 +100,7 @@ export function ExpeditionHud({
                   >
                     {FR.ui.expeditionHud.p}{hud.boss.phase}/{hud.boss.maxPhases}
                     {hud.boss.phase === 3
-                      ? FR.ui.expeditionHud.surcharge
+                      ? FR.ui.expeditionHud.dernierSursaut
                       : hud.boss.phase === 2
                         ? FR.ui.expeditionHud.fureur
                         : ''}
@@ -147,30 +147,20 @@ export function ExpeditionHud({
             </div>
           )}
 
-          {/* Contextual Combo & Elemental Reaction Indicator (only visible when active) */}
-          {(hud.comboCount >= 2 || hud.lastReactionLabel) && (
-            <div className="flex items-center gap-2.5 px-3 py-1 rounded-lg bg-[#141A26]/90 border border-[#39445A] w-fit">
-              {hud.comboCount >= 2 && (
-                <motion.span
-                  key={hud.comboCount}
-                  initial={{ scale: 1.45 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 520, damping: 16 }}
-                  className="inline-block origin-left font-mono-num font-extrabold text-sm text-[#F4B942]"
-                >
-                  ×{hud.comboCount}{FR.ui.expeditionHud.combo}
-                </motion.span>
-              )}
-              {hud.lastReactionLabel && (
-                <span
-                  className="font-display font-bold text-xs tracking-wide uppercase"
-                  style={{ color: hud.lastReactionColor ?? '#F4B942' }}
-                >
-                  {hud.lastReactionLabel}
-                </span>
-              )}
-            </div>
-          )}
+          {/* Compteur discret des Éclats et des Trios, et nom du dernier Éclat */}
+          <div className="flex items-center gap-2.5 px-3 py-1 rounded-lg bg-[#141A26]/80 border border-[#39445A] w-fit">
+            <span className="font-mono-num text-[11px] font-bold text-[#B8C2D1]">
+              {FR.ui.expeditionHud.eclatsTrios(hud.burstsTriggered, hud.triosTriggered)}
+            </span>
+            {hud.lastBurstLabel && (
+              <span
+                className="font-display font-bold text-xs tracking-wide uppercase"
+                style={{ color: hud.lastBurstColor ?? '#F4B942' }}
+              >
+                {hud.lastBurstLabel}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Top-Right: Compact Utility Controls */}
@@ -305,6 +295,14 @@ export function ExpeditionHud({
               Math.min(1, 1 - u.moveCooldown / Math.max(0.1, u.moveMaxCooldown)),
             );
             const moveColor = ELEMENT_META[u.moveElement].color;
+            // Aperçu du moteur : Trio (or), Éclat (bleu), cube qui mûrit (« … »), trop loin (grisé)
+            const preview = skillReady ? hud.skillPreviews[idx] : null;
+            const previewRing =
+              preview === 'trio'
+                ? ['ring-2', 'ring-[#F4B942]', 'animate-pulse'].join(' ')
+                : preview === 'burst'
+                  ? ['ring-2', 'ring-[#38BDF8]'].join(' ')
+                  : '';
 
             return (
               <div
@@ -371,11 +369,11 @@ export function ExpeditionHud({
                     e.currentTarget.blur();
                     onCastSkill(idx);
                   }}
-                  className={`voxel-btn relative overflow-hidden cursor-pointer rounded-lg px-2 py-1.5 border-2 text-left flex items-center justify-between gap-1.5 ${
+                  className={`voxel-btn relative overflow-hidden cursor-pointer rounded-lg px-2 py-1.5 border-2 text-left flex items-center justify-between gap-1.5 ${previewRing} ${
                     skillReady
                       ? 'border-[#141925] text-[#FAF7F0]'
                       : 'border-[#39445A] bg-[#161C28] text-[#94A3B8] cursor-not-allowed'
-                  }`}
+                  } ${preview === 'far' ? 'opacity-60 grayscale' : ''}`}
                   style={skillReady ? { backgroundColor: moveColor } : undefined}
                   aria-label={FR.ui.expeditionHud.lancerAvec(u.moveName, u.name)}
                 >
@@ -386,7 +384,15 @@ export function ExpeditionHud({
                     />
                   )}
                   <span className="relative z-10 text-[11px] sm:text-xs font-bold truncate hud-text-stroke">
-                    {u.moveName}
+                    {preview === 'trio'
+                      ? FR.ui.expeditionHud.previewTrio
+                      : preview === 'burst'
+                        ? FR.ui.expeditionHud.previewEclat
+                        : preview === 'ripening'
+                          ? FR.ui.expeditionHud.previewMurit
+                          : preview === 'far'
+                            ? FR.ui.expeditionHud.previewLoin
+                            : u.moveName}
                   </span>
                   <span className="relative z-10 font-mono-num text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#141925]/70 text-[#FAF7F0] shrink-0">
                     {skillReady ? idx + 1 : `${u.moveCooldown.toFixed(1)}s`}

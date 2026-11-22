@@ -13,6 +13,7 @@ import { fovForAspect, handleResize } from './engine/camera';
 import { clearGroup, loadCampScene, setPotVisual } from './engine/camp';
 import { _color, _dummy, BOLT_POOL_SIZE, PARTICLE_POOL_SIZE, WEATHER_COUNT } from './engine/constants';
 import { playEvolutionSequence } from './engine/evolution';
+import { createCubeMeshes } from './engine/cubeFx';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
 import { getDebugStats, type EngineDebugStats } from './engine/debug';
@@ -79,6 +80,9 @@ export class VoxelEngine {
   particleCursor = 0;
   floatingText: FloatingTextPool;
   weatherMesh: THREE.InstancedMesh;
+  /** Cubes d'élément et mini-cubes de Fêlure : un maillage instancié chacun (engine/cubeFx.ts). */
+  cubeMesh: THREE.InstancedMesh | null = null;
+  crackMesh: THREE.InstancedMesh | null = null;
   weatherMotes: WeatherMote[] = [];
   activeBiomeId: BiomeId = 'meadow';
   waterUniform: { value: number } | null = null;
@@ -140,10 +144,6 @@ export class VoxelEngine {
   dodgeCooldown = 0;
   readonly dodgeMaxCooldown = 5.0;
   ultimateCharge = 0;
-  comboCount = 0;
-  comboTimer = 0;
-  maxCombo = 0;
-  reactionsTriggered = 0;
   /** Compteurs des cubes pour ce combat. */
   cubesPlaced = 0;
   /** Pas de charge de Déchaînement tant qu'il dure (après un Déchaînement). */
@@ -156,9 +156,13 @@ export class VoxelEngine {
   firstTimeSeen = new Set<string>();
   ultimatesUsed = 0;
   perfectDodges = 0;
-  lastReactionLabel: string | null = null;
-  lastReactionColor: string | null = null;
-  lastReactionTimer = 0;
+  /** Dernier Éclat (nom, couleur), affiché brièvement en haut de l'écran. */
+  lastBurstLabel: string | null = null;
+  lastBurstColor: string | null = null;
+  lastBurstTimer = 0;
+  /** Ralenti du Trio (temps réel restant) et dernier déclenchement. */
+  slowMoTimer = 0;
+  lastSlowMoAt = -10;
   bannerText: string | null = null;
   bannerTimer = 0;
   expeditionEnded = false;
@@ -287,6 +291,8 @@ export class VoxelEngine {
     }
     this.particleMesh.instanceMatrix.needsUpdate = true;
     this.fxGroup.add(this.particleMesh);
+
+    createCubeMeshes(this);
 
     // Zero-GC 3D Floating Combat Text Pool
     this.floatingText = new FloatingTextPool(this.fxGroup, 28);

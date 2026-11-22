@@ -16,7 +16,7 @@ interface OutcomeModalProps {
 }
 
 const CONFETTI_COLORS = ['#F4B942', '#E85D3F', '#2FB97A', '#38BDF8', '#C084FC', '#FAF7F0'];
-const STAR_LABELS = [FR.ui.outcomeModal.victoire, FR.ui.outcomeModal.t2ReactionsElementaires, FR.ui.outcomeModal.ultimeOuEsquiveParfaite];
+const STAR_LABELS = [FR.ui.outcomeModal.victoire, FR.ui.outcomeModal.t2Eclats, FR.ui.outcomeModal.ultimeOuEsquiveParfaite];
 
 /** Compteur qui grimpe jusqu'à sa valeur (ease-out) pour donner du poids aux chiffres. */
 function useCountUp(target: number, delayMs = 0, durationMs = 850): number {
@@ -226,16 +226,16 @@ export function OutcomeModal({
             className="mt-2.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-mono-num text-[#B8C2D1]"
           >
             <span>
-              {FR.ui.outcomeModal.reactions}<strong className="text-[#F4B942]">{outcome.reactionsTriggered}</strong>
+              {FR.ui.outcomeModal.eclats}<strong className="text-[#38BDF8]">{outcome.burstsTriggered}</strong>
             </span>
             <span>
-              {FR.ui.outcomeModal.ultimes}<strong className="text-[#F4B942]">{outcome.ultimatesUsed}</strong>
+              {FR.ui.outcomeModal.trios}<strong className="text-[#F4B942]">{outcome.triosTriggered}</strong>
             </span>
             <span>
               {FR.ui.outcomeModal.esquivesParfaites}<strong className="text-[#38BDF8]">{outcome.perfectDodges}</strong>
             </span>
             <span>
-              {FR.ui.outcomeModal.comboMax}<strong className="text-[#2FB97A]">×{outcome.maxCombo}</strong>
+              {FR.ui.outcomeModal.dechainements}<strong className="text-[#2FB97A]">{outcome.ultimatesUsed}</strong>
             </span>
           </motion.div>
 
