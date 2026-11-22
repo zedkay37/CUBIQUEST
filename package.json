@@ -13,6 +13,7 @@
     "test": "tsx --test \"src/game/*.test.ts\"",
     "sim": "tsx tools/sim.ts",
     "golden": "tsx tools/golden.ts",
+    "census": "tsx tools/census.ts",
     "check": "tsc --noEmit && tsx --test \"src/game/*.test.ts\" && tsx tools/golden.ts && vite build"
   },
   "dependencies": {

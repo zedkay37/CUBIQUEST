@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { CampHud, type CampDrawerTab } from './components/CampHud';
 import { CodexDrawer } from './components/CodexDrawer';
@@ -49,6 +49,11 @@ import { getReferenceConfig } from './game/previewConfigs';
 import { loadSettings, persistSettings, type GameSettings } from './game/settings';
 import { VoxelEngine } from './game/VoxelEngine';
 
+// `?debug=1` : overlay de diagnostic (FPS, draw calls...). Le composant n'est téléchargé que dans ce cas.
+const DEBUG_ENABLED =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1';
+const DebugOverlay = lazy(() => import('./components/DebugOverlay'));
+
 function hasAutostartParam(): boolean {
   if (typeof window === 'undefined') return false;
   return new URLSearchParams(window.location.search).get('autostart') === '1';
@@ -82,6 +87,7 @@ function getPreviewParams(): { stage: StageDef; squad: string[]; level: number; 
 export default function App() {
   const canvasMountRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<VoxelEngine | null>(null);
+  const getDebugStats = useCallback(() => engineRef.current?.getDebugStats() ?? null, []);
 
   const [save, setSave] = useState<SaveState>(() => {
     const loaded = loadSaveState();
@@ -575,6 +581,12 @@ export default function App() {
         data-testid="voxel-viewport"
         className="fixed inset-0 w-full h-full"
       />
+
+      {DEBUG_ENABLED && (
+        <Suspense fallback={null}>
+          <DebugOverlay getStats={getDebugStats} />
+        </Suspense>
+      )}
 
       {/* Title Screen */}
       {screenState === 'title' && (

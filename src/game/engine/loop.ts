@@ -58,6 +58,9 @@ export function tick(self: VoxelEngine): void {
   self.lastTimeMs = now;
   advance(self, Math.min(rawDt, 0.05));
   self.renderer?.render(self.scene, self.camera);
+  // mesures lues par l'overlay `?debug=1`
+  self.frameCount += 1;
+  self.lastFrameMs = performance.now() - now;
   scheduleNextFrame(self);
 }
 

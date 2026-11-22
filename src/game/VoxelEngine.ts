@@ -15,6 +15,7 @@ import { _color, _dummy, BOLT_POOL_SIZE, PARTICLE_POOL_SIZE, WEATHER_COUNT } fro
 import { playEvolutionSequence } from './engine/evolution';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
+import { getDebugStats, type EngineDebugStats } from './engine/debug';
 import { emitHudSnapshot } from './engine/hud';
 import { advance, detectSoftwareGl, scheduleNextFrame } from './engine/loop';
 import { triggerAllySkill, triggerScatter, triggerUltimate } from './engine/skills';
@@ -42,6 +43,7 @@ import type {
 } from './types';
 import { FloatingTextPool } from './voxelModels';
 
+export type { EngineDebugStats } from './engine/debug';
 export type { CombatTelemetry, EngineCallbacks, EngineOptions } from './engine/types';
 
 export class VoxelEngine {
@@ -59,6 +61,9 @@ export class VoxelEngine {
   disposed = false;
   lastTimeMs = 0;
   elapsedTotal = 0;
+  // Diagnostic (`?debug=1`) : images affichées et temps de calcul de la dernière
+  frameCount = 0;
+  lastFrameMs = 0;
 
   // Groups
   worldGroup = new THREE.Group();
@@ -430,6 +435,11 @@ export class VoxelEngine {
       evolutionActive: this.evo !== null,
       playMode: this.playMode,
     };
+  }
+
+  /** Mesures de rendu pour l'overlay `?debug=1` (FPS, draw calls, mémoire graphique...). */
+  public getDebugStats(): EngineDebugStats {
+    return getDebugStats(this);
   }
 
   public getCombatTelemetry(): CombatTelemetry {
