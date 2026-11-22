@@ -7,8 +7,8 @@ import type {
   ElementType,
   IngredientDef,
   MoveDef,
-  MoveStoneDef,
-  MoveStoneKind,
+  RuneDef,
+  RuneKind,
   PotTier,
   QuestTemplate,
   ReactionId,
@@ -425,58 +425,58 @@ export const MOVES: Record<string, MoveDef> = {
   },
 };
 
-export const MOVE_STONES: Record<MoveStoneKind, MoveStoneDef> = {
-  broadburst: {
-    kind: 'broadburst',
-    name: FR.catalog.MOVE_STONES.broadburst.name,
-    shortLabel: FR.catalog.MOVE_STONES.broadburst.shortLabel,
+export const RUNES: Record<RuneKind, RuneDef> = {
+  rune_ampleur: {
+    kind: 'rune_ampleur',
+    name: FR.catalog.RUNES.rune_ampleur.name,
+    shortLabel: FR.catalog.RUNES.rune_ampleur.shortLabel,
     color: '#38BDF8',
-    description: FR.catalog.MOVE_STONES.broadburst.description,
+    description: FR.catalog.RUNES.rune_ampleur.description,
   },
-  wait_less: {
-    kind: 'wait_less',
-    name: FR.catalog.MOVE_STONES.wait_less.name,
-    shortLabel: FR.catalog.MOVE_STONES.wait_less.shortLabel,
+  rune_cadence: {
+    kind: 'rune_cadence',
+    name: FR.catalog.RUNES.rune_cadence.name,
+    shortLabel: FR.catalog.RUNES.rune_cadence.shortLabel,
     color: '#4ADE80',
-    description: FR.catalog.MOVE_STONES.wait_less.description,
+    description: FR.catalog.RUNES.rune_cadence.description,
   },
-  whack_whack: {
-    kind: 'whack_whack',
-    name: FR.catalog.MOVE_STONES.whack_whack.name,
-    shortLabel: FR.catalog.MOVE_STONES.whack_whack.shortLabel,
+  rune_force: {
+    kind: 'rune_force',
+    name: FR.catalog.RUNES.rune_force.name,
+    shortLabel: FR.catalog.RUNES.rune_force.shortLabel,
     color: '#F97316',
-    description: FR.catalog.MOVE_STONES.whack_whack.description,
+    description: FR.catalog.RUNES.rune_force.description,
   },
-  share: {
-    kind: 'share',
-    name: FR.catalog.MOVE_STONES.share.name,
-    shortLabel: FR.catalog.MOVE_STONES.share.shortLabel,
+  rune_partage: {
+    kind: 'rune_partage',
+    name: FR.catalog.RUNES.rune_partage.name,
+    shortLabel: FR.catalog.RUNES.rune_partage.shortLabel,
     color: '#C084FC',
-    description: FR.catalog.MOVE_STONES.share.description,
+    description: FR.catalog.RUNES.rune_partage.description,
   },
-  crit_focus: {
-    kind: 'crit_focus',
-    name: FR.catalog.MOVE_STONES.crit_focus.name,
-    shortLabel: FR.catalog.MOVE_STONES.crit_focus.shortLabel,
+  rune_precision: {
+    kind: 'rune_precision',
+    name: FR.catalog.RUNES.rune_precision.name,
+    shortLabel: FR.catalog.RUNES.rune_precision.shortLabel,
     color: '#FDE047',
-    description: FR.catalog.MOVE_STONES.crit_focus.description,
+    description: FR.catalog.RUNES.rune_precision.description,
   },
-  leech: {
-    kind: 'leech',
-    name: FR.catalog.MOVE_STONES.leech.name,
-    shortLabel: FR.catalog.MOVE_STONES.leech.shortLabel,
+  rune_vigueur: {
+    kind: 'rune_vigueur',
+    name: FR.catalog.RUNES.rune_vigueur.name,
+    shortLabel: FR.catalog.RUNES.rune_vigueur.shortLabel,
     color: '#F472B6',
-    description: FR.catalog.MOVE_STONES.leech.description,
+    description: FR.catalog.RUNES.rune_vigueur.description,
   },
 };
 
-/** Pierres de Capacité historiques (butin de tous les niveaux). */
-export const BASE_MOVE_STONE_KINDS: MoveStoneKind[] = ['broadburst', 'wait_less', 'whack_whack', 'share'];
-/** Pierres ajoutées par la Giga Update (butin des nouveaux biomes, quêtes et succès). */
-export const FRONTIER_MOVE_STONE_KINDS: MoveStoneKind[] = ['crit_focus', 'leech'];
-export const MOVE_STONE_ORDER: MoveStoneKind[] = [
-  ...BASE_MOVE_STONE_KINDS,
-  ...FRONTIER_MOVE_STONE_KINDS,
+/** Runes historiques (butin de tous les niveaux). */
+export const BASE_RUNE_KINDS: RuneKind[] = ['rune_ampleur', 'rune_cadence', 'rune_force', 'rune_partage'];
+/** Runes ajoutées par la Giga Update (butin des nouveaux biomes, quêtes et succès). */
+export const FRONTIER_RUNE_KINDS: RuneKind[] = ['rune_precision', 'rune_vigueur'];
+export const RUNE_ORDER: RuneKind[] = [
+  ...BASE_RUNE_KINDS,
+  ...FRONTIER_RUNE_KINDS,
 ];
 
 export const SPECIES: Record<string, SpeciesDef> = {
@@ -2749,7 +2749,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     reward: {
       label: FR.catalog.QUEST_POOL.q_ult_1.reward.label,
       ingredients: { frost_crystal: 2 },
-      moveStone: 'wait_less',
+      rune: 'rune_cadence',
     },
   },
   {
@@ -2772,7 +2772,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     reward: {
       label: FR.catalog.QUEST_POOL.q_dodge_2.reward.label,
       ingredients: { pebble_gray: 3 },
-      moveStone: 'share',
+      rune: 'rune_partage',
     },
   },
   {
@@ -2797,7 +2797,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     reward: {
       label: FR.catalog.QUEST_POOL.q_combos_6.reward.label,
       ingredients: { crimson_root: 2 },
-      moveStone: 'whack_whack',
+      rune: 'rune_force',
     },
   },
   {
@@ -2809,7 +2809,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     reward: {
       label: FR.catalog.QUEST_POOL.q_win_3.reward.label,
       ingredients: { mystic_shard: 2 },
-      moveStone: 'broadburst',
+      rune: 'rune_ampleur',
     },
   },
 
@@ -2824,7 +2824,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     reward: {
       label: FR.catalog.QUEST_POOL.q_frontier_win_2.reward.label,
       ingredients: { snow_lichen: 3 },
-      moveStone: 'crit_focus',
+      rune: 'rune_precision',
     },
   },
   {
@@ -2848,7 +2848,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     requiresStageIndex: FRONTIER_STAGE_INDEX + 1,
     reward: {
       label: FR.catalog.QUEST_POOL.q_frontier_boss_3.reward.label,
-      moveStone: 'leech',
+      rune: 'rune_vigueur',
       powerStoneRange: [700, 950],
       guaranteedRarity: 'gold',
     },
@@ -2912,7 +2912,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_combo_master.reward.label,
       ingredients: { mystic_shard: 2 },
-      moveStone: 'whack_whack',
+      rune: 'rune_force',
     },
   },
   {
@@ -2924,7 +2924,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_chain_8.reward.label,
       ingredients: { amber_honey: 3 },
-      moveStone: 'wait_less',
+      rune: 'rune_cadence',
     },
   },
   {
@@ -2948,7 +2948,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_dodge_3.reward.label,
       ingredients: { azure_drop: 3 },
-      moveStone: 'share',
+      rune: 'rune_partage',
     },
   },
   {
@@ -2971,7 +2971,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_evolve_1.reward.label,
       ingredients: { crimson_root: 3 },
-      moveStone: 'broadburst',
+      rune: 'rune_ampleur',
     },
   },
   {
@@ -3021,7 +3021,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_tundra_clear.reward.label,
       ingredients: { aurora_petal: 3 },
-      moveStone: 'crit_focus',
+      rune: 'rune_precision',
     },
   },
   {
@@ -3032,7 +3032,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 3,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_storm_clear.reward.label,
-      moveStone: 'leech',
+      rune: 'rune_vigueur',
       powerStoneRange: [950, 1250],
       guaranteedRarity: 'gold',
     },
@@ -3095,7 +3095,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_evolve_5.reward.label,
       ingredients: { storm_pepper: 3 },
-      moveStone: 'whack_whack',
+      rune: 'rune_force',
     },
   },
 ];

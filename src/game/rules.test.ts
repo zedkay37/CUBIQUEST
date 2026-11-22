@@ -21,7 +21,7 @@ import {
   countClaimableRewards,
   createInitialSaveState,
   createOwnedCreature,
-  equipMoveStone,
+  equipRune,
   equipPowerStone,
   evolveCreature,
   exportSaveToJson,
@@ -41,9 +41,9 @@ import {
 import {
   ACHIEVEMENTS,
   BIOME_ORDER,
-  FRONTIER_MOVE_STONE_KINDS,
+  FRONTIER_RUNE_KINDS,
   FRONTIER_STAGE_INDEX,
-  MOVE_STONE_ORDER,
+  RUNE_ORDER,
   QUEST_POOL,
   BIOMES,
   INGREDIENTS,
@@ -55,6 +55,7 @@ import {
 import { buildPreviewQuery, evolvedFormAtLevel, getReferenceConfig, listReferenceConfigs } from './previewConfigs';
 import { normalizeSettings } from './settings';
 import { BOSS_KITS, STAGE_TUNING } from './balance';
+import { LEGACY_RUNE_IDS } from './legacyIds';
 
 test('elemental type effectiveness returns accurate multipliers', () => {
   assert.equal(getTypeEffectiveness('water', 'fire'), 1.5);
@@ -119,7 +120,7 @@ test('Power Stone board enforces slot type and level lock, and updates squad pow
 });
 
 test('Move Stone modifiers and damage calculation scale properly', () => {
-  const mods = getMoveModifiers(['whack_whack', 'broadburst']);
+  const mods = getMoveModifiers(['rune_force', 'rune_ampleur']);
   assert.ok(mods.damageMult > 1.39);
   assert.ok(mods.radiusMult > 1.34);
 
@@ -130,7 +131,7 @@ test('Move Stone modifiers and damage calculation scale properly', () => {
     MOVES.ember_burst,
     'grass',
     0,
-    ['whack_whack'],
+    ['rune_force'],
     1,
     deterministicRng,
   );
@@ -138,9 +139,9 @@ test('Move Stone modifiers and damage calculation scale properly', () => {
   assert.ok(boostedHit.damage > baseHit.damage);
 
   const save = createInitialSaveState('pyrocube', true);
-  const withStone = equipMoveStone(save, save.roster[0].uid, 0, 'wait_less');
-  assert.equal(withStone.roster[0].moveStones[0], 'wait_less');
-  assert.equal(withStone.moveStoneBag.wait_less, 0);
+  const withStone = equipRune(save, save.roster[0].uid, 0, 'rune_cadence');
+  assert.equal(withStone.roster[0].runes[0], 'rune_cadence');
+  assert.equal(withStone.runeBag.rune_cadence, 0);
 });
 
 test('Evolution transforms species when required level is reached', () => {
@@ -281,7 +282,7 @@ test('V0.2 SaveState v1 -> v2 migration and JSON export/import validation', () =
     roster: freshV2.roster,
     ingredients: { ...freshV2.ingredients, ruby_berry: 19 },
     powerStones: freshV2.powerStones,
-    moveStoneBag: freshV2.moveStoneBag,
+    runeBag: freshV2.runeBag,
     pot: freshV2.pot,
     unlockedPotTiers: ['iron', 'bronze'],
     highestStageIndex: 4,
@@ -532,44 +533,44 @@ test('Giga: recettes des nouveaux biomes — résolution, priorités et non-rég
   assert.equal(classic.stats.frontierDishes, 0);
 });
 
-test('Giga: Pierres Précision et Sangsue — modificateurs, équipement et butin', () => {
+test('Giga: Runes de Précision et de Vigueur — modificateurs, équipement et butin', () => {
   const none = getMoveModifiers([]);
   assert.equal(none.critBonus, 0);
   assert.equal(none.leechRatio, 0);
-  assert.equal(getMoveModifiers(['crit_focus']).critBonus, 15);
-  assert.equal(getMoveModifiers(['crit_focus', 'crit_focus']).critBonus, 30);
-  assert.equal(getMoveModifiers(['leech']).leechRatio, 0.1);
-  assert.equal(getMoveModifiers(['leech', 'leech']).leechRatio, 0.2);
+  assert.equal(getMoveModifiers(['rune_precision']).critBonus, 15);
+  assert.equal(getMoveModifiers(['rune_precision', 'rune_precision']).critBonus, 30);
+  assert.equal(getMoveModifiers(['rune_vigueur']).leechRatio, 0.1);
+  assert.equal(getMoveModifiers(['rune_vigueur', 'rune_vigueur']).leechRatio, 0.2);
   // Les anciennes pierres gardent exactement leurs effets
-  assert.equal(getMoveModifiers(['whack_whack']).damageMult, 1.4);
+  assert.equal(getMoveModifiers(['rune_force']).damageMult, 1.4);
 
-  // rng = 0.1 -> jet de 10 : raté avec 0 % de critique, réussi avec la Pierre Précision (+15)
+  // rng = 0.1 -> jet de 10 : raté avec 0 % de critique, réussi avec la Rune de Précision (+15)
   const rng = () => 0.1;
   assert.equal(calculateDamage(100, MOVES.chain_spark, 'water', 0, [], 1, rng).isCrit, false);
-  const focused = calculateDamage(100, MOVES.chain_spark, 'water', 0, ['crit_focus'], 1, rng);
+  const focused = calculateDamage(100, MOVES.chain_spark, 'water', 0, ['rune_precision'], 1, rng);
   assert.equal(focused.isCrit, true);
   assert.equal(focused.effectiveness, 1.5);
 
   // Équipement : il faut en posséder une
   let save = createInitialSaveState('pyrocube', true);
-  assert.equal(save.moveStoneBag.crit_focus, 0);
-  assert.equal(equipMoveStone(save, save.roster[0].uid, 0, 'crit_focus'), save);
-  save = { ...save, moveStoneBag: { ...save.moveStoneBag, crit_focus: 1 } };
-  const equipped = equipMoveStone(save, save.roster[0].uid, 0, 'crit_focus');
-  assert.equal(equipped.roster[0].moveStones[0], 'crit_focus');
-  assert.equal(equipped.moveStoneBag.crit_focus, 0);
+  assert.equal(save.runeBag.rune_precision, 0);
+  assert.equal(equipRune(save, save.roster[0].uid, 0, 'rune_precision'), save);
+  save = { ...save, runeBag: { ...save.runeBag, rune_precision: 1 } };
+  const equipped = equipRune(save, save.roster[0].uid, 0, 'rune_precision');
+  assert.equal(equipped.roster[0].runes[0], 'rune_precision');
+  assert.equal(equipped.runeBag.rune_precision, 0);
 
   // Butin : jamais de pierre des confins dans les anciens biomes, possible dans les nouveaux
   const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 10, bossHpPercentRemaining: 0 };
   const fresh = createInitialSaveState('pyrocube', true);
   for (const roll of [0.01, 0.3, 0.52, 0.7, 0.99]) {
-    const old = applyExpeditionRewards(fresh, STAGES[0], true, stats, () => roll).outcome.droppedMoveStone;
-    assert.ok(old === null || !FRONTIER_MOVE_STONE_KINDS.includes(old));
+    const old = applyExpeditionRewards(fresh, STAGES[0], true, stats, () => roll).outcome.droppedRune;
+    assert.ok(old === null || !FRONTIER_RUNE_KINDS.includes(old));
   }
   // rng constant < 0.55 : une pierre tombe, tirée dans la liste étendue des confins
   const tundra1 = STAGES[FRONTIER_STAGE_INDEX];
   const always = applyExpeditionRewards({ ...fresh, highestStageIndex: tundra1.index }, tundra1, true, stats, () => 0.5399);
-  assert.ok(always.outcome.droppedMoveStone !== null && MOVE_STONE_ORDER.includes(always.outcome.droppedMoveStone));
+  assert.ok(always.outcome.droppedRune !== null && RUNE_ORDER.includes(always.outcome.droppedRune));
   assert.equal(always.nextSave.stats.frontierWins, 1);
   assert.equal(applyExpeditionRewards(fresh, STAGES[0], true, stats, () => 0.4).nextSave.stats.frontierWins, 0);
 });
@@ -621,9 +622,9 @@ test('Giga: quêtes et succès des nouveaux biomes', () => {
   save = applyExpeditionRewards(save, tundra1, true, stats, () => 0.9).nextSave;
   save = applyExpeditionRewards(save, STAGES[FRONTIER_STAGE_INDEX + 1], true, stats, () => 0.9).nextSave;
   assert.equal(save.activeQuests[0].progress, 2);
-  const beforeBag = save.moveStoneBag.crit_focus;
+  const beforeBag = save.runeBag.rune_precision;
   const claimed = claimQuestReward(save, 'q_test', () => 0.3);
-  assert.equal(claimed.moveStoneBag.crit_focus, beforeBag + 1);
+  assert.equal(claimed.runeBag.rune_precision, beforeBag + 1);
   assert.equal(claimed.ingredients.snow_lichen, (save.ingredients.snow_lichen ?? 0) + 3);
 
   // Succès de biome : progression dérivée des niveaux terminés, réclamation unique
@@ -634,21 +635,30 @@ test('Giga: quêtes et succès des nouveaux biomes', () => {
   assert.equal(getAchievementProgress(save, tundraAch), 3);
   const withAch = claimAchievementReward(save, tundraAch.id, () => 0.2);
   assert.ok(withAch.claimedAchievementIds.includes(tundraAch.id));
-  assert.equal(withAch.moveStoneBag.crit_focus, save.moveStoneBag.crit_focus + 1);
+  assert.equal(withAch.runeBag.rune_precision, save.runeBag.rune_precision + 1);
   assert.equal(claimAchievementReward(withAch, tundraAch.id), withAch);
   const stormAch = ACHIEVEMENTS.find((a) => a.id === 'ach_storm_clear')!;
   assert.equal(getAchievementProgress(save, stormAch), 0);
 });
 
-test('Giga: migration v2 -> v3 (sac de pierres, stats, progression intacte)', () => {
-  assert.equal(SAVE_VERSION, 3);
+/** Ancien nom d'une rune (sauvegardes v1 à v3), relu dans la table de conversion. */
+function oldRuneId(kind: string): string {
+  const entry = Object.entries(LEGACY_RUNE_IDS).find(([, now]) => now === kind);
+  assert.ok(entry, `pas d'ancien nom pour ${kind}`);
+  return entry[0];
+}
+
+test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intacte)', () => {
+  assert.equal(SAVE_VERSION, 4);
   const fresh = createInitialSaveState('aquabloc', true);
   // Sauvegarde v2 réaliste : pas de pierres/stats des confins, quête en cours, créature équipée
   const { frontierWins: _fw, frontierDishes: _fd, ...v2Stats } = fresh.stats;
   const v2: Record<string, unknown> = {
     ...fresh,
     version: 2,
-    moveStoneBag: { broadburst: 2, wait_less: 0, whack_whack: 3, share: 1 },
+    // en v2 le sac s'appelait `moveStoneBag` et portait les anciens noms (table de legacyIds.ts)
+    runeBag: undefined,
+    moveStoneBag: { [oldRuneId('rune_ampleur')]: 2, [oldRuneId('rune_cadence')]: 0, [oldRuneId('rune_force')]: 3, [oldRuneId('rune_partage')]: 1 },
     stats: { ...v2Stats, expeditionsWon: 9, maxCombo: 14 },
     highestStageIndex: 7,
     completedStageIds: STAGES.slice(0, 7).map((s) => s.id),
@@ -658,8 +668,8 @@ test('Giga: migration v2 -> v3 (sac de pierres, stats, progression intacte)', ()
   };
   const migrated = migrateSaveState(JSON.parse(JSON.stringify(v2)));
   assert.ok(migrated !== null);
-  assert.equal(migrated.version, 3);
-  assert.deepEqual(migrated.moveStoneBag, { broadburst: 2, wait_less: 0, whack_whack: 3, share: 1, crit_focus: 0, leech: 0 });
+  assert.equal(migrated.version, SAVE_VERSION);
+  assert.deepEqual(migrated.runeBag, { rune_ampleur: 2, rune_cadence: 0, rune_force: 3, rune_partage: 1, rune_precision: 0, rune_vigueur: 0 });
   assert.equal(migrated.stats.frontierWins, 0);
   assert.equal(migrated.stats.frontierDishes, 0);
   assert.equal(migrated.stats.expeditionsWon, 9);
@@ -675,14 +685,14 @@ test('Giga: migration v2 -> v3 (sac de pierres, stats, progression intacte)', ()
   assert.equal(played.stats.frontierWins, 1);
   assert.equal(countClaimableRewards(migrated) >= 0, true);
 
-  // Aller-retour export/import en v3 + idempotence de la migration
+  // Aller-retour export/import + idempotence de la migration
   const round = importSaveFromJson(exportSaveToJson(migrated));
   assert.equal(round.ok, true);
   if (round.ok) assert.deepEqual(round.save, migrated);
   assert.deepEqual(migrateSaveState(migrated), migrated);
 
   // Une version inconnue (future) est refusée plutôt que corrompue
-  assert.equal(migrateSaveState({ ...v2, version: 4 }), null);
+  assert.equal(migrateSaveState({ ...v2, version: SAVE_VERSION + 1 }), null);
 });
 
 test('Giga: écran de victoire — étoiles et annonce du biome débloqué', () => {

@@ -10,7 +10,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { ACHIEVEMENTS, INGREDIENTS, MOVE_STONES, STAGES } from '../game/catalog';
+import { ACHIEVEMENTS, INGREDIENTS, RUNES, STAGES } from '../game/catalog';
 import {
   exportSaveToJson,
   getAchievementProgress,
@@ -50,8 +50,8 @@ function formatRewardSummary(reward: QuestReward): string {
             : FR.ui.questsDrawer.aleatoire;
     parts.push(FR.ui.questsDrawer.pierre(rarityLabel));
   }
-  if (reward.moveStone) {
-    parts.push(`+1 ${MOVE_STONES[reward.moveStone].name}`);
+  if (reward.rune) {
+    parts.push(`+1 ${RUNES[reward.rune].name}`);
   }
   return parts.join(' · ');
 }

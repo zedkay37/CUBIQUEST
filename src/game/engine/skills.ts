@@ -174,7 +174,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
 
 export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
   const move = MOVES[unit.moveId] ?? MOVES.ember_burst;
-  const mods = getMoveModifiers(unit.moveStones);
+  const mods = getMoveModifiers(unit.runes);
   unit.skillCooldown = unit.skillMaxCooldown;
   unit.squashY = 1.28;
   soundFx.playSkill(move.element);
@@ -215,7 +215,7 @@ export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
       move,
       target.rig.species.element,
       unit.critRate,
-      unit.moveStones,
+      unit.runes,
     );
     spawnProjectile(self, {
       x: unit.x,
@@ -264,7 +264,7 @@ export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
         move,
         enemy.rig.species.element,
         unit.critRate,
-        unit.moveStones,
+        unit.runes,
       );
       applyDamageToActor(
         self,

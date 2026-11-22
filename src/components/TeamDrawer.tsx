@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowUpCircle, Lock, Sparkles, X } from 'lucide-react';
-import { ELEMENT_META, MOVE_STONE_ORDER, MOVE_STONES, MOVES, SPECIES } from '../game/catalog';
+import { ELEMENT_META, RUNE_ORDER, RUNES, MOVES, SPECIES } from '../game/catalog';
 import {
   canEquipStone,
   canEvolve,
@@ -9,7 +9,7 @@ import {
   isStoneEquippedAnywhere,
   xpForNextLevel,
 } from '../game/rules';
-import type { MoveStoneKind, PowerStone, SaveState } from '../game/types';
+import type { RuneKind, PowerStone, SaveState } from '../game/types';
 import { ElementIcon, StoneIcon, VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
 
@@ -18,7 +18,7 @@ interface TeamDrawerProps {
   onToggleSquadMember: (uid: string) => void;
   onEquipStone: (creatureUid: string, slotIdx: number, stoneId: string) => void;
   onUnequipStone: (creatureUid: string, slotIdx: number) => void;
-  onEquipMoveStone: (creatureUid: string, slotIdx: number, kind: MoveStoneKind | null) => void;
+  onEquipRune: (creatureUid: string, slotIdx: number, kind: RuneKind | null) => void;
   onEvolve: (creatureUid: string) => void;
   onClose: () => void;
 }
@@ -42,7 +42,7 @@ export function TeamDrawer({
   onToggleSquadMember,
   onEquipStone,
   onUnequipStone,
-  onEquipMoveStone,
+  onEquipRune,
   onEvolve,
   onClose,
 }: TeamDrawerProps) {
@@ -256,19 +256,19 @@ export function TeamDrawer({
               </div>
 
               <div className="mt-2 grid grid-cols-2 gap-2">
-                {creature.moveStones.map((equippedKind, mIdx) => (
+                {creature.runes.map((equippedKind, mIdx) => (
                   <div
                     key={mIdx}
                     className="rounded-lg bg-[#1F2738] border border-[#344056] p-2 space-y-1"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-semibold text-[#B8C2D1]">
-                        {FR.ui.teamDrawer.pierreCapacite}{mIdx + 1}
+                        {FR.ui.teamDrawer.rune}{mIdx + 1}
                       </span>
                       {equippedKind && (
                         <button
                           type="button"
-                          onClick={() => onEquipMoveStone(creature.uid, mIdx, null)}
+                          onClick={() => onEquipRune(creature.uid, mIdx, null)}
                           className="cursor-pointer text-[10px] text-[#E85D3F] hover:underline"
                         >
                           {FR.ui.teamDrawer.retirer}
@@ -279,31 +279,31 @@ export function TeamDrawer({
                       <div className="flex items-center gap-1.5 text-xs font-bold">
                         <Sparkles
                           className="w-3.5 h-3.5 shrink-0"
-                          style={{ color: MOVE_STONES[equippedKind].color }}
+                          style={{ color: RUNES[equippedKind].color }}
                         />
-                        <span className="truncate">{MOVE_STONES[equippedKind].name}</span>
+                        <span className="truncate">{RUNES[equippedKind].name}</span>
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-1">
-                        {MOVE_STONE_ORDER.map(
+                        {RUNE_ORDER.map(
                           (kind) => {
-                            const qty = save.moveStoneBag[kind] ?? 0;
+                            const qty = save.runeBag[kind] ?? 0;
                             if (qty <= 0) return null;
                             return (
                               <button
                                 key={kind}
                                 type="button"
-                                onClick={() => onEquipMoveStone(creature.uid, mIdx, kind)}
+                                onClick={() => onEquipRune(creature.uid, mIdx, kind)}
                                 className="cursor-pointer px-1.5 py-0.5 rounded bg-[#151B27] hover:bg-[#2C374F] border border-[#3A4760] text-[10px] font-semibold"
-                                style={{ color: MOVE_STONES[kind].color }}
-                                title={MOVE_STONES[kind].description}
+                                style={{ color: RUNES[kind].color }}
+                                title={RUNES[kind].description}
                               >
-                                +{MOVE_STONES[kind].name.replace('Pierre ', '')} ({qty})
+                                +{RUNES[kind].name.replace(/^Rune d(e |’)/, '')} ({qty})
                               </button>
                             );
                           },
                         )}
-                        {Object.values(save.moveStoneBag).every((q) => q <= 0) && (
+                        {Object.values(save.runeBag).every((q) => q <= 0) && (
                           <span className="text-[10px] text-[#64748B]">{FR.ui.teamDrawer.aucuneEnSac}</span>
                         )}
                       </div>

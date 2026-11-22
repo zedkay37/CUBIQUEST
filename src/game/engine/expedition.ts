@@ -105,7 +105,7 @@ export function startExpedition(
     const species = SPECIES[c.speciesId] ?? SPECIES.pyrocube;
     const stats = computeCreatureStats(c, allStones);
     const move = MOVES[c.moveId] ?? MOVES.ember_burst;
-    const mods = getMoveModifiers(c.moveStones);
+    const mods = getMoveModifiers(c.runes);
     const rig = buildVoxelCreature(c.speciesId);
     attachWorldHpBar(rig, false, false);
 
@@ -139,7 +139,7 @@ export function startExpedition(
       moveSpeed: species.moveSpeed * stats.moveSpeedMult,
       attackRange: species.attackRange,
       moveId: move.id,
-      moveStones: c.moveStones,
+      runes: c.runes,
       basicCooldown: 0.3 + idx * 0.15,
       skillCooldown: 0.6 + idx * 0.25,
       skillMaxCooldown: maxCd,
@@ -238,7 +238,7 @@ export function spawnWave(self: VoxelEngine, index: number): void {
       moveSpeed: species.moveSpeed * (isBoss ? 0.72 : 0.78),
       attackRange: isBoss ? 4.4 : def.ai === 'kiter' ? 6.8 : 2.7,
       moveId: species.moveId,
-      moveStones: [],
+      runes: [],
       basicCooldown: 1.0 + i * 0.35,
       skillCooldown: isBoss ? 3.2 : 4.2,
       skillMaxCooldown: isBoss ? 5.0 : 5.5,

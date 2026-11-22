@@ -21,14 +21,14 @@ export type CreatureArchetype =
 
 export type MoveStyle = 'melee' | 'projectile' | 'aoe' | 'dash' | 'buff';
 
-export type MoveStoneKind =
-  | 'broadburst'
-  | 'wait_less'
-  | 'whack_whack'
-  | 'share'
+export type RuneKind =
+  | 'rune_ampleur'
+  | 'rune_cadence'
+  | 'rune_force'
+  | 'rune_partage'
   // Giga Update : pierres des nouveaux biomes
-  | 'crit_focus'
-  | 'leech';
+  | 'rune_precision'
+  | 'rune_vigueur';
 
 export type StoneKind = 'atk' | 'hp';
 export type StoneSlotType = 'atk' | 'hp' | 'flex';
@@ -89,8 +89,8 @@ export interface MoveDef {
   description: string;
 }
 
-export interface MoveStoneDef {
-  kind: MoveStoneKind;
+export interface RuneDef {
+  kind: RuneKind;
   name: string;
   shortLabel: string;
   color: string;
@@ -123,7 +123,7 @@ export interface OwnedCreature {
   xp: number;
   potBonus: number;
   moveId: string;
-  moveStones: (MoveStoneKind | null)[]; // 2 slots
+  runes: (RuneKind | null)[]; // 2 slots
   stoneBoard: StoneSlot[]; // 9 slots (3x3)
 }
 
@@ -266,7 +266,7 @@ export type QuestMetric =
 export interface QuestReward {
   label: string;
   ingredients?: Record<string, number>;
-  moveStone?: MoveStoneKind;
+  rune?: RuneKind;
   powerStoneRange?: [number, number];
   guaranteedRarity?: StoneRarity;
 }
@@ -324,7 +324,7 @@ export interface SaveState {
   roster: OwnedCreature[];
   ingredients: Record<string, number>;
   powerStones: PowerStone[];
-  moveStoneBag: Record<MoveStoneKind, number>;
+  runeBag: Record<RuneKind, number>;
   pot: PotState;
   unlockedPotTiers: PotTier[];
   highestStageIndex: number; // 0..STAGES.length-1 unlocked
@@ -406,7 +406,7 @@ export interface ExpeditionOutcome {
   xpPerUnit: number;
   droppedIngredients: { id: string; count: number }[];
   droppedStone: PowerStone | null;
-  droppedMoveStone: MoveStoneKind | null;
+  droppedRune: RuneKind | null;
   leveledUpNames: string[];
   potReadyNow: boolean;
   unlockedNextStageName: string | null;

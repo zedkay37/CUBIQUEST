@@ -2,7 +2,7 @@
  * Types internes du moteur (acteurs de combat, projectiles, télégraphes, météo) et types de son API.
  */
 import * as THREE from 'three';
-import type { ElementType, ExpeditionHudSnapshot, MoveStoneKind, StatusKind } from '../types';
+import type { ElementType, ExpeditionHudSnapshot, RuneKind, StatusKind } from '../types';
 import type { VoxelCreatureRig } from '../voxelModels';
 
 export interface ParticleSlot {
@@ -86,7 +86,7 @@ export interface CombatActor {
   moveSpeed: number;
   attackRange: number;
   moveId: string;
-  moveStones: (MoveStoneKind | null)[];
+  runes: (RuneKind | null)[];
   basicCooldown: number;
   skillCooldown: number;
   skillMaxCooldown: number;

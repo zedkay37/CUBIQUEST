@@ -265,7 +265,7 @@ export const FR = {
       nivRequis: (a: string | number) => `Niv. ${a} requis`,
       competenceSpeciale: 'Compétence Spéciale',
       s: 's',
-      pierreCapacite: 'Pierre Capacité ',
+      rune: 'Rune ',
       retirer: 'Retirer',
       aucuneEnSac: 'Aucune en sac',
       grilleDePierresDePouvoir3: 'Grille de Pierres de Pouvoir (3×3)',
@@ -407,7 +407,7 @@ export const FR = {
       },
       iron_guard: {
         name: 'Égide de Fer',
-        description: 'Renforce la défense et soigne légèrement. Idéal avec Pierre Partage !',
+        description: 'Renforce la défense et soigne légèrement. Idéal avec la Rune de Partage !',
       },
       horn_charge: {
         name: 'Charge Cornue',
@@ -451,41 +451,41 @@ export const FR = {
       },
       dream_mist: {
         name: 'Brume Onirique',
-        description: 'Enveloppe le lanceur d’une brume apaisante : soin et défense. Parfaite avec Pierre Partage.',
+        description: 'Enveloppe le lanceur d’une brume apaisante : soin et défense. Parfaite avec la Rune de Partage.',
       },
       mirage_storm: {
         name: 'Orage Mirage',
         description: 'Un nuage d’illusions éclate au-dessus des ennemis et sème la confusion.',
       },
     },
-    MOVE_STONES: {
-      broadburst: {
-        name: 'Pierre Élargie',
+    RUNES: {
+      rune_ampleur: {
+        name: 'Rune d’Ampleur',
         shortLabel: 'Zone +35%',
         description: 'Augmente le rayon et la portée de la compétence de 35 %.',
       },
-      wait_less: {
-        name: 'Pierre Hâte',
+      rune_cadence: {
+        name: 'Rune de Cadence',
         shortLabel: 'Recharge -18%',
         description: 'Réduit le temps de recharge de la compétence de 18 %.',
       },
-      whack_whack: {
-        name: 'Pierre Double',
+      rune_force: {
+        name: 'Rune de Force',
         shortLabel: 'Dégâts +40%',
         description: 'Double l’impact (+40 % dégâts) pour +15 % de temps de recharge.',
       },
-      share: {
-        name: 'Pierre Partage',
+      rune_partage: {
+        name: 'Rune de Partage',
         shortLabel: 'Partage Équipe',
         description: 'Partage 50 % des bonus défensifs et soins avec toute l’escouade.',
       },
-      crit_focus: {
-        name: 'Pierre Précision',
+      rune_precision: {
+        name: 'Rune de Précision',
         shortLabel: 'Critique +15',
         description: 'Ajoute 15 points de chance de coup critique à la compétence.',
       },
-      leech: {
-        name: 'Pierre Sangsue',
+      rune_vigueur: {
+        name: 'Rune de Vigueur',
         shortLabel: 'Drain 10 %',
         description: 'La compétence rend au lanceur 10 % des dégâts qu’elle inflige.',
       },
@@ -979,7 +979,7 @@ export const FR = {
         title: 'Force Unie',
         description: 'Déclenchez 1 Cubi-Déchaînement (touche R) en expédition.',
         reward: {
-          label: '1× Pierre Hâte · 2× Cristal Glacé',
+          label: '1× Rune de Cadence · 2× Cristal Glacé',
         },
       },
       q_cook_1: {
@@ -993,7 +993,7 @@ export const FR = {
         title: 'Réflexes de Cube',
         description: 'Réussissez 2 Esquives Parfaites pendant un télégraphe.',
         reward: {
-          label: '1× Pierre Partage · 3× Galet Fossile',
+          label: '1× Rune de Partage · 3× Galet Fossile',
         },
       },
       q_boss_2: {
@@ -1007,21 +1007,21 @@ export const FR = {
         title: 'Maître des Synergies',
         description: 'Déclenchez 6 réactions élémentaires cumulées.',
         reward: {
-          label: '1× Pierre Double · 2× Racine Ardente',
+          label: '1× Rune de Force · 2× Racine Ardente',
         },
       },
       q_win_3: {
         title: 'Explorateur Infatigable',
         description: 'Terminez 3 expéditions victorieuses.',
         reward: {
-          label: '1× Pierre Élargie · 2× Éclat Mystique',
+          label: '1× Rune d’Ampleur · 2× Éclat Mystique',
         },
       },
       q_frontier_win_2: {
         title: 'Éclaireur des Confins',
         description: 'Remportez 2 expéditions dans la Toundra Boréale ou la Cime des Orages.',
         reward: {
-          label: '1× Pierre Précision · 3× Lichen des Neiges',
+          label: '1× Rune de Précision · 3× Lichen des Neiges',
         },
       },
       q_frontier_dish_1: {
@@ -1035,7 +1035,7 @@ export const FR = {
         title: 'Dompteur de Tempêtes',
         description: 'Vainquez 3 boss de la Toundra Boréale ou de la Cime des Orages.',
         reward: {
-          label: '1× Pierre Sangsue · Pierre Or (+700–950)',
+          label: '1× Rune de Vigueur · Pierre Or (+700–950)',
         },
       },
       q_evolve_frontier: {
@@ -1072,14 +1072,14 @@ export const FR = {
         title: 'Architecte des Combos',
         description: 'Déclenchez 15 réactions élémentaires au total.',
         reward: {
-          label: '1× Pierre Double · 2× Éclat Mystique',
+          label: '1× Rune de Force · 2× Éclat Mystique',
         },
       },
       ach_chain_8: {
         title: 'Cadence Infernale',
         description: 'Atteignez un combo d’escouade de ×8 en un seul combat.',
         reward: {
-          label: '1× Pierre Hâte · 3× Miel Ambré',
+          label: '1× Rune de Cadence · 3× Miel Ambré',
         },
       },
       ach_ult_3: {
@@ -1093,7 +1093,7 @@ export const FR = {
         title: 'Intouchables',
         description: 'Réussissez 3 Esquives Parfaites face aux attaques télégraphiées.',
         reward: {
-          label: '1× Pierre Partage · 3× Baie Azur',
+          label: '1× Rune de Partage · 3× Baie Azur',
         },
       },
       ach_cook_3: {
@@ -1107,7 +1107,7 @@ export const FR = {
         title: 'Métamorphose',
         description: 'Faites évoluer votre premier Cubimon.',
         reward: {
-          label: '1× Pierre Élargie · 3× Racine Ardente',
+          label: '1× Rune d’Ampleur · 3× Racine Ardente',
         },
       },
       ach_dex_8: {
@@ -1135,14 +1135,14 @@ export const FR = {
         title: 'Brise-Glace',
         description: 'Terminez les 3 niveaux de la Toundra Boréale.',
         reward: {
-          label: '1× Pierre Précision · 3× Pétale d’Aurore',
+          label: '1× Rune de Précision · 3× Pétale d’Aurore',
         },
       },
       ach_storm_clear: {
         title: 'Chevaucheur d’Orage',
         description: 'Terminez les 3 niveaux de la Cime des Orages.',
         reward: {
-          label: '1× Pierre Sangsue · Pierre Or (+950–1250)',
+          label: '1× Rune de Vigueur · Pierre Or (+950–1250)',
         },
       },
       ach_stages_18: {
@@ -1177,7 +1177,7 @@ export const FR = {
         title: 'Éleveur Émérite',
         description: 'Faites évoluer 5 Cubimons.',
         reward: {
-          label: '1× Pierre Double · 3× Poivre d’Orage',
+          label: '1× Rune de Force · 3× Poivre d’Orage',
         },
       },
     },

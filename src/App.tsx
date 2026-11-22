@@ -23,7 +23,7 @@ import {
   countClaimableRewards,
   createInitialSaveState,
   createOwnedCreature,
-  equipMoveStone,
+  equipRune,
   equipPowerStone,
   evolveCreature,
   getPotIngredientCost,
@@ -38,7 +38,7 @@ import type {
   ExpeditionHudSnapshot,
   ExpeditionOutcome,
   GameScreenState,
-  MoveStoneKind,
+  RuneKind,
   OwnedCreature,
   PlayMode,
   PotTier,
@@ -499,13 +499,13 @@ export default function App() {
     setSave((prev) => unequipPowerStone(prev, creatureUid, slotIdx));
   };
 
-  const handleEquipMoveStone = (
+  const handleEquipRune = (
     creatureUid: string,
     slotIdx: number,
-    kind: MoveStoneKind | null,
+    kind: RuneKind | null,
   ) => {
     soundFx.playUiClick();
-    setSave((prev) => equipMoveStone(prev, creatureUid, slotIdx, kind));
+    setSave((prev) => equipRune(prev, creatureUid, slotIdx, kind));
   };
 
   const handleEvolve = (creatureUid: string) => {
@@ -670,7 +670,7 @@ export default function App() {
               onToggleSquadMember={handleToggleSquadMember}
               onEquipStone={handleEquipStone}
               onUnequipStone={handleUnequipStone}
-              onEquipMoveStone={handleEquipMoveStone}
+              onEquipRune={handleEquipRune}
               onEvolve={handleEvolve}
               onClose={() => setActiveDrawer(null)}
             />

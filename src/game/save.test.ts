@@ -40,7 +40,7 @@ test('Sauvegarde: une créature abîmée est réparée au lieu de faire planter 
   assert.equal(starter.xp, 0);
   assert.equal(starter.potBonus, 0);
   assert.equal(starter.moveId, SPECIES.pyrocube.moveId);
-  assert.deepEqual(starter.moveStones, [null, null]);
+  assert.deepEqual(starter.runes, [null, null]);
   assert.equal(starter.stoneBoard.length, 9);
   assert.ok(starter.stoneBoard.every((slot) => slot.stoneId === null));
   assert.equal(migrated.roster.some((c) => c.speciesId === 'espece_fantome'), false);
@@ -67,7 +67,7 @@ test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoy�
     null,
   ];
   broken.ingredients = { ruby_berry: -4, azure_drop: 'douze', sun_pollen: 3.9, ingredient_fantome: 50, pebble_gray: null };
-  broken.moveStoneBag = { broadburst: -2, wait_less: 'x', share: 2.7 };
+  broken.runeBag = { rune_ampleur: -2, rune_cadence: 'x', rune_partage: 2.7 };
   broken.stats = { expeditionsWon: -3, maxCombo: 'beaucoup', reactionsTriggered: 4 };
   broken.expeditionsCompleted = 'trois';
   broken.completedStageIds = ['meadow-1', 'meadow-1', 'niveau_fantome', 42];
@@ -84,7 +84,7 @@ test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoy�
   assert.deepEqual(m.powerStones.find((s) => s.id === 'sans_stats')!.substats, []);
   assert.equal(m.powerStones.some((s) => s.id === 'type_inconnu' || s.id === 'puissance_nulle'), false);
   assert.deepEqual(m.ingredients, { ruby_berry: 0, azure_drop: 0, sun_pollen: 3, pebble_gray: 0 });
-  assert.deepEqual(m.moveStoneBag, { broadburst: 0, wait_less: 0, whack_whack: 0, share: 2, crit_focus: 0, leech: 0 });
+  assert.deepEqual(m.runeBag, { rune_ampleur: 0, rune_cadence: 0, rune_force: 0, rune_partage: 2, rune_precision: 0, rune_vigueur: 0 });
   assert.equal(m.stats.expeditionsWon, 0);
   assert.equal(m.stats.maxCombo, 0);
   assert.equal(m.stats.reactionsTriggered, 4);

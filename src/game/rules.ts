@@ -1,10 +1,10 @@
 import {
   ACHIEVEMENTS,
-  BASE_MOVE_STONE_KINDS,
+  BASE_RUNE_KINDS,
   BIOMES,
   ELEMENTAL_REACTIONS,
   FRONTIER_STAGE_INDEX,
-  MOVE_STONE_ORDER,
+  RUNE_ORDER,
   ELEMENT_META,
   INGREDIENTS,
   MOVES,
@@ -25,7 +25,7 @@ import type {
   ElementType,
   ExpeditionOutcome,
   MoveDef,
-  MoveStoneKind,
+  RuneKind,
   OwnedCreature,
   PlayerStats,
   PotTier,
@@ -43,6 +43,7 @@ import type {
   StoneSlotType,
 } from './types';
 import { FR } from '../i18n/fr';
+import { LEGACY_RUNE_IDS } from './legacyIds';
 
 export const SAVE_STORAGE_KEY = 'cubiquest_save_v2';
 /** Copie brute d'une sauvegarde stockée mais illisible (JSON cassé, version inconnue) : jamais écrasée en silence. */
@@ -50,9 +51,10 @@ export const SAVE_BACKUP_STORAGE_KEY = 'cubiquest_save_unreadable_backup';
 /** Taille maximale du sac de Pierres de Pouvoir (les pierres équipées ne comptent jamais parmi celles qu'on retire). */
 export const POWER_STONE_BAG_LIMIT = 48;
 export const LEGACY_SAVE_STORAGE_KEY = 'cubiquest_save_v1';
-// v3 (Giga Update) : sac de Pierres de Capacité étendu (crit_focus, leech) + stats frontierWins/frontierDishes.
-// La clé de stockage reste la même : migrateSaveState accepte les versions 1, 2 et 3.
-export const SAVE_VERSION = 3;
+// v3 (Giga Update) : sac de runes étendu (rune_precision, rune_vigueur) + stats frontierWins/frontierDishes.
+// v4 (S03) : identifiants renommés (runes, recettes) ; `moveStoneBag` devient `runeBag`, `moveStones` devient `runes`.
+// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 4.
+export const SAVE_VERSION = 4;
 
 export type RngFn = () => number;
 
@@ -220,7 +222,7 @@ export function createOwnedCreature(
     xp: 0,
     potBonus,
     moveId: species.moveId,
-    moveStones: [null, null],
+    runes: [null, null],
     stoneBoard: createStoneBoardForRole(species.role),
   };
 }
@@ -283,7 +285,7 @@ export function computeSquadPower(save: SaveState): number {
   return total;
 }
 
-export function getMoveModifiers(moveStones: (MoveStoneKind | null)[]): {
+export function getMoveModifiers(runes: (RuneKind | null)[]): {
   damageMult: number;
   cooldownMult: number;
   radiusMult: number;
@@ -298,16 +300,16 @@ export function getMoveModifiers(moveStones: (MoveStoneKind | null)[]): {
   let critBonus = 0;
   let leechRatio = 0;
 
-  for (const ms of moveStones) {
-    if (ms === 'broadburst') radiusMult += 0.35;
-    if (ms === 'wait_less') cooldownMult *= 0.82;
-    if (ms === 'whack_whack') {
+  for (const ms of runes) {
+    if (ms === 'rune_ampleur') radiusMult += 0.35;
+    if (ms === 'rune_cadence') cooldownMult *= 0.82;
+    if (ms === 'rune_force') {
       damageMult += 0.4;
       cooldownMult *= 1.15;
     }
-    if (ms === 'share') shareRatio += 0.5;
-    if (ms === 'crit_focus') critBonus += 15;
-    if (ms === 'leech') leechRatio += 0.1;
+    if (ms === 'rune_partage') shareRatio += 0.5;
+    if (ms === 'rune_precision') critBonus += 15;
+    if (ms === 'rune_vigueur') leechRatio += 0.1;
   }
 
   return {
@@ -325,11 +327,11 @@ export function calculateDamage(
   move: Pick<MoveDef, 'element' | 'powerMultiplier'>,
   defenderElement: ElementType,
   critRate: number,
-  moveStones: (MoveStoneKind | null)[] = [],
+  runes: (RuneKind | null)[] = [],
   defenderDefenseMult = 1,
   rng: RngFn = Math.random,
 ): { damage: number; isCrit: boolean; effectiveness: number } {
-  const mods = getMoveModifiers(moveStones);
+  const mods = getMoveModifiers(runes);
   const effectiveness = getTypeEffectiveness(move.element, defenderElement);
   const isCrit = rng() * 100 < critRate + mods.critBonus;
   const critMult = isCrit ? 1.55 : 1.0;
@@ -421,20 +423,20 @@ export function unequipPowerStone(
   };
 }
 
-export function equipMoveStone(
+export function equipRune(
   save: SaveState,
   creatureUid: string,
   slotIndex: number,
-  kind: MoveStoneKind | null,
+  kind: RuneKind | null,
 ): SaveState {
   if (slotIndex < 0 || slotIndex > 1) return save;
   const target = save.roster.find((c) => c.uid === creatureUid);
   if (!target) return save;
 
-  const currentKind = target.moveStones[slotIndex];
+  const currentKind = target.runes[slotIndex];
   if (currentKind === kind) return save;
 
-  const nextBag = { ...save.moveStoneBag };
+  const nextBag = { ...save.runeBag };
   if (kind !== null && (nextBag[kind] ?? 0) <= 0) {
     return save;
   }
@@ -448,15 +450,15 @@ export function equipMoveStone(
 
   const nextRoster = save.roster.map((c) => {
     if (c.uid !== creatureUid) return c;
-    const nextMoveStones = [...c.moveStones];
-    nextMoveStones[slotIndex] = kind;
-    return { ...c, moveStones: nextMoveStones };
+    const nextRunes = [...c.runes];
+    nextRunes[slotIndex] = kind;
+    return { ...c, runes: nextRunes };
   });
 
   return {
     ...save,
     roster: nextRoster,
-    moveStoneBag: nextBag,
+    runeBag: nextBag,
   };
 }
 
@@ -797,14 +799,14 @@ export function applyExpeditionRewards(
     ? addPowerStoneToBag(save.powerStones, save.roster, droppedStone)
     : save.powerStones;
 
-  let droppedMoveStone: MoveStoneKind | null = null;
-  const nextMoveStoneBag = { ...save.moveStoneBag };
+  let droppedRune: RuneKind | null = null;
+  const nextRuneBag = { ...save.runeBag };
   if (victory && rng() < 0.55) {
     // Les Pierres Précision / Sangsue ne tombent que dans les nouveaux biomes
-    const kinds: MoveStoneKind[] =
-      stage.index >= FRONTIER_STAGE_INDEX ? MOVE_STONE_ORDER : BASE_MOVE_STONE_KINDS;
-    droppedMoveStone = kinds[Math.floor(rng() * kinds.length)];
-    nextMoveStoneBag[droppedMoveStone] = (nextMoveStoneBag[droppedMoveStone] ?? 0) + 1;
+    const kinds: RuneKind[] =
+      stage.index >= FRONTIER_STAGE_INDEX ? RUNE_ORDER : BASE_RUNE_KINDS;
+    droppedRune = kinds[Math.floor(rng() * kinds.length)];
+    nextRuneBag[droppedRune] = (nextRuneBag[droppedRune] ?? 0) + 1;
   }
 
   // Advance Cooking Pot if cooking
@@ -870,7 +872,7 @@ export function applyExpeditionRewards(
     roster: nextRoster,
     ingredients: nextIngredients,
     powerStones: nextPowerStones,
-    moveStoneBag: nextMoveStoneBag,
+    runeBag: nextRuneBag,
     pot: nextPot,
     unlockedPotTiers,
     highestStageIndex,
@@ -909,7 +911,7 @@ export function applyExpeditionRewards(
       count,
     })),
     droppedStone,
-    droppedMoveStone,
+    droppedRune,
     leveledUpNames,
     potReadyNow,
     unlockedNextStageName,
@@ -1008,13 +1010,13 @@ export function createInitialSaveState(
       mystic_shard: 1,
     },
     powerStones: startingStones,
-    moveStoneBag: {
-      broadburst: 1,
-      wait_less: 1,
-      whack_whack: 1,
-      share: 1,
-      crit_focus: 0,
-      leech: 0,
+    runeBag: {
+      rune_ampleur: 1,
+      rune_cadence: 1,
+      rune_force: 1,
+      rune_partage: 1,
+      rune_precision: 0,
+      rune_vigueur: 0,
     },
     pot: {
       tier: 'iron',
@@ -1139,9 +1141,9 @@ function applyRewardToSave(
     }
   }
 
-  const nextMoveStoneBag = { ...save.moveStoneBag };
-  if (reward.moveStone) {
-    nextMoveStoneBag[reward.moveStone] = (nextMoveStoneBag[reward.moveStone] ?? 0) + 1;
+  const nextRuneBag = { ...save.runeBag };
+  if (reward.rune) {
+    nextRuneBag[reward.rune] = (nextRuneBag[reward.rune] ?? 0) + 1;
   }
 
   let nextPowerStones = save.powerStones;
@@ -1153,7 +1155,7 @@ function applyRewardToSave(
   return {
     ...save,
     ingredients: nextIngredients,
-    moveStoneBag: nextMoveStoneBag,
+    runeBag: nextRuneBag,
     powerStones: nextPowerStones,
   };
 }
@@ -1288,6 +1290,29 @@ function uniqueKnown(list: unknown, isKnown: (id: string) => boolean): string[] 
   return out;
 }
 
+/** Identifiant de rune actuel pour une valeur lue dans une sauvegarde (ancien nom converti) ; null si inconnu. */
+function resolveRuneKind(raw: unknown): RuneKind | null {
+  if (typeof raw !== 'string') return null;
+  if (RUNE_ORDER.includes(raw as RuneKind)) return raw as RuneKind;
+  return Object.hasOwn(LEGACY_RUNE_IDS, raw) ? LEGACY_RUNE_IDS[raw] : null;
+}
+
+/**
+ * Sac de runes : additionne le sac actuel (`runeBag`) et l'ancien (`moveStoneBag`, v1 à v3),
+ * anciens noms convertis. Une clé inconnue est ignorée.
+ */
+function normalizeRuneBag(...bags: unknown[]): Record<RuneKind, number> {
+  const out = Object.fromEntries(RUNE_ORDER.map((kind) => [kind, 0])) as Record<RuneKind, number>;
+  for (const bag of bags) {
+    if (!bag || typeof bag !== 'object') continue;
+    for (const [key, qty] of Object.entries(bag as Record<string, unknown>)) {
+      const kind = resolveRuneKind(key);
+      if (kind) out[kind] += toCount(qty);
+    }
+  }
+  return out;
+}
+
 /** Valide une Pierre de Pouvoir lue depuis une sauvegarde ; null si elle est inutilisable. */
 export function normalizePowerStone(raw: unknown): PowerStone | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -1344,10 +1369,10 @@ export function normalizeCreature(raw: unknown, freeStoneIds: Set<string>): Owne
     return { type, unlockLevel, stoneId };
   });
 
-  const rawMoveStones = Array.isArray(c.moveStones) ? c.moveStones : [];
-  const moveStones = [0, 1].map((i) =>
-    MOVE_STONE_ORDER.includes(rawMoveStones[i] as MoveStoneKind) ? (rawMoveStones[i] as MoveStoneKind) : null,
-  );
+  // v1 à v3 : les runes équipées s'appelaient `moveStones`
+  const legacyRunes = (raw as { moveStones?: unknown }).moveStones;
+  const rawRunes: unknown[] = Array.isArray(c.runes) ? c.runes : Array.isArray(legacyRunes) ? legacyRunes : [];
+  const runes = [0, 1].map((i) => resolveRuneKind(rawRunes[i]));
 
   return {
     uid: c.uid,
@@ -1356,7 +1381,7 @@ export function normalizeCreature(raw: unknown, freeStoneIds: Set<string>): Owne
     xp: Math.max(0, Number(c.xp) || 0),
     potBonus: Math.max(0, Number(c.potBonus) || 0),
     moveId: typeof c.moveId === 'string' && MOVES[c.moveId] ? c.moveId : species.moveId,
-    moveStones,
+    runes,
     stoneBoard,
   };
 }
@@ -1382,23 +1407,29 @@ function normalizeQuests(raw: unknown): ActiveQuest[] {
     ) {
       return createInitialQuests();
     }
+    // Les textes et la récompense d'une quête sont copiés dans la sauvegarde : on les reprend du modèle,
+    // pour qu'une ancienne sauvegarde n'affiche pas d'ancien nom et ne garde pas d'ancien identifiant.
+    const tpl = QUEST_POOL.find((t) => t.templateId === q.templateId);
+    if (!tpl) return createInitialQuests();
     quests.push({
       uid: q.uid,
-      templateId: q.templateId,
-      title: q.title,
-      description: q.description,
-      metric: q.metric as QuestMetric,
-      progress: Math.min(target, Math.max(0, Number(q.progress) || 0)),
-      target,
-      reward: q.reward,
+      templateId: tpl.templateId,
+      title: tpl.title,
+      description: tpl.description,
+      metric: tpl.metric,
+      progress: Math.min(tpl.target, Math.max(0, Number(q.progress) || 0)),
+      target: tpl.target,
+      reward: tpl.reward,
     });
   }
   return new Set(quests.map((q) => q.uid)).size === 3 ? quests : createInitialQuests();
 }
 
 /**
- * Migrate v1 / v2 SaveState or normalize v3 SaveState cleanly without losing user progress.
- * v2 -> v3 : ajoute les Pierres Précision/Sangsue (0) au sac, les stats frontierWins/frontierDishes (0)
+ * Migre une sauvegarde v1, v2 ou v3, ou normalise une v4, sans perdre la progression du joueur.
+ * v3 -> v4 : identifiants renommés (runes, recettes) convertis par les tables de `legacyIds.ts` ;
+ * les quêtes en cours reprennent les textes et la récompense de leur modèle.
+ * v2 -> v3 : ajoute les Runes de Précision et de Vigueur (0) au sac, les stats frontierWins/frontierDishes (0)
  * et ouvre la Toundra aux sauvegardes qui avaient déjà vaincu l'ancien dernier niveau.
  *
  * Toute sauvegarde (y compris un JSON importé à la main) est aussi NORMALISÉE : chaque champ est
@@ -1411,7 +1442,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
   if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.pot !== 'object') return null;
   if (!obj.ingredients || typeof obj.ingredients !== 'object') return null;
-  if (obj.version !== 1 && obj.version !== 2 && obj.version !== SAVE_VERSION) return null;
+  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== SAVE_VERSION) return null;
 
   // Pierres de Pouvoir : valides, identifiants uniques
   const powerStones: PowerStone[] = [];
@@ -1498,14 +1529,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     roster: validRoster,
     ingredients,
     powerStones,
-    moveStoneBag: {
-      broadburst: toCount(obj.moveStoneBag?.broadburst),
-      wait_less: toCount(obj.moveStoneBag?.wait_less),
-      whack_whack: toCount(obj.moveStoneBag?.whack_whack),
-      share: toCount(obj.moveStoneBag?.share),
-      crit_focus: toCount(obj.moveStoneBag?.crit_focus),
-      leech: toCount(obj.moveStoneBag?.leech),
-    },
+    runeBag: normalizeRuneBag(obj.runeBag, (raw as { moveStoneBag?: unknown }).moveStoneBag),
     pot: {
       tier: unlockedPotTiers.includes(rawPot.tier as PotTier) ? (rawPot.tier as PotTier) : 'iron',
       slots: potSlots,

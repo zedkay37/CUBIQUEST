@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Star } from 'lucide-react';
-import { INGREDIENTS, MOVE_STONES, POT_TIER_META } from '../game/catalog';
+import { INGREDIENTS, RUNES, POT_TIER_META } from '../game/catalog';
 import { computeVictoryStars } from '../game/rules';
 import type { ExpeditionOutcome } from '../game/types';
 import { StoneIcon } from './Icons';
@@ -288,7 +288,7 @@ export function OutcomeModal({
               </div>
             )}
 
-            {(outcome.droppedStone || outcome.droppedMoveStone) && (
+            {(outcome.droppedStone || outcome.droppedRune) && (
               <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-[#273145]">
                 {outcome.droppedStone && (
                   <div className="flex items-center gap-2 text-xs">
@@ -302,12 +302,12 @@ export function OutcomeModal({
                     </span>
                   </div>
                 )}
-                {outcome.droppedMoveStone && (
+                {outcome.droppedRune && (
                   <div
                     className="text-xs font-semibold"
-                    style={{ color: MOVE_STONES[outcome.droppedMoveStone].color }}
+                    style={{ color: RUNES[outcome.droppedRune].color }}
                   >
-                    +1 {MOVE_STONES[outcome.droppedMoveStone].name}
+                    +1 {RUNES[outcome.droppedRune].name}
                   </div>
                 )}
               </div>
