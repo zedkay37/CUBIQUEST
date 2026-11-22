@@ -3317,6 +3317,10 @@ export class VoxelEngine {
         case 'antlered':
           extra.rotation.z = Math.sin(elapsed * 1.6 + seed + idx) * 0.05;
           break;
+        case 'crab':
+          // les pinces s'ouvrent et se referment en alternance
+          extra.rotation.x = Math.sin(elapsed * 3.2 + seed + idx * Math.PI) * 0.16;
+          break;
         case 'golem':
           extra.rotation.y = Math.sin(elapsed * 0.9 + seed) * 0.08;
           break;

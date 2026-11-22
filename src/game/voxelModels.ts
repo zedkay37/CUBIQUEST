@@ -131,6 +131,8 @@ export function getRigTopY(species: SpeciesDef): number {
       return 1.8;
     case 'antlered':
       return 2.5;
+    case 'crab':
+      return 1.6;
     case 'golem':
       return 2.1;
     case 'serpentine':
@@ -316,6 +318,45 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
     const armR = makeBox(0.22, 0.24, 0.28, primaryMat, 0.54, 0.58, 0.2);
     bodyPivot.add(legL, legR, armL, armR);
     legs.push(legL, legR);
+  } else if (arch === 'crab') {
+    // Crabe : carapace large et basse, yeux sur tiges, deux pinces ouvertes, six pattes (Crabloc / Crabastion)
+    bodyPivot.add(makeBox(1.3, 0.5, 0.9, primaryMat, 0, 0.52, 0));
+    bodyPivot.add(makeBox(1.0, 0.22, 0.7, secondaryMat, 0, 0.86, -0.02));
+    bodyPivot.add(makeBox(0.9, 0.26, 0.1, bellyMat, 0, 0.44, 0.46));
+    for (const side of [-1, 1]) {
+      // yeux perchés sur des tiges
+      bodyPivot.add(makeBox(0.1, 0.3, 0.1, primaryMat, side * 0.26, 1.08, 0.3));
+      bodyPivot.add(makeBox(0.2, 0.22, 0.16, eyeMat, side * 0.26, 1.32, 0.32, false));
+      bodyPivot.add(makeBox(0.06, 0.06, 0.05, eyeHighlightMat, side * 0.26 + 0.04, 1.37, 0.41, false));
+      // pince : bras + deux mâchoires écartées. Au stade final, la pince droite est énorme.
+      const claw = new THREE.Group();
+      claw.position.set(side * (stage >= 3 && side === 1 ? 0.98 : 0.84), 0.56, 0.28);
+      claw.add(makeBox(0.22, 0.2, 0.34, primaryMat, 0, 0, 0.12));
+      claw.add(makeBox(0.38, 0.15, 0.4, accentMat, 0, 0.13, 0.48));
+      claw.add(makeBox(0.38, 0.15, 0.4, accentMat, 0, -0.13, 0.48));
+      if (stage >= 3 && side === 1) claw.scale.setScalar(1.45);
+      bodyPivot.add(claw);
+      extras.push(claw);
+      for (const lz of [0.24, -0.02, -0.28]) {
+        const crabLeg = makeBox(0.14, 0.3, 0.14, secondaryMat, side * 0.62, 0.15, lz);
+        bodyPivot.add(crabLeg);
+        legs.push(crabLeg);
+      }
+    }
+    if (stage >= 3) {
+      // créneaux de forteresse et coraux sur la carapace
+      for (const [mx, mz] of [
+        [-0.4, 0.24],
+        [0.4, 0.24],
+        [-0.4, -0.28],
+        [0.4, -0.28],
+      ]) {
+        bodyPivot.add(makeBox(0.2, 0.2, 0.2, secondaryMat, mx, 1.07, mz));
+      }
+      bodyPivot.add(makeBox(0.14, 0.34, 0.14, accentMat, 0, 1.14, -0.04));
+      bodyPivot.add(makeBox(0.3, 0.1, 0.1, accentMat, 0.02, 1.2, -0.04));
+      bodyPivot.add(makeBox(0.1, 0.2, 0.1, accentMat, -0.12, 1.06, -0.3));
+    }
   } else if (arch === 'winged') {
     // Majestic winged dragon / thunderbird Cubimon (Ignisaur / Raicube)
     bodyPivot.add(makeBox(0.88, 0.94, 0.88, primaryMat, 0, 0.72, 0));

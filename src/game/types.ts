@@ -7,6 +7,7 @@ export type CreatureArchetype =
   | 'fungal'
   | 'biped'
   | 'shelled'
+  | 'crab'
   | 'winged'
   | 'horned'
   | 'floating'
