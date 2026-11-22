@@ -116,6 +116,8 @@ export function updateWeather(self: VoxelEngine, dt: number): void {
   const kind = self.weatherKind;
   const isRain = kind === 'rain';
   const sway = isRain ? 0.15 : kind === 'snow' ? 0.9 : 0.65;
+  // Pendant une annonce ennemie, les particules décoratives sont réduites de moitié
+  const hazard = self.playMode === 'expedition' && self.telegraphs.some((tg) => tg.isEnemyHazard);
 
   for (let i = 0; i < self.weatherCount; i++) {
     const m = self.weatherMotes[i];
@@ -153,7 +155,8 @@ export function updateWeather(self: VoxelEngine, dt: number): void {
     } else {
       _dummy.rotation.set(m.phase * 0.7, m.phase * 0.9, 0);
     }
-    _dummy.scale.set(m.sizeX, m.sizeY, m.sizeZ);
+    if (hazard && i % 2 === 1) _dummy.scale.setScalar(0.0001);
+    else _dummy.scale.set(m.sizeX, m.sizeY, m.sizeZ);
     _dummy.updateMatrix();
     self.weatherMesh.setMatrixAt(i, _dummy.matrix);
   }

@@ -155,6 +155,24 @@ export const DODGE_KIT = {
   perfectSlowMoScale: 0.5,
 };
 
+/**
+ * ANNONCES (S05.2, plan 5.3). Délais minimaux entre l'annonce et l'impact par phase de boss, nombre
+ * maximal de zones de danger simultanées, rendu.
+ */
+export const TELEGRAPH_KIT = {
+  minWindup: [0.9, 0.75, 0.65] as const,
+  maxZones: 3,
+  maxZonesMeteor: 5,
+  /** Le contour clignote et le « tic » sonne à cette durée de l'impact. */
+  warnBefore: 0.35,
+  backgroundOpacity: 0.35,
+  fillOpacity: 0.55,
+  /** La consigne écrite n'apparaît que les N premières fois par attaque (compteur dans la sauvegarde). */
+  hintShows: 2,
+  /** La caméra recule au plus de cette part quand une zone sort du cadre. */
+  cameraBackoff: 0.25,
+};
+
 /** Déchaînement selon l'élément du meneur (plan 5.4). Dégâts de base = attaque cumulée × baseMult. */
 export const ULTIMATE_KIT = {
   baseMult: 1.35,

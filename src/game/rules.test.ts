@@ -638,7 +638,7 @@ function oldRuneId(kind: string): string {
 }
 
 test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intacte)', () => {
-  assert.equal(SAVE_VERSION, 5);
+  assert.equal(SAVE_VERSION, 6);
   const fresh = createInitialSaveState('aquabloc', true);
   // Sauvegarde v2 réaliste : pas de pierres/stats des confins, quête en cours, créature équipée
   const { frontierWins: _fw, frontierDishes: _fd, ...v2Stats } = fresh.stats;

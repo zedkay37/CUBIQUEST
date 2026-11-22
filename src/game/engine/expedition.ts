@@ -32,6 +32,7 @@ export function emptyTelemetry(): CombatTelemetry {
   return {
     bossAppearedAt: -1,
     phaseStartedAt: [-1, -1, -1],
+    minWindupByPhase: [-1, -1, -1],
     bossDefeatedAt: -1,
     castsByPhase: [0, 0, 0],
     patternsByPhase: [[], [], []],

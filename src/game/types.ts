@@ -334,6 +334,8 @@ export interface SaveState {
   claimedAchievementIds: string[];
   /** Gestes déjà expliqués par une bulle « première fois » (cube, Éclat faible, Éclat, Trio). */
   firstTimesSeen: string[];
+  /** Consignes d'attaque déjà montrées, par type d'attaque (S05.2). */
+  hazardHintsSeen: Record<string, number>;
 }
 
 export interface ExpeditionUnitHud {

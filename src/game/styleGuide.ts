@@ -7,6 +7,9 @@
 import { MOVES, SPECIES } from './catalog';
 import type { CreatureRole, MoveStyle, SpeciesDef } from './types';
 
+/** La seule couleur des zones de danger (S05.2, plan 5.3). Les kits de boss ne colorent que les particules. */
+export const DANGER = '#E5383B';
+
 export type EvolutionTier = 'base' | 'mid' | 'final';
 
 type Range = [number, number];

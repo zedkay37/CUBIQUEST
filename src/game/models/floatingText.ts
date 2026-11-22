@@ -55,6 +55,10 @@ export class FloatingTextPool {
     }
   }
 
+  /** Déplace un point hors des zones à ne pas recouvrir (annonces ennemies) ; fourni par le moteur. */
+  public relocate: ((p: { x: number; z: number }) => void) | null = null;
+  private readonly spot = { x: 0, z: 0 };
+
   public spawn(
     x: number,
     y: number,
@@ -64,6 +68,13 @@ export class FloatingTextPool {
     scale = 1.0,
     duration = 0.85,
   ): void {
+    if (this.relocate) {
+      this.spot.x = x;
+      this.spot.z = z;
+      this.relocate(this.spot);
+      x = this.spot.x;
+      z = this.spot.z;
+    }
     const slot = this.slots[this.cursor];
     this.cursor = (this.cursor + 1) % this.slots.length;
 

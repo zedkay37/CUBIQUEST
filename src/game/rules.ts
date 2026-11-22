@@ -48,6 +48,24 @@ import { LEGACY_ACHIEVEMENT_IDS, LEGACY_QUEST_IDS, LEGACY_RECIPE_IDS, LEGACY_RUN
 export const FIRST_TIME_KINDS = ['cube', 'weak', 'burst', 'trio'] as const;
 export type FirstTimeKindId = (typeof FIRST_TIME_KINDS)[number];
 
+/** Consignes d'attaque connues (boss.ts) : les autres clés sont ignorées au chargement. */
+export const HAZARD_HINT_KEYS = ['ring', 'aftershock', 'strike', 'eye'] as const;
+
+function normalizeHintCounts(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const key of HAZARD_HINT_KEYS) {
+    const n = Math.floor(Number((raw as Record<string, unknown>)[key]));
+    if (Number.isFinite(n) && n > 0) out[key] = n;
+  }
+  return out;
+}
+
+/** Compte une consigne d'attaque montrée. */
+export function markHazardHintSeen(save: SaveState, key: string): SaveState {
+  return { ...save, hazardHintsSeen: { ...save.hazardHintsSeen, [key]: (save.hazardHintsSeen[key] ?? 0) + 1 } };
+}
+
 /** Ajoute un geste à ceux déjà expliqués (sans doublon). */
 export function markFirstTimeSeen(save: SaveState, kind: FirstTimeKindId): SaveState {
   if (save.firstTimesSeen.includes(kind)) return save;
@@ -65,8 +83,9 @@ export const LEGACY_SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v1');
 // v4 (S03) : identifiants renommés (runes, recettes) ; `moveStoneBag` devient `runeBag`, `moveStones` devient `runes`.
 // v5 (S04) : statistique des anciennes réactions -> `burstsTriggered` ; `triosTriggered` (cumul, repart de 0) ;
 //            quêtes et succès renommés (legacyIds.ts) ; `firstTimesSeen` (bulles « première fois »).
-// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 5.
-export const SAVE_VERSION = 5;
+// v6 (S05) : `hazardHintsSeen` (consignes d'attaque déjà montrées).
+// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 6.
+export const SAVE_VERSION = 6;
 
 export type RngFn = () => number;
 
@@ -1108,6 +1127,7 @@ export function createInitialSaveState(
     activeQuests: createInitialQuests(),
     claimedAchievementIds: [],
     firstTimesSeen: [],
+    hazardHintsSeen: {},
   };
 }
 
@@ -1524,7 +1544,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
   if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.pot !== 'object') return null;
   if (!obj.ingredients || typeof obj.ingredients !== 'object') return null;
-  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== SAVE_VERSION) return null;
+  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== SAVE_VERSION) return null;
 
   // Pierres de Pouvoir : valides, identifiants uniques
   const powerStones: PowerStone[] = [];
@@ -1642,6 +1662,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
       (id) => ACHIEVEMENTS.some((a) => a.id === id),
     ),
     firstTimesSeen: uniqueKnown(obj.firstTimesSeen, (id) => (FIRST_TIME_KINDS as readonly string[]).includes(id)),
+    hazardHintsSeen: normalizeHintCounts(obj.hazardHintsSeen),
   };
 }
 export function exportSaveToJson(save: SaveState): string {

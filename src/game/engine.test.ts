@@ -11,6 +11,7 @@ import { getReferenceConfig } from './previewConfigs';
 import { createOwnedCreature } from './rules';
 import type { OwnedCreature, StageDef } from './types';
 import { VoxelEngine } from './VoxelEngine';
+import { DANGER } from './styleGuide';
 import { newCast } from './engine/cubes';
 import { applyDamageToActor } from './engine/damage';
 import { clearProjectilesAndTelegraphs, spawnEnemyTelegraph } from './engine/fx';
@@ -505,4 +506,55 @@ test('Esquive: aucun mode de contrôle n’esquive à la place du joueur', () =>
     assert.equal(h.engine.dodgesUsed, 0);
     h.engine.dispose();
   });
+});
+
+test('Annonces: aucun délai sous le minimum de sa phase (0,9 / 0,75 / 0,65 s)', () => {
+  const seen: number[][] = [[], [], []];
+  for (const id of ['meadow-3', 'shore-3', 'volcano-3', 'tundra-3', 'stormpeak-3', 'canyon-3']) {
+    withSeededRandom(12, () => {
+      const h = makeHarness();
+      h.start(id);
+      h.run(240, () => h.results.length > 0);
+      h.engine.getCombatTelemetry().minWindupByPhase.forEach((w, i) => {
+        if (w >= 0) seen[i].push(w);
+      });
+      h.engine.dispose();
+    });
+  }
+  const min = [0.9, 0.75, 0.65];
+  for (let i = 0; i < 3; i++) for (const w of seen[i]) assert.ok(w >= min[i] - 1e-9, `phase ${i + 1} : délai ${w}`);
+  assert.ok(seen[0].length > 0 && seen[1].length > 0, 'des annonces ont bien été observées');
+});
+
+test('Annonces: toutes les zones de danger utilisent DANGER, jamais la couleur du kit', () => {
+  withSeededRandom(13, () => {
+    const h = makeHarness();
+    h.start('tundra-1');
+    spawnEnemyTelegraph(h.engine, 0, 0, 3, 1, false, 0, 0, () => {}, { color: '#00FF00', phase: 1 });
+    spawnEnemyTelegraph(h.engine, 0, 0, 5, 1, false, 0, 0, () => {}, { color: '#0000FF', innerRadius: 2 });
+    spawnEnemyTelegraph(h.engine, 0, 0, 6, 1, true, 1, 0, () => {}, { color: '#FF00FF' });
+    const zones = h.engine.telegraphs.filter((t) => t.isEnemyHazard);
+    assert.ok(zones.length >= 3);
+    for (const z of zones) {
+      z.mesh.traverse((node) => {
+        const mat = (node as { material?: { color?: { getHexString(): string } } }).material;
+        if (mat?.color && node.name !== 'outlineDark' && node.name !== 'outlineLight') {
+          assert.equal(`#${mat.color.getHexString()}`.toUpperCase(), DANGER.toUpperCase());
+        }
+      });
+    }
+    h.engine.dispose();
+  });
+});
+
+test('Annonces: la consigne écrite d’une attaque ne s’affiche que deux fois', () => {
+  const h = makeHarness();
+  const shown: string[] = [];
+  h.engine.callbacks.onHazardHint = (k) => shown.push(k);
+  h.engine.setHazardHintCounts({ eye: 1 });
+  for (let i = 0; i < 3; i++) h.engine.showHazardHint('ring', 'texte', 1);
+  h.engine.showHazardHint('eye', 'texte', 1);
+  h.engine.showHazardHint('eye', 'texte', 1);
+  assert.deepEqual(shown, ['ring', 'ring', 'eye']);
+  h.engine.dispose();
 });

@@ -6,7 +6,10 @@ import * as THREE from 'three';
 import { soundFx } from '../audio';
 import type { ElementType } from '../types';
 import { _color, _dummy, CONFETTI_COLORS, ELEMENT_FX, PARTICLE_POOL_SIZE } from './constants';
+import { TELEGRAPH_KIT } from '../balance';
 import { newCast } from './cubes';
+import { disposeObject } from './camp';
+import { buildTelegraphVisual, updateTelegraphVisual, type TelegraphShape } from './telegraphs';
 import { applyDamageToActor } from './damage';
 import type { ActiveProjectile, GroundTelegraph } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
@@ -51,6 +54,8 @@ export function spawnShockwaveRing(self: VoxelEngine, x: number, z: number, radi
     dirZ: 0,
     isEnemyHazard: false,
     innerRadius: 0,
+    shape: null,
+    warned: true,
     onComplete: () => {},
   });
 }
@@ -65,25 +70,20 @@ export function spawnEnemyTelegraph(
   dirX: number,
   dirZ: number,
   onComplete: () => void,
-  opts?: { innerRadius?: number; color?: string; silent?: boolean },
+  /**
+   * `color` (couleur du kit) n'est plus utilisée pour la zone : toutes les zones sont `DANGER`.
+   * `phase` : phase du boss qui attaque ; le délai est porté au minimum de la phase (TELEGRAPH_KIT).
+   */
+  opts?: { innerRadius?: number; color?: string; silent?: boolean; phase?: 1 | 2 | 3; shape?: TelegraphShape },
 ): void {
-  if (!opts?.silent) soundFx.playTelegraph();
-  const geo = isLine
-    ? new THREE.PlaneGeometry(1.4, radius)
-    : opts?.innerRadius
-      ? new THREE.RingGeometry(opts.innerRadius, radius, 40) // couronne : zone sûre au centre
-      : new THREE.CircleGeometry(radius, 28);
-  if (isLine) {
-    geo.translate(0, radius / 2, 0);
+  if (opts?.phase) {
+    duration = Math.max(duration, TELEGRAPH_KIT.minWindup[opts.phase - 1]);
+    const prev = self.telemetry.minWindupByPhase[opts.phase - 1];
+    self.telemetry.minWindupByPhase[opts.phase - 1] = prev < 0 ? duration : Math.min(prev, duration);
   }
-  const mat = new THREE.MeshBasicMaterial({
-    color: opts?.color ?? '#EF4444',
-    transparent: true,
-    opacity: 0.32,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-  });
-  const mesh = new THREE.Mesh(geo, mat);
+  if (!opts?.silent) soundFx.playTelegraph();
+  const shape: TelegraphShape = opts?.shape ?? (isLine ? 'band' : opts?.innerRadius ? 'ring' : 'disc');
+  const mesh = buildTelegraphVisual(shape, radius, opts?.innerRadius ?? 0);
   mesh.rotation.x = -Math.PI / 2;
   if (isLine) {
     mesh.rotation.z = Math.atan2(dirX, dirZ) - Math.PI;
@@ -103,6 +103,8 @@ export function spawnEnemyTelegraph(
     dirZ,
     isEnemyHazard: true,
     innerRadius: opts?.innerRadius ?? 0,
+    shape,
+    warned: false,
     onComplete,
   });
 }
@@ -118,6 +120,20 @@ export function isInTelegraph(tg: GroundTelegraph, x: number, z: number, margin 
   }
   const d = Math.hypot(x - tg.x, z - tg.z);
   return d <= tg.radius + margin && d >= tg.innerRadius - margin * 0.5;
+}
+
+/** Pousse un point hors des zones d'annonce ennemie actives (vers le bord le plus proche). */
+export function keepOutOfHazards(self: VoxelEngine, p: { x: number; z: number }): void {
+  for (const tg of self.telegraphs) {
+    if (!tg.isEnemyHazard || tg.isLine || !isInTelegraph(tg, p.x, p.z, 0)) continue;
+    const dx = p.x - tg.x;
+    const dz = p.z - tg.z;
+    const d = Math.max(0.01, Math.hypot(dx, dz));
+    // couronne : vers le centre sûr ; disque : vers l'extérieur
+    const target = tg.innerRadius > 0 ? Math.max(0, tg.innerRadius - 0.6) : tg.radius + 0.6;
+    p.x = tg.x + (dx / d) * target;
+    p.z = tg.z + (dz / d) * target;
+  }
 }
 
 /** Délai avant le prochain impact ennemi annoncé qui toucherait au moins un allié là où il se trouve. */
@@ -142,8 +158,7 @@ export function clearProjectilesAndTelegraphs(self: VoxelEngine): void {
 
   for (const t of self.telegraphs) {
     self.fxGroup.remove(t.mesh);
-    t.mesh.geometry.dispose();
-    (t.mesh.material as THREE.Material).dispose();
+    disposeObject(self, t.mesh);
   }
   self.telegraphs = [];
 }
@@ -379,18 +394,22 @@ export function updateTelegraphs(self: VoxelEngine, simDt: number): void {
     tg.elapsed += simDt;
     const ratio = Math.min(1, tg.elapsed / tg.duration);
     const mat = tg.mesh.material as THREE.MeshBasicMaterial;
-    if (tg.duration <= 0.3) {
-      // Expanding shockwave ring
+    if (tg.shape) {
+      // Annonce ennemie : remplissage, contour qui clignote, « tic » commun à 0,35 s de l'impact
+      const left = tg.duration - tg.elapsed;
+      updateTelegraphVisual(tg.mesh, tg.shape, ratio, left, self.elapsedTotal);
+      if (!tg.warned && left <= TELEGRAPH_KIT.warnBefore) {
+        tg.warned = true;
+        soundFx.playTelegraphTick();
+      }
+    } else {
+      // Onde décorative qui s'élargit
       tg.mesh.scale.setScalar(0.5 + ratio * 0.7);
       mat.opacity = (1 - ratio) * 0.75;
-    } else {
-      // Enemy attack windup telegraph pulsing brighter as impact approaches
-      mat.opacity = 0.22 + ratio * 0.42;
     }
     if (tg.elapsed >= tg.duration) {
       self.fxGroup.remove(tg.mesh);
-      tg.mesh.geometry.dispose();
-      mat.dispose();
+      disposeObject(self, tg.mesh);
       self.telegraphs.splice(i, 1);
       // L'impact d'une attaque annoncée : applyDamageToActor sait alors qu'une esquive peut être parfaite
       self.resolvingHazard = tg.isEnemyHazard;

@@ -288,13 +288,13 @@ test('Chargement: une sauvegarde illisible est copiée avant que le jeu ne repar
   }
 });
 
-test('Sauvegarde: une sauvegarde v3 réaliste se charge en v5 sans perte, identifiants renommés', () => {
+test('Sauvegarde: une sauvegarde v3 réaliste se charge en v6 sans perte, identifiants renommés', () => {
   const v3 = clone(SAVE_V3_FIXTURE) as Record<string, any>;
   assert.equal(v3.version, 3);
   const m = migrateSaveState(clone(v3));
   assert.ok(m !== null);
   assert.equal(m.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 5);
+  assert.equal(SAVE_VERSION, 6);
 
   // escouade et créatures : rien ne bouge, sauf le nom du champ des runes équipées
   assert.deepEqual(m.squadIds, v3.squadIds);
@@ -325,6 +325,7 @@ test('Sauvegarde: une sauvegarde v3 réaliste se charge en v5 sans perte, identi
   delete otherStats[LEGACY_STAT_FIELDS.bestChain];
   assert.deepEqual(m.stats, { ...otherStats, burstsTriggered: v3.stats[LEGACY_STAT_FIELDS.bursts], triosTriggered: 0 });
   assert.deepEqual(m.firstTimesSeen, []);
+  assert.deepEqual(m.hazardHintsSeen, {});
   assert.deepEqual(m.discoveredSpeciesIds, v3.discoveredSpeciesIds);
   assert.deepEqual(m.claimedAchievementIds, v3.claimedAchievementIds);
   assert.deepEqual(m.unlockedPotTiers, v3.unlockedPotTiers);

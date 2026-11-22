@@ -56,6 +56,10 @@ export interface GroundTelegraph {
   isEnemyHazard: boolean;
   /** Couronne : rayon de la zone sûre au centre (0 sinon). */
   innerRadius: number;
+  /** Forme de la zone (grammaire unique, engine/telegraphs.ts) ; null pour une onde décorative. */
+  shape: 'disc' | 'ring' | 'band' | 'spiral' | null;
+  /** Le « tic » de fin a déjà sonné. */
+  warned: boolean;
   onComplete: () => void;
 }
 
@@ -170,6 +174,8 @@ export interface CombatTelemetry {
   bossAppearedAt: number;
   /** Début de chaque phase du boss : [phase 1, phase 2, phase 3] (-1 si jamais atteinte). */
   phaseStartedAt: [number, number, number];
+  /** Plus court délai d'annonce observé par phase de boss (-1 : aucune annonce). */
+  minWindupByPhase: [number, number, number];
   /** Instant de la mort du boss (-1 s'il a survécu). */
   bossDefeatedAt: number;
   /** Nombre d'attaques télégraphiées lancées par le boss dans chaque phase. */
@@ -212,6 +218,8 @@ export type FirstTimeKind = 'cube' | 'weak' | 'burst' | 'trio';
 export interface EngineCallbacks {
   /** Première fois qu'un geste se produit dans ce combat ; l'interface décide s'il faut l'expliquer. */
   onFirstTime?: (kind: FirstTimeKind) => void;
+  /** Une consigne d'attaque vient d'être montrée (pour la compter dans la sauvegarde). */
+  onHazardHint?: (key: string) => void;
   onHudUpdate: (snapshot: ExpeditionHudSnapshot) => void;
   /**
    * Victoire acquise : appelé UNE fois par combat, à l'instant où le dernier ennemi tombe, avec le bilan

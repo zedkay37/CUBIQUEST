@@ -276,6 +276,11 @@ class ToyboxAudio {
     });
   }
 
+  /** Le même « tic » pour toutes les attaques annoncées, 0,35 s avant l'impact. */
+  public playTelegraphTick(): void {
+    this.playTone(1318.5, 1318.5, 0.05, 'square', 0.06, 0);
+  }
+
   /** Un cube devient mûr : tintement bref et clair. */
   public playCubeRipe(): void {
     this.playTone(1567.98, 1661.22, 0.09, 'sine', 0.07, 0);

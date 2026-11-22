@@ -3,6 +3,10 @@
  */
 import * as THREE from 'three';
 import { findNearestLiving } from './actors';
+import { TELEGRAPH_KIT } from '../balance';
+
+/** Distance au centre du cadre au-delà de laquelle une zone sort de l'écran (estimation pour le cadrage par défaut). */
+const CAMERA_FRAME_REACH = 11;
 import { _vecA, _vecB, _vecC, EVO_X, EVO_Z } from './constants';
 import type { VoxelEngine } from '../VoxelEngine';
 
@@ -71,7 +75,18 @@ export function updateCamera(self: VoxelEngine, dt: number): void {
       _vecA.set(sx, 10.2, sz + 11.5);
       _vecB.set(sx, 1.0, sz);
     } else {
-      _vecA.set(focusX, 15.8, focusZ + 16.5);
+      // Une zone de danger loin du centre : la caméra recule (25 % au plus), puis revient
+      let reach = 0;
+      for (const tg of self.telegraphs) {
+        if (!tg.isEnemyHazard) continue;
+        const far = tg.isLine
+          ? Math.max(Math.hypot(tg.x - focusX, tg.z - focusZ), Math.hypot(tg.x + tg.dirX * tg.radius - focusX, tg.z + tg.dirZ * tg.radius - focusZ))
+          : Math.hypot(tg.x - focusX, tg.z - focusZ) + tg.radius;
+        reach = Math.max(reach, far);
+      }
+      const wanted = 1 + Math.min(TELEGRAPH_KIT.cameraBackoff, Math.max(0, (reach - CAMERA_FRAME_REACH) / CAMERA_FRAME_REACH));
+      self.camBackoff += (wanted - self.camBackoff) * (1 - Math.exp(-3 * dt));
+      _vecA.set(focusX, 15.8 * self.camBackoff, focusZ + 16.5 * self.camBackoff);
       _vecB.set(focusX, 0.7, focusZ);
     }
   }

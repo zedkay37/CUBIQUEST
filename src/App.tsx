@@ -26,6 +26,7 @@ import { INGREDIENT_LIST, RECIPE_BY_ID, SPECIES, STAGE_BY_ID, STAGES } from './g
 import {
   applyExpeditionRewards,
   markFirstTimeSeen,
+  markHazardHintSeen,
   buildPreviewSave,
   claimAchievementReward,
   claimQuestReward,
@@ -205,6 +206,12 @@ export default function App() {
         setSave(next);
         setFirstTimeTip(kind);
       },
+      onHazardHint: (key) => {
+        if (previewRef.current) return;
+        const next = markHazardHintSeen(saveRef.current, key);
+        saveRef.current = next;
+        setSave(next);
+      },
       onExpeditionComplete: (result) => {
         const stage = activeStageRef.current;
         if (!stage) return;
@@ -322,6 +329,7 @@ export default function App() {
       setPlayMode('expedition');
       setScreenState('playing');
       document.body.dataset.state = 'playing';
+      engineRef.current?.setHazardHintCounts(saveRef.current.hazardHintsSeen);
       engineRef.current?.startExpedition(
         stage,
         getSquadCreatures(saveRef.current),

@@ -14,8 +14,8 @@ import { clearGroup, loadCampScene, setPotVisual } from './engine/camp';
 import { _color, _dummy, BOLT_POOL_SIZE, PARTICLE_POOL_SIZE, WEATHER_COUNT } from './engine/constants';
 import { playEvolutionSequence } from './engine/evolution';
 import { createCubeMeshes } from './engine/cubeFx';
-import { DODGE_KIT } from './balance';
-import { getNextHazardImpact } from './engine/fx';
+import { DODGE_KIT, TELEGRAPH_KIT } from './balance';
+import { getNextHazardImpact, keepOutOfHazards } from './engine/fx';
 import type { CastContext } from './engine/cubes';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
@@ -182,6 +182,9 @@ export class VoxelEngine {
   /** Ralenti du Trio (temps réel restant) et dernier déclenchement. */
   slowMoTimer = 0;
   lastSlowMoAt = -10;
+  /** Recul de la caméra (1 = cadrage normal) quand une zone de danger sort du cadre. */
+  camBackoff = 1;
+  hazardHintCounts: Record<string, number> = {};
   bannerText: string | null = null;
   bannerTimer = 0;
   expeditionEnded = false;
@@ -315,6 +318,8 @@ export class VoxelEngine {
 
     // Zero-GC 3D Floating Combat Text Pool
     this.floatingText = new FloatingTextPool(this.fxGroup, 28);
+    // Aucun texte flottant ne recouvre une zone de danger : il est poussé au bord de la zone
+    this.floatingText.relocate = (p) => keepOutOfHazards(this, p);
 
     // Pooled Biome Weather InstancedMesh (petals / rain / embers / astral shards)
     const wGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -440,6 +445,21 @@ export class VoxelEngine {
     if (this.firstTimeSeen.has(kind)) return;
     this.firstTimeSeen.add(kind);
     this.callbacks.onFirstTime?.(kind);
+  }
+
+  /** Combien de fois chaque consigne d'attaque a déjà été montrée (sauvegarde) ; fourni par l'interface. */
+  public setHazardHintCounts(counts: Record<string, number>): void {
+    this.hazardHintCounts = { ...counts };
+  }
+
+  /** Consigne écrite d'une attaque (« Collez-vous au boss ! ») : seulement les premières fois. */
+  showHazardHint(key: string, text: string, seconds: number): void {
+    const seen = this.hazardHintCounts[key] ?? 0;
+    if (seen >= TELEGRAPH_KIT.hintShows) return;
+    this.hazardHintCounts[key] = seen + 1;
+    this.bannerText = text;
+    this.bannerTimer = seconds;
+    this.callbacks.onHazardHint?.(key);
   }
 
   /** Délai avant le prochain impact ennemi annoncé qui toucherait un allié là où il est, ou null. */

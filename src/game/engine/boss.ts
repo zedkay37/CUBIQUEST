@@ -24,6 +24,7 @@ import {
   spawnShockwaveRing,
 } from './fx';
 import { emitHudSnapshot } from './hud';
+import { TELEGRAPH_KIT } from '../balance';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 import { FR } from '../../i18n/fr';
@@ -64,7 +65,18 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
   const phase = enemy.bossPhase;
   // Rotation des attaques selon le kit du boss (données : StageDef.bossKit)
   const kitDef = BOSS_KITS[self.activeStage.bossKit ?? 'classic'];
-  const cycle = kitDef.cycle[phase === 1 ? 0 : 1];          const pattern = cycle[enemy.bossPatternIndex % cycle.length];
+  const cycle = kitDef.cycle[phase === 1 ? 0 : 1];
+  const pattern = cycle[enemy.bossPatternIndex % cycle.length];
+  // Jamais plus de trois zones de danger à la fois (cinq avec la pluie de météores) : le boss attend
+  const activeZones = self.telegraphs.filter((tg) => tg.isEnemyHazard).length;
+  const adding = pattern === 2 ? (phase === 3 ? 4 : 3) : pattern === 1 ? 2 : 1;
+  const cap = pattern === 2 ? TELEGRAPH_KIT.maxZonesMeteor : TELEGRAPH_KIT.maxZones;
+  if (activeZones > 0 && activeZones + adding > cap) {
+    enemy.telegraphing = false;
+    enemy.hasAttackToken = false;
+    enemy.skillCooldown = 0.3;
+    return;
+  }
   self.telemetry.castsByPhase[phase - 1] += 1;
   if (!self.telemetry.patternsByPhase[phase - 1].includes(pattern)) {
     self.telemetry.patternsByPhase[phase - 1].push(pattern);
@@ -112,7 +124,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
           });
         }
       }
-    });
+    }, { phase });
   } else if (pattern === 1) {
     // Pattern 1: Double Cross Line Charge (2 perpendicular red sight-lines!)
     const dirX = dx / dist;
@@ -137,7 +149,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
           applyDamageToActor(self, ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F4B942');
         }
       }
-    });
+    }, { phase });
     // Primary forward boss dash
     spawnEnemyTelegraph(self, bx, bz, chargeLen, windup, true, dirX, dirZ, () => {
       enemy.telegraphing = false;
@@ -160,7 +172,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
           applyDamageToActor(self, ally, Math.round(enemy.atk * 1.6), enemy, true, false, '#F43F5E');
         }
       }
-    });
+    }, { phase });
   } else if (pattern === 2) {
     // Pattern 2: Sequential Meteor Volley (3 staggered impact circles on squad!)
     const living = self.allies.filter((a) => !a.fainted);
@@ -186,7 +198,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
             applyDamageToActor(self, ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F97316');
           }
         }
-      });
+      }, { phase });
     }
   } else if (pattern === 3) {
     // Anneau (kit Givre à l'origine) : couronne autour du boss, habillée par le thème du kit.
@@ -202,8 +214,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
     const bx = enemy.x;
     const bz = enemy.z;
     const hasFollowUp = phase >= 2;
-    self.bannerText = ringTheme.label;
-    self.bannerTimer = 1.4;
+    self.showHazardHint('ring', ringTheme.label, 1.4);
     spawnEnemyTelegraph(
       self,
       bx,
@@ -238,8 +249,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
           }
         }
         if (hasFollowUp) {
-          self.bannerText = FR.engine.contrecoupEloignezVous;
-          self.bannerTimer = 1.0;
+          self.showHazardHint('aftershock', FR.engine.contrecoupEloignezVous, 1.0);
           spawnEnemyTelegraph(
             self,
             bx,
@@ -288,11 +298,11 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
                 }
               }
             },
-            { color: ringTheme.telegraphColor },
+            { color: ringTheme.telegraphColor, phase },
           );
         }
       },
-      { innerRadius: inner, color: ringTheme.telegraphColor },
+      { innerRadius: inner, color: ringTheme.telegraphColor, phase },
     );
   } else if (pattern === 4) {
     // Rafale en ligne (kit Orage à l'origine) : les impacts « marchent » du boss vers sa cible.
@@ -306,8 +316,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
     const bz = enemy.z;
     // Les cercles se chevauchent : chaque allié n'encaisse qu'UN impact par rafale
     const struck = new Set<string>();
-    self.bannerText = strikeTheme.label;
-    self.bannerTimer = 1.4;
+    self.showHazardHint('strike', strikeTheme.label, 1.4);
     soundFx.playTelegraph();
     for (let k = 0; k < strikes; k++) {
       const sx = THREE.MathUtils.clamp(bx + dirX * (2.4 + k * 2.3), -ARENA_BOUND, ARENA_BOUND);
@@ -350,7 +359,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
             }
           }
         },
-        { color: strikeTheme.color, silent: true },
+        { color: strikeTheme.color, silent: true, phase },
       );
     }
   } else {
@@ -362,8 +371,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
     const bx = enemy.x;
     const bz = enemy.z;
     enemy.pullTimer = windup;
-    self.bannerText = eyeTheme.label;
-    self.bannerTimer = 1.5;
+    self.showHazardHint('eye', eyeTheme.label, 1.5);
     spawnEnemyTelegraph(
       self,
       bx,
@@ -396,7 +404,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
           }
         }
       },
-      { color: eyeTheme.color },
+      { color: eyeTheme.color, phase, shape: 'spiral' },
     );
   }
 }
