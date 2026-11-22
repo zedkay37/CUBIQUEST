@@ -54,6 +54,7 @@ import {
   updateTelegraphs,
 } from './engine/fx';
 import { advance, detectSoftwareGl, scheduleNextFrame } from './engine/loop';
+import { executeAllySkill, triggerAllySkill, triggerScatter, triggerUltimate } from './engine/skills';
 import type {
   ActiveProjectile,
   CampWanderer,
@@ -67,7 +68,7 @@ import type {
   WeatherKind,
   WeatherMote,
 } from './engine/types';
-import { calculateDamage, computeCreatureStats, computeUltimateCharge, getMoveModifiers } from './rules';
+import { calculateDamage, computeCreatureStats, getMoveModifiers } from './rules';
 import type {
   BiomeId,
   ControlMode,
@@ -1021,281 +1022,20 @@ export class VoxelEngine {
   }
 
   public triggerAllySkill(slotIndex: number): boolean {
-    if (
-      this.playMode !== 'expedition' ||
-      this.screenState !== 'playing' ||
-      this.expeditionEnded ||
-      this.bossIntroTimer > 0 // cinématique d'entrée : commandes gelées
-    ) {
-      return false;
-    }
-    const unit = this.allies[slotIndex];
-    if (!unit || unit.fainted || unit.skillCooldown > 0) return false;
-    this.executeAllySkill(unit);
-    this.emitHudSnapshot();
-    return true;
+    return triggerAllySkill(this, slotIndex);
   }
 
   public triggerScatter(): boolean {
-    if (
-      this.playMode !== 'expedition' ||
-      this.screenState !== 'playing' ||
-      this.expeditionEnded ||
-      this.bossIntroTimer > 0 ||
-      this.scatterCooldown > 0
-    ) {
-      return false;
-    }
-    this.scatterCooldown = this.scatterMaxCooldown;
-    soundFx.playScatter();
-
-    // Perfect Dodge check: if any enemy hazard telegraph is active right now, reward the squad!
-    const activeHazard = this.telegraphs.some((tg) => tg.isEnemyHazard);
-    if (activeHazard) {
-      this.perfectDodges += 1;
-      this.ultimateCharge = computeUltimateCharge(this.ultimateCharge, 14);
-      soundFx.playPerfectDodge();
-      const firstAlive = this.allies.find((a) => !a.fainted);
-      if (firstAlive) {
-        this.floatingText.spawn(firstAlive.x, 2.4, firstAlive.z, 'ESQUIVE PARFAITE !', '#38BDF8', 1.25, 1.05);
-      }
-    }
-
-    // Compute enemy centroid to dash AWAY from danger
-    let cx = 0;
-    let cz = 0;
-    const livingEnemies = this.enemies.filter((e) => !e.fainted && !e.removed);
-    if (livingEnemies.length > 0) {
-      for (const e of livingEnemies) {
-        cx += e.x;
-        cz += e.z;
-      }
-      cx /= livingEnemies.length;
-      cz /= livingEnemies.length;
-    }
-
-    this.allies.forEach((ally, idx) => {
-      if (ally.fainted) return;
-      let dx = ally.x - cx;
-      let dz = ally.z - cz;
-      const len = Math.hypot(dx, dz);
-      if (len < 0.2) {
-        const ang = (idx / 3) * Math.PI * 2 + 0.5;
-        dx = Math.cos(ang);
-        dz = Math.sin(ang);
-      } else {
-        dx /= len;
-        dz /= len;
-        const spread = (idx - 1) * 0.48;
-        const cos = Math.cos(spread);
-        const sin = Math.sin(spread);
-        const rx = dx * cos - dz * sin;
-        const rz = dx * sin + dz * cos;
-        dx = rx;
-        dz = rz;
-      }
-      ally.scatterDirX = dx;
-      ally.scatterDirZ = dz;
-      ally.scatterTimer = 0.42;
-      ally.invulnTimer = activeHazard ? 0.8 : 0.55;
-      ally.squashY = 1.24;
-      spawnParticleBurst(this, ally.x, 0.5, ally.z, activeHazard ? '#38BDF8' : '#FAF7F0', 10, 4.2);
-    });
-
-    this.emitHudSnapshot();
-    return true;
+    return triggerScatter(this);
   }
 
-  /**
-   * V0.2 Squad Ultimate: Cubi-Déchaînement (KeyR or HUD button at 100% charge)
-   */
   public triggerUltimate(): boolean {
-    if (
-      this.playMode !== 'expedition' ||
-      this.screenState !== 'playing' ||
-      this.expeditionEnded ||
-      this.bossIntroTimer > 0 ||
-      this.ultimateCharge < 100
-    ) {
-      return false;
-    }
-
-    const livingAllies = this.allies.filter((a) => !a.fainted);
-    if (livingAllies.length === 0) return false;
-
-    this.ultimateCharge = 0;
-    this.ultimatesUsed += 1;
-    soundFx.playUltimate();
-    this.hitstopTimer = 0.085;
-    this.trauma = Math.min(1, this.trauma + 0.7);
-    this.bannerText = 'CUBI-DÉCHAÎNEMENT !';
-    this.bannerTimer = 1.8;
-
-    let combinedAtk = 0;
-    for (const ally of livingAllies) {
-      combinedAtk += ally.atk;
-      ally.invulnTimer = Math.max(ally.invulnTimer, 0.9);
-      ally.squashY = 1.38;
-      const heal = Math.round(ally.maxHp * 0.22);
-      ally.hp = Math.min(ally.maxHp, ally.hp + heal);
-      spawnParticleBurst(this, ally.x, 1.0, ally.z, ally.rig.species.palette.accent, 18, 6.2);
-      this.floatingText.spawn(ally.x, 2.1, ally.z, `+${heal} PV`, '#4ADE80', 1.0, 0.9);
-      spawnShockwaveRing(this, ally.x, ally.z, 5.5, ally.rig.species.palette.accent);
-    }
-
-    const livingEnemies = this.enemies.filter((e) => !e.fainted && !e.removed);
-    if (livingEnemies.length > 0) {
-      let cx = 0;
-      let cz = 0;
-      for (const e of livingEnemies) {
-        cx += e.x;
-        cz += e.z;
-      }
-      cx /= livingEnemies.length;
-      cz /= livingEnemies.length;
-      spawnShockwaveRing(this, cx, cz, 8.5, '#F4B942');
-      spawnParticleBurst(this, cx, 1.2, cz, '#FFE066', 36, 7.4);
-      this.floatingText.spawn(cx, 2.9, cz, 'CUBI-DÉCHAÎNEMENT !', '#F4B942', 1.4, 1.15);
-
-      const leadAlly = livingAllies[0];
-      const baseUltDmg = Math.round(combinedAtk * 1.35);
-      for (const enemy of livingEnemies) {
-        applyDamageToActor(
-          this,
-          enemy,
-          baseUltDmg,
-          leadAlly,
-          true,
-          true,
-          '#F4B942',
-          leadAlly.rig.species.element,
-          true,
-        );
-      }
-    }
-
-    this.emitHudSnapshot();
-    return true;
+    return triggerUltimate(this);
   }
 
   public triggerCookBurstFx(colorHex: string): void {
     soundFx.playCookBubble();
     spawnParticleBurst(this, 0, 1.8, -1.2, colorHex, 22, 4.6);
-  }
-
-  executeAllySkill(unit: CombatActor): void {
-    const move = MOVES[unit.moveId] ?? MOVES.ember_burst;
-    const mods = getMoveModifiers(unit.moveStones);
-    unit.skillCooldown = unit.skillMaxCooldown;
-    unit.squashY = 1.28;
-    soundFx.playSkill(move.element);
-
-    const target = findNearestLiving(this, unit.x, unit.z, this.enemies);
-    const radius = move.aoeRadius * mods.radiusMult;
-
-    if (move.style === 'buff') {
-      unit.buffTimer = 8.0;
-      const healAmt = Math.round(unit.maxHp * 0.14);
-      unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
-      this.ultimateCharge = computeUltimateCharge(this.ultimateCharge, 8);
-      spawnParticleBurst(this, unit.x, 0.9, unit.z, move.color, 14, 4.0);
-      this.floatingText.spawn(unit.x, 2.0, unit.z, `+${healAmt} PV`, '#4ADE80', 0.95);
-
-      if (mods.shareRatio > 0) {
-        for (const mate of this.allies) {
-          if (mate.id !== unit.id && !mate.fainted) {
-            mate.buffTimer = Math.max(mate.buffTimer, 8.0 * mods.shareRatio + 2.0);
-            const sharedHeal = Math.round(healAmt * mods.shareRatio);
-            mate.hp = Math.min(mate.maxHp, mate.hp + sharedHeal);
-            spawnParticleBurst(this, mate.x, 0.9, mate.z, '#C084FC', 10, 3.4);
-            this.floatingText.spawn(mate.x, 2.0, mate.z, `+${sharedHeal} PV`, '#4ADE80', 0.85);
-          }
-        }
-      }
-      return;
-    }
-
-    if (move.style === 'projectile' && target) {
-      const dx = target.x - unit.x;
-      const dz = target.z - unit.z;
-      const dist = Math.max(0.01, Math.hypot(dx, dz));
-      unit.facing = Math.atan2(dx, dz);
-
-      const hit = calculateDamage(
-        unit.atk,
-        move,
-        target.rig.species.element,
-        unit.critRate,
-        unit.moveStones,
-      );
-      spawnProjectile(this, {
-        x: unit.x,
-        y: 0.9,
-        z: unit.z,
-        vx: (dx / dist) * 14.5,
-        vz: (dz / dist) * 14.5,
-        radius: 0.45,
-        life: 1.4,
-        fromAlly: true,
-        damage: hit.damage,
-        elementColor: move.color,
-        elementType: move.element,
-        isSkill: true,
-        aoeRadius: radius,
-        isCrit: hit.isCrit,
-        casterUnit: unit,
-      });
-      return;
-    }
-
-    if (move.style === 'dash' && target) {
-      const dx = target.x - unit.x;
-      const dz = target.z - unit.z;
-      const dist = Math.max(0.01, Math.hypot(dx, dz));
-      const dashDist = Math.min(dist, 5.2);
-      unit.x = THREE.MathUtils.clamp(unit.x + (dx / dist) * dashDist, -ARENA_BOUND, ARENA_BOUND);
-      unit.z = THREE.MathUtils.clamp(unit.z + (dz / dist) * dashDist, -ARENA_BOUND, ARENA_BOUND);
-      unit.facing = Math.atan2(dx, dz);
-      spawnParticleBurst(this, unit.x, 0.7, unit.z, move.color, 18, 5.4);
-    }
-
-    // Melee / AoE / Dash arrival impact
-    const centerX = move.style === 'aoe' && target && move.range > 5.5 ? target.x : unit.x;
-    const centerZ = move.style === 'aoe' && target && move.range > 5.5 ? target.z : unit.z;
-    spawnShockwaveRing(this, centerX, centerZ, radius, move.color);
-    spawnParticleBurst(this, centerX, 0.8, centerZ, move.color, 20, 5.6);
-
-    let hitAny = false;
-    for (const enemy of this.enemies) {
-      if (enemy.fainted || enemy.removed) continue;
-      const dist = Math.hypot(enemy.x - centerX, enemy.z - centerZ);
-      if (dist <= radius + (enemy.isBoss ? 1.1 : 0.6)) {
-        const res = calculateDamage(
-          unit.atk,
-          move,
-          enemy.rig.species.element,
-          unit.critRate,
-          unit.moveStones,
-        );
-        applyDamageToActor(
-          this,
-          enemy,
-          res.damage,
-          unit,
-          true,
-          res.isCrit,
-          move.color,
-          move.element,
-          true,
-        );
-        hitAny = true;
-      }
-    }
-
-    if (hitAny) {
-      this.hitstopTimer = Math.max(this.hitstopTimer, 0.045);
-      this.trauma = Math.min(1, this.trauma + 0.38);
-    }
   }
 
   /**
@@ -1444,7 +1184,7 @@ export class VoxelEngine {
       }
     }
     if (this.controlMode === 'auto' && this.ultimateCharge >= 100 && this.enemies.some((e) => !e.fainted && !e.removed)) {
-      this.triggerUltimate();
+      triggerUltimate(this);
     }
 
     this.updateAllies(dt, simDt);
@@ -1645,7 +1385,7 @@ export class VoxelEngine {
         const move = MOVES[ally.moveId] ?? MOVES.ember_burst;
         const dist = Math.hypot(target.x - ally.x, target.z - ally.z);
         if (move.style === 'buff' || dist <= move.range + 1.2) {
-          this.executeAllySkill(ally);
+          executeAllySkill(this, ally);
         }
       }
 
