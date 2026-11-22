@@ -52,7 +52,7 @@ interface Finding {
   text: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// nœud de l'arbre syntaxique : parcouru de façon générique, sans typer chaque forme
 type Node = any;
 
 function scan(file: string): Finding[] {

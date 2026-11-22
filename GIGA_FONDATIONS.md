@@ -81,11 +81,11 @@ Avant de déplacer, `updateExpedition` (850 lignes) a été coupée en six étap
 | Scène | Draw calls (overlay) | Triangles (overlay) | Maillages | dont projetant une ombre |
 | --- | --- | --- | --- | --- |
 | Camp | 162 | 10 220 | 117 | 66 |
-| volcano-3 | 104 à 137 | 9 812 à 10 082 | 125 | 58 |
+| volcano-3 | 103 à 147 | 9 442 à 10 082 | 125 | 58 |
 | tundra-3 | 234 à 291 | 12 052 à 12 724 | 190 | 108 |
-| canyon-3 | 240 à 318 | 12 636 à 13 902 | 192 | 113 |
+| canyon-3 | 159 à 318 | 11 576 à 13 902 | 192 | 113 |
 
-Colonnes « overlay » : trois relevés à quelques secondes d'écart, dans Edge sans affichage. Colonnes « maillages » : `npm run census`, au même instant d'un combat à graine fixe. **Avant et après sont identiques : aucune optimisation de rendu n'a été conservée.**
+Colonnes « overlay » : relevés à quelques secondes d'écart sur trois passes, dans Edge sans affichage ; en combat le nombre varie avec les ennemis encore debout. Colonnes « maillages » : `npm run census`, au même instant d'un combat à graine fixe. **Avant et après sont identiques : aucune optimisation de rendu n'a été conservée.**
 
 Les Cubimons font l'essentiel des appels : 143 des 190 maillages de tundra-3, une boîte par appel.
 
@@ -118,7 +118,7 @@ Conséquence : toute optimisation qui change le nombre d'objets three.js créés
 - Après une mise à jour du jeu, le navigateur ne retélécharge que le code du jeu (322 kB) ; three.js et l'interface restent en cache.
 - Non fait : charger les tiroirs du camp à la demande. Cela changerait leur ouverture (un temps de chargement à la première fois).
 
-Les FPS ne sont pas mesurés ici (rendu logiciel) : à lire sur ton PC avec `?debug=1`.
+**FPS : relevé indicatif seulement.** Dans Edge sans affichage, sur cette machine, l'overlay donne 59 à 60 FPS et 0,7 à 2,5 ms par image sur les quatre scènes. « Image » mesure le calcul côté JavaScript (logique + envoi du rendu), pas le travail de la carte graphique. La mesure qui compte est la tienne, en jeu, avec `?debug=1`.
 
 ## 7. Textes centralisés
 
@@ -156,7 +156,7 @@ Les FPS ne sont pas mesurés ici (rendu logiciel) : à lire sur ton PC avec `?de
 ## 10. Reprise
 
 - **Changé** : outils (`golden`, `census`, `texts`, profils de `sim`), workflow GitHub, moteur et modèles découpés, overlay `?debug=1`, bundle en trois fichiers, textes dans `src/i18n/fr.ts`, `CLAUDE.md`, `README.md`, deux tests du moteur (55 tests au total).
-- **Non vérifié** : FPS réels, son, écrans listés en section 9.
+- **Non vérifié** : FPS en jeu réel, son, écrans listés en section 9.
 - **Retour arrière** : `git checkout <tag>` (section 2). Chaque section est aussi un ou plusieurs commits séparés.
 - **Ne pas toucher** : `docs/sim/golden-master.json` à la main ; `main`, `sauvegarde-v1`, `giga-update`, `giga-update-2` et les tags.
 - **Prochaine action sûre** : `npm install`, `npm run check`, puis `npm run dev` et `?debug=1`.
