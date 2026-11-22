@@ -126,6 +126,12 @@ export interface CombatActor {
   bossMaxPhases: 2 | 3;
   bossPatternIndex: number;
   pullTimer: number; // Œil du Cyclone : le boss aspire l'escouade tant que > 0
+  /** Gardien (module Satellites) : identifiant de son boss, sinon null. */
+  guardianOf: string | null;
+  /** Carapace de magma : valeur du bouclier au début de la phase (pour la barre du HUD). */
+  shieldMax: number;
+  /** Instant où le bouclier de la phase a été posé (mesure de sa durée de vie). */
+  shieldSince: number;
 }
 
 export interface CampWanderer {
@@ -176,6 +182,8 @@ export interface CombatTelemetry {
   phaseStartedAt: [number, number, number];
   /** Plus court délai d'annonce observé par phase de boss (-1 : aucune annonce). */
   minWindupByPhase: [number, number, number];
+  /** Carapace de magma : secondes avant que chaque bouclier soit brisé. */
+  shieldBreakSecs: number[];
   /** Instant de la mort du boss (-1 s'il a survécu). */
   bossDefeatedAt: number;
   /** Nombre d'attaques télégraphiées lancées par le boss dans chaque phase. */

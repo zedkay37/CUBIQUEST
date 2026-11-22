@@ -265,8 +265,15 @@ export const DEFAULT_EYE_THEME: StrikeTheme = {
 };
 
 export interface BossKitDef {
-  /** Rotation des attaques : [en phase 1, en phases 2 et 3]. */
-  cycle: [number[], number[]];
+  /**
+   * Rotation des attaques par phase : [phase 1, phase 2, phase 3]. Avec deux entrées, la seconde sert aux
+   * phases 2 et 3. Les mini-boss (niveaux 1 et 2 d'un biome) n'en prennent que la ou les premières attaques.
+   */
+  cycle: number[][];
+  /** Délai de la Frappe circulaire par phase (porté au minimum de la phase si plus court). */
+  slamWindup?: [number, number, number];
+  /** Mécanique propre au boss de biome (niveau 3 seulement). */
+  module?: 'shield' | 'satellites';
   ring?: RingTheme;
   strike?: StrikeTheme;
   eye?: StrikeTheme;
@@ -274,6 +281,18 @@ export interface BossKitDef {
 
 export const BOSS_KITS: Record<BossKit, BossKitDef> = {
   classic: { cycle: [[0], [0, 1, 2]] },
+  // S05.3 : un kit par biome, une leçon par boss (plan 5.5)
+  // Prairie : esquiver. Frappe circulaire lente, puis la pluie (de pétales) s'ajoute.
+  meadow: { cycle: [[0], [0, 2]], slamWindup: [1.1, 0.9, 0.8] },
+  // Rive : sortir d'un couloir. Lames d'eau en ligne, puis charges en croix.
+  shore: {
+    cycle: [[4], [4, 1]],
+    strike: { label: FR.balance.lamesDEauSortezDeLaLigne, color: '#38BDF8', fx: 'water', status: 'soaked', lightning: false },
+  },
+  // Crête : l'Éclat est nécessaire (Carapace de magma).
+  volcano: { cycle: [[0, 2], [0, 1, 2]], module: 'shield' },
+  // Sanctuaire : choisir sa cible, jouer en zone (Satellites).
+  sanctuary: { cycle: [[0, 4], [2, 4, 1]], module: 'satellites' },
   frost: { cycle: [[3, 0], [3, 1, 0, 2]] },
   storm: { cycle: [[4, 0], [4, 5, 1, 0]] },
   // Kit « Ambre » (Canyon d'Ambre) : aucune attaque nouvelle. Il recombine l'Anneau du kit Givre,
@@ -299,6 +318,27 @@ export const BOSS_KITS: Record<BossKit, BossKitDef> = {
       lightning: false,
     },
   },
+};
+
+/** Kit de boss par biome (le niveau peut le remplacer par `bossKit`). */
+export const BIOME_BOSS_KITS: Record<string, BossKit> = {
+  meadow: 'meadow',
+  shore: 'shore',
+  volcano: 'volcano',
+  sanctuary: 'sanctuary',
+  tundra: 'frost',
+  stormpeak: 'storm',
+  canyon: 'amber',
+};
+
+/** Modules de boss (S05.3), génériques : aucun cas particulier par espèce dans le moteur. */
+export const BOSS_MODULES = {
+  /** Carapace de magma : bouclier au début de chaque phase. */
+  shield: { hpRatio: 0.18, burstFactor: 3, attackSpeedBonus: 0.2 },
+  /** Satellites : deux gardiens en phases 2 et 3, le boss subit moitié moins tant qu'un gardien tient. */
+  satellites: { count: 2, hpRatio: 0.06, damageTakenMult: 0.5 },
+  /** Changement de phase : boss invulnérable, puis silencieux. */
+  phaseShift: { invuln: 0.8, silence: 1.0 },
 };
 
 /** Kit de boss « Orage » (StageDef.bossKit = 'storm'). Même convention que FROST_KIT. */

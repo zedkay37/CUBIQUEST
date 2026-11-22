@@ -1,4 +1,4 @@
-import { STAGE_TUNING } from './balance';
+import { BIOME_BOSS_KITS, STAGE_TUNING } from './balance';
 import type {
   AchievementDef,
   BiomeDef,
@@ -2582,9 +2582,12 @@ const RAW_STAGES: StageDef[] = [
  * Niveaux du jeu. Les multiplicateurs d'équilibrage (PV / attaque des ennemis, PV du boss)
  * viennent exclusivement de STAGE_TUNING (balance.ts) : un niveau sans entrée garde la formule d'origine.
  */
-export const STAGES: StageDef[] = RAW_STAGES.map((stage) =>
-  STAGE_TUNING[stage.id] ? { ...stage, ...STAGE_TUNING[stage.id] } : stage,
-);
+export const STAGES: StageDef[] = RAW_STAGES.map((stage) => ({
+  ...stage,
+  ...(STAGE_TUNING[stage.id] ?? {}),
+  // S05.3 : chaque biome a son kit de boss (un niveau peut le préciser lui-même)
+  bossKit: stage.bossKit ?? BIOME_BOSS_KITS[stage.biomeId],
+}));
 
 /** Index du premier niveau des biomes de la Giga Update (Toundra Boréale). */
 export const FRONTIER_STAGE_INDEX = STAGES.findIndex((s) => s.biomeId === 'tundra');

@@ -43,6 +43,8 @@ export function emitHudSnapshot(self: VoxelEngine): void {
           maxPhases: boss.bossMaxPhases,
           telegraphing: boss.telegraphing,
           statuses: Object.keys(boss.statuses) as StatusKind[],
+          shield: boss.shieldHp,
+          shieldMax: boss.shieldMax,
         }
       : null,
     units: self.allies.map((a) => {

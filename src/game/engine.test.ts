@@ -12,6 +12,7 @@ import { createOwnedCreature } from './rules';
 import type { OwnedCreature, StageDef } from './types';
 import { VoxelEngine } from './VoxelEngine';
 import { DANGER } from './styleGuide';
+import { bossCycle } from './engine/boss';
 import { newCast } from './engine/cubes';
 import { applyDamageToActor } from './engine/damage';
 import { clearProjectilesAndTelegraphs, spawnEnemyTelegraph } from './engine/fx';
@@ -557,4 +558,49 @@ test('Annonces: la consigne écrite d’une attaque ne s’affiche que deux fois
   h.engine.showHazardHint('eye', 'texte', 1);
   assert.deepEqual(shown, ['ring', 'ring', 'eye']);
   h.engine.dispose();
+});
+
+test('Boss: mini-boss (une puis deux attaques), modules Carapace et Satellites, changement de phase', () => {
+  const kit = { cycle: [[0], [0, 2]] };
+  assert.deepEqual(bossCycle(1, kit, 1), [0]);
+  assert.deepEqual(bossCycle(2, kit, 2), [0, 2]);
+  assert.deepEqual(bossCycle(3, { cycle: [[4], [4, 1]] }, 3), [4, 1]);
+  withSeededRandom(14, () => {
+    const h = makeHarness();
+    // Crête, niveau 3 : bouclier de 18 % dès l'arrivée du boss
+    h.engine.setScreenState('playing');
+    h.engine.startExpedition(STAGE_BY_ID['volcano-3'], h.squad(STAGE_BY_ID['volcano-3']), [], 'semi');
+    h.run(120, () => h.engine.enemies.some((e) => e.isBoss));
+    const boss = h.engine.enemies.find((e) => e.isBoss)!;
+    assert.equal(boss.shieldHp, Math.round(boss.maxHp * 0.18));
+    // un coup qui fait éclater un cube compte triple contre le bouclier
+    const caster = h.engine.allies[0];
+    boss.cube = { element: caster.rig.species.element === 'fire' ? 'water' : 'fire', age: 5, remaining: 3 };
+    const before = boss.shieldHp;
+    boss.invulnTimer = 0;
+    applyDamageToActor(h.engine, boss, 10, caster, true, false, '#fff', caster.rig.species.element, true);
+    assert.ok(before - boss.shieldHp >= 3 * 10, `bouclier ${before} -> ${boss.shieldHp}`);
+    h.engine.dispose();
+  });
+  withSeededRandom(15, () => {
+    const h = makeHarness();
+    h.engine.setScreenState('playing');
+    h.engine.startExpedition(STAGE_BY_ID['sanctuary-3'], h.squad(STAGE_BY_ID['sanctuary-3']), [], 'semi');
+    h.run(120, () => h.engine.enemies.some((e) => e.isBoss));
+    const boss = h.engine.enemies.find((e) => e.isBoss)!;
+    boss.invulnTimer = 0;
+    // passage en phase 2 : deux gardiens, boss invulnérable, zones annulées
+    boss.hp = Math.round(boss.maxHp * 0.52);
+    applyDamageToActor(h.engine, boss, Math.round(boss.maxHp * 0.05), h.engine.allies[0], false, false, '#fff');
+    assert.equal(boss.bossPhase, 2);
+    assert.equal(h.engine.enemies.filter((e) => e.guardianOf === boss.id).length, 2);
+    assert.ok(boss.invulnTimer > 0);
+    assert.equal(h.engine.telegraphs.filter((t) => t.isEnemyHazard).length, 0);
+    // tant qu'un gardien tient, le boss subit moitié moins
+    boss.invulnTimer = 0;
+    const hp = boss.hp;
+    applyDamageToActor(h.engine, boss, 100, h.engine.allies[0], false, false, '#fff');
+    assert.equal(hp - boss.hp, 50);
+    h.engine.dispose();
+  });
 });

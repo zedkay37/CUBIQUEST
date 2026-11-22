@@ -8,7 +8,9 @@ import {
   getMoveModifiers,
   getTypeEffectiveness,
 } from '../rules';
-import { DODGE_KIT, ULTIMATE_CHARGE } from '../balance';
+import { BOSS_MODULES, DODGE_KIT, ULTIMATE_CHARGE } from '../balance';
+import { grantBossShield, spawnGuardians } from './boss';
+import { clearHazards } from './fx';
 import type { ElementType } from '../types';
 import { getRigTopY } from '../voxelModels';
 import { applyCubeRule, gainUltimateCharge, newCast, type CastContext } from './cubes';
@@ -50,8 +52,13 @@ export function applyDamageToActor(
   }
 
   // Cubes d'élément : tout coup de sort allié sur un ennemi applique la règle (pose, Éclat, Trio)
+  self.lastCubeOutcome = null;
   if (attacker?.isAlly && isSkillHit && incomingElement && !target.isAlly) {
     dmg *= applyCubeRule(self, target, incomingElement, attacker, rawDamage, cast ?? newCast());
+  }
+  // Satellites : tant qu'un gardien tient, le boss subit moitié moins
+  if (target.isBoss && !target.isAlly && self.enemies.some((g) => g.guardianOf === target.id && !g.fainted && !g.removed)) {
+    dmg *= BOSS_MODULES.satellites.damageTakenMult;
   }
 
   const defMult = target.buffTimer > 0 ? 0.65 : 1.0;
@@ -59,9 +66,17 @@ export function applyDamageToActor(
 
   // Le bouclier (Rempart, Déchaînement Roche) absorbe d'abord les dégâts
   if (target.shieldHp > 0) {
-    const absorbed = Math.min(target.shieldHp, finalDmg);
+    // Carapace de magma : un coup qui déclenche un Éclat ou un Trio compte triple contre le bouclier
+    const factor = !target.isAlly && (self.lastCubeOutcome === 'burst' || self.lastCubeOutcome === 'trio') ? BOSS_MODULES.shield.burstFactor : 1;
+    const absorbed = Math.min(target.shieldHp, finalDmg * factor);
     target.shieldHp -= absorbed;
-    finalDmg -= absorbed;
+    finalDmg -= Math.ceil(absorbed / factor);
+    if (finalDmg < 0) finalDmg = 0;
+    if (target.shieldHp <= 0 && target.shieldMax > 0 && !target.isAlly) {
+      target.shieldHp = 0;
+      self.telemetry.shieldBreakSecs.push(self.expeditionElapsed - target.shieldSince);
+      spawnParticleBurst(self, target.x, 1.4, target.z, '#F97316', 24, 6);
+    }
   }
 
   if (finalDmg > 0) {
@@ -224,6 +239,11 @@ export function onBossPhaseShift(self: VoxelEngine, boss: CombatActor, phase: 2 
       ally.vz += (dz / dist) * 6.5;
     }
   }
-  boss.skillCooldown = 1.4;
+  // Changement de phase : boss invulnérable, zones actives annulées, aucune attaque pendant 1 s
+  boss.invulnTimer = Math.max(boss.invulnTimer, BOSS_MODULES.phaseShift.invuln);
+  clearHazards(self);
+  boss.skillCooldown = Math.max(1.4, BOSS_MODULES.phaseShift.silence);
+  grantBossShield(self, boss);
+  spawnGuardians(self, boss);
   emitHudSnapshot(self);
 }

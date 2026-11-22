@@ -153,6 +153,7 @@ export const FR = {
       premiereFoisFaible: 'Attends que le cube s’allume.',
       premiereFoisEclat: 'Éclat ! L’élément qui fait éclater décide de l’effet.',
       premiereFoisTrio: 'TRIO ! Un troisième élément sur un ennemi fêlé.',
+      carapace: 'Carapace de magma',
       eclatsTrios: (a: string | number, b: string | number) => `Éclats ${a} · Trios ${b}`,
       previewTrio: 'TRIO',
       previewEclat: 'ÉCLAT',
@@ -369,6 +370,7 @@ export const FR = {
     foudreEnRafaleSortezDeLa: 'Foudre en Rafale — sortez de la ligne !',
     ilDuCycloneEsquivePourFuir: 'Œil du Cyclone — Esquive pour fuir le centre !',
     anneauDAmbreCollezVousAu: 'Anneau d’Ambre — collez-vous au boss !',
+    lamesDEauSortezDeLaLigne: 'Lames d’eau — sortez de la ligne !',
     tourbillonDeSableEsquivePourFuir: 'Tourbillon de Sable — Esquive pour fuir le centre !',
   },
   catalog: {

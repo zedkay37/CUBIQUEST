@@ -131,6 +131,15 @@ export function ExpeditionHud({
                   <div className="absolute inset-y-0 left-1/4 w-[2px] bg-[#0F1420]/85 pointer-events-none" />
                 )}
               </div>
+              {/* Carapace de magma : bouclier du boss (les Éclats le brisent trois fois plus vite) */}
+              {hud.boss.shieldMax > 0 && hud.boss.shield > 0 && (
+                <div className="mt-1 h-1.5 w-full rounded bg-[#111622] overflow-hidden border border-[#39445A]" aria-label={FR.ui.expeditionHud.carapace}>
+                  <div
+                    className="h-full bg-[#F97316] origin-left"
+                    style={{ transform: `scaleX(${Math.max(0, Math.min(1, hud.boss.shield / hud.boss.shieldMax))})` }}
+                  />
+                </div>
+              )}
               {hud.boss.statuses.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] font-bold">
                   {hud.boss.statuses.map((st) => (

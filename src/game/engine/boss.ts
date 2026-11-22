@@ -24,7 +24,8 @@ import {
   spawnShockwaveRing,
 } from './fx';
 import { emitHudSnapshot } from './hud';
-import { TELEGRAPH_KIT } from '../balance';
+import { BOSS_MODULES, TELEGRAPH_KIT, type BossKitDef } from '../balance';
+import { spawnEnemyActor } from './expedition';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 import { FR } from '../../i18n/fr';
@@ -57,6 +58,50 @@ export function updateBossIntro(self: VoxelEngine, dt: number): void {
 }
 
 /**
+ * Rotation d'attaques du boss pour cette phase. Mini-boss (niveaux 1 et 2 d'un biome) : seulement la
+ * première (niveau 1) ou les deux premières (niveau 2) attaques du kit, dans l'ordre où elles apparaissent.
+ */
+export function bossCycle(stageNumber: number, kit: BossKitDef, phase: number): number[] {
+  if (stageNumber < 3) {
+    const order: number[] = [];
+    for (const p of kit.cycle.flat()) if (!order.includes(p)) order.push(p);
+    return order.slice(0, stageNumber);
+  }
+  return kit.cycle[Math.min(phase - 1, kit.cycle.length - 1)];
+}
+
+/** Module du boss de ce niveau (seulement pour le boss de biome, niveau 3). */
+export function bossModule(self: VoxelEngine): BossKitDef['module'] {
+  const stage = self.activeStage;
+  if (!stage || stage.stageNumber !== 3) return undefined;
+  return BOSS_KITS[stage.bossKit ?? 'classic'].module;
+}
+
+/** Carapace de magma : bouclier de 18 % des PV max au début de chaque phase. */
+export function grantBossShield(self: VoxelEngine, boss: CombatActor): void {
+  if (bossModule(self) !== 'shield') return;
+  boss.shieldMax = Math.round(boss.maxHp * BOSS_MODULES.shield.hpRatio);
+  boss.shieldHp = boss.shieldMax;
+  boss.shieldSince = self.expeditionElapsed;
+}
+
+/** Satellites : deux gardiens autour du boss (phases 2 et 3). */
+export function spawnGuardians(self: VoxelEngine, boss: CombatActor): void {
+  if (bossModule(self) !== 'satellites') return;
+  const cfg = BOSS_MODULES.satellites;
+  for (let k = 0; k < cfg.count; k++) {
+    const g = spawnEnemyActor(self, { speciesId: boss.speciesId, level: boss.level, ai: 'chaser' }, k, cfg.count);
+    g.maxHp = Math.max(1, Math.round(boss.maxHp * cfg.hpRatio));
+    g.hp = g.maxHp;
+    g.guardianOf = boss.id;
+    const ang = (k / cfg.count) * Math.PI * 2;
+    g.x = boss.x + Math.cos(ang) * 3;
+    g.z = boss.z + Math.sin(ang) * 3;
+    g.rig.root.position.set(g.x, 0, g.z);
+  }
+}
+
+/**
  * Lance la prochaine attaque télégraphiée du boss (patterns 0 à 5), selon le kit du niveau et la phase.
  * L'appelant a déjà réservé le jeton d'attaque.
  */
@@ -65,7 +110,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
   const phase = enemy.bossPhase;
   // Rotation des attaques selon le kit du boss (données : StageDef.bossKit)
   const kitDef = BOSS_KITS[self.activeStage.bossKit ?? 'classic'];
-  const cycle = kitDef.cycle[phase === 1 ? 0 : 1];
+  const cycle = bossCycle(self.activeStage.stageNumber, kitDef, phase);
   const pattern = cycle[enemy.bossPatternIndex % cycle.length];
   // Jamais plus de trois zones de danger à la fois (cinq avec la pluie de météores) : le boss attend
   const activeZones = self.telegraphs.filter((tg) => tg.isEnemyHazard).length;
@@ -82,12 +127,13 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
     self.telemetry.patternsByPhase[phase - 1].push(pattern);
   }
   enemy.bossPatternIndex += 1;
-  const cooldownAfter = phase === 3 ? 2.8 : phase === 2 ? 3.4 : 4.6;
+  // Carapace de magma : tant que le bouclier tient, le boss attaque 20 % plus vite
+  const cooldownAfter = (phase === 3 ? 2.8 : phase === 2 ? 3.4 : 4.6) / (enemy.shieldHp > 0 ? 1 + BOSS_MODULES.shield.attackSpeedBonus : 1);
 
   if (pattern === 0) {
     // Pattern 0: Circular AoE Slam (+ radial projectiles in Phase 2/3)
     const aoeRad = phase === 3 ? 4.6 : phase === 2 ? 4.2 : 3.6;
-    const windup = phase === 3 ? 0.62 : phase === 2 ? 0.72 : 0.82;
+    const windup = kitDef.slamWindup ? kitDef.slamWindup[phase - 1] : phase === 3 ? 0.62 : phase === 2 ? 0.72 : 0.82;
     const tx = target.x;
     const tz = target.z;
     spawnEnemyTelegraph(self, tx, tz, aoeRad, windup, false, 0, 0, () => {

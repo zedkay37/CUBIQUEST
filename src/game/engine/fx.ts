@@ -148,6 +148,22 @@ export function getNextHazardImpact(self: VoxelEngine): number | null {
   return next;
 }
 
+/** Annule les attaques annoncées en cours (changement de phase) : rien ne frappe, les ennemis sont libérés. */
+export function clearHazards(self: VoxelEngine): void {
+  for (let i = self.telegraphs.length - 1; i >= 0; i--) {
+    const tg = self.telegraphs[i];
+    if (!tg.isEnemyHazard) continue;
+    self.fxGroup.remove(tg.mesh);
+    disposeObject(self, tg.mesh);
+    self.telegraphs.splice(i, 1);
+  }
+  for (const e of self.enemies) {
+    e.telegraphing = false;
+    e.hasAttackToken = false;
+    e.pullTimer = 0;
+  }
+}
+
 export function clearProjectilesAndTelegraphs(self: VoxelEngine): void {
   for (const p of self.projectiles) {
     self.fxGroup.remove(p.mesh);

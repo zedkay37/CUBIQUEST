@@ -726,11 +726,8 @@ test('Équilibrage: chaque niveau a une entrée STAGE_TUNING, aux multiplicateur
     // PV du boss : multiplicateur supplémentaire, plafond plus large (les boss des premiers niveaux partent de très bas)
     assert.ok(t.bossHpMult >= 0.5 && t.bossHpMult <= 25, `${stage.id} : PV du boss ${t.bossHpMult}`);
     assert.equal(stage.waves.length, 3, stage.id);
-    if (stage.index >= FRONTIER_STAGE_INDEX) {
-      assert.ok(stage.bossKit && stage.bossKit !== 'classic' && BOSS_KITS[stage.bossKit], stage.id);
-    } else {
-      assert.equal(stage.bossKit, undefined, stage.id);
-    }
+    // S05.3 : chaque niveau a le kit de boss de son biome
+    assert.ok(stage.bossKit && stage.bossKit !== 'classic' && BOSS_KITS[stage.bossKit], stage.id);
   }
   // Contenu des 12 premiers niveaux : puissance conseillée, XP, Galets, boss, niveaux et IA des vagues.
   // S03 ne règle que les multiplicateurs de STAGE_TUNING ; ce contenu bouge en S05 (mettre à jour ici).

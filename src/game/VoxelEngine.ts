@@ -162,6 +162,8 @@ export class VoxelEngine {
   cubesPlaced = 0;
   /** Diagnostic (outils) : issues de la règle des cubes et Fêlures perdues sans Trio. */
   cubeOutcomeCounts: Record<string, number> = {};
+  /** Issue de la règle des cubes pour le coup en cours (bouclier de la Carapace de magma). */
+  lastCubeOutcome: string | null = null;
   cracksExpired = 0;
   /** Pas de charge de Déchaînement tant qu'il dure (après un Déchaînement). */
   ultimateLockTimer = 0;

@@ -5,12 +5,12 @@ import * as THREE from 'three';
 import { soundFx } from '../audio';
 import { BIOMES, MOVES, SPECIES } from '../catalog';
 import { computeCreatureStats, getMoveModifiers } from '../rules';
-import type { ControlMode, OwnedCreature, PowerStone, StageDef } from '../types';
+import type { ControlMode, OwnedCreature, PowerStone, StageDef, StageWaveDef } from '../types';
 import { attachWorldHpBar, buildBiomeEnvironment, buildVoxelCreature } from '../voxelModels';
 import { animateRigPose, updateEnemyDissolve } from './actors';
 import { updateAllies } from './allies';
 import { applyBiomeLighting, configureWeather } from './atmosphere';
-import { updateBossIntro } from './boss';
+import { grantBossShield, updateBossIntro } from './boss';
 import { clearGroup } from './camp';
 import { BOSS_INTRO_SEC } from './constants';
 import { updateEnemies } from './enemies';
@@ -24,7 +24,7 @@ import {
 } from './fx';
 import { emitHudSnapshot } from './hud';
 import { triggerUltimate, updatePendingUltimateHits } from './skills';
-import type { CombatTelemetry, ExpeditionResult } from './types';
+import type { CombatActor, CombatTelemetry, ExpeditionResult } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 import { FR } from '../../i18n/fr';
 
@@ -33,6 +33,7 @@ export function emptyTelemetry(): CombatTelemetry {
     bossAppearedAt: -1,
     phaseStartedAt: [-1, -1, -1],
     minWindupByPhase: [-1, -1, -1],
+    shieldBreakSecs: [],
     bossDefeatedAt: -1,
     castsByPhase: [0, 0, 0],
     patternsByPhase: [[], [], []],
@@ -180,6 +181,9 @@ export function startExpedition(
       crack: null,
       trioLockTimer: 0,
       cubeRipeFlash: 0,
+      guardianOf: null,
+      shieldMax: 0,
+      shieldSince: 0,
       bossPhase: 1,
       bossMaxPhases: 2,
       bossPatternIndex: 0,
@@ -210,87 +214,7 @@ export function spawnWave(self: VoxelEngine, index: number): void {
     : FR.engine.vague(index + 1, self.activeStage.waves.length);
   self.bannerTimer = 2.4;
 
-  const stageHpMult = self.activeStage.enemyHpMult ?? 1;
-  const stageAtkMult = self.activeStage.enemyAtkMult ?? 1;
-  const stageBossHpMult = self.activeStage.bossHpMult ?? 1;
-  wave.enemies.forEach((def, i) => {
-    const species = SPECIES[def.speciesId] ?? SPECIES.bourgeon;
-    const isBoss = Boolean(def.isBoss);
-    const scaleMult = isBoss ? 1.48 : 0.96;
-    const rig = buildVoxelCreature(species.id, species.scale * scaleMult);
-    attachWorldHpBar(rig, true, isBoss);
-
-    const spreadZ = (i - (wave.enemies.length - 1) / 2) * 3.8;
-    const spawnX = 8.0 + (isBoss ? 2.2 : (i % 2) * 1.8);
-    const spawnZ = spreadZ;
-    rig.root.position.set(spawnX, 0, spawnZ);
-    self.actorsGroup.add(rig.root);
-
-    // Balanced enemy stats so Level 1 is genuinely winnable and later stages scale meaningfully
-    const levelScale = 1 + (def.level - 1) * 0.14;
-    const maxHp = Math.round(species.baseHp * levelScale * (isBoss ? 3.4 * stageBossHpMult : 1.15) * stageHpMult);
-    const atk = Math.round(
-      species.baseAtk * (0.42 + (def.level - 1) * 0.055) * (isBoss ? 1.45 : 0.9) * stageAtkMult,
-    );
-
-    const isFinalBiomeBoss = isBoss && self.activeStage?.stageNumber === 3;
-    self.enemies.push({
-      id: `enemy_${index}_${i}_${Math.random().toString(36).slice(2, 6)}`,
-      isAlly: false,
-      isBoss,
-      ai: def.ai,
-      speciesId: species.id,
-      name: isBoss ? FR.engine.boss(species.name) : species.name,
-      level: def.level,
-      rig,
-      x: spawnX,
-      z: spawnZ,
-      vx: 0,
-      vz: 0,
-      facing: -Math.PI / 2,
-      hp: maxHp,
-      maxHp,
-      shieldHp: 0,
-      atk,
-      critRate: 5,
-      hitHeal: 0,
-      statusRes: isBoss ? 25 : 0,
-      moveSpeed: species.moveSpeed * (isBoss ? 0.72 : 0.78),
-      attackRange: isBoss ? 4.4 : def.ai === 'kiter' ? 6.8 : 2.7,
-      moveId: species.moveId,
-      runes: [],
-      basicCooldown: 1.0 + i * 0.35,
-      skillCooldown: isBoss ? 3.2 : 4.2,
-      skillMaxCooldown: isBoss ? 5.0 : 5.5,
-      buffTimer: 0,
-      flashTimer: 0,
-      invulnTimer: 0,
-      stunTimer: 0,
-      dodgeTimer: 0,
-      dodgeDirX: 0,
-      dodgeDirZ: 0,
-      walkPhase: 0,
-      squashY: 1,
-      fainted: false,
-      reviveTimer: 0,
-      koDissolveTimer: 0,
-      removed: false,
-      telegraphing: false,
-      aiCooldown: 1.4 + i * 0.5,
-      hasAttackToken: false,
-      statuses: {},
-      cube: null,
-      crack: null,
-      trioLockTimer: 0,
-      cubeRipeFlash: 0,
-      bossPhase: 1,
-      bossMaxPhases: isFinalBiomeBoss ? 3 : 2,
-      bossPatternIndex: 0,
-      pullTimer: 0,
-    });
-
-    spawnParticleBurst(self, spawnX, 0.8, spawnZ, species.palette.accent, isBoss ? 20 : 10, 4.5);
-  });
+  wave.enemies.forEach((def, i) => spawnEnemyActor(self, def, i, wave.enemies.length));
 
   // Entrée de boss : il tombe du ciel pendant une courte cinématique (combat gelé)
   const boss = isBossWave ? self.enemies.find((e) => e.isBoss && !e.removed && !e.fainted) : undefined;
@@ -481,5 +405,102 @@ export function updateEndSequence(self: VoxelEngine, dt: number): void {
     self.confettiTimer = self.resultSent ? 0.5 : 0.14;
     spawnConfetti(self, cx / n + (Math.random() - 0.5) * 7, 1.2 + Math.random() * 1.5, cz / n + (Math.random() - 0.5) * 5, 9);
     if (!self.resultSent) soundFx.playConfettiPop();
+  }
+}
+
+/** Crée un ennemi (vague ou gardien) à partir de sa définition et l'ajoute au combat. */
+export function spawnEnemyActor(
+  self: VoxelEngine,
+  def: StageWaveDef['enemies'][number],
+  i: number,
+  count: number,
+): CombatActor {
+  const stage = self.activeStage!;
+  const stageHpMult = stage.enemyHpMult ?? 1;
+  const stageAtkMult = stage.enemyAtkMult ?? 1;
+  const stageBossHpMult = stage.bossHpMult ?? 1;
+  {
+    const species = SPECIES[def.speciesId] ?? SPECIES.bourgeon;
+    const isBoss = Boolean(def.isBoss);
+    const scaleMult = isBoss ? 1.48 : 0.96;
+    const rig = buildVoxelCreature(species.id, species.scale * scaleMult);
+    attachWorldHpBar(rig, true, isBoss);
+
+    const spreadZ = (i - (count - 1) / 2) * 3.8;
+    const spawnX = 8.0 + (isBoss ? 2.2 : (i % 2) * 1.8);
+    const spawnZ = spreadZ;
+    rig.root.position.set(spawnX, 0, spawnZ);
+    self.actorsGroup.add(rig.root);
+
+    // Balanced enemy stats so Level 1 is genuinely winnable and later stages scale meaningfully
+    const levelScale = 1 + (def.level - 1) * 0.14;
+    const maxHp = Math.round(species.baseHp * levelScale * (isBoss ? 3.4 * stageBossHpMult : 1.15) * stageHpMult);
+    const atk = Math.round(
+      species.baseAtk * (0.42 + (def.level - 1) * 0.055) * (isBoss ? 1.45 : 0.9) * stageAtkMult,
+    );
+
+    const isFinalBiomeBoss = isBoss && self.activeStage?.stageNumber === 3;
+    const actor: CombatActor = {
+      id: `enemy_${self.waveIndex}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+      isAlly: false,
+      isBoss,
+      ai: def.ai,
+      speciesId: species.id,
+      name: isBoss ? FR.engine.boss(species.name) : species.name,
+      level: def.level,
+      rig,
+      x: spawnX,
+      z: spawnZ,
+      vx: 0,
+      vz: 0,
+      facing: -Math.PI / 2,
+      hp: maxHp,
+      maxHp,
+      shieldHp: 0,
+      atk,
+      critRate: 5,
+      hitHeal: 0,
+      statusRes: isBoss ? 25 : 0,
+      moveSpeed: species.moveSpeed * (isBoss ? 0.72 : 0.78),
+      attackRange: isBoss ? 4.4 : def.ai === 'kiter' ? 6.8 : 2.7,
+      moveId: species.moveId,
+      runes: [],
+      basicCooldown: 1.0 + i * 0.35,
+      skillCooldown: isBoss ? 3.2 : 4.2,
+      skillMaxCooldown: isBoss ? 5.0 : 5.5,
+      buffTimer: 0,
+      flashTimer: 0,
+      invulnTimer: 0,
+      stunTimer: 0,
+      dodgeTimer: 0,
+      dodgeDirX: 0,
+      dodgeDirZ: 0,
+      walkPhase: 0,
+      squashY: 1,
+      fainted: false,
+      reviveTimer: 0,
+      koDissolveTimer: 0,
+      removed: false,
+      telegraphing: false,
+      aiCooldown: 1.4 + i * 0.5,
+      hasAttackToken: false,
+      statuses: {},
+      cube: null,
+      crack: null,
+      trioLockTimer: 0,
+      cubeRipeFlash: 0,
+      guardianOf: null,
+      shieldMax: 0,
+      shieldSince: 0,
+      bossPhase: 1,
+      bossMaxPhases: isFinalBiomeBoss ? 3 : 2,
+      bossPatternIndex: 0,
+      pullTimer: 0,
+    };
+    self.enemies.push(actor);
+    if (isBoss) grantBossShield(self, actor);
+
+    spawnParticleBurst(self, spawnX, 0.8, spawnZ, species.palette.accent, isBoss ? 20 : 10, 4.5);
+    return actor;
   }
 }

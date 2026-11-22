@@ -42,7 +42,7 @@ export type IngredientRarity = 'common' | 'rare' | 'mystic';
 export type BiomeId = 'meadow' | 'shore' | 'volcano' | 'sanctuary' | 'tundra' | 'stormpeak' | 'canyon';
 
 /** Jeu de mécaniques télégraphiées d'un boss (voir VoxelEngine, IA 'boss'). */
-export type BossKit = 'classic' | 'frost' | 'storm' | 'amber';
+export type BossKit = 'classic' | 'meadow' | 'shore' | 'volcano' | 'sanctuary' | 'frost' | 'storm' | 'amber';
 
 export type ControlMode = 'semi' | 'auto' | 'manual';
 
@@ -388,6 +388,9 @@ export interface ExpeditionHudSnapshot {
     phase: 1 | 2 | 3;
     maxPhases: 2 | 3;
     statuses: StatusKind[];
+    /** Carapace de magma : bouclier restant et bouclier de la phase (0 si aucun). */
+    shield: number;
+    shieldMax: number;
   } | null;
   damageDealt: number;
   bannerText: string | null;
