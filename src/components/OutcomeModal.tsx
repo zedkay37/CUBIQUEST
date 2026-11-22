@@ -5,6 +5,7 @@ import { INGREDIENTS, MOVE_STONES, POT_TIER_META } from '../game/catalog';
 import { computeVictoryStars } from '../game/rules';
 import type { ExpeditionOutcome } from '../game/types';
 import { StoneIcon } from './Icons';
+import { FR } from '../i18n/fr';
 
 interface OutcomeModalProps {
   outcome: ExpeditionOutcome;
@@ -15,7 +16,7 @@ interface OutcomeModalProps {
 }
 
 const CONFETTI_COLORS = ['#F4B942', '#E85D3F', '#2FB97A', '#38BDF8', '#C084FC', '#FAF7F0'];
-const STAR_LABELS = ['Victoire', '2 réactions élémentaires', 'Ultime ou esquive parfaite'];
+const STAR_LABELS = [FR.ui.outcomeModal.victoire, FR.ui.outcomeModal.t2ReactionsElementaires, FR.ui.outcomeModal.ultimeOuEsquiveParfaite];
 
 /** Compteur qui grimpe jusqu'à sa valeur (ease-out) pour donner du poids aux chiffres. */
 function useCountUp(target: number, delayMs = 0, durationMs = 850): number {
@@ -127,7 +128,7 @@ export function OutcomeModal({
             <div
               className="mt-2 flex items-end justify-center gap-2"
               role="img"
-              aria-label={`${stars} étoile${stars > 1 ? 's' : ''} sur 3`}
+              aria-label={FR.ui.outcomeModal.etoileSur3(stars, stars > 1 ? 's' : '')}
             >
               {[0, 1, 2].map((i) => {
                 const earned = i < stars;
@@ -161,7 +162,7 @@ export function OutcomeModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.12 }}
           >
-            {outcome.victory ? 'Expédition réussie !' : 'Escouade vaincue'}
+            {outcome.victory ? FR.ui.outcomeModal.expeditionReussie : FR.ui.outcomeModal.escouadeVaincue}
           </motion.h2>
 
           {outcome.victory ? (
@@ -175,8 +176,8 @@ export function OutcomeModal({
           ) : (
             <p className="mt-1 text-xs text-[#B8C2D1]">
               {outcome.bossHpPercentRemaining > 0 && outcome.bossHpPercentRemaining <= 35
-                ? 'Si près du but ! Gardez Dispersion pour ses attaques télégraphiées.'
-                : 'Renforcez vos Pierres de Pouvoir ou tentez une recrue à la Marmite.'}
+                ? FR.ui.outcomeModal.siPresDuButGardezDispersion
+                : FR.ui.outcomeModal.renforcezVosPierresDePouvoirOu}
             </p>
           )}
         </div>
@@ -189,7 +190,7 @@ export function OutcomeModal({
               className="rounded-xl bg-[#222A3A] border border-[#39445A] p-3 text-center"
             >
               <p className="text-[11px] uppercase tracking-wider text-[#B8C2D1]">
-                {outcome.victory ? 'Temps' : 'Vagues'}
+                {outcome.victory ? FR.ui.outcomeModal.temps : FR.ui.outcomeModal.vagues}
               </p>
               <p className="mt-1 font-mono-num text-lg font-bold text-[#FAF7F0]">
                 {outcome.victory
@@ -201,7 +202,7 @@ export function OutcomeModal({
               variants={itemVariants}
               className="rounded-xl bg-[#222A3A] border border-[#39445A] p-3 text-center"
             >
-              <p className="text-[11px] uppercase tracking-wider text-[#B8C2D1]">Dégâts</p>
+              <p className="text-[11px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.outcomeModal.degats}</p>
               <p className="mt-1 font-mono-num text-lg font-bold text-[#F4B942]">
                 {damageShown.toLocaleString('fr-FR')}
               </p>
@@ -211,7 +212,7 @@ export function OutcomeModal({
               className="rounded-xl bg-[#222A3A] border border-[#39445A] p-3 text-center"
             >
               <p className="text-[11px] uppercase tracking-wider text-[#B8C2D1]">
-                {outcome.victory ? 'XP / Unité' : 'PV Boss'}
+                {outcome.victory ? FR.ui.outcomeModal.xpUnite : FR.ui.outcomeModal.pvBoss}
               </p>
               <p className="mt-1 font-mono-num text-lg font-bold text-[#2FB97A]">
                 {outcome.victory ? `+${xpShown}` : `${outcome.bossHpPercentRemaining}%`}
@@ -225,16 +226,16 @@ export function OutcomeModal({
             className="mt-2.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-mono-num text-[#B8C2D1]"
           >
             <span>
-              Réactions <strong className="text-[#F4B942]">{outcome.reactionsTriggered}</strong>
+              {FR.ui.outcomeModal.reactions}<strong className="text-[#F4B942]">{outcome.reactionsTriggered}</strong>
             </span>
             <span>
-              Ultimes <strong className="text-[#F4B942]">{outcome.ultimatesUsed}</strong>
+              {FR.ui.outcomeModal.ultimes}<strong className="text-[#F4B942]">{outcome.ultimatesUsed}</strong>
             </span>
             <span>
-              Esquives parfaites <strong className="text-[#38BDF8]">{outcome.perfectDodges}</strong>
+              {FR.ui.outcomeModal.esquivesParfaites}<strong className="text-[#38BDF8]">{outcome.perfectDodges}</strong>
             </span>
             <span>
-              Combo max <strong className="text-[#2FB97A]">×{outcome.maxCombo}</strong>
+              {FR.ui.outcomeModal.comboMax}<strong className="text-[#2FB97A]">×{outcome.maxCombo}</strong>
             </span>
           </motion.div>
 
@@ -244,7 +245,7 @@ export function OutcomeModal({
               className="mt-3 rounded-xl border-2 border-[#F4B942] bg-[#F4B942]/12 px-4 py-2.5 text-center outcome-unlock-pulse"
             >
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#F4B942]">
-                Nouveau biome découvert
+                {FR.ui.outcomeModal.nouveauBiomeDecouvert}
               </p>
               <p className="font-display text-xl font-extrabold text-[#FAF7F0]">
                 {outcome.unlockedBiomeName}
@@ -260,7 +261,7 @@ export function OutcomeModal({
             {outcome.droppedIngredients.length > 0 && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1] mb-1.5">
-                  Ingrédients récoltés
+                  {FR.ui.outcomeModal.ingredientsRecoltes}
                 </p>
                 <div className="flex flex-wrap gap-2 text-xs">
                   {outcome.droppedIngredients.map((item, i) => {
@@ -293,7 +294,7 @@ export function OutcomeModal({
                   <div className="flex items-center gap-2 text-xs">
                     <StoneIcon kind={outcome.droppedStone.kind} size={20} />
                     <span>
-                      Pierre {outcome.droppedStone.kind === 'atk' ? 'ATQ' : 'PV'}{' '}
+                      {FR.ui.outcomeModal.pierre}{outcome.droppedStone.kind === 'atk' ? FR.ui.outcomeModal.atq : FR.ui.outcomeModal.pv}{' '}
                       <strong className="font-mono-num text-[#F4B942]">
                         +{outcome.droppedStone.power}
                       </strong>{' '}
@@ -314,25 +315,25 @@ export function OutcomeModal({
 
             {outcome.leveledUpNames.length > 0 && (
               <p className="text-xs text-[#2FB97A] font-semibold pt-1 border-t border-[#273145]">
-                Montée de niveau : {outcome.leveledUpNames.join(' · ')}
+                {FR.ui.outcomeModal.monteeDeNiveau}{outcome.leveledUpNames.join(' · ')}
               </p>
             )}
 
             {outcome.potReadyNow && (
               <p className="text-xs text-[#F4B942] font-bold pt-1 border-t border-[#273145]">
-                Votre plat dans la Marmite est prêt ! Rentrez au Camp pour accueillir la recrue.
+                {FR.ui.outcomeModal.votrePlatDansLaMarmiteEst}
               </p>
             )}
 
             {outcome.unlockedPotTier && (
               <p className="text-xs text-[#38BDF8] font-bold pt-1 border-t border-[#273145]">
-                Nouveau chaudron débloqué : {POT_TIER_META[outcome.unlockedPotTier].label} !
+                {FR.ui.outcomeModal.nouveauChaudronDebloque}{POT_TIER_META[outcome.unlockedPotTier].label} !
               </p>
             )}
 
             {outcome.unlockedNextStageName && (
               <p className="text-xs text-[#FAF7F0] pt-1 border-t border-[#273145]">
-                Nouveau niveau ouvert : <strong>{outcome.unlockedNextStageName}</strong>
+                {FR.ui.outcomeModal.nouveauNiveauOuvert}<strong>{outcome.unlockedNextStageName}</strong>
               </p>
             )}
           </motion.div>
@@ -344,7 +345,7 @@ export function OutcomeModal({
               onClick={onReturnCamp}
               className="voxel-btn cursor-pointer px-4 py-2.5 rounded-xl bg-[#222A3A] hover:bg-[#2C364A] text-[#FAF7F0] font-semibold text-sm border-2 border-[#39445A] whitespace-nowrap shrink-0"
             >
-              Retour au Camp
+              {FR.ui.outcomeModal.retourAuCamp}
             </button>
 
             {outcome.victory && hasNextStage ? (
@@ -354,7 +355,7 @@ export function OutcomeModal({
                 onClick={onNextStage}
                 className="voxel-btn cursor-pointer px-6 py-2.5 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-display font-bold text-sm border-2 border-[#141925] whitespace-nowrap shrink-0"
               >
-                Niveau suivant
+                {FR.ui.outcomeModal.niveauSuivant}
               </button>
             ) : (
               <button
@@ -363,7 +364,7 @@ export function OutcomeModal({
                 onClick={onRetry}
                 className="voxel-btn cursor-pointer px-6 py-2.5 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-display font-bold text-sm border-2 border-[#141925] whitespace-nowrap shrink-0"
               >
-                {outcome.victory ? 'Rejouer le niveau' : 'Réessayer'}
+                {outcome.victory ? FR.ui.outcomeModal.rejouerLeNiveau : FR.ui.outcomeModal.reessayer}
               </button>
             )}
           </motion.div>

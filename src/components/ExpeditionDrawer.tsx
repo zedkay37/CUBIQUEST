@@ -4,6 +4,7 @@ import { BIOME_ORDER, BIOMES, ELEMENT_META, INGREDIENTS, SPECIES, STAGES } from 
 import { computeSquadPower, isBiomeUnlocked } from '../game/rules';
 import type { BiomeId, SaveState, StageDef } from '../game/types';
 import { ElementIcon, VoxelCreatureAvatar } from './Icons';
+import { FR } from '../i18n/fr';
 
 interface ExpeditionDrawerProps {
   save: SaveState;
@@ -39,21 +40,21 @@ export function ExpeditionDrawer({
         <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-[#39445A]">
           <div>
             <h2 id="expedition-drawer-title" className="font-display text-xl sm:text-2xl font-bold">
-              Carte des Expéditions
+              {FR.ui.expeditionDrawer.carteDesExpeditions}
             </h2>
             <p className="text-xs text-[#B8C2D1]">
-              Puissance de votre escouade :{' '}
+              {FR.ui.expeditionDrawer.puissanceDeVotreEscouade}{' '}
               <strong className="font-mono-num text-[#F4B942]">
                 {squadPower.toLocaleString('fr-FR')}
               </strong>{' '}
-              · {save.completedStageIds.length}/{STAGES.length} niveaux vaincus
+              · {save.completedStageIds.length}/{STAGES.length}{FR.ui.expeditionDrawer.niveauxVaincus}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="voxel-btn cursor-pointer w-9 h-9 rounded-lg bg-[#222A3A] hover:bg-[#2E384E] border border-[#39445A] flex items-center justify-center"
-            aria-label="Fermer la carte des expéditions"
+            aria-label={FR.ui.expeditionDrawer.fermerLaCarteDesExpeditions}
           >
             <X className="w-4 h-4" />
           </button>
@@ -96,7 +97,7 @@ export function ExpeditionDrawer({
             <p className="text-xs text-[#B8C2D1] mb-2">{activeBiome.subtitle}</p>
             {!isBiomeUnlocked(save, selectedBiome) && biomeStages[0] && biomeStages[0].index > 0 && (
               <p className="text-xs font-semibold text-[#F4B942] mb-2">
-                Biome verrouillé : terminez « {STAGES[biomeStages[0].index - 1].name} » pour l’ouvrir.
+                {FR.ui.expeditionDrawer.biomeVerrouilleTerminez}{STAGES[biomeStages[0].index - 1].name}{FR.ui.expeditionDrawer.pourLOuvrir}
               </p>
             )}
             {biomeStages.map((stage) => {
@@ -122,7 +123,7 @@ export function ExpeditionDrawer({
                     <VoxelCreatureAvatar speciesId={boss.id} size={42} className="shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[11px] font-mono-num text-[#B8C2D1]">
-                        Niveau {stage.index + 1} · {completed ? 'Terminé' : locked ? 'Verrouillé' : 'Disponible'}
+                        {FR.ui.expeditionDrawer.niveau}{stage.index + 1} · {completed ? FR.ui.expeditionDrawer.termine : locked ? FR.ui.expeditionDrawer.verrouille : FR.ui.expeditionDrawer.disponible}
                       </p>
                       <p className="font-display font-bold text-sm sm:text-base text-[#FAF7F0] truncate">
                         {stage.name}
@@ -134,7 +135,7 @@ export function ExpeditionDrawer({
                       <Lock className="w-4 h-4 text-[#94A3B8] ml-auto" />
                     ) : (
                       <>
-                        <p className="text-[10px] uppercase text-[#B8C2D1]">Conseillé</p>
+                        <p className="text-[10px] uppercase text-[#B8C2D1]">{FR.ui.expeditionDrawer.conseille}</p>
                         <p
                           className={`font-mono-num text-sm font-bold ${
                             squadPower >= stage.recommendedPower ? 'text-[#2FB97A]' : 'text-[#F4B942]'
@@ -157,13 +158,13 @@ export function ExpeditionDrawer({
                 <VoxelCreatureAvatar speciesId={activeStage.bossSpeciesId} size={56} />
                 <div>
                   <p className="text-xs font-semibold text-[#B8C2D1]">
-                    Boss du niveau · {ELEMENT_META[SPECIES[activeStage.bossSpeciesId].element].label}
+                    {FR.ui.expeditionDrawer.bossDuNiveau}{ELEMENT_META[SPECIES[activeStage.bossSpeciesId].element].label}
                   </p>
                   <h3 className="font-display text-xl font-bold text-[#FAF7F0]">
                     {SPECIES[activeStage.bossSpeciesId].name}
                   </h3>
                   <p className="text-xs text-[#CBD5E1] mt-0.5">
-                    {activeStage.waves.length} vagues · XP de base{' '}
+                    {activeStage.waves.length}{FR.ui.expeditionDrawer.vaguesXpDeBase}{' '}
                     <span className="font-mono-num text-[#2FB97A]">+{activeStage.xpReward}</span>
                   </p>
                 </div>
@@ -171,7 +172,7 @@ export function ExpeditionDrawer({
 
               <div className="border-t border-[#283247] pt-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1] mb-2">
-                  Butin & Ingrédients
+                  {FR.ui.expeditionDrawer.butinIngredients}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {activeStage.dropIngredients.map((ingId) => {
@@ -192,9 +193,9 @@ export function ExpeditionDrawer({
                   })}
                 </div>
                 <p className="mt-2.5 text-xs text-[#B8C2D1]">
-                  Pierres de Pouvoir :{' '}
+                  {FR.ui.expeditionDrawer.pierresDePouvoir}{' '}
                   <strong className="font-mono-num text-[#F4B942]">
-                    +{activeStage.stonePowerRange[0]} à +{activeStage.stonePowerRange[1]}
+                    +{activeStage.stonePowerRange[0]}{FR.ui.expeditionDrawer.a}{activeStage.stonePowerRange[1]}
                   </strong>
                 </p>
               </div>
@@ -203,7 +204,7 @@ export function ExpeditionDrawer({
             <div className="space-y-2">
             {isStageLocked && activeStage.index > 0 && (
               <p className="text-xs font-semibold text-[#F4B942] text-center">
-                Niveau verrouillé : terminez d’abord « {STAGES[activeStage.index - 1].name} ».
+                {FR.ui.expeditionDrawer.niveauVerrouilleTerminezDAbord}{STAGES[activeStage.index - 1].name} ».
               </p>
             )}
             <button
@@ -213,7 +214,7 @@ export function ExpeditionDrawer({
               className="voxel-btn cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full py-3.5 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-display font-bold text-base border-2 border-[#141925] flex items-center justify-center gap-2"
             >
               <Play className="w-4 h-4 fill-current" />
-              <span>Lancer l’expédition</span>
+              <span>{FR.ui.expeditionDrawer.lancerLExpedition}</span>
             </button>
             </div>
           </div>

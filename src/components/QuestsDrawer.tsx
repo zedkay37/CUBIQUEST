@@ -17,6 +17,7 @@ import {
   importSaveFromJson,
 } from '../game/rules';
 import type { QuestReward, SaveState } from '../game/types';
+import { FR } from '../i18n/fr';
 
 type DrawerSection = 'missions' | 'achievements' | 'save';
 type AchievementFilter = 'all' | 'claimable' | 'completed';
@@ -41,13 +42,13 @@ function formatRewardSummary(reward: QuestReward): string {
   if (reward.powerStoneRange) {
     const rarityLabel =
       reward.guaranteedRarity === 'gold'
-        ? 'Or'
+        ? FR.ui.questsDrawer.or
         : reward.guaranteedRarity === 'silver'
-          ? 'Argent'
+          ? FR.ui.questsDrawer.argent
           : reward.guaranteedRarity === 'bronze'
-            ? 'Bronze'
-            : 'Aléatoire';
-    parts.push(`Pierre (${rarityLabel})`);
+            ? FR.ui.questsDrawer.bronze
+            : FR.ui.questsDrawer.aleatoire;
+    parts.push(FR.ui.questsDrawer.pierre(rarityLabel));
   }
   if (reward.moveStone) {
     parts.push(`+1 ${MOVE_STONES[reward.moveStone].name}`);
@@ -107,19 +108,19 @@ export function QuestsDrawer({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setFeedback({ kind: 'success', text: 'Fichier de sauvegarde téléchargé (.json).' });
+    setFeedback({ kind: 'success', text: FR.ui.questsDrawer.fichierDeSauvegardeTelechargeJson });
   };
 
   const handleCopyJson = async () => {
     try {
       await navigator.clipboard.writeText(exportSaveToJson(save));
       setCopied(true);
-      setFeedback({ kind: 'success', text: 'Sauvegarde copiée dans le presse-papiers.' });
+      setFeedback({ kind: 'success', text: FR.ui.questsDrawer.sauvegardeCopieeDansLePressePapiers });
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       setFeedback({
         kind: 'error',
-        text: 'Impossible d’accéder au presse-papiers. Utilisez le bouton Télécharger (.json).',
+        text: FR.ui.questsDrawer.impossibleDAccederAuPressePapiers,
       });
     }
   };
@@ -135,7 +136,7 @@ export function QuestsDrawer({
     setConfirmReset(false);
     setFeedback({
       kind: 'success',
-      text: `Sauvegarde restaurée (${res.save.roster.length} Cubimons, ${res.save.completedStageIds.length}/${STAGES.length} niveaux).`,
+      text: FR.ui.questsDrawer.sauvegardeRestaureeCubimonsNiveaux(res.save.roster.length, res.save.completedStageIds.length, STAGES.length),
     });
   };
 
@@ -147,7 +148,7 @@ export function QuestsDrawer({
       const text = await file.text();
       applyRawImport(text);
     } catch {
-      setFeedback({ kind: 'error', text: 'Erreur lors de la lecture du fichier JSON.' });
+      setFeedback({ kind: 'error', text: FR.ui.questsDrawer.erreurLorsDeLaLectureDu });
     }
   };
 
@@ -163,17 +164,17 @@ export function QuestsDrawer({
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#39445A] bg-[#141A26]">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[#B8C2D1]">
-              Journal du Camp · V0.2
+              {FR.ui.questsDrawer.journalDuCampV02}
             </p>
             <h2 id="quests-drawer-title" className="font-display text-xl sm:text-2xl font-bold">
-              Quêtes, Succès &amp; Sauvegarde
+              {FR.ui.questsDrawer.quetesSuccesSauvegarde}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="voxel-btn cursor-pointer w-9 h-9 rounded-lg bg-[#222A3A] hover:bg-[#2C364A] border-2 border-[#39445A] flex items-center justify-center"
-            aria-label="Fermer le journal"
+            aria-label={FR.ui.questsDrawer.fermerLeJournal}
           >
             <X className="w-4 h-4" />
           </button>
@@ -191,7 +192,7 @@ export function QuestsDrawer({
             }`}
           >
             <ScrollText className="w-4 h-4 text-[#F4B942]" />
-            <span>Missions ({save.activeQuests.length})</span>
+            <span>{FR.ui.questsDrawer.missions}{save.activeQuests.length})</span>
             {claimableQuests > 0 && (
               <span className="font-mono-num text-[#2FB97A]">· {claimableQuests}</span>
             )}
@@ -208,7 +209,7 @@ export function QuestsDrawer({
           >
             <Trophy className="w-4 h-4 text-[#F4B942]" />
             <span>
-              Succès ({save.claimedAchievementIds.length}/{ACHIEVEMENTS.length})
+              {FR.ui.questsDrawer.succes}{save.claimedAchievementIds.length}/{ACHIEVEMENTS.length})
             </span>
             {claimableAchCount > 0 && (
               <span className="font-mono-num text-[#2FB97A]">· {claimableAchCount}</span>
@@ -225,7 +226,7 @@ export function QuestsDrawer({
             }`}
           >
             <HardDrive className="w-4 h-4 text-[#38BDF8]" />
-            <span>Sauvegarde</span>
+            <span>{FR.ui.questsDrawer.sauvegarde}</span>
           </button>
         </div>
 
@@ -234,8 +235,7 @@ export function QuestsDrawer({
           {section === 'missions' && (
             <div className="space-y-3">
               <p className="text-xs text-[#B8C2D1]">
-                Complétez des objectifs en expédition ou à la marmite pour gagner des ressources.
-                Chaque mission réclamée est remplacée par un nouveau défi.
+                {FR.ui.questsDrawer.completezDesObjectifsEnExpeditionOu}
               </p>
 
               {save.activeQuests.map((q) => {
@@ -270,7 +270,7 @@ export function QuestsDrawer({
                         />
                       </div>
                       <p className="text-[11px] font-semibold text-[#F4B942]">
-                        Récompense : {formatRewardSummary(q.reward)}
+                        {FR.ui.questsDrawer.recompense}{formatRewardSummary(q.reward)}
                       </p>
                     </div>
 
@@ -284,7 +284,7 @@ export function QuestsDrawer({
                           : 'bg-[#161C28] text-[#64748B] border-[#2D3648] cursor-not-allowed'
                       }`}
                     >
-                      {ready ? 'Réclamer' : 'En cours'}
+                      {ready ? FR.ui.questsDrawer.reclamer : FR.ui.questsDrawer.enCours}
                     </button>
                   </div>
                 );
@@ -296,14 +296,14 @@ export function QuestsDrawer({
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-[#B8C2D1]">
-                  Paliers permanents de votre aventure sur l’Île aux Cubes.
+                  {FR.ui.questsDrawer.paliersPermanentsDeVotreAventureSur}
                 </p>
                 <div className="flex items-center gap-1.5">
                   {(
                     [
-                      ['all', 'Tous'],
-                      ['claimable', `À réclamer (${claimableAchCount})`],
-                      ['completed', 'Terminés'],
+                      ['all', FR.ui.questsDrawer.tous],
+                      ['claimable', FR.ui.questsDrawer.aReclamer(claimableAchCount)],
+                      ['completed', FR.ui.questsDrawer.termines],
                     ] as const
                   ).map(([id, label]) => (
                     <button
@@ -324,7 +324,7 @@ export function QuestsDrawer({
 
               {filteredAchievements.length === 0 ? (
                 <div className="rounded-xl bg-[#161C28] border border-[#39445A] p-6 text-center text-xs text-[#B8C2D1]">
-                  Aucun succès dans ce filtre pour le moment.
+                  {FR.ui.questsDrawer.aucunSuccesDansCeFiltrePour}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -367,7 +367,7 @@ export function QuestsDrawer({
                           </span>
                           {claimed ? (
                             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2FB97A] shrink-0">
-                              <Check className="w-3.5 h-3.5" /> Obtenu
+                              <Check className="w-3.5 h-3.5" />{FR.ui.questsDrawer.obtenu}
                             </span>
                           ) : (
                             <button
@@ -380,7 +380,7 @@ export function QuestsDrawer({
                                   : 'bg-[#161C28] text-[#64748B] border-[#2D3648] cursor-not-allowed'
                               }`}
                             >
-                              {ready ? 'Réclamer' : 'Verrouillé'}
+                              {ready ? FR.ui.questsDrawer.reclamer : FR.ui.questsDrawer.verrouille}
                             </button>
                           )}
                         </div>
@@ -397,25 +397,25 @@ export function QuestsDrawer({
               {/* Compact Profile Telemetry */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div className="rounded-xl bg-[#202838] border border-[#39445A] p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">Expéditions</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.expeditions}</p>
                   <p className="font-mono-num text-lg font-bold text-[#FAF7F0] mt-0.5">
                     {save.stats.expeditionsWon}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#202838] border border-[#39445A] p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">Réactions</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.reactions}</p>
                   <p className="font-mono-num text-lg font-bold text-[#F4B942] mt-0.5">
                     {save.stats.reactionsTriggered}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#202838] border border-[#39445A] p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">Combo Max</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.comboMax}</p>
                   <p className="font-mono-num text-lg font-bold text-[#38BDF8] mt-0.5">
                     ×{save.stats.maxCombo}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#202838] border border-[#39445A] p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">Cubimons</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.cubimons}</p>
                   <p className="font-mono-num text-lg font-bold text-[#2FB97A] mt-0.5">
                     {save.roster.length}
                   </p>
@@ -438,11 +438,10 @@ export function QuestsDrawer({
               {/* Export Section */}
               <div className="rounded-xl bg-[#141A26] border border-[#39445A] p-4 space-y-2.5">
                 <h3 className="font-display font-bold text-sm text-[#FAF7F0]">
-                  Exporter votre sauvegarde locale (v{save.version})
+                  {FR.ui.questsDrawer.exporterVotreSauvegardeLocaleV}{save.version})
                 </h3>
                 <p className="text-xs text-[#B8C2D1]">
-                  Conservez une copie de votre équipe, vos pierres, vos ingrédients et vos succès
-                  au format JSON.
+                  {FR.ui.questsDrawer.conservezUneCopieDeVotreEquipe}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -451,7 +450,7 @@ export function QuestsDrawer({
                     className="voxel-btn cursor-pointer px-4 py-2 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-bold text-xs sm:text-sm border-2 border-[#141925] inline-flex items-center gap-2"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Télécharger (.json)</span>
+                    <span>{FR.ui.questsDrawer.telechargerJson}</span>
                   </button>
                   <button
                     type="button"
@@ -459,7 +458,7 @@ export function QuestsDrawer({
                     className="voxel-btn cursor-pointer px-4 py-2 rounded-xl bg-[#222A3A] hover:bg-[#2C364A] text-[#FAF7F0] font-semibold text-xs sm:text-sm border-2 border-[#39445A] inline-flex items-center gap-2"
                   >
                     {copied ? <Check className="w-4 h-4 text-[#2FB97A]" /> : <Copy className="w-4 h-4" />}
-                    <span>{copied ? 'Copié !' : 'Copier le JSON'}</span>
+                    <span>{copied ? FR.ui.questsDrawer.copie : FR.ui.questsDrawer.copierLeJson}</span>
                   </button>
                 </div>
               </div>
@@ -468,7 +467,7 @@ export function QuestsDrawer({
               <div className="rounded-xl bg-[#141A26] border border-[#39445A] p-4 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="font-display font-bold text-sm text-[#FAF7F0]">
-                    Importer une sauvegarde (.json)
+                    {FR.ui.questsDrawer.importerUneSauvegardeJson}
                   </h3>
                   <input
                     ref={fileInputRef}
@@ -483,14 +482,14 @@ export function QuestsDrawer({
                     className="voxel-btn cursor-pointer px-3.5 py-1.5 rounded-lg bg-[#222A3A] hover:bg-[#2C364A] text-[#FAF7F0] font-semibold text-xs border border-[#39445A] inline-flex items-center gap-1.5"
                   >
                     <Upload className="w-3.5 h-3.5 text-[#38BDF8]" />
-                    <span>Choisir un fichier .json</span>
+                    <span>{FR.ui.questsDrawer.choisirUnFichierJson}</span>
                   </button>
                 </div>
                 <textarea
                   value={pasteJson}
                   onChange={(e) => setPasteJson(e.target.value)}
                   rows={4}
-                  placeholder="Ou collez ici le contenu JSON d’une sauvegarde CubiQuest (v1 ou v2)..."
+                  placeholder={FR.ui.questsDrawer.ouCollezIciLeContenuJson}
                   className="w-full rounded-lg bg-[#0F1420] border border-[#39445A] p-2.5 text-xs font-mono-num text-[#FAF7F0] placeholder:text-[#64748B] focus:outline-none focus:border-[#F4B942]"
                 />
                 <div className="flex justify-end">
@@ -499,7 +498,7 @@ export function QuestsDrawer({
                     onClick={() => applyRawImport(pasteJson)}
                     className="voxel-btn cursor-pointer px-4 py-2 rounded-xl bg-[#2FB97A] hover:bg-[#38C987] text-[#0F172A] font-bold text-xs sm:text-sm border-2 border-[#141925]"
                   >
-                    Valider &amp; Importer
+                    {FR.ui.questsDrawer.validerImporter}
                   </button>
                 </div>
               </div>
@@ -508,10 +507,10 @@ export function QuestsDrawer({
               <div className="rounded-xl bg-[#1F151A] border border-[#5B2A35] p-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="font-display font-bold text-sm text-[#FECACA]">
-                    Réinitialiser la sauvegarde
+                    {FR.ui.questsDrawer.reinitialiserLaSauvegarde}
                   </h3>
                   <p className="text-xs text-[#CBD5E1]">
-                    Repart de zéro sur l’Île aux Cubes (pensez à exporter votre JSON avant).
+                    {FR.ui.questsDrawer.repartDeZeroSurLIle}
                   </p>
                 </div>
                 {!confirmReset ? (
@@ -521,7 +520,7 @@ export function QuestsDrawer({
                     className="voxel-btn cursor-pointer px-3.5 py-2 rounded-xl bg-[#311A21] hover:bg-[#42222B] text-[#FECACA] font-semibold text-xs border border-[#E85D3F] inline-flex items-center gap-1.5"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Réinitialiser</span>
+                    <span>{FR.ui.questsDrawer.reinitialiser}</span>
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -530,7 +529,7 @@ export function QuestsDrawer({
                       onClick={() => setConfirmReset(false)}
                       className="cursor-pointer px-3 py-1.5 rounded-lg bg-[#222A3A] text-xs font-semibold text-[#FAF7F0] border border-[#39445A]"
                     >
-                      Annuler
+                      {FR.ui.questsDrawer.annuler}
                     </button>
                     <button
                       type="button"
@@ -540,7 +539,7 @@ export function QuestsDrawer({
                       }}
                       className="voxel-btn cursor-pointer px-3.5 py-1.5 rounded-lg bg-[#E85D3F] text-xs font-bold text-[#FAF7F0] border border-[#141925]"
                     >
-                      Confirmer la remise à zéro
+                      {FR.ui.questsDrawer.confirmerLaRemiseAZero}
                     </button>
                   </div>
                 )}

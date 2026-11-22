@@ -1,0 +1,122 @@
+CAMP DE BASE
+
+Île aux Cubes
+
+PUISSANCE
+
+1 253
+
+Masquer le dock
+Expéditions
+Marmite
+Équipe & Pierres
+Quêtes
+· 6
+Codex Web
+Marmite du Campement
+
+Placez 5 ingrédients pour cuisiner un plat et attirer un nouveau Cubimon.
+
+Chaudron
+Recettes (0/17)
+
+TYPE DE CHAUDRON (1× PAR INGRÉDIENT)
+
+Fer
+
+Niv.1-5
+
+Bronze
+
+Niv.7-12
+
+Argent
+
+Niv.13-18
+
+Or
+
+Niv.19-26
+
+EMPLACEMENTS (5 REQUIS)
+Remplir auto
+Vider
+Baie
+Baie
+Pollen
+4
+5
+
+Cliquez sur vos ingrédients à droite pour remplir les 5 emplacements de la marmite.
+
+RÉSERVE D’INGRÉDIENTS
+
+Baie Rubis
+×5
+
+Commun · coût 1
+
+Racine Ardente
+×2
+
+Rare · coût 1
+
+Baie Azur
+×5
+
+Commun · coût 1
+
+Cristal Glacé
+×2
+
+Rare · coût 1
+
+Pollen Solaire
+×5
+
+Commun · coût 1
+
+Miel Ambré
+×2
+
+Rare · coût 1
+
+Galet Fossile
+×5
+
+Commun · coût 1
+
+Éclat Mystique
+×1
+
+Mystique · coût 1
+
+Lichen des Neiges
+×6
+
+Commun · coût 1
+
+Pétale d’Aurore
+×3
+
+Rare · coût 1
+
+Poivre d’Orage
+×4
+
+Rare · coût 1
+
+Flocon de Nuage
+×5
+
+Commun · coût 1
+
+Figue des Mesas
+×0
+
+Commun · coût 1
+
+Résine d’Ambre
+×0
+
+Rare · coût 1

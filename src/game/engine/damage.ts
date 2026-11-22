@@ -17,6 +17,7 @@ import { spawnElementBurst, spawnParticleBurst, spawnShockwaveRing } from './fx'
 import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
+import { FR } from '../../i18n/fr';
 
 export function applyDamageToActor(
   self: VoxelEngine,
@@ -96,7 +97,7 @@ export function applyDamageToActor(
             const shieldGain = Math.round(ally.maxHp * 0.15);
             ally.shieldHp = Math.min(Math.round(ally.maxHp * 0.35), ally.shieldHp + shieldGain);
             spawnParticleBurst(self, ally.x, 0.9, ally.z, '#EAB308', 8, 3.2);
-            self.floatingText.spawn(ally.x, 2.0, ally.z, `+${shieldGain} BOUCL.`, '#FDE047', 0.85);
+            self.floatingText.spawn(ally.x, 2.0, ally.z, FR.engine.boucl(shieldGain), '#FDE047', 0.85);
           }
         }
       } else if (reaction.effect === 'cd_spread') {
@@ -160,7 +161,7 @@ export function applyDamageToActor(
       0.78,
     );
   } else {
-    self.floatingText.spawn(target.x, numY, target.z, 'BLOQUÉ', '#FDE047', 0.82, 0.65);
+    self.floatingText.spawn(target.x, numY, target.z, FR.engine.bloque, '#FDE047', 0.82, 0.65);
   }
 
   if (attacker?.isAlly && !target.isAlly) {
@@ -251,7 +252,7 @@ export function onBossPhaseShift(self: VoxelEngine, boss: CombatActor, phase: 2 
     self.telemetry.phaseStartedAt[1] = self.expeditionElapsed;
   }
   soundFx.playBossPhase();
-  const label = phase === 3 ? 'PHASE 3 : SURCHARGE !' : 'PHASE 2 : FUREUR !';
+  const label = phase === 3 ? FR.engine.phase3Surcharge : FR.engine.phase2Fureur;
   const auraColor = phase === 3 ? '#F4B942' : '#F43F5E';
   self.bannerText = `${boss.name} — ${label}`;
   self.bannerTimer = 2.6;

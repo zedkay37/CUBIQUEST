@@ -26,6 +26,7 @@ import { emitHudSnapshot } from './hud';
 import { triggerUltimate } from './skills';
 import type { CombatTelemetry } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
+import { FR } from '../../i18n/fr';
 
 export function emptyTelemetry(): CombatTelemetry {
   return {
@@ -185,8 +186,8 @@ export function spawnWave(self: VoxelEngine, index: number): void {
   self.waveIndex = index;
   const isBossWave = index === self.activeStage.waves.length - 1;
   self.bannerText = isBossWave
-    ? 'ALERTE BOSS ! Préparez Dispersion !'
-    : `Vague ${index + 1} / ${self.activeStage.waves.length}`;
+    ? FR.engine.alerteBossPreparezDispersion
+    : FR.engine.vague(index + 1, self.activeStage.waves.length);
   self.bannerTimer = 2.4;
 
   const stageHpMult = self.activeStage.enemyHpMult ?? 1;
@@ -219,7 +220,7 @@ export function spawnWave(self: VoxelEngine, index: number): void {
       isBoss,
       ai: def.ai,
       speciesId: species.id,
-      name: isBoss ? `Boss ${species.name}` : species.name,
+      name: isBoss ? FR.engine.boss(species.name) : species.name,
       level: def.level,
       rig,
       x: spawnX,
@@ -281,8 +282,8 @@ export function spawnWave(self: VoxelEngine, index: number): void {
       name: boss.rig.species.name,
       title:
         self.activeStage.stageNumber === 3
-          ? `Souverain — ${BIOMES[self.activeStage.biomeId].name}`
-          : `Gardien — ${self.activeStage.name}`,
+          ? FR.engine.souverain(BIOMES[self.activeStage.biomeId].name)
+          : FR.engine.gardien(self.activeStage.name),
       element: boss.rig.species.element,
     };
     self.bannerText = null;
@@ -383,7 +384,7 @@ export function updateExpeditionProgress(self: VoxelEngine, dt: number, simDt: n
     self.expeditionEnded = true;
     self.pendingVictory = false;
     self.endDelayTimer = 0.65;
-    self.bannerText = 'Escouade K.O. ! Repli au camp...';
+    self.bannerText = FR.engine.escouadeKORepliAuCamp;
     self.bannerTimer = 1.5;
     soundFx.playDefeat();
     emitHudSnapshot(self);
@@ -404,7 +405,7 @@ export function updateExpeditionProgress(self: VoxelEngine, dt: number, simDt: n
       self.pendingVictory = true;
       self.endDelayTimer = 1.7; // le temps de fêter ça : sauts de joie + confettis
       self.confettiTimer = 0;
-      self.bannerText = 'VICTOIRE ! Expédition réussie !';
+      self.bannerText = FR.engine.victoireExpeditionReussie;
       self.bannerTimer = 2.0;
       soundFx.playFanfare();
       emitHudSnapshot(self);

@@ -11,6 +11,7 @@ import {
 } from '../game/rules';
 import type { MoveStoneKind, PowerStone, SaveState } from '../game/types';
 import { ElementIcon, StoneIcon, VoxelCreatureAvatar } from './Icons';
+import { FR } from '../i18n/fr';
 
 interface TeamDrawerProps {
   save: SaveState;
@@ -30,10 +31,10 @@ const RARITY_BORDER: Record<PowerStone['rarity'], string> = {
 };
 
 const SUBSTAT_LABELS: Record<string, string> = {
-  critRate: 'Critique',
-  hitHeal: 'Vampirisme',
-  moveSpeed: 'Vitesse',
-  statusRes: 'Résist.',
+  critRate: FR.ui.teamDrawer.critique,
+  hitHeal: FR.ui.teamDrawer.vampirisme,
+  moveSpeed: FR.ui.teamDrawer.vitesse,
+  statusRes: FR.ui.teamDrawer.resist,
 };
 
 export function TeamDrawer({
@@ -78,21 +79,21 @@ export function TeamDrawer({
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4 border-b border-[#39445A]">
           <div>
             <h2 id="team-drawer-title" className="font-display text-xl sm:text-2xl font-bold">
-              Escouade & Grille de Pierres de Pouvoir
+              {FR.ui.teamDrawer.escouadeGrilleDePierresDePouvoir}
             </h2>
             <p className="text-xs text-[#B8C2D1]">
-              Puissance totale d’escouade :{' '}
+              {FR.ui.teamDrawer.puissanceTotaleDEscouade}{' '}
               <strong className="font-mono-num text-[#F4B942]">
                 {squadPower.toLocaleString('fr-FR')}
               </strong>{' '}
-              · {save.squadIds.length}/3 actifs · {save.roster.length} compagnons au camp
+              · {save.squadIds.length}{FR.ui.teamDrawer.t3Actifs}{save.roster.length}{FR.ui.teamDrawer.compagnonsAuCamp}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="voxel-btn cursor-pointer w-9 h-9 rounded-lg bg-[#222A3A] hover:bg-[#2E384E] border border-[#39445A] flex items-center justify-center"
-            aria-label="Fermer la gestion d'équipe"
+            aria-label={FR.ui.teamDrawer.fermerLaGestionDEquipe}
           >
             <X className="w-4 h-4" />
           </button>
@@ -103,7 +104,7 @@ export function TeamDrawer({
           {/* Column 1: Roster & Active Squad Selector */}
           <div className="lg:col-span-3 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1]">
-              Compagnons ({save.roster.length})
+              {FR.ui.teamDrawer.compagnons}{save.roster.length})
             </p>
             <div className="space-y-2 max-h-[56vh] overflow-y-auto cubi-scroll pr-1">
               {save.roster.map((c) => {
@@ -131,12 +132,12 @@ export function TeamDrawer({
                         <span className="font-display font-bold text-xs text-[#FAF7F0] truncate">
                           {sp.name}
                         </span>
-                        <span className="font-mono-num text-[10px] text-[#B8C2D1]">N.{c.level}</span>
+                        <span className="font-mono-num text-[10px] text-[#B8C2D1]">{FR.ui.teamDrawer.n}{c.level}</span>
                       </div>
                       <div className="flex items-center justify-between text-[11px] mt-0.5">
                         <span className="font-mono-num text-[#F4B942]">{st.power}</span>
                         {isActive && (
-                          <span className="text-[10px] font-bold text-[#2FB97A]">Escouade</span>
+                          <span className="text-[10px] font-bold text-[#2FB97A]">{FR.ui.teamDrawer.escouade}</span>
                         )}
                       </div>
                     </div>
@@ -159,8 +160,8 @@ export function TeamDrawer({
                       <h3 className="font-display text-lg font-bold">{species.name}</h3>
                     </div>
                     <p className="text-xs text-[#B8C2D1] mt-0.5">
-                      Niv. <strong className="font-mono-num text-[#FAF7F0]">{creature.level}</strong> ·{' '}
-                      {ELEMENT_META[species.element].label} · XP{' '}
+                      {FR.ui.teamDrawer.niv}<strong className="font-mono-num text-[#FAF7F0]">{creature.level}</strong> ·{' '}
+                      {ELEMENT_META[species.element].label}{FR.ui.teamDrawer.xp}{' '}
                       <span className="font-mono-num">
                         {creature.xp}/{xpForNextLevel(creature.level)}
                       </span>
@@ -175,9 +176,9 @@ export function TeamDrawer({
                   }
                   title={
                     !inSquad && save.squadIds.length >= 3
-                      ? 'L’escouade compte déjà 3 Cubimons : retirez-en un d’abord.'
+                      ? FR.ui.teamDrawer.lEscouadeCompteDeja3Cubimons
                       : inSquad && save.squadIds.length <= 1
-                        ? 'L’escouade doit garder au moins un Cubimon.'
+                        ? FR.ui.teamDrawer.lEscouadeDoitGarderAuMoins
                         : undefined
                   }
                   onClick={() => onToggleSquadMember(creature.uid)}
@@ -189,30 +190,30 @@ export function TeamDrawer({
                 >
                   {inSquad
                     ? save.squadIds.length <= 1
-                      ? 'Dernier membre'
-                      : 'Retirer escouade'
+                      ? FR.ui.teamDrawer.dernierMembre
+                      : FR.ui.teamDrawer.retirerEscouade
                     : save.squadIds.length >= 3
-                      ? 'Escouade complète'
-                      : 'Mettre en escouade'}
+                      ? FR.ui.teamDrawer.escouadeComplete
+                      : FR.ui.teamDrawer.mettreEnEscouade}
                 </button>
               </div>
 
               {/* Stats Strip */}
               <div className="mt-2.5 grid grid-cols-4 gap-2 text-center">
                 <div className="rounded-lg bg-[#202838] py-1.5 px-2">
-                  <p className="text-[10px] uppercase text-[#B8C2D1]">PV</p>
+                  <p className="text-[10px] uppercase text-[#B8C2D1]">{FR.ui.teamDrawer.pv}</p>
                   <p className="font-mono-num text-sm font-bold text-[#2FB97A]">{stats.maxHp}</p>
                 </div>
                 <div className="rounded-lg bg-[#202838] py-1.5 px-2">
-                  <p className="text-[10px] uppercase text-[#B8C2D1]">ATQ</p>
+                  <p className="text-[10px] uppercase text-[#B8C2D1]">{FR.ui.teamDrawer.atq}</p>
                   <p className="font-mono-num text-sm font-bold text-[#E85D3F]">{stats.atk}</p>
                 </div>
                 <div className="rounded-lg bg-[#202838] py-1.5 px-2">
-                  <p className="text-[10px] uppercase text-[#B8C2D1]">Crit</p>
+                  <p className="text-[10px] uppercase text-[#B8C2D1]">{FR.ui.teamDrawer.crit}</p>
                   <p className="font-mono-num text-sm font-bold text-[#F4B942]">{stats.critRate}%</p>
                 </div>
                 <div className="rounded-lg bg-[#202838] py-1.5 px-2">
-                  <p className="text-[10px] uppercase text-[#B8C2D1]">Vamp.</p>
+                  <p className="text-[10px] uppercase text-[#B8C2D1]">{FR.ui.teamDrawer.vamp}</p>
                   <p className="font-mono-num text-sm font-bold text-[#38BDF8]">{stats.hitHeal}%</p>
                 </div>
               </div>
@@ -221,7 +222,7 @@ export function TeamDrawer({
               {nextEvoSpecies && species.evolveLevel && (
                 <div className="mt-2.5 pt-2.5 border-t border-[#283247] flex items-center justify-between gap-2">
                   <p className="text-xs text-[#CBD5E1]">
-                    Évolution : <strong>{nextEvoSpecies.name}</strong> (Niv. {species.evolveLevel})
+                    {FR.ui.teamDrawer.evolution}<strong>{nextEvoSpecies.name}</strong>{FR.ui.teamDrawer.niv2}{species.evolveLevel})
                   </p>
                   <button
                     type="button"
@@ -234,7 +235,7 @@ export function TeamDrawer({
                     }`}
                   >
                     <ArrowUpCircle className="w-3.5 h-3.5" />
-                    {evolvable ? 'Faire évoluer' : `Niv. ${species.evolveLevel} requis`}
+                    {evolvable ? FR.ui.teamDrawer.faireEvoluer : FR.ui.teamDrawer.nivRequis(species.evolveLevel)}
                   </button>
                 </div>
               )}
@@ -245,12 +246,12 @@ export function TeamDrawer({
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">
-                    Compétence Spéciale
+                    {FR.ui.teamDrawer.competenceSpeciale}
                   </p>
                   <p className="font-display font-bold text-sm text-[#FAF7F0]">{move.name}</p>
                 </div>
                 <span className="font-mono-num text-xs text-[#F4B942] whitespace-nowrap shrink-0">
-                  {move.cooldown}s
+                  {move.cooldown}{FR.ui.teamDrawer.s}
                 </span>
               </div>
 
@@ -262,7 +263,7 @@ export function TeamDrawer({
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-semibold text-[#B8C2D1]">
-                        Pierre Capacité {mIdx + 1}
+                        {FR.ui.teamDrawer.pierreCapacite}{mIdx + 1}
                       </span>
                       {equippedKind && (
                         <button
@@ -270,7 +271,7 @@ export function TeamDrawer({
                           onClick={() => onEquipMoveStone(creature.uid, mIdx, null)}
                           className="cursor-pointer text-[10px] text-[#E85D3F] hover:underline"
                         >
-                          Retirer
+                          {FR.ui.teamDrawer.retirer}
                         </button>
                       )}
                     </div>
@@ -303,7 +304,7 @@ export function TeamDrawer({
                           },
                         )}
                         {Object.values(save.moveStoneBag).every((q) => q <= 0) && (
-                          <span className="text-[10px] text-[#64748B]">Aucune en sac</span>
+                          <span className="text-[10px] text-[#64748B]">{FR.ui.teamDrawer.aucuneEnSac}</span>
                         )}
                       </div>
                     )}
@@ -316,7 +317,7 @@ export function TeamDrawer({
             <div className="rounded-xl bg-[#161C29] border border-[#344056] p-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1]">
-                  Grille de Pierres de Pouvoir (3×3)
+                  {FR.ui.teamDrawer.grilleDePierresDePouvoir3}
                 </p>
                 {activeSlot?.stoneId && (
                   <button
@@ -324,7 +325,7 @@ export function TeamDrawer({
                     onClick={() => onUnequipStone(creature.uid, selectedSlotIdx)}
                     className="cursor-pointer text-xs font-semibold text-[#E85D3F] hover:underline"
                   >
-                    Retirer la pierre
+                    {FR.ui.teamDrawer.retirerLaPierre}
                   </button>
                 )}
               </div>
@@ -340,7 +341,7 @@ export function TeamDrawer({
                       type="button"
                       disabled={locked}
                       onClick={() => setSelectedSlotIdx(idx)}
-                      aria-label={`Emplacement pierre ${idx + 1} (${slot.type})`}
+                      aria-label={FR.ui.teamDrawer.emplacementPierre(idx + 1, slot.type)}
                       className={`rounded-xl py-2 px-2 border-2 flex flex-col items-center justify-center min-h-[60px] transition-colors ${
                         locked
                           ? 'bg-[#121722] border-[#252E40] opacity-55 cursor-not-allowed'
@@ -353,21 +354,21 @@ export function TeamDrawer({
                         <>
                           <Lock className="w-3.5 h-3.5 text-[#64748B]" />
                           <span className="font-mono-num text-[10px] text-[#94A3B8] mt-0.5">
-                            Niv.{slot.unlockLevel}
+                            {FR.ui.teamDrawer.niv3}{slot.unlockLevel}
                           </span>
                         </>
                       ) : equipped ? (
                         <>
                           <StoneIcon kind={equipped.kind} size={20} />
                           <span className="font-mono-num text-xs font-bold text-[#FAF7F0] mt-0.5">
-                            +{equipped.power} {equipped.kind === 'atk' ? 'ATQ' : 'PV'}
+                            +{equipped.power} {equipped.kind === 'atk' ? FR.ui.teamDrawer.atq : FR.ui.teamDrawer.pv}
                           </span>
                         </>
                       ) : (
                         <>
                           <StoneIcon kind={slot.type} size={18} />
                           <span className="text-[10px] text-[#94A3B8] mt-0.5">
-                            {slot.type === 'flex' ? 'Mixte' : slot.type === 'atk' ? 'ATQ' : 'PV'}
+                            {slot.type === 'flex' ? FR.ui.teamDrawer.mixte : slot.type === 'atk' ? FR.ui.teamDrawer.atq : FR.ui.teamDrawer.pv}
                           </span>
                         </>
                       )}
@@ -382,7 +383,7 @@ export function TeamDrawer({
           <div className="lg:col-span-4 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1]">
-                Sac de Pierres ({filteredStones.length})
+                {FR.ui.teamDrawer.sacDePierres}{filteredStones.length})
               </p>
               <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#141A26] border border-[#344056]">
                 {(['all', 'atk', 'hp'] as const).map((f) => (
@@ -394,7 +395,7 @@ export function TeamDrawer({
                       stoneFilter === f ? 'bg-[#E85D3F] text-[#FAF7F0]' : 'text-[#B8C2D1]'
                     }`}
                   >
-                    {f === 'all' ? 'Tout' : f === 'atk' ? 'ATQ' : 'PV'}
+                    {f === 'all' ? FR.ui.teamDrawer.tout : f === 'atk' ? FR.ui.teamDrawer.atq : FR.ui.teamDrawer.pv}
                   </button>
                 ))}
               </div>
@@ -417,7 +418,7 @@ export function TeamDrawer({
                     title={
                       compatible
                         ? undefined
-                        : 'L’emplacement sélectionné n’accepte pas ce type de pierre (ou il est encore verrouillé).'
+                        : FR.ui.teamDrawer.lEmplacementSelectionneNAcceptePas
                     }
                     onClick={() => onEquipStone(creature.uid, selectedSlotIdx, stone.id)}
                     className={`w-full text-left rounded-xl p-3 border-2 transition-colors flex items-center justify-between gap-2 ${
@@ -439,20 +440,20 @@ export function TeamDrawer({
                       <StoneIcon kind={stone.kind} size={26} />
                       <div className="min-w-0">
                         <p className="font-mono-num text-sm font-bold text-[#FAF7F0]">
-                          +{stone.power} {stone.kind === 'atk' ? 'ATQ' : 'PV'}
+                          +{stone.power} {stone.kind === 'atk' ? FR.ui.teamDrawer.atq : FR.ui.teamDrawer.pv}
                         </p>
                         <p className="text-[11px] text-[#B8C2D1] truncate">
                           {stone.substats.length > 0
                             ? stone.substats
                                 .map((s) => `${SUBSTAT_LABELS[s.type]} +${s.value}%`)
                                 .join(' · ')
-                            : 'Pierre standard'}
+                            : FR.ui.teamDrawer.pierreStandard}
                         </p>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
                       <span className="text-[10px] font-bold uppercase text-[#F4B942] block">
-                        {isOnSelectedSlot ? 'Équipée' : compatible ? 'Équiper' : 'Mauvais type'}
+                        {isOnSelectedSlot ? FR.ui.teamDrawer.equipee : compatible ? FR.ui.teamDrawer.equiper : FR.ui.teamDrawer.mauvaisType}
                       </span>
                       {ownerName && !isOnSelectedSlot && (
                         <span className="text-[10px] text-[#94A3B8]">{ownerName}</span>

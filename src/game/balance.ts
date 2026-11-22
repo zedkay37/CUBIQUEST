@@ -12,6 +12,7 @@
  * Ce fichier ne doit rien importer du catalogue (le catalogue l'importe).
  */
 import type { BossKit, ElementType, StatusKind } from './types';
+import { FR } from '../i18n/fr';
 
 export interface StageTuning {
   /** Multiplie les PV de tous les ennemis du niveau (boss compris). */
@@ -117,7 +118,7 @@ export interface StrikeTheme {
 }
 
 export const DEFAULT_RING_THEME: RingTheme = {
-  label: 'Anneau de Givre — collez-vous au boss !',
+  label: FR.balance.anneauDeGivreCollezVousAu,
   telegraphColor: '#0284C7', // bleu soutenu : lisible sur la neige
   burstColor: '#7DD3FC',
   aftershockColor: '#E0F2FE',
@@ -127,14 +128,14 @@ export const DEFAULT_RING_THEME: RingTheme = {
   sound: 'frost',
 };
 export const DEFAULT_STRIKE_THEME: StrikeTheme = {
-  label: 'Foudre en Rafale — sortez de la ligne !',
+  label: FR.balance.foudreEnRafaleSortezDeLa,
   color: '#FACC15',
   fx: 'electric',
   status: 'shocked',
   lightning: true,
 };
 export const DEFAULT_EYE_THEME: StrikeTheme = {
-  label: 'Œil du Cyclone — Dispersion pour fuir le centre !',
+  label: FR.balance.ilDuCycloneDispersionPourFuir,
   color: '#FACC15',
   fx: 'electric',
   status: 'shocked',
@@ -159,7 +160,7 @@ export const BOSS_KITS: Record<BossKit, BossKitDef> = {
   amber: {
     cycle: [[3, 1], [5, 3, 1, 2]],
     ring: {
-      label: 'Anneau d’Ambre — collez-vous au boss !',
+      label: FR.balance.anneauDAmbreCollezVousAu,
       telegraphColor: '#B91C1C', // rouge sombre : lisible sur le sol ocre
       burstColor: '#F59E0B',
       aftershockColor: '#FDE68A',
@@ -169,7 +170,7 @@ export const BOSS_KITS: Record<BossKit, BossKitDef> = {
       sound: 'impact',
     },
     eye: {
-      label: 'Tourbillon de Sable — Dispersion pour fuir le centre !',
+      label: FR.balance.tourbillonDeSableDispersionPourFuir,
       color: '#B91C1C',
       fx: 'rock',
       status: 'sunder',

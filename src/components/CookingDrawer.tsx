@@ -12,6 +12,7 @@ import {
 import { getPotIngredientCost, resolveRecipe } from '../game/rules';
 import type { OwnedCreature, PotTier, SaveState } from '../game/types';
 import { ElementIcon, VoxelCreatureAvatar } from './Icons';
+import { FR } from '../i18n/fr';
 
 interface CookingDrawerProps {
   save: SaveState;
@@ -73,10 +74,10 @@ export function CookingDrawer({
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4 border-b border-[#39445A]">
           <div className="min-w-0 flex-1 basis-56">
             <h2 id="cooking-drawer-title" className="font-display text-xl sm:text-2xl font-bold">
-              Marmite du Campement
+              {FR.ui.cookingDrawer.marmiteDuCampement}
             </h2>
             <p className="text-xs text-[#B8C2D1]">
-              Placez 5 ingrédients pour cuisiner un plat et attirer un nouveau Cubimon.
+              {FR.ui.cookingDrawer.placez5IngredientsPourCuisinerUn}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -88,7 +89,7 @@ export function CookingDrawer({
                   view === 'pot' ? 'bg-[#E85D3F] text-[#FAF7F0]' : 'text-[#B8C2D1] hover:text-[#FAF7F0]'
                 }`}
               >
-                Chaudron
+                {FR.ui.cookingDrawer.chaudron}
               </button>
               <button
                 type="button"
@@ -97,14 +98,14 @@ export function CookingDrawer({
                   view === 'recipes' ? 'bg-[#E85D3F] text-[#FAF7F0]' : 'text-[#B8C2D1] hover:text-[#FAF7F0]'
                 }`}
               >
-                Recettes ({save.discoveredRecipeIds.length}/{RECIPES.length})
+                {FR.ui.cookingDrawer.recettes}{save.discoveredRecipeIds.length}/{RECIPES.length})
               </button>
             </div>
             <button
               type="button"
               onClick={onClose}
               className="voxel-btn cursor-pointer w-9 h-9 rounded-lg bg-[#222A3A] hover:bg-[#2E384E] border border-[#39445A] flex items-center justify-center"
-              aria-label="Fermer la marmite"
+              aria-label={FR.ui.cookingDrawer.fermerLaMarmite}
             >
               <X className="w-4 h-4" />
             </button>
@@ -118,17 +119,17 @@ export function CookingDrawer({
               <VoxelCreatureAvatar speciesId={recruitedPreview.speciesId} size={56} />
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-[#2FB97A]">
-                  Nouvelle recrue attirée au camp !
+                  {FR.ui.cookingDrawer.nouvelleRecrueAttireeAuCamp}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <ElementIcon element={SPECIES[recruitedPreview.speciesId].element} size={18} />
                   <h3 className="font-display text-lg font-bold text-[#FAF7F0]">
-                    {SPECIES[recruitedPreview.speciesId].name} · Niv.{' '}
+                    {SPECIES[recruitedPreview.speciesId].name}{FR.ui.cookingDrawer.niv}{' '}
                     <span className="font-mono-num">{recruitedPreview.level}</span>
                   </h3>
                 </div>
                 <p className="text-xs text-[#CBD5E1] mt-0.5">
-                  Ajouté à votre réserve — équipez-le depuis l’onglet Équipe & Pierres.
+                  {FR.ui.cookingDrawer.ajouteAVotreReserveEquipezLe}
                 </p>
               </div>
             </div>
@@ -137,7 +138,7 @@ export function CookingDrawer({
               onClick={onDismissRecruit}
               className="voxel-btn cursor-pointer px-4 py-2 rounded-lg bg-[#2FB97A] text-[#0F172A] font-bold text-xs border border-[#141925]"
             >
-              Super !
+              {FR.ui.cookingDrawer.super}
             </button>
           </div>
         )}
@@ -159,12 +160,12 @@ export function CookingDrawer({
                     <div className="flex items-center gap-2">
                       <h3 className="font-display font-bold text-sm text-[#FAF7F0]">{r.name}</h3>
                       <span className="font-mono-num text-[11px] text-[#F4B942]">
-                        {r.cookExpeditions} exp.
+                        {r.cookExpeditions}{FR.ui.cookingDrawer.exp}
                       </span>
                     </div>
                     <p className="text-xs text-[#CBD5E1] mt-0.5">{r.description}</p>
                     <p className="text-[11px] text-[#94A3B8] mt-1">
-                      Astuce : {r.hint} {discovered ? '· Découverte' : ''}
+                      {FR.ui.cookingDrawer.astuce}{r.hint} {discovered ? FR.ui.cookingDrawer.decouverte : ''}
                     </p>
                   </div>
                 </div>
@@ -178,7 +179,7 @@ export function CookingDrawer({
               {/* Pot Tier Selector */}
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1] mb-2">
-                  Type de chaudron ({costPerSlot}× par ingrédient)
+                  {FR.ui.cookingDrawer.typeDeChaudron}{costPerSlot}{FR.ui.cookingDrawer.parIngredient}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {TIERS.map((tier) => {
@@ -207,7 +208,7 @@ export function CookingDrawer({
                           {!unlocked && <Lock className="w-3 h-3 text-[#94A3B8]" />}
                         </div>
                         <p className="font-mono-num text-[10px] text-[#B8C2D1] mt-0.5">
-                          Niv.{meta.minLevel}-{meta.maxLevel}
+                          {FR.ui.cookingDrawer.niv2}{meta.minLevel}-{meta.maxLevel}
                         </p>
                       </button>
                     );
@@ -219,7 +220,7 @@ export function CookingDrawer({
               <div className="rounded-xl bg-[#161C29] border border-[#344056] p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1]">
-                    Emplacements (5 requis)
+                    {FR.ui.cookingDrawer.emplacements5Requis}
                   </span>
                   {pot.status === 'idle' && (
                     <div className="flex items-center gap-2">
@@ -229,7 +230,7 @@ export function CookingDrawer({
                         className="cursor-pointer inline-flex items-center gap-1 text-xs font-semibold text-[#F4B942] hover:underline"
                       >
                         <Wand2 className="w-3.5 h-3.5" />
-                        Remplir auto
+                        {FR.ui.cookingDrawer.remplirAuto}
                       </button>
                       <button
                         type="button"
@@ -237,7 +238,7 @@ export function CookingDrawer({
                         className="cursor-pointer inline-flex items-center gap-1 text-xs font-semibold text-[#B8C2D1] hover:text-[#FAF7F0]"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        Vider
+                        {FR.ui.cookingDrawer.vider}
                       </button>
                     </div>
                   )}
@@ -254,8 +255,8 @@ export function CookingDrawer({
                         onClick={() => onRemoveSlot(idx)}
                         aria-label={
                           ing
-                            ? `Retirer ${ing.name} de l'emplacement ${idx + 1}`
-                            : `Emplacement ${idx + 1} vide`
+                            ? FR.ui.cookingDrawer.retirerDeLEmplacement(ing.name, idx + 1)
+                            : FR.ui.cookingDrawer.emplacementVide(idx + 1)
                         }
                         className={`aspect-square rounded-xl border-2 flex flex-col items-center justify-center p-1.5 transition-colors ${
                           ing
@@ -297,13 +298,13 @@ export function CookingDrawer({
                                 {previewRecipe.name}
                               </p>
                               <p className="text-xs text-[#B8C2D1]">
-                                Cuisson :{' '}
+                                {FR.ui.cookingDrawer.cuisson}{' '}
                                 <strong className="font-mono-num text-[#F4B942]">
                                   {previewRecipe.cookExpeditions}
                                 </strong>{' '}
-                                expédition{previewRecipe.cookExpeditions > 1 ? 's' : ''}
+                                {FR.ui.cookingDrawer.expedition}{previewRecipe.cookExpeditions > 1 ? 's' : ''}
                                 {previewRecipe.targetElement
-                                  ? ` · Type ${ELEMENT_META[previewRecipe.targetElement].label}`
+                                  ? FR.ui.cookingDrawer.type(ELEMENT_META[previewRecipe.targetElement].label)
                                   : ''}
                               </p>
                             </div>
@@ -314,18 +315,18 @@ export function CookingDrawer({
                             title={
                               canCook
                                 ? undefined
-                                : `Chaque emplacement coûte ${costPerSlot} ingrédient${costPerSlot > 1 ? 's' : ''} avec ce chaudron.`
+                                : FR.ui.cookingDrawer.chaqueEmplacementCouteIngredientAvecCe(costPerSlot, costPerSlot > 1 ? 's' : '')
                             }
                             onClick={onStartCooking}
                             className="voxel-btn cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed px-4 py-2.5 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-display font-bold text-sm border-2 border-[#141925] flex items-center gap-1.5 whitespace-nowrap shrink-0"
                           >
                             <Flame className="w-4 h-4" />
-                            {canCook ? 'Lancer la cuisson' : 'Stock insuffisant'}
+                            {canCook ? FR.ui.cookingDrawer.lancerLaCuisson : FR.ui.cookingDrawer.stockInsuffisant}
                           </button>
                         </div>
                       ) : (
                         <p className="text-xs text-[#B8C2D1]">
-                          Cliquez sur vos ingrédients à droite pour remplir les 5 emplacements de la marmite.
+                          {FR.ui.cookingDrawer.cliquezSurVosIngredientsADroite}
                         </p>
                       )}
                     </>
@@ -336,14 +337,14 @@ export function CookingDrawer({
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-display font-bold text-sm text-[#F4B942]">
-                            Cuisson en cours : {activeRecipe.name}
+                            {FR.ui.cookingDrawer.cuissonEnCours}{activeRecipe.name}
                           </p>
                           <p className="text-xs text-[#CBD5E1]">
-                            Encore{' '}
+                            {FR.ui.cookingDrawer.encore}{' '}
                             <strong className="font-mono-num">
                               {pot.expeditionsRemaining}
                             </strong>{' '}
-                            expédition{pot.expeditionsRemaining > 1 ? 's' : ''} avant dégustation.
+                            {FR.ui.cookingDrawer.expedition}{pot.expeditionsRemaining > 1 ? 's' : ''}{FR.ui.cookingDrawer.avantDegustation}
                           </p>
                         </div>
                         <button
@@ -351,7 +352,7 @@ export function CookingDrawer({
                           onClick={onFastFinishCooking}
                           className="voxel-btn cursor-pointer px-3 py-1.5 rounded-lg bg-[#242F44] hover:bg-[#313F59] text-xs font-semibold text-[#F4B942] border border-[#F4B942]/60 whitespace-nowrap shrink-0"
                         >
-                          Terminer maintenant
+                          {FR.ui.cookingDrawer.terminerMaintenant}
                         </button>
                       </div>
                       <div className="h-2.5 rounded bg-[#101520] border border-[#344056] overflow-hidden">
@@ -374,10 +375,10 @@ export function CookingDrawer({
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-display font-bold text-base text-[#2FB97A]">
-                          {activeRecipe.name} est prêt !
+                          {activeRecipe.name}{FR.ui.cookingDrawer.estPret}
                         </p>
                         <p className="text-xs text-[#CBD5E1]">
-                          Un Cubimon attiré par l’odeur attend près du feu de camp.
+                          {FR.ui.cookingDrawer.unCubimonAttireParLOdeur}
                         </p>
                       </div>
                       <button
@@ -386,7 +387,7 @@ export function CookingDrawer({
                         className="voxel-btn cursor-pointer px-5 py-2.5 rounded-xl bg-[#2FB97A] hover:bg-[#38C987] text-[#0F172A] font-display font-bold text-sm border-2 border-[#141925] flex items-center gap-1.5 whitespace-nowrap shrink-0"
                       >
                         <Sparkles className="w-4 h-4" />
-                        Accueillir la recrue
+                        {FR.ui.cookingDrawer.accueillirLaRecrue}
                       </button>
                     </div>
                   )}
@@ -397,7 +398,7 @@ export function CookingDrawer({
             {/* Right: Ingredient Inventory */}
             <div className="md:col-span-6">
               <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1] mb-2">
-                Réserve d’ingrédients
+                {FR.ui.cookingDrawer.reserveDIngredients}
               </p>
               <div className="grid grid-cols-2 gap-2.5">
                 {INGREDIENT_LIST.map((ing) => {
@@ -441,11 +442,11 @@ export function CookingDrawer({
                         </div>
                         <p className="text-[11px] text-[#94A3B8] truncate mt-0.5">
                           {ing.rarity === 'mystic'
-                            ? 'Mystique'
+                            ? FR.ui.cookingDrawer.mystique
                             : ing.rarity === 'rare'
-                              ? 'Rare'
-                              : 'Commun'}{' '}
-                          · coût {costPerSlot}
+                              ? FR.ui.cookingDrawer.rare
+                              : FR.ui.cookingDrawer.commun}{' '}
+                          {FR.ui.cookingDrawer.cout}{costPerSlot}
                         </p>
                       </div>
                     </button>

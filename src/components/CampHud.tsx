@@ -16,6 +16,7 @@ import {
 import { computeSquadPower } from '../game/rules';
 import type { SaveState } from '../game/types';
 import { VoxelCreatureAvatar } from './Icons';
+import { FR } from '../i18n/fr';
 
 export type CampDrawerTab = 'expeditions' | 'cooking' | 'team' | 'quests' | 'codex' | null;
 
@@ -53,9 +54,9 @@ export function CampHud({
 
   const potNotice =
     save.pot.status === 'ready'
-      ? 'Plat prêt !'
+      ? FR.ui.campHud.platPret
       : save.pot.status === 'cooking'
-        ? `Cuisson (${save.pot.expeditionsRemaining})`
+        ? FR.ui.campHud.cuisson(save.pot.expeditionsRemaining)
         : null;
 
   return (
@@ -65,16 +66,16 @@ export function CampHud({
         <div className="voxel-panel rounded-xl px-4 py-2.5 flex items-center gap-3.5 pointer-events-auto">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[#B8C2D1] leading-none">
-              Camp de Base
+              {FR.ui.campHud.campDeBase}
             </p>
             <p className="font-display font-bold text-base text-[#FAF7F0] leading-tight mt-0.5">
-              Île aux Cubes
+              {FR.ui.campHud.ileAuxCubes}
             </p>
           </div>
           <div className="h-8 w-px bg-[#39445A]" />
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B8C2D1] leading-none">
-              Puissance
+              {FR.ui.campHud.puissance}
             </p>
             <p className="font-mono-num font-bold text-base text-[#F4B942] leading-tight mt-0.5">
               {squadPower.toLocaleString('fr-FR')}
@@ -100,11 +101,11 @@ export function CampHud({
             }`}
             aria-label={
               screenShake
-                ? 'Désactiver le tremblement de caméra'
-                : 'Activer le tremblement de caméra'
+                ? FR.ui.campHud.desactiverLeTremblementDeCamera
+                : FR.ui.campHud.activerLeTremblementDeCamera
             }
             aria-pressed={screenShake}
-            title={screenShake ? 'Tremblement de caméra : activé' : 'Tremblement de caméra : désactivé'}
+            title={screenShake ? FR.ui.campHud.tremblementDeCameraActive : FR.ui.campHud.tremblementDeCameraDesactive}
           >
             {screenShake ? <Vibrate className="w-4 h-4" /> : <VibrateOff className="w-4 h-4" />}
           </button>
@@ -116,7 +117,7 @@ export function CampHud({
               onToggleMute();
             }}
             className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
-            aria-label={muted ? 'Activer le son' : 'Couper le son'}
+            aria-label={muted ? FR.ui.campHud.activerLeSon : FR.ui.campHud.couperLeSon}
           >
             {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
@@ -128,7 +129,7 @@ export function CampHud({
               onReturnTitle();
             }}
             className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
-            aria-label="Retour à l'écran titre"
+            aria-label={FR.ui.campHud.retourALEcranTitre}
           >
             <Home className="w-4 h-4" />
           </button>
@@ -144,11 +145,11 @@ export function CampHud({
         >
           {dockCollapsed ? (
             <>
-              <ChevronUp className="w-3.5 h-3.5" /> Afficher le camp
+              <ChevronUp className="w-3.5 h-3.5" />{FR.ui.campHud.afficherLeCamp}
             </>
           ) : (
             <>
-              <ChevronDown className="w-3.5 h-3.5" /> Masquer le dock
+              <ChevronDown className="w-3.5 h-3.5" />{FR.ui.campHud.masquerLeDock}
             </>
           )}
         </button>
@@ -165,7 +166,7 @@ export function CampHud({
               }`}
             >
               <Compass className="w-4 h-4" />
-              <span>Expéditions</span>
+              <span>{FR.ui.campHud.expeditions}</span>
             </button>
 
             <button
@@ -178,7 +179,7 @@ export function CampHud({
               }`}
             >
               <Flame className="w-4 h-4 text-[#F4B942]" />
-              <span>Marmite</span>
+              <span>{FR.ui.campHud.marmite}</span>
               {potNotice && (
                 <span className="font-mono-num text-[11px] text-[#2FB97A] font-bold">
                   · {potNotice}
@@ -196,7 +197,7 @@ export function CampHud({
               }`}
             >
               <Users className="w-4 h-4 text-[#38BDF8]" />
-              <span>Équipe & Pierres</span>
+              <span>{FR.ui.campHud.equipePierres}</span>
             </button>
 
             <button
@@ -209,7 +210,7 @@ export function CampHud({
               }`}
             >
               <Trophy className="w-4 h-4 text-[#F4B942]" />
-              <span>Quêtes</span>
+              <span>{FR.ui.campHud.quetes}</span>
               {claimableCount > 0 && (
                 <span className="font-mono-num text-[11px] text-[#2FB97A] font-bold">
                   · {claimableCount}
@@ -227,7 +228,7 @@ export function CampHud({
               }`}
             >
               <BookOpen className="w-4 h-4 text-[#C084FC]" />
-              <span>Codex Web</span>
+              <span>{FR.ui.campHud.codexWeb}</span>
             </button>
           </div>
         )}

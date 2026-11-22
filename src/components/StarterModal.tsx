@@ -1,6 +1,7 @@
 import React from 'react';
 import { ELEMENT_META, MOVES, SPECIES, STARTER_IDS } from '../game/catalog';
 import { ElementIcon, VoxelCreatureAvatar } from './Icons';
+import { FR } from '../i18n/fr';
 
 interface StarterModalProps {
   onSelectStarter: (speciesId: string) => void;
@@ -17,10 +18,10 @@ export function StarterModal({ onSelectStarter }: StarterModalProps) {
       >
         <div className="mb-5 text-center">
           <h2 id="starter-dialog-title" className="font-display text-2xl sm:text-3xl font-bold">
-            Choisissez votre premier Cubimon
+            {FR.ui.starterModal.choisissezVotrePremierCubimon}
           </h2>
           <p className="mt-1.5 text-sm text-[#B8C2D1]">
-            Deux éclaireurs vous rejoindront aussitôt pour former votre escouade de 3 au Camp de Base.
+            {FR.ui.starterModal.deuxEclaireursVousRejoindrontAussitotPour}
           </p>
         </div>
 
@@ -42,14 +43,14 @@ export function StarterModal({ onSelectStarter }: StarterModalProps) {
                   <span className="font-display text-lg font-bold text-[#FAF7F0]">{sp.name}</span>
                 </div>
                 <p className="mt-1 text-xs text-[#B8C2D1] text-center">
-                  {el.label} · {sp.role === 'tank' ? 'Tank' : sp.role === 'ranged' ? 'Distance' : 'Mêlée'}
+                  {el.label} · {sp.role === 'tank' ? FR.ui.starterModal.tank : sp.role === 'ranged' ? FR.ui.starterModal.distance : FR.ui.starterModal.melee}
                 </p>
                 <div className="mt-3 w-full border-t border-[#39445A] pt-2.5 flex justify-between text-xs font-mono-num">
-                  <span className="text-[#2FB97A]">PV {sp.baseHp}</span>
-                  <span className="text-[#F4B942]">ATQ {sp.baseAtk}</span>
+                  <span className="text-[#2FB97A]">{FR.ui.starterModal.pv}{sp.baseHp}</span>
+                  <span className="text-[#F4B942]">{FR.ui.starterModal.atq}{sp.baseAtk}</span>
                 </div>
                 <p className="mt-2 text-xs text-[#CBD5E1] text-center leading-snug">
-                  Sort : <strong className="text-[#FAF7F0]">{move.name}</strong>
+                  {FR.ui.starterModal.sort}<strong className="text-[#FAF7F0]">{move.name}</strong>
                 </p>
               </button>
             );

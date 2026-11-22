@@ -2,6 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ELEMENT_META, MOVES, SPECIES } from '../game/catalog';
 import { ElementIcon } from './Icons';
+import { FR } from '../i18n/fr';
 
 interface EvolutionOverlayProps {
   fromSpeciesId: string;
@@ -49,14 +50,14 @@ export function EvolutionOverlay({ fromSpeciesId, toSpeciesId, revealed }: Evolu
               transition={{ duration: 0.3 }}
             >
               <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#F4B942]">
-                Métamorphose
+                {FR.ui.evolutionOverlay.metamorphose}
               </p>
               <motion.p
                 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold text-[#FAF7F0] hud-text-stroke"
                 animate={{ opacity: [1, 0.55, 1] }}
                 transition={{ duration: 0.9, repeat: Infinity }}
               >
-                {from.name} rayonne d’une lumière étrange…
+                {from.name}{FR.ui.evolutionOverlay.rayonneDUneLumiereEtrange}
               </motion.p>
             </motion.div>
           ) : (
@@ -67,10 +68,10 @@ export function EvolutionOverlay({ fromSpeciesId, toSpeciesId, revealed }: Evolu
               transition={{ type: 'spring', stiffness: 300, damping: 14 }}
             >
               <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#F4B942]">
-                Évolution réussie
+                {FR.ui.evolutionOverlay.evolutionReussie}
               </p>
               <p className="mt-1 font-display text-3xl sm:text-4xl font-extrabold text-[#FAF7F0] hud-text-stroke">
-                {from.name} devient{' '}
+                {from.name}{FR.ui.evolutionOverlay.devient}{' '}
                 <span style={{ color: ELEMENT_META[to.element].color }}>{to.name}</span> !
               </p>
               <motion.div
@@ -82,11 +83,11 @@ export function EvolutionOverlay({ fromSpeciesId, toSpeciesId, revealed }: Evolu
                 <span className="inline-flex items-center gap-1">
                   <ElementIcon element={to.element} size={14} /> {ELEMENT_META[to.element].label}
                 </span>
-                <span className="font-mono-num text-[#2FB97A]">PV +{to.baseHp - from.baseHp}</span>
-                <span className="font-mono-num text-[#F4B942]">ATQ +{to.baseAtk - from.baseAtk}</span>
+                <span className="font-mono-num text-[#2FB97A]">{FR.ui.evolutionOverlay.pv}{to.baseHp - from.baseHp}</span>
+                <span className="font-mono-num text-[#F4B942]">{FR.ui.evolutionOverlay.atq}{to.baseAtk - from.baseAtk}</span>
                 {newMove && (
                   <span>
-                    Nouveau sort : <strong className="text-[#FAF7F0]">{newMove.name}</strong>
+                    {FR.ui.evolutionOverlay.nouveauSort}<strong className="text-[#FAF7F0]">{newMove.name}</strong>
                   </span>
                 )}
               </motion.div>

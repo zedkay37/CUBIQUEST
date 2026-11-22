@@ -1,0 +1,51 @@
+CAMP DE BASE
+
+Île aux Cubes
+
+PUISSANCE
+
+1 253
+
+Masquer le dock
+Expéditions
+Marmite
+Équipe & Pierres
+Quêtes
+· 6
+Codex Web
+
+JOURNAL DU CAMP · V0.2
+
+Quêtes, Succès & Sauvegarde
+Missions (3)
+· 1
+Succès (0/19)
+· 5
+Sauvegarde
+
+Complétez des objectifs en expédition ou à la marmite pour gagner des ressources. Chaque mission réclamée est remplacée par un nouveau défi.
+
+Patrouille de l’Île
+1 / 1
+
+Remportez 1 expédition dans n’importe quel biome.
+
+Récompense : +3 Baie Rubis · +3 Baie Azur
+
+Réclamer
+Alchimiste Élémentaire
+0 / 3
+
+Déclenchez 3 réactions élémentaires en combat.
+
+Récompense : +2 Miel Ambré · Pierre (Argent)
+
+En cours
+Force Unie
+0 / 1
+
+Déclenchez 1 Cubi-Déchaînement (touche R) en expédition.
+
+Récompense : +2 Cristal Glacé · +1 Pierre Hâte
+
+En cours

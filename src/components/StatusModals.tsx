@@ -1,4 +1,5 @@
 import React from 'react';
+import { FR } from '../i18n/fr';
 
 interface PauseModalProps {
   stageName: string;
@@ -26,13 +27,13 @@ export function PauseModal({
         className="voxel-panel w-full max-w-sm rounded-2xl p-6 text-center text-[#FAF7F0]"
       >
         <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1]">
-          Expédition en pause
+          {FR.ui.statusModals.expeditionEnPause}
         </p>
         <h2 id="pause-modal-title" className="mt-1 font-display text-2xl font-bold">
           {stageName}
         </h2>
         <p className="mt-2 text-xs text-[#B8C2D1]">
-          Appuyez sur Échap ou P pour reprendre le combat.
+          {FR.ui.statusModals.appuyezSurEchapOuPPour}
         </p>
 
         <div className="mt-6 flex flex-col gap-2.5">
@@ -41,21 +42,21 @@ export function PauseModal({
             onClick={onResume}
             className="voxel-btn cursor-pointer w-full py-3 rounded-xl bg-[#2FB97A] hover:bg-[#38C987] text-[#0F172A] font-display font-bold text-base border-2 border-[#141925]"
           >
-            Reprendre
+            {FR.ui.statusModals.reprendre}
           </button>
           <button
             type="button"
             onClick={onRestart}
             className="voxel-btn cursor-pointer w-full py-2.5 rounded-xl bg-[#222A3A] hover:bg-[#2B3548] text-[#FAF7F0] font-semibold text-sm border-2 border-[#39445A]"
           >
-            Recommencer le niveau
+            {FR.ui.statusModals.recommencerLeNiveau}
           </button>
           <button
             type="button"
             onClick={onReturnCamp}
             className="voxel-btn cursor-pointer w-full py-2.5 rounded-xl bg-[#181E2A] hover:bg-[#222A3A] text-[#CBD5E1] font-semibold text-sm border-2 border-[#39445A]"
           >
-            Retour au Camp de Base
+            {FR.ui.statusModals.retourAuCampDeBase}
           </button>
         </div>
 
@@ -66,7 +67,7 @@ export function PauseModal({
             onChange={onToggleShake}
             className="w-4 h-4 accent-[#F4B942] cursor-pointer"
           />
-          Tremblement de caméra lors des impacts
+          {FR.ui.statusModals.tremblementDeCameraLorsDesImpacts}
         </label>
       </div>
     </div>

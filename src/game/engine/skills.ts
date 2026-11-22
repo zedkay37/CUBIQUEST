@@ -12,6 +12,7 @@ import { spawnParticleBurst, spawnProjectile, spawnShockwaveRing } from './fx';
 import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
+import { FR } from '../../i18n/fr';
 
 export function triggerAllySkill(self: VoxelEngine, slotIndex: number): boolean {
   if (
@@ -50,7 +51,7 @@ export function triggerScatter(self: VoxelEngine): boolean {
     soundFx.playPerfectDodge();
     const firstAlive = self.allies.find((a) => !a.fainted);
     if (firstAlive) {
-      self.floatingText.spawn(firstAlive.x, 2.4, firstAlive.z, 'ESQUIVE PARFAITE !', '#38BDF8', 1.25, 1.05);
+      self.floatingText.spawn(firstAlive.x, 2.4, firstAlive.z, FR.engine.esquiveParfaite, '#38BDF8', 1.25, 1.05);
     }
   }
 
@@ -121,7 +122,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
   soundFx.playUltimate();
   self.hitstopTimer = 0.085;
   self.trauma = Math.min(1, self.trauma + 0.7);
-  self.bannerText = 'CUBI-DÉCHAÎNEMENT !';
+  self.bannerText = FR.engine.cubiDechainement;
   self.bannerTimer = 1.8;
 
   let combinedAtk = 0;
@@ -132,7 +133,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
     const heal = Math.round(ally.maxHp * 0.22);
     ally.hp = Math.min(ally.maxHp, ally.hp + heal);
     spawnParticleBurst(self, ally.x, 1.0, ally.z, ally.rig.species.palette.accent, 18, 6.2);
-    self.floatingText.spawn(ally.x, 2.1, ally.z, `+${heal} PV`, '#4ADE80', 1.0, 0.9);
+    self.floatingText.spawn(ally.x, 2.1, ally.z, FR.engine.pv(heal), '#4ADE80', 1.0, 0.9);
     spawnShockwaveRing(self, ally.x, ally.z, 5.5, ally.rig.species.palette.accent);
   }
 
@@ -148,7 +149,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
     cz /= livingEnemies.length;
     spawnShockwaveRing(self, cx, cz, 8.5, '#F4B942');
     spawnParticleBurst(self, cx, 1.2, cz, '#FFE066', 36, 7.4);
-    self.floatingText.spawn(cx, 2.9, cz, 'CUBI-DÉCHAÎNEMENT !', '#F4B942', 1.4, 1.15);
+    self.floatingText.spawn(cx, 2.9, cz, FR.engine.cubiDechainement, '#F4B942', 1.4, 1.15);
 
     const leadAlly = livingAllies[0];
     const baseUltDmg = Math.round(combinedAtk * 1.35);
@@ -187,7 +188,7 @@ export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
     unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
     self.ultimateCharge = computeUltimateCharge(self.ultimateCharge, 8);
     spawnParticleBurst(self, unit.x, 0.9, unit.z, move.color, 14, 4.0);
-    self.floatingText.spawn(unit.x, 2.0, unit.z, `+${healAmt} PV`, '#4ADE80', 0.95);
+    self.floatingText.spawn(unit.x, 2.0, unit.z, FR.engine.pv(healAmt), '#4ADE80', 0.95);
 
     if (mods.shareRatio > 0) {
       for (const mate of self.allies) {
@@ -196,7 +197,7 @@ export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
           const sharedHeal = Math.round(healAmt * mods.shareRatio);
           mate.hp = Math.min(mate.maxHp, mate.hp + sharedHeal);
           spawnParticleBurst(self, mate.x, 0.9, mate.z, '#C084FC', 10, 3.4);
-          self.floatingText.spawn(mate.x, 2.0, mate.z, `+${sharedHeal} PV`, '#4ADE80', 0.85);
+          self.floatingText.spawn(mate.x, 2.0, mate.z, FR.engine.pv(sharedHeal), '#4ADE80', 0.85);
         }
       }
     }

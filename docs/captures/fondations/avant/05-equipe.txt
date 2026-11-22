@@ -1,0 +1,128 @@
+CAMP DE BASE
+
+Île aux Cubes
+
+PUISSANCE
+
+1 253
+
+Masquer le dock
+Expéditions
+Marmite
+Équipe & Pierres
+Quêtes
+· 6
+Codex Web
+Escouade & Grille de Pierres de Pouvoir
+
+Puissance totale d’escouade : 1 253 · 3/3 actifs · 5 compagnons au camp
+
+COMPAGNONS (5)
+
+Pyrocube
+N.8
+559
+Escouade
+Bourgéon
+N.3
+378
+Escouade
+Voltik
+N.3
+316
+Escouade
+Cailloc
+N.3
+336
+Givrelin
+N.14
+1009
+Pyrocube
+
+Niv. 8 · Feu · XP 0/535
+
+Retirer escouade
+
+PV
+
+256
+
+ATQ
+
+303
+
+CRIT
+
+14%
+
+VAMP.
+
+0%
+
+Évolution : Flambrix (Niv. 8)
+
+Faire évoluer
+
+COMPÉTENCE SPÉCIALE
+
+Flammèche Cube
+
+4.5s
+Pierre Capacité 1
++Élargie (1)
++Hâte (1)
++Double (1)
++Partage (1)
++Précision (1)
++Sangsue (1)
+Pierre Capacité 2
++Élargie (1)
++Hâte (1)
++Double (1)
++Partage (1)
++Précision (1)
++Sangsue (1)
+
+GRILLE DE PIERRES DE POUVOIR (3×3)
+
+Retirer la pierre
++48 ATQ
+PV
+ATQ
+ATQ
+Mixte
+Niv.10
+Niv.14
+Niv.18
+Niv.22
+
+SAC DE PIERRES (4)
+
+Tout
+ATQ
+PV
+
++52 PV
+
+Vampirisme +3%
+
+MAUVAIS TYPE
+Bourgéon
+
++48 ATQ
+
+Critique +6%
+
+ÉQUIPÉE
+
++40 PV
+
+Pierre standard
+
+MAUVAIS TYPE
+
++36 ATQ
+
+Pierre standard
+
+ÉQUIPER

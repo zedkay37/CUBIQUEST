@@ -4,6 +4,7 @@ import { Pause, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { ELEMENT_META, STATUS_META } from '../game/catalog';
 import type { ControlMode, ExpeditionHudSnapshot } from '../game/types';
 import { ElementIcon, ScatterIcon, VoxelCreatureAvatar } from './Icons';
+import { FR } from '../i18n/fr';
 
 interface ExpeditionHudProps {
   hud: ExpeditionHudSnapshot;
@@ -17,9 +18,9 @@ interface ExpeditionHudProps {
 }
 
 const CONTROL_LABELS: Record<ControlMode, string> = {
-  semi: 'Semi-Auto [E]',
-  auto: 'Auto Total [E]',
-  manual: 'Manuel [E]',
+  semi: FR.ui.expeditionHud.semiAutoE,
+  auto: FR.ui.expeditionHud.autoTotalE,
+  manual: FR.ui.expeditionHud.manuelE,
 };
 
 export function ExpeditionHud({
@@ -62,7 +63,7 @@ export function ExpeditionHud({
             <div className="h-7 w-px bg-[#39445A]" />
             <div className="text-right">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B8C2D1] leading-none">
-                Vague
+                {FR.ui.expeditionHud.vague}
               </p>
               <p className="font-mono-num font-bold text-base text-[#F4B942] leading-tight mt-0.5">
                 {hud.waveIndex + 1}/{hud.totalWaves}
@@ -71,7 +72,7 @@ export function ExpeditionHud({
             <div className="h-7 w-px bg-[#39445A] hidden sm:block" />
             <div className="text-right hidden sm:block">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B8C2D1] leading-none">
-                Temps
+                {FR.ui.expeditionHud.temps}
               </p>
               <p className="font-mono-num font-bold text-base text-[#FAF7F0] leading-tight mt-0.5">
                 {timerStr}
@@ -97,17 +98,17 @@ export function ExpeditionHud({
                           : 'bg-[#273145] text-[#CBD5E1]'
                     }`}
                   >
-                    P{hud.boss.phase}/{hud.boss.maxPhases}
+                    {FR.ui.expeditionHud.p}{hud.boss.phase}/{hud.boss.maxPhases}
                     {hud.boss.phase === 3
-                      ? ' · SURCHARGE'
+                      ? FR.ui.expeditionHud.surcharge
                       : hud.boss.phase === 2
-                        ? ' · FUREUR'
+                        ? FR.ui.expeditionHud.fureur
                         : ''}
                   </span>
                 </div>
                 <span className="font-mono-num text-xs font-bold text-[#FCA5A5] whitespace-nowrap shrink-0">
                   {hud.boss.telegraphing
-                    ? 'ATTAQUE ! ESQUIVEZ !'
+                    ? FR.ui.expeditionHud.attaqueEsquivez
                     : `${Math.round(hud.boss.hp)} / ${Math.round(hud.boss.maxHp)}`}
                 </span>
               </div>
@@ -157,7 +158,7 @@ export function ExpeditionHud({
                   transition={{ type: 'spring', stiffness: 520, damping: 16 }}
                   className="inline-block origin-left font-mono-num font-extrabold text-sm text-[#F4B942]"
                 >
-                  ×{hud.comboCount} COMBO
+                  ×{hud.comboCount}{FR.ui.expeditionHud.combo}
                 </motion.span>
               )}
               {hud.lastReactionLabel && (
@@ -186,7 +187,7 @@ export function ExpeditionHud({
                 ? 'bg-[#2FB97A] text-[#0F172A] border-[#141925]'
                 : 'bg-[#181E2A]/92 text-[#FAF7F0] border-[#39445A] hover:border-[#F4B942]'
             }`}
-            aria-label="Changer le mode de contrôle"
+            aria-label={FR.ui.expeditionHud.changerLeModeDeControle}
           >
             {CONTROL_LABELS[hud.controlMode]}
           </button>
@@ -199,7 +200,7 @@ export function ExpeditionHud({
               onToggleMute();
             }}
             className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
-            aria-label={muted ? 'Activer le son' : 'Couper le son'}
+            aria-label={muted ? FR.ui.expeditionHud.activerLeSon : FR.ui.expeditionHud.couperLeSon}
           >
             {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
@@ -212,7 +213,7 @@ export function ExpeditionHud({
               onPause();
             }}
             className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
-            aria-label="Mettre en pause"
+            aria-label={FR.ui.expeditionHud.mettreEnPause}
           >
             <Pause className="w-4 h-4" />
           </button>
@@ -260,7 +261,7 @@ export function ExpeditionHud({
                 animate={{ opacity: 1, letterSpacing: '0.45em' }}
                 transition={{ duration: 0.5 }}
               >
-                Alerte Boss
+                {FR.ui.expeditionHud.alerteBoss}
               </motion.p>
               <motion.h2
                 className="mt-1 font-display text-5xl sm:text-6xl font-extrabold hud-text-stroke"
@@ -320,7 +321,7 @@ export function ExpeditionHud({
                         {u.name}
                       </span>
                       <span className="font-mono-num text-[10px] text-[#B8C2D1] shrink-0">
-                        N.{u.level}
+                        {FR.ui.expeditionHud.n}{u.level}
                       </span>
                     </div>
                     <div className="relative mt-1 h-2 w-full rounded bg-[#111622] overflow-hidden border border-[#39445A]">
@@ -340,13 +341,13 @@ export function ExpeditionHud({
                     <div className="mt-0.5 flex items-center justify-between gap-1 text-[10px] font-mono-num text-[#B8C2D1]">
                       <span className="truncate">
                         {u.fainted
-                          ? `Réanim. ${u.reviveTimer.toFixed(0)}s`
+                          ? FR.ui.expeditionHud.reanimS(u.reviveTimer.toFixed(0))
                           : u.shieldHp > 0
                             ? `${Math.round(u.hp)} +${u.shieldHp}`
                             : `${Math.round(u.hp)}/${Math.round(u.maxHp)}`}
                       </span>
                       <span className="flex items-center gap-1 shrink-0">
-                        {u.buffActive && <span className="text-[#38BDF8] font-bold">DEF+</span>}
+                        {u.buffActive && <span className="text-[#38BDF8] font-bold">{FR.ui.expeditionHud.def}</span>}
                         {u.statuses.slice(0, 2).map((st) => (
                           <span
                             key={st}
@@ -376,7 +377,7 @@ export function ExpeditionHud({
                       : 'border-[#39445A] bg-[#161C28] text-[#94A3B8] cursor-not-allowed'
                   }`}
                   style={skillReady ? { backgroundColor: moveColor } : undefined}
-                  aria-label={`Lancer ${u.moveName} avec ${u.name}`}
+                  aria-label={FR.ui.expeditionHud.lancerAvec(u.moveName, u.name)}
                 >
                   {!skillReady && !u.fainted && (
                     <div
@@ -411,7 +412,7 @@ export function ExpeditionHud({
               ? 'bg-[#E85D3F] hover:bg-[#F06D50] border-[#141925] text-[#FAF7F0]'
               : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
           }`}
-          aria-label="Dispersion de l'escouade"
+          aria-label={FR.ui.expeditionHud.dispersionDeLEscouade}
         >
           {!scatterReady && (
             <div
@@ -421,10 +422,10 @@ export function ExpeditionHud({
           )}
           <ScatterIcon size={24} />
           <span className="relative z-10 font-display font-bold text-xs leading-none">
-            Dispersion
+            {FR.ui.expeditionHud.dispersion}
           </span>
           <span className="relative z-10 font-mono-num text-[10px] opacity-90">
-            {scatterReady ? 'ESPACE' : `${hud.scatterCooldown.toFixed(1)}s`}
+            {scatterReady ? FR.ui.expeditionHud.espace : `${hud.scatterCooldown.toFixed(1)}s`}
           </span>
         </button>
 
@@ -442,7 +443,7 @@ export function ExpeditionHud({
               ? 'bg-[#F4B942] hover:bg-[#F7C964] border-[#141925] text-[#0F172A]'
               : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
           }`}
-          aria-label="Déclencher l'Ultime d'escouade"
+          aria-label={FR.ui.expeditionHud.declencherLUltimeDEscouade}
         >
           {!ultimateReady && (
             <div
@@ -452,10 +453,10 @@ export function ExpeditionHud({
           )}
           <Sparkles className="relative z-10 w-6 h-6" />
           <span className="relative z-10 font-display font-bold text-xs leading-none">
-            Ultime
+            {FR.ui.expeditionHud.ultime}
           </span>
           <span className="relative z-10 font-mono-num text-[10px] font-bold">
-            {ultimateReady ? 'TOUCHE R' : `${hud.ultimateCharge}%`}
+            {ultimateReady ? FR.ui.expeditionHud.toucheR : `${hud.ultimateCharge}%`}
           </span>
         </button>
         </div>

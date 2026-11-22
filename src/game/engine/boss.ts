@@ -26,6 +26,7 @@ import {
 import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
+import { FR } from '../../i18n/fr';
 
 export function updateBossIntro(self: VoxelEngine, dt: number): void {
   const boss = self.bossIntroActor;
@@ -48,7 +49,7 @@ export function updateBossIntro(self: VoxelEngine, dt: number): void {
     self.bossIntroActor = null;
     self.bossIntroInfo = null;
     self.bossDropY = 0;
-    self.bannerText = 'ALERTE BOSS ! Préparez Dispersion !';
+    self.bannerText = FR.engine.alerteBossPreparezDispersion;
     self.bannerTimer = 2.2;
     emitHudSnapshot(self);
   }
@@ -237,7 +238,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
           }
         }
         if (hasFollowUp) {
-          self.bannerText = 'Contrecoup — éloignez-vous !';
+          self.bannerText = FR.engine.contrecoupEloignezVous;
           self.bannerTimer = 1.0;
           spawnEnemyTelegraph(
             self,

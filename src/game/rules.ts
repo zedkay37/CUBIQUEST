@@ -42,6 +42,7 @@ import type {
   StoneSlot,
   StoneSlotType,
 } from './types';
+import { FR } from '../i18n/fr';
 
 export const SAVE_STORAGE_KEY = 'cubiquest_save_v2';
 /** Copie brute d'une sauvegarde stockée mais illisible (JSON cassé, version inconnue) : jamais écrasée en silence. */
@@ -773,7 +774,7 @@ export function applyExpeditionRewards(
       level += 1;
     }
     if (level > startLevel) {
-      leveledUpNames.push(`${SPECIES[c.speciesId]?.name ?? 'Cubimon'} Niv.${level}`);
+      leveledUpNames.push(FR.rules.niv(SPECIES[c.speciesId]?.name ?? FR.rules.cubimon, level));
     }
     return { ...c, level, xp };
   });
@@ -1536,19 +1537,19 @@ export function importSaveFromJson(
 ): { ok: true; save: SaveState } | { ok: false; error: string } {
   const trimmed = rawJson.trim();
   if (!trimmed) {
-    return { ok: false, error: 'Le contenu JSON est vide.' };
+    return { ok: false, error: FR.rules.leContenuJsonEstVide };
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(trimmed);
   } catch {
-    return { ok: false, error: 'Format JSON invalide. Vérifiez que le fichier n’est pas tronqué.' };
+    return { ok: false, error: FR.rules.formatJsonInvalideVerifiezQueLe };
   }
   const migrated = migrateSaveState(parsed);
   if (!migrated) {
     return {
       ok: false,
-      error: 'Sauvegarde CubiQuest non reconnue ou incomplète (version ou escouade manquante).',
+      error: FR.rules.sauvegardeCubiquestNonReconnueOuIncomplete,
     };
   }
   return { ok: true, save: migrated };

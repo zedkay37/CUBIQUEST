@@ -1,5 +1,6 @@
 import React from 'react';
 import { CubiQuestTitleLockup } from './Icons';
+import { FR } from '../i18n/fr';
 
 interface TitleOverlayProps {
   hasExistingSave: boolean;
@@ -31,7 +32,7 @@ export function TitleOverlay({
             }}
             className="voxel-btn cursor-pointer px-8 py-3.5 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-display font-bold text-lg tracking-wide border-2 border-[#181E2A] whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4B942]"
           >
-            {hasExistingSave ? 'Continuer l’aventure' : 'Commencer l’aventure'}
+            {hasExistingSave ? FR.ui.titleOverlay.continuerLAventure : FR.ui.titleOverlay.commencerLAventure}
           </button>
 
           {hasExistingSave && (
@@ -43,13 +44,13 @@ export function TitleOverlay({
               }}
               className="voxel-btn cursor-pointer px-5 py-3.5 rounded-xl bg-[#181E2A]/90 hover:bg-[#242D3F] text-[#FAF7F0] font-semibold text-sm border-2 border-[#39445A] whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4B942]"
             >
-              Nouvelle île
+              {FR.ui.titleOverlay.nouvelleIle}
             </button>
           )}
         </div>
 
         <p className="text-xs sm:text-sm font-medium text-[#FAF7F0] hud-text-stroke tracking-wide text-center">
-          1 / 2 / 3 Sorts · Espace Dispersion · R Ultime · ZQSD Déplacer · E Auto · P Pause
+          {FR.ui.titleOverlay.t123SortsEspaceDispersion}
         </p>
       </div>
     </div>

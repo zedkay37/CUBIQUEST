@@ -1,6 +1,7 @@
 import React from 'react';
 import { ELEMENT_META, SPECIES } from '../game/catalog';
 import type { ElementType } from '../game/types';
+import { FR } from '../i18n/fr';
 
 export function CubiQuestTitleLockup() {
   return (
@@ -8,7 +9,7 @@ export function CubiQuestTitleLockup() {
       viewBox="0 0 560 156"
       className="w-[min(520px,88vw)] h-auto drop-shadow-[0_10px_24px_rgba(14,18,28,0.45)]"
       role="img"
-      aria-label="CubiQuest : L'Île aux Cubes"
+      aria-label={FR.ui.icons.cubiquestLIleAuxCubes}
     >
       {/* Left voxel isometric crest cube */}
       <g transform="translate(24, 24)">
@@ -39,8 +40,8 @@ export function CubiQuestTitleLockup() {
           paintOrder="stroke fill"
           strokeLinejoin="round"
         >
-          CUBI
-          <tspan fill="#F4B942">QUEST</tspan>
+          {FR.ui.icons.cubi}
+          <tspan fill="#F4B942">{FR.ui.icons.quest}</tspan>
         </text>
         <text
           x="4"
@@ -54,7 +55,7 @@ export function CubiQuestTitleLockup() {
           strokeWidth="6"
           paintOrder="stroke fill"
         >
-          L’ÎLE AUX CUBES
+          {FR.ui.icons.lIleAuxCubes}
         </text>
       </g>
     </svg>
