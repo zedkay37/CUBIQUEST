@@ -139,6 +139,8 @@ export function getRigTopY(species: SpeciesDef): number {
       return 1.35;
     case 'serpentine':
       return 1.6;
+    case 'ram':
+      return 1.85;
     default:
       return 1.72;
   }
@@ -482,6 +484,49 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
     bodyPivot.add(makeBox(0.18, 0.2, 0.08, eyeMat, 0.22, 1.06, 0.43, false));
     bodyPivot.add(makeBox(0.07, 0.07, 0.09, eyeHighlightMat, -0.19, 1.11, 0.44, false));
     bodyPivot.add(makeBox(0.07, 0.07, 0.09, eyeHighlightMat, 0.25, 1.11, 0.44, false));
+  } else if (arch === 'ram') {
+    // Bélier des mesas : trapu, sans encolure, deux grosses cornes d'ambre enroulées autour de la tête
+    // (Chevrok / Mouflambre / Bélithan)
+    bodyPivot.add(makeBox(0.9, 0.66, 1.1, primaryMat, 0, 0.74, -0.08));
+    bodyPivot.add(makeBox(0.98, 0.22, 0.92, secondaryMat, 0, 1.12, -0.12)); // échine rocheuse
+    bodyPivot.add(makeBox(0.66, 0.4, 0.2, bellyMat, 0, 0.66, 0.5));
+    bodyPivot.add(makeBox(0.6, 0.52, 0.54, primaryMat, 0, 1.0, 0.68));
+    bodyPivot.add(makeBox(0.36, 0.24, 0.2, bellyMat, 0, 0.86, 1.02));
+    bodyPivot.add(makeBox(0.13, 0.16, 0.08, eyeMat, -0.17, 1.08, 0.96, false));
+    bodyPivot.add(makeBox(0.13, 0.16, 0.08, eyeMat, 0.17, 1.08, 0.96, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, -0.15, 1.12, 0.97, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, 0.19, 1.12, 0.97, false));
+    for (const side of [-1, 1]) {
+      // corne en « C » : part vers l'arrière, redescend, revient vers l'avant ; elle s'enroule davantage à chaque stade
+      bodyPivot.add(makeBox(0.2, 0.2, 0.36, accentMat, side * 0.4, 1.3, 0.56));
+      bodyPivot.add(makeBox(0.2, 0.42, 0.2, accentMat, side * 0.46, 1.08, 0.36));
+      bodyPivot.add(makeBox(0.18, 0.18, 0.32, accentMat, side * 0.46, 0.84, 0.52));
+      if (stage >= 2) bodyPivot.add(makeBox(0.16, 0.22, 0.16, accentMat, side * 0.46, 0.96, 0.74));
+      if (stage >= 3) bodyPivot.add(makeBox(0.26, 0.26, 0.26, accentMat, side * 0.5, 1.34, 0.36));
+    }
+    if (stage >= 2) bodyPivot.add(makeBox(0.2, 0.2, 0.12, bellyMat, 0, 0.66, 0.98)); // barbiche
+    if (stage >= 3) {
+      // cristaux d'ambre sur l'échine et épaulières de roche
+      bodyPivot.add(makeBox(0.16, 0.3, 0.16, accentMat, -0.22, 1.36, -0.08, false));
+      bodyPivot.add(makeBox(0.18, 0.38, 0.18, accentMat, 0.2, 1.4, -0.3, false));
+      bodyPivot.add(makeBox(0.14, 0.26, 0.14, accentMat, -0.04, 1.34, -0.5, false));
+      bodyPivot.add(makeBox(0.24, 0.4, 0.5, secondaryMat, -0.54, 0.86, 0.16));
+      bodyPivot.add(makeBox(0.24, 0.4, 0.5, secondaryMat, 0.54, 0.86, 0.16));
+    }
+    const ramLegs: [number, number][] = [
+      [-0.3, 0.34],
+      [0.3, 0.34],
+      [-0.3, -0.44],
+      [0.3, -0.44],
+    ];
+    for (const [lx, lz] of ramLegs) {
+      const leg = makeBox(0.24, 0.42, 0.24, secondaryMat, lx, 0.21, lz);
+      bodyPivot.add(leg);
+      legs.push(leg);
+    }
+    const ramTail = makeBox(0.18, 0.18, 0.18, bellyMat, 0, 0.9, -0.7);
+    bodyPivot.add(ramTail);
+    extras.push(ramTail);
   } else if (arch === 'antlered') {
     // Cerf de givre : corps élancé, encolure dressée, bois de glace (Givrelin / Ramurgel / Auroramure)
     bodyPivot.add(makeBox(0.84, 0.6, 1.2, primaryMat, 0, 0.8, -0.05));

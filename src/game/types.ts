@@ -12,6 +12,7 @@ export type CreatureArchetype =
   | 'horned'
   | 'lizard'
   | 'floating'
+  | 'ram'
   // Giga Update : nouvelles silhouettes
   | 'antlered'
   | 'golem'
