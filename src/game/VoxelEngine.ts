@@ -17,20 +17,11 @@ import {
   STORM_KIT,
 } from './balance';
 import { BIOMES, MOVES, RECIPE_BY_ID, SPECIES, STATUS_META } from './catalog';
-import {
-  applyBiomeLighting,
-  configureWeather,
-  spawnBolt,
-  updateDayNight,
-  updateStormAmbience,
-  updateWeather,
-} from './engine/atmosphere';
+import { applyBiomeLighting, configureWeather, spawnBolt, updateDayNight } from './engine/atmosphere';
+import { fovForAspect, handleResize } from './engine/camera';
 import {
   _color,
   _dummy,
-  _vecA,
-  _vecB,
-  _vecC,
   ARENA_BOUND,
   BOLT_POOL_SIZE,
   BOSS_INTRO_SEC,
@@ -51,10 +42,10 @@ import {
   spawnProjectile,
   spawnShockwaveRing,
   spawnSteamCube,
-  updateParticles,
   updateProjectiles,
   updateTelegraphs,
 } from './engine/fx';
+import { advance, detectSoftwareGl, scheduleNextFrame } from './engine/loop';
 import type {
   ActiveProjectile,
   CampWanderer,
@@ -242,7 +233,7 @@ export class VoxelEngine {
       this.isSoftwareGl = true;
       this.renderer = null;
     } else {
-      this.isSoftwareGl = VoxelEngine.detectSoftwareGl();
+      this.isSoftwareGl = detectSoftwareGl();
 
       const renderer = new THREE.WebGLRenderer({
         antialias: !this.isSoftwareGl,
@@ -276,7 +267,7 @@ export class VoxelEngine {
     }
     this.scene.environmentIntensity = 0.42;
 
-    this.camera = new THREE.PerspectiveCamera(VoxelEngine.fovForAspect(width / height), width / height, 0.5, 160);
+    this.camera = new THREE.PerspectiveCamera(fovForAspect(width / height), width / height, 0.5, 160);
     this.camera.position.set(11, 10.5, 20);
     this.camera.lookAt(0, 2.2, -1);
 
@@ -368,7 +359,7 @@ export class VoxelEngine {
     }
 
     if (!this.headless && container) {
-      this.resizeObserver = new ResizeObserver(() => this.handleResize());
+      this.resizeObserver = new ResizeObserver(() => handleResize(this));
       this.resizeObserver.observe(container);
 
       window.addEventListener('keydown', this.handleKeyDown);
@@ -377,42 +368,8 @@ export class VoxelEngine {
       document.addEventListener('visibilitychange', this.handleVisibility);
 
       this.lastTimeMs = performance.now();
-      this.scheduleNextFrame();
+      scheduleNextFrame(this);
     }
-  }
-
-  /**
-   * Champ de vision vertical : 42° en paysage (inchangé). En portrait, on l'ouvre progressivement
-   * pour que l'escouade et ses adversaires restent dans le cadre d'un écran étroit.
-   */
-  static fovForAspect(aspect: number): number {
-    if (!(aspect < 1)) return 42;
-    return THREE.MathUtils.clamp(42 + (1 - aspect) * 46, 42, 72);
-  }
-
-  static detectSoftwareGl(): boolean {
-    try {
-      const gl = document.createElement('canvas').getContext('webgl2');
-      if (!gl) return true;
-      const ext = gl.getExtension('WEBGL_debug_renderer_info');
-      const param = ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER;
-      const gpu = String(gl.getParameter(param));
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
-      return /SwiftShader|llvmpipe|softpipe|Software|Basic Render/i.test(gpu);
-    } catch {
-      return true;
-    }
-  }
-
-  handleResize(): void {
-    if (this.disposed || !this.container || !this.renderer) return;
-    const w = Math.max(1, this.container.clientWidth);
-    const h = Math.max(1, this.container.clientHeight);
-    this.camera.aspect = w / h;
-    this.camera.fov = VoxelEngine.fovForAspect(w / h);
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
-    this.renderer.render(this.scene, this.camera);
   }
 
   handleKeyDown = (e: KeyboardEvent): void => {
@@ -1648,51 +1605,13 @@ export class VoxelEngine {
     return best;
   }
 
-  scheduleNextFrame(): void {
-    if (this.disposed) return;
-    if (this.isSoftwareGl) {
-      this.afterDraw(() => this.tick());
-    } else {
-      this.frameId = requestAnimationFrame(() => this.tick());
-    }
-  }
-
-  afterDraw(cb: () => void): void {
-    if (this.disposed || !this.renderer) return;
-    const gl = this.renderer.getContext() as WebGL2RenderingContext;
-    const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-    gl.flush();
-    const poll = () => {
-      if (this.disposed) return;
-      const state = sync && gl.getSyncParameter(sync, gl.SYNC_STATUS);
-      if (state === gl.UNSIGNALED) {
-        this.frameId = window.setTimeout(poll, 5);
-      } else {
-        if (sync) gl.deleteSync(sync);
-        this.frameId = window.setTimeout(cb, 80);
-      }
-    };
-    this.frameId = window.setTimeout(poll, 5);
-  }
-
-  tick(): void {
-    if (this.disposed) return;
-
-    const now = performance.now();
-    const rawDt = Math.max(0.001, (now - this.lastTimeMs) / 1000);
-    this.lastTimeMs = now;
-    this.advance(Math.min(rawDt, 0.05));
-    this.renderer?.render(this.scene, this.camera);
-    this.scheduleNextFrame();
-  }
-
   /**
    * Avance la simulation d'un pas fixe, sans horloge ni rendu.
    * Réservé au mode headless (`npm run sim`) : en jeu, c'est `tick()` qui pilote.
    */
   public stepSimulation(dt: number): void {
     if (this.disposed) return;
-    this.advance(Math.min(Math.max(dt, 0.001), 0.05));
+    advance(this, Math.min(Math.max(dt, 0.001), 0.05));
   }
 
   /** Accès en lecture pour les tests et outils (fuites mémoire, cohérence d'état). */
@@ -1732,49 +1651,6 @@ export class VoxelEngine {
       ],
       elapsed: this.expeditionElapsed,
     };
-  }
-
-  /** Un pas de jeu complet (logique + caméra), commun à la boucle temps réel et au mode headless. */
-  advance(dt: number): void {
-    this.elapsedTotal += dt;
-
-    if (this.waterUniform) {
-      this.waterUniform.value = this.elapsedTotal;
-    }
-
-    this.envAnimate?.(this.elapsedTotal);
-
-    if (this.cloudGroup) {
-      const clouds = this.cloudGroup.children;
-      for (let i = 0; i < clouds.length; i++) {
-        const cloud = clouds[i];
-        cloud.position.x += (0.55 + (i % 3) * 0.25) * dt;
-        if (cloud.position.x > 40) {
-          cloud.position.x = -40;
-        }
-      }
-    }
-
-    if (this.screenState !== 'paused') {
-      // Hitstop freezes simDt while camera shake, flashes & particles keep ticking in real dt
-      const simDt = this.hitstopTimer > 0 ? 0 : dt;
-      if (this.hitstopTimer > 0) {
-        this.hitstopTimer = Math.max(0, this.hitstopTimer - dt);
-      }
-
-      if (this.playMode === 'camp') {
-        this.updateCamp(dt);
-      } else {
-        this.updateExpedition(dt, simDt);
-      }
-
-      updateParticles(this, dt);
-      updateWeather(this, dt);
-      updateStormAmbience(this, dt);
-      this.floatingText.update(dt);
-    }
-
-    this.updateCamera(dt);
   }
 
   updateCamp(dt: number): void {
@@ -2814,78 +2690,6 @@ export class VoxelEngine {
           extra.rotation.y = Math.sin(elapsed * 5.2 + idx) * 0.25;
       }
     });
-  }
-
-  updateCamera(dt: number): void {
-    if (this.screenState === 'title') {
-      // Atmospheric isometric diorama orbit with upper sky negative space for the Title Lockup
-      const ang = this.elapsedTotal * 0.16 + 0.52;
-      _vecA.set(Math.sin(ang) * 21.5, 9.6, Math.cos(ang) * 21.5);
-      _vecB.set(0.4, 2.5, -1.2);
-    } else if (this.playMode === 'camp') {
-      if (this.evo) {
-        // Gros plan sur la créature qui évolue
-        _vecA.set(EVO_X + 1.6, 2.9, EVO_Z + 5.4);
-        _vecB.set(EVO_X, 1.2, EVO_Z);
-      } else {
-        // Scenic Base Camp diorama showing island shoreline, waystone, cauldron & roaming squad
-        _vecA.set(0.6, 11.4, 20.5);
-        _vecB.set(0.4, 1.4, -1.2);
-      }
-    } else if (this.bossIntroTimer > 0 && this.bossIntroActor) {
-      // Entrée de boss : la caméra plonge sur lui
-      _vecA.set(this.bossIntroActor.x - 1.5, 6.6, this.bossIntroActor.z + 10.5);
-      _vecB.set(this.bossIntroActor.x, 1.9, this.bossIntroActor.z);
-    } else {
-      // Expedition tactical isometric follow camera centered on living squad + slight enemy lead
-      let sx = 0;
-      let sz = 0;
-      let count = 0;
-      for (const a of this.allies) {
-        if (!a.fainted) {
-          sx += a.x;
-          sz += a.z;
-          count += 1;
-        }
-      }
-      if (count > 0) {
-        sx /= count;
-        sz /= count;
-      }
-      const nearestEnemy = this.findNearestLiving(sx, sz, this.enemies);
-      const focusX = nearestEnemy ? sx * 0.72 + nearestEnemy.x * 0.28 : sx;
-      const focusZ = nearestEnemy ? sz * 0.72 + nearestEnemy.z * 0.28 : sz;
-
-      if (this.pendingVictory && (this.expeditionEnded || this.resultSent)) {
-        // Victoire : la caméra se rapproche de l'escouade en fête
-        _vecA.set(sx, 10.2, sz + 11.5);
-        _vecB.set(sx, 1.0, sz);
-      } else {
-        _vecA.set(focusX, 15.8, focusZ + 16.5);
-        _vecB.set(focusX, 0.7, focusZ);
-      }
-    }
-
-    const alpha = 1 - Math.exp(-5.5 * dt);
-    this.camPos.lerp(_vecA, alpha);
-    this.camLook.lerp(_vecB, alpha);
-
-    // Trauma-squared decaying camera shake
-    _vecC.set(0, 0, 0);
-    if (this.trauma > 0) {
-      this.trauma = Math.max(0, this.trauma - dt * 1.9);
-      if (this.shakeEnabled) {
-        const shake = this.trauma * this.trauma * 0.5;
-        _vecC.set(
-          (Math.random() - 0.5) * 2 * shake,
-          (Math.random() - 0.5) * 2 * shake,
-          0,
-        );
-      }
-    }
-
-    this.camera.position.copy(this.camPos).add(_vecC);
-    this.camera.lookAt(this.camLook);
   }
 
   emitHudSnapshot(): void {
