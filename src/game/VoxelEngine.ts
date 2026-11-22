@@ -3305,6 +3305,15 @@ export class VoxelEngine {
             extra.rotation.y = Math.sin(elapsed * 5.2 + idx) * 0.25;
           }
           break;
+        case 'fungal':
+          if (idx === 0) {
+            // le chapeau dodeline
+            extra.rotation.z = Math.sin(elapsed * 2.2 + seed) * 0.06;
+            extra.rotation.x = Math.sin(elapsed * 1.7 + seed) * 0.04;
+          } else {
+            extra.rotation.y = elapsed * 1.1; // spores en orbite
+          }
+          break;
         case 'antlered':
           extra.rotation.z = Math.sin(elapsed * 1.6 + seed + idx) * 0.05;
           break;

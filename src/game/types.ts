@@ -4,6 +4,7 @@ export type CreatureRole = 'melee' | 'ranged' | 'tank';
 
 export type CreatureArchetype =
   | 'quadruped'
+  | 'fungal'
   | 'biped'
   | 'shelled'
   | 'winged'

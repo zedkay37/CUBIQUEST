@@ -127,6 +127,8 @@ export function getRigTopY(species: SpeciesDef): number {
     case 'floating':
     case 'jelly':
       return 2.0;
+    case 'fungal':
+      return 1.8;
     case 'antlered':
       return 2.5;
     case 'golem':
@@ -238,6 +240,53 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
       const leg = makeBox(0.26, 0.3, 0.26, primaryMat, lx, 0.15, lz);
       bodyPivot.add(leg);
       legs.push(leg);
+    }
+  } else if (arch === 'fungal') {
+    // Champignon : pied crème trapu, grand chapeau à trois étages, pastilles lumineuses (Mycélin / Amanitox)
+    bodyPivot.add(makeBox(0.62, 0.62, 0.58, bellyMat, 0, 0.45, 0));
+    const sporeFootL = makeBox(0.24, 0.16, 0.3, secondaryMat, -0.18, 0.08, 0.04);
+    const sporeFootR = makeBox(0.24, 0.16, 0.3, secondaryMat, 0.18, 0.08, 0.04);
+    bodyPivot.add(sporeFootL, sporeFootR);
+    legs.push(sporeFootL, sporeFootR);
+    bodyPivot.add(makeBox(0.14, 0.2, 0.16, bellyMat, -0.38, 0.44, 0.08));
+    bodyPivot.add(makeBox(0.14, 0.2, 0.16, bellyMat, 0.38, 0.44, 0.08));
+    bodyPivot.add(makeBox(0.14, 0.18, 0.08, eyeMat, -0.16, 0.52, 0.3, false));
+    bodyPivot.add(makeBox(0.14, 0.18, 0.08, eyeMat, 0.16, 0.52, 0.3, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, -0.14, 0.57, 0.31, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, 0.18, 0.57, 0.31, false));
+    // Chapeau : pivot à sa base pour qu'il dodeline d'un bloc
+    const cap = new THREE.Group();
+    cap.position.set(0, 0.76, 0);
+    cap.add(makeBox(0.98, 0.12, 0.98, secondaryMat, 0, 0.06, 0)); // lamelles
+    cap.add(makeBox(1.24, 0.3, 1.24, primaryMat, 0, 0.26, 0));
+    cap.add(makeBox(0.92, 0.26, 0.92, primaryMat, 0, 0.53, 0));
+    cap.add(makeBox(0.5, 0.16, 0.5, primaryMat, 0, 0.73, 0));
+    const capSpots: [number, number, number][] = [
+      [-0.36, 0.43, 0.3],
+      [0.34, 0.43, -0.22],
+      [0.08, 0.69, 0.12],
+    ];
+    if (stage >= 3) capSpots.push([-0.12, 0.43, -0.42], [0.42, 0.43, 0.36]);
+    for (const [sx, sy, sz] of capSpots) cap.add(makeBox(0.2, 0.06, 0.2, accentMat, sx, sy, sz, false));
+    cap.add(makeBox(0.22, 0.14, 0.06, accentMat, 0.3, 0.26, 0.63, false));
+    if (stage >= 3) {
+      // deux petits champignons ont poussé sur le chapeau
+      for (const side of [-1, 1]) {
+        cap.add(makeBox(0.12, 0.2, 0.12, bellyMat, side * 0.44, 0.5, -0.4));
+        cap.add(makeBox(0.3, 0.14, 0.3, primaryMat, side * 0.44, 0.66, -0.4));
+      }
+    }
+    bodyPivot.add(cap);
+    extras.push(cap);
+    if (stage >= 3) {
+      bodyPivot.add(makeBox(0.8, 0.1, 0.76, secondaryMat, 0, 0.68, 0)); // collerette
+      // spores en suspension qui tournent lentement autour du pied
+      const spores = new THREE.Group();
+      spores.position.set(0, 0.5, 0);
+      spores.add(makeBox(0.12, 0.12, 0.12, accentMat, 0.86, 0.1, 0.1, false));
+      spores.add(makeBox(0.1, 0.1, 0.1, accentMat, -0.8, -0.12, -0.3, false));
+      bodyPivot.add(spores);
+      extras.push(spores);
     }
   } else if (arch === 'shelled') {
     // Armored turtle/blaster Cubimon (Aquabloc line)

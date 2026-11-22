@@ -140,6 +140,31 @@ export const MOVES: Record<string, MoveDef> = {
     color: '#22C55E',
     description: 'Tourbillon de pétales cubiques lacérant toute la zone.',
   },
+  // Lignée Mycélin
+  spore_shot: {
+    id: 'spore_shot',
+    name: 'Tir Sporique',
+    element: 'grass',
+    style: 'projectile',
+    powerMultiplier: 2.0,
+    cooldown: 4.7,
+    range: 9.0,
+    aoeRadius: 2.4,
+    color: '#86EFAC',
+    description: 'Projette une capsule de spores qui éclate en nuage collant.',
+  },
+  fungal_bloom: {
+    id: 'fungal_bloom',
+    name: 'Éclosion Fongique',
+    element: 'grass',
+    style: 'aoe',
+    powerMultiplier: 2.4,
+    cooldown: 6.3,
+    range: 7.0,
+    aoeRadius: 4.4,
+    color: '#4ADE80',
+    description: 'Fait jaillir un cercle de champignons sous les pieds des ennemis.',
+  },
   spark_dash: {
     id: 'spark_dash',
     name: 'Éclair Vif',
@@ -586,6 +611,55 @@ export const SPECIES: Record<string, SpeciesDef> = {
       eye: '#1F1716',
     },
     dexNote: 'Gardien ancestral de la Prairie Émeraude, sa fleur monumentale déclenche des tempêtes.',
+    isRare: true,
+  },
+
+  // === PRAIRIE ÉMERAUDE : lignée du champignon (Plante, 2 stades) ===
+  mycelin: {
+    id: 'mycelin',
+    name: 'Mycélin',
+    element: 'grass',
+    role: 'ranged',
+    archetype: 'fungal',
+    stage: 1,
+    baseHp: 125,
+    baseAtk: 140,
+    moveSpeed: 4.7,
+    attackRange: 6.0,
+    moveId: 'spore_shot',
+    evolvesTo: 'amanitox',
+    evolveLevel: 18,
+    scale: 0.97,
+    palette: {
+      primary: '#8CCB6E',
+      secondary: '#4F8A4B',
+      belly: '#F3EBD3',
+      accent: '#FFF7C2',
+      eye: '#2A1F1A',
+    },
+    dexNote: 'Il s’installe à l’ombre des marmites tièdes et saupoudre le camp de spores qui sentent la noisette.',
+  },
+  amanitox: {
+    id: 'amanitox',
+    name: 'Amanitox',
+    element: 'grass',
+    role: 'ranged',
+    archetype: 'fungal',
+    stage: 3,
+    baseHp: 270,
+    baseAtk: 340,
+    moveSpeed: 5.0,
+    attackRange: 6.6,
+    moveId: 'fungal_bloom',
+    scale: 1.34,
+    palette: {
+      primary: '#2F7D5B',
+      secondary: '#1F4D3A',
+      belly: '#E8E2C8',
+      accent: '#E879F9',
+      eye: '#1B1420',
+    },
+    dexNote: 'Vénérable champignon des sous-bois : là où son chapeau fait de l’ombre, une clairière entière repousse.',
     isRare: true,
   },
 
@@ -1286,7 +1360,7 @@ export const RECIPES: RecipeDef[] = [
     description: 'Mélange parfumé de baies et de pollen adoré des créatures Plante.',
     hint: 'Combinez au moins 2 jaunes et 2 rouges (ou 2 bleus).',
     targetElement: 'grass',
-    poolSpeciesIds: ['bourgeon', 'feuilloc', 'bourgeoliath'],
+    poolSpeciesIds: ['bourgeon', 'mycelin', 'feuilloc', 'amanitox', 'bourgeoliath'],
   },
   {
     id: 'astral_veloute',
@@ -1388,7 +1462,7 @@ export const RECIPES: RecipeDef[] = [
     cookExpeditions: 1,
     description: 'La recette classique de l’Île aux Cubes : attire toutes les espèces de base.',
     hint: 'N’importe quel mélange varié de 5 ingrédients.',
-    poolSpeciesIds: ['pyrocube', 'aquabloc', 'bourgeon', 'voltik', 'cailloc', 'psycube'],
+    poolSpeciesIds: ['pyrocube', 'aquabloc', 'bourgeon', 'voltik', 'cailloc', 'psycube', 'mycelin'],
   },
 ];
 
@@ -1529,7 +1603,7 @@ const RAW_STAGES: StageDef[] = [
         enemies: [
           { speciesId: 'voltik', level: 5, ai: 'charger' },
           { speciesId: 'bourgeon', level: 5, ai: 'chaser' },
-          { speciesId: 'voltik', level: 5, ai: 'kiter' },
+          { speciesId: 'mycelin', level: 5, ai: 'kiter' },
         ],
       },
       {
@@ -1562,7 +1636,7 @@ const RAW_STAGES: StageDef[] = [
       {
         enemies: [
           { speciesId: 'feuilloc', level: 8, ai: 'chaser' },
-          { speciesId: 'psycube', level: 8, ai: 'kiter' },
+          { speciesId: 'mycelin', level: 8, ai: 'kiter' },
           { speciesId: 'voltik', level: 8, ai: 'charger' },
         ],
       },
@@ -1744,7 +1818,7 @@ const RAW_STAGES: StageDef[] = [
         enemies: [
           { speciesId: 'lunabloc', level: 21, ai: 'kiter' },
           { speciesId: 'granitox', level: 21, ai: 'chaser' },
-          { speciesId: 'raicube', level: 21, ai: 'kiter' },
+          { speciesId: 'amanitox', level: 21, ai: 'kiter' },
         ],
       },
       {
