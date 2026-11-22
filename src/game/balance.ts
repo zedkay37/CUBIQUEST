@@ -2,7 +2,13 @@
  * ÉQUILIBRAGE — toutes les valeurs réglables des 21 niveaux.
  *
  * Chaque niveau a une entrée dans STAGE_TUNING (un test le vérifie, ainsi que des bornes : PV ennemis
- * 0,5 à 12, attaque 0,2 à 1,5, PV du boss 0,5 à 25). Tout se règle dans ce fichier, puis se mesure avec
+ * 0,5 à 12, attaque 0,05 à 1,5, PV du boss 0,5 à 25).
+ *
+ * S04 (cubes d'élément) : l'Auto a perdu le soin de 22 % du Déchaînement et la plupart de ses Déchaînements
+ * (charge réduite) ; sans retouche il perdait presque tout. L'attaque des ennemis (enemyAtkMult) de CHAQUE
+ * niveau a donc été multipliée par un facteur de 0,38 à 0,76, mesuré niveau par niveau (3 graines x 40
+ * combats) pour rester près des victoires en Auto d'avant la session. Les commentaires « avant / après »
+ * ci-dessous décrivent les sessions précédentes ; les valeurs actuelles sont celles de S04 (rapport S04). Tout se règle dans ce fichier, puis se mesure avec
  * `npm run sim` (voir CLAUDE.md), sur au moins 40 combats et 3 graines.
  *
  * Cibles, mesurées en « Auto Total » avec les escouades de `previewConfigs.ts` :
@@ -48,49 +54,49 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   // --- Douze premiers niveaux (S03 : a minima). Avant : formule d'origine, soit 1 / 1 / 1. ---
   // Mesures : 40 combats x graines 1, 2, 3, en Auto. « boss » = durée moyenne du combat de boss.
   // meadow-1 : avant 21 % (le boss tuait l'escouade de niveau 4 en ~5 s) -> 96 %, boss ~13 s
-  'meadow-1': { enemyHpMult: 1, enemyAtkMult: 0.25, bossHpMult: 9 },
+  'meadow-1': { enemyHpMult: 1, enemyAtkMult: 0.15, bossHpMult: 9 },
   // avant 100 %, boss 2 s -> 77 %, boss ~13 s (seuil raide : bossHpMult 10.5 => 58 %)
-  'meadow-2': { enemyHpMult: 1, enemyAtkMult: 0.25, bossHpMult: 11 },
+  'meadow-2': { enemyHpMult: 1, enemyAtkMult: 0.119, bossHpMult: 11 },
   // avant 85 %, boss 3 s -> 88 %, boss ~14 s, attaque annoncée dans les 3 phases
-  'meadow-3': { enemyHpMult: 0.5, enemyAtkMult: 0.2, bossHpMult: 16 },
+  'meadow-3': { enemyHpMult: 0.5, enemyAtkMult: 0.144, bossHpMult: 16 },
   // avant 100 %, boss 2 s -> 88 %, boss ~11 s
-  'shore-1': { enemyHpMult: 1, enemyAtkMult: 0.35, bossHpMult: 10 },
+  'shore-1': { enemyHpMult: 1, enemyAtkMult: 0.224, bossHpMult: 10 },
   // avant 98 %, boss 3 s -> 82 %, boss ~12 s
-  'shore-2': { enemyHpMult: 1, enemyAtkMult: 0.2, bossHpMult: 9 },
+  'shore-2': { enemyHpMult: 1, enemyAtkMult: 0.096, bossHpMult: 9 },
   // avant 100 %, boss 0,5 s -> 87 %, boss ~17 s (phase 3 : attaque annoncée dans 93 % des combats)
-  'shore-3': { enemyHpMult: 0.55, enemyAtkMult: 0.2, bossHpMult: 22 },
+  'shore-3': { enemyHpMult: 0.55, enemyAtkMult: 0.094, bossHpMult: 22 },
   // avant 100 %, boss 1 s -> 93 %, boss ~12 s
-  'volcano-1': { enemyHpMult: 1, enemyAtkMult: 0.4, bossHpMult: 13 },
+  'volcano-1': { enemyHpMult: 1, enemyAtkMult: 0.304, bossHpMult: 13 },
   // avant 100 %, boss 1 s -> 83 %, boss ~12 s
-  'volcano-2': { enemyHpMult: 1, enemyAtkMult: 0.25, bossHpMult: 12 },
+  'volcano-2': { enemyHpMult: 1, enemyAtkMult: 0.14, bossHpMult: 12 },
   // avant 100 %, boss 1 s -> 89 %, boss ~15 s
-  'volcano-3': { enemyHpMult: 1, enemyAtkMult: 0.25, bossHpMult: 12 },
+  'volcano-3': { enemyHpMult: 1, enemyAtkMult: 0.138, bossHpMult: 12 },
   // avant 100 %, boss 0,4 s -> 87 %, boss ~12 s (phase 1 : 98 %)
-  'sanctuary-1': { enemyHpMult: 1, enemyAtkMult: 0.36, bossHpMult: 13 },
+  'sanctuary-1': { enemyHpMult: 1, enemyAtkMult: 0.259, bossHpMult: 13 },
   // avant 100 %, boss 1 s -> 84 %, boss ~15 s
-  'sanctuary-2': { enemyHpMult: 1, enemyAtkMult: 0.2, bossHpMult: 13 },
+  'sanctuary-2': { enemyHpMult: 1, enemyAtkMult: 0.126, bossHpMult: 13 },
   // avant 100 %, boss 1,5 s -> 77 %, boss ~12 s. NON ATTEINT : phase 2 trop courte (attaque annoncée
   // dans 60 % des combats) ; allonger le boss fait chuter les victoires sous 50 %. À reprendre en S05.
-  'sanctuary-3': { enemyHpMult: 0.7, enemyAtkMult: 0.2, bossHpMult: 15 },
+  'sanctuary-3': { enemyHpMult: 0.7, enemyAtkMult: 0.124, bossHpMult: 15 },
   // --- Toundra Boréale ---
   // avant 8 / 0.6 / 2.2 (75 %, boss 14 s)                -> ~61 %, boss ~24 s
-  'tundra-1': { enemyHpMult: 8, enemyAtkMult: 0.274, bossHpMult: 3.4 },
+  'tundra-1': { enemyHpMult: 8, enemyAtkMult: 0.145, bossHpMult: 3.4 },
   // avant 8.5 / 0.5 / 1.8 (88 %, boss 14 s)              -> ~60 %, boss ~29 s
-  'tundra-2': { enemyHpMult: 8.5, enemyAtkMult: 0.385, bossHpMult: 3.0 },
+  'tundra-2': { enemyHpMult: 8.5, enemyAtkMult: 0.239, bossHpMult: 3.0 },
   // avant 9 / 0.5 / 1.6 (0 %, phase 3 de 2,5 s)          -> ~70 %, phases 15 / 8 / 9 s
-  'tundra-3': { enemyHpMult: 9, enemyAtkMult: 0.277, bossHpMult: 3.2 },
+  'tundra-3': { enemyHpMult: 9, enemyAtkMult: 0.169, bossHpMult: 3.2 },
   // --- Cime des Orages ---
   // avant 9 / 0.48 / 2.0 (100 %, boss 10 s)              -> ~79 %, boss ~19 s
-  'stormpeak-1': { enemyHpMult: 9, enemyAtkMult: 0.438, bossHpMult: 4.0 },
+  'stormpeak-1': { enemyHpMult: 9, enemyAtkMult: 0.293, bossHpMult: 4.0 },
   // avant 9.5 / 0.45 / 1.8 (83 %, boss 18 s)             -> ~74 %, boss ~29 s
-  'stormpeak-2': { enemyHpMult: 9.5, enemyAtkMult: 0.385, bossHpMult: 2.92 },
+  'stormpeak-2': { enemyHpMult: 9.5, enemyAtkMult: 0.285, bossHpMult: 2.92 },
   // avant 10 / 0.45 / 1.9 (70 %, phases 2 et 3 de 4 s)   -> ~74 %, phases 12 / 6,5 / 9 s
-  'stormpeak-3': { enemyHpMult: 10, enemyAtkMult: 0.3, bossHpMult: 4.0 },
+  'stormpeak-3': { enemyHpMult: 10, enemyAtkMult: 0.123, bossHpMult: 4.0 },
   // --- Canyon d'Ambre (session 2, réglé directement avec `npm run sim`) ---
   // canyon-1 : seuil très raide — attaque 0.46 => 85 %, 0.465 => 44 % ; affiné par les PV du boss (5.3 => 85 %, 5.5 => 53 %)
-  'canyon-1': { enemyHpMult: 10, enemyAtkMult: 0.46, bossHpMult: 5.4 },
-  'canyon-2': { enemyHpMult: 10, enemyAtkMult: 0.322, bossHpMult: 4.0 },
-  'canyon-3': { enemyHpMult: 10, enemyAtkMult: 0.325, bossHpMult: 6.0 },
+  'canyon-1': { enemyHpMult: 10, enemyAtkMult: 0.248, bossHpMult: 5.4 },
+  'canyon-2': { enemyHpMult: 10, enemyAtkMult: 0.177, bossHpMult: 4.0 },
+  'canyon-3': { enemyHpMult: 10, enemyAtkMult: 0.13, bossHpMult: 6.0 },
 };
 
 /**

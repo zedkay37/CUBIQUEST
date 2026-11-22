@@ -9,6 +9,7 @@
  *   npm run sim -- --profile active               # profil « joueur actif » (voir tools/simFight.ts)
  *   npm run sim -- --cubes 0                  # cubes d’élément coupés (option d'outil)
  *   npm run sim -- --stages tundra-3 --set tundra-3=14/0.4/1.8
+ *   npm run sim -- --scale 1/0.7/1        # multiplie les réglages de tous les niveaux (essai global)
  *        # essaie des multiplicateurs (PV ennemis / attaque / PV boss) SANS toucher à balance.ts
  *
  * Fonctionnement :
@@ -48,6 +49,12 @@ export interface StageSummary {
   phases: ({ reached: number; durationAvg: number; durationMin: number; castsAvg: number; withCast: number } | null)[];
   bossHpOnDefeatAvg: number | null;
   timeouts: number;
+  /** Par combat : Éclats pleins, Éclats faibles, Trios, Déchaînements ; Déchaînements par combat de boss. */
+  burstsAvg: number;
+  weakBurstsAvg: number;
+  triosAvg: number;
+  ultimatesAvg: number;
+  bossUltimatesAvg: number;
 }
 
 const avg = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
@@ -84,6 +91,11 @@ function summarize(stage: StageDef, fights: FightResult[]): StageSummary {
     }),
     bossHpOnDefeatAvg: defeats.length ? avg(defeats.map((f) => f.bossHpPct)) : null,
     timeouts: fights.filter((f) => f.timedOut).length,
+    burstsAvg: avg(fights.map((f) => f.bursts)),
+    weakBurstsAvg: avg(fights.map((f) => f.weakBursts)),
+    triosAvg: avg(fights.map((f) => f.trios)),
+    ultimatesAvg: avg(fights.map((f) => f.ultimates)),
+    bossUltimatesAvg: avg(fights.filter((f) => f.bossAppearedAt >= 0).map((f) => f.bossUltimates)),
   };
 }
 
@@ -106,14 +118,16 @@ export function toMarkdown(
   const control =
     profile === 'auto'
       ? 'contrôle « Auto Total » (aucune esquive)'
-      : 'profil « joueur actif » (mode Semi : sorts et ultime dès que prêts, Esquive sur télégraphe)';
+      : profile === 'expert'
+        ? 'profil « expert » (mode Semi piloté par l’aperçu des sorts : Trios, Éclats pleins, Esquive sur télégraphe)'
+        : 'profil « joueur actif » (mode Semi : sorts et ultime dès que prêts, Esquive sur télégraphe)';
   const lines = [
     `Simulation headless — ${runs} combats par niveau, graine ${seed}, ${control}${cubes ? '' : ', cubes d’élément coupés'}.`,
     '',
     'Colonnes de phase : durée moyenne (durée minimale) · attaques télégraphiées lancées en moyenne · part des combats où le boss en a lancé au moins une dans cette phase.',
     '',
-    '| Niveau | Escouade de référence | Victoires | Durée totale (min–max) | Combat de boss | Phase 1 | Phase 2 | Phase 3 | PV boss restants (défaites) |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| Niveau | Escouade de référence | Victoires | Durée totale (min–max) | Combat de boss | Phase 1 | Phase 2 | Phase 3 | PV boss restants (défaites) | Éclats (faibles) · Trios · Déchaînements (boss) par combat |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
   ];
   for (const s of summaries) {
     lines.push(
@@ -121,7 +135,7 @@ export function toMarkdown(
         s.bossFightAvg === null ? '—' : sec(s.bossFightAvg)
       } | ${phaseCell(s.phases[0])} | ${phaseCell(s.phases[1])} | ${phaseCell(s.phases[2])} | ${
         s.bossHpOnDefeatAvg === null ? '—' : `${Math.round(s.bossHpOnDefeatAvg)} %`
-      }${s.timeouts ? ` · ${s.timeouts} hors délai` : ''} |`,
+      }${s.timeouts ? ` · ${s.timeouts} hors délai` : ''} | ${s.burstsAvg.toFixed(1)} (${s.weakBurstsAvg.toFixed(1)}) · ${s.triosAvg.toFixed(1)} · ${s.ultimatesAvg.toFixed(1)} (${s.bossUltimatesAvg.toFixed(1)}) |`,
     );
   }
   return lines.join('\n') + '\n';
@@ -135,6 +149,7 @@ function parseArgs(argv: string[]): {
   json: boolean;
   brief: boolean;
   set: string | null;
+  scale: string | null;
   profile: SimProfile;
   cubes: boolean;
 } {
@@ -150,7 +165,8 @@ function parseArgs(argv: string[]): {
     json: argv.includes('--json'),
     brief: argv.includes('--brief'),
     set: get('set'),
-    profile: get('profile') === 'active' ? 'active' : 'auto',
+    scale: get('scale'),
+    profile: get('profile') === 'active' ? 'active' : get('profile') === 'expert' ? 'expert' : 'auto',
     cubes: get('cubes') !== '0',
   };
 }
@@ -166,7 +182,7 @@ function briefLine(s: StageSummary): string {
     .join(' | ');
   return `${s.stageId.padEnd(12)} ${pct(s.winRate).padStart(5)}  total ${s.durationAvg.toFixed(1)}s  boss ${
     s.bossFightAvg === null ? '-' : s.bossFightAvg.toFixed(1) + 's'
-  }  ${ph}${s.bossHpOnDefeatAvg === null ? '' : `  | défaites: boss ${Math.round(s.bossHpOnDefeatAvg)}%`}`;
+  }  ${ph}  | Éclats ${s.burstsAvg.toFixed(1)} (+${s.weakBurstsAvg.toFixed(1)} faibles) Trios ${s.triosAvg.toFixed(1)} Déch. ${s.ultimatesAvg.toFixed(1)} (boss ${s.bossUltimatesAvg.toFixed(1)})${s.bossHpOnDefeatAvg === null ? '' : `  | défaites: boss ${Math.round(s.bossHpOnDefeatAvg)}%`}`;
 }
 
 const args = parseArgs(process.argv.slice(2));
@@ -174,6 +190,21 @@ const selected = args.stages ? STAGES.filter((s) => args.stages!.includes(s.id))
 if (selected.length === 0) {
   console.error(`Aucun niveau trouvé. Identifiants valides : ${STAGES.map((s) => s.id).join(', ')}`);
   process.exit(1);
+}
+
+// Essai de réglage global : --scale pv/attaque/pvBoss multiplie les valeurs de TOUS les niveaux choisis
+// (en mémoire, pour ce processus seulement), avant un éventuel --set.
+if (args.scale) {
+  const [hp, atk, boss] = args.scale.split('/').map(Number);
+  if (![hp, atk, boss].every((n) => Number.isFinite(n) && n > 0)) {
+    console.error(`--scale invalide : ${args.scale} (attendu pv/attaque/pvBoss)`);
+    process.exit(1);
+  }
+  for (const stage of selected) {
+    stage.enemyHpMult = (stage.enemyHpMult ?? 1) * hp;
+    stage.enemyAtkMult = (stage.enemyAtkMult ?? 1) * atk;
+    stage.bossHpMult = (stage.bossHpMult ?? 1) * boss;
+  }
 }
 
 // Essai de réglage : --set id=pvEnnemis/attaque/pvBoss[,id=...] (en mémoire, pour ce processus seulement)

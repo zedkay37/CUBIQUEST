@@ -23,7 +23,7 @@ const CASES: { key: string; profile: SimProfile; cubes: boolean }[] = [
   { key: 'auto|cubes', profile: 'auto', cubes: true },
   { key: 'auto|sans-cubes', profile: 'auto', cubes: false },
   { key: 'actif|cubes', profile: 'active', cubes: true },
-  { key: 'actif|sans-cubes', profile: 'active', cubes: false },
+  { key: 'expert|cubes', profile: 'expert', cubes: true },
 ];
 
 interface GoldenFile {

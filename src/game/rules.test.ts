@@ -721,7 +721,8 @@ test('Équilibrage: chaque niveau a une entrée STAGE_TUNING, aux multiplicateur
     // les valeurs de balance.ts sont bien celles que le moteur reçoit
     assert.deepEqual({ enemyHpMult: stage.enemyHpMult, enemyAtkMult: stage.enemyAtkMult, bossHpMult: stage.bossHpMult }, t, stage.id);
     assert.ok(t.enemyHpMult >= 0.5 && t.enemyHpMult <= 12, `${stage.id} : PV ennemis ${t.enemyHpMult}`);
-    assert.ok(t.enemyAtkMult >= 0.2 && t.enemyAtkMult <= 1.5, `${stage.id} : attaque ${t.enemyAtkMult}`);
+    // attaque : plancher abaissé de 0,2 à 0,05 en S04 (les cubes ont retiré à l'Auto le soin du Déchaînement)
+    assert.ok(t.enemyAtkMult >= 0.05 && t.enemyAtkMult <= 1.5, `${stage.id} : attaque ${t.enemyAtkMult}`);
     // PV du boss : multiplicateur supplémentaire, plafond plus large (les boss des premiers niveaux partent de très bas)
     assert.ok(t.bossHpMult >= 0.5 && t.bossHpMult <= 25, `${stage.id} : PV du boss ${t.bossHpMult}`);
     assert.equal(stage.waves.length, 3, stage.id);
