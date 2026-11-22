@@ -44,6 +44,7 @@ import type {
   SaveState,
   StageDef,
 } from './game/types';
+import { getReferenceConfig } from './game/previewConfigs';
 import { loadSettings, persistSettings, type GameSettings } from './game/settings';
 import { VoxelEngine } from './game/VoxelEngine';
 
@@ -63,15 +64,18 @@ function getPreviewParams(): { stage: StageDef; squad: string[]; level: number; 
   const params = new URLSearchParams(window.location.search);
   const stage = STAGE_BY_ID[params.get('stage') ?? ''];
   if (!stage) return null;
+  // Sans paramètre, on prend l'escouade de référence du niveau (la même que l'outil `npm run sim`)
+  const reference = getReferenceConfig(stage);
   const squad = (params.get('squad') ?? '')
     .split(',')
     .map((id) => id.trim())
     .filter((id) => Boolean(SPECIES[id]))
     .slice(0, 3);
-  const level = Math.max(1, Math.min(50, Number(params.get('lvl')) || stage.waves[0].enemies[0].level + 5));
+  const rawLevel = Number(params.get('lvl'));
+  const level = rawLevel > 0 ? Math.max(1, Math.min(50, Math.floor(rawLevel))) : reference.level;
   const rawBonus = Number(params.get('bonus'));
-  const bonus = Number.isFinite(rawBonus) && rawBonus > 0 ? Math.min(6000, rawBonus) : level * 18;
-  return { stage, squad, level, bonus };
+  const bonus = Number.isFinite(rawBonus) && rawBonus > 0 ? Math.min(6000, rawBonus) : reference.bonus;
+  return { stage, squad: squad.length > 0 ? squad : reference.squad, level, bonus };
 }
 
 export default function App() {
@@ -172,11 +176,7 @@ export default function App() {
 
     const preview = getPreviewParams();
     if (preview) {
-      const speciesIds =
-        preview.squad.length > 0
-          ? preview.squad
-          : getSquadCreatures(initialSave).map((c) => c.speciesId);
-      const creatures = speciesIds.map((id, i) =>
+      const creatures = preview.squad.map((id, i) =>
         createOwnedCreature(id, preview.level, preview.bonus, `preview_${i}`),
       );
       previewRef.current = true;

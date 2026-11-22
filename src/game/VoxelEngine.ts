@@ -246,6 +246,30 @@ interface WeatherMote {
   phase: number;
 }
 
+/** Mesures d'un combat lues par l'outil de simulation (`npm run sim`). Temps en secondes de combat. */
+export interface CombatTelemetry {
+  /** Instant où le boss entre en scène (-1 s'il n'est jamais apparu). */
+  bossAppearedAt: number;
+  /** Début de chaque phase du boss : [phase 1, phase 2, phase 3] (-1 si jamais atteinte). */
+  phaseStartedAt: [number, number, number];
+  /** Instant de la mort du boss (-1 s'il a survécu). */
+  bossDefeatedAt: number;
+  /** Nombre d'attaques télégraphiées lancées par le boss dans chaque phase. */
+  castsByPhase: [number, number, number];
+  /** Identifiants des attaques (patterns 0 à 5) vues dans chaque phase. */
+  patternsByPhase: [number[], number[], number[]];
+  bossMaxPhases: number;
+  elapsed: number;
+}
+
+export interface EngineOptions {
+  /**
+   * Sans rendu ni DOM : aucune WebGLRenderer, aucun écouteur, aucune boucle automatique.
+   * La simulation avance uniquement via `stepSimulation(dt)` (outil `npm run sim`).
+   */
+  headless?: boolean;
+}
+
 export interface EngineCallbacks {
   onHudUpdate: (snapshot: ExpeditionHudSnapshot) => void;
   onExpeditionComplete: (result: {
@@ -289,8 +313,9 @@ const ARENA_BOUND = 15.5;
 const MAX_ATTACK_TOKENS = 3;
 
 export class VoxelEngine {
-  private container: HTMLElement;
-  private renderer: THREE.WebGLRenderer;
+  private container: HTMLElement | null;
+  private headless: boolean;
+  private renderer: THREE.WebGLRenderer | null;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
   private keyLight: THREE.DirectionalLight;
@@ -395,40 +420,64 @@ export class VoxelEngine {
   private heldKeys = new Set<string>();
   private hudEmitAccum = 0;
   private callbacks: EngineCallbacks;
-  private resizeObserver: ResizeObserver;
+  private resizeObserver: ResizeObserver | null = null;
+  private telemetry: CombatTelemetry = VoxelEngine.emptyTelemetry();
 
-  constructor(container: HTMLElement, callbacks: EngineCallbacks) {
+  private static emptyTelemetry(): CombatTelemetry {
+    return {
+      bossAppearedAt: -1,
+      phaseStartedAt: [-1, -1, -1],
+      bossDefeatedAt: -1,
+      castsByPhase: [0, 0, 0],
+      patternsByPhase: [[], [], []],
+      bossMaxPhases: 0,
+      elapsed: 0,
+    };
+  }
+
+  constructor(container: HTMLElement | null, callbacks: EngineCallbacks, options: EngineOptions = {}) {
     this.container = container;
     this.callbacks = callbacks;
+    this.headless = Boolean(options.headless) || !container;
 
-    this.isSoftwareGl = VoxelEngine.detectSoftwareGl();
+    let width = 1280;
+    let height = 720;
+    if (this.headless || !container) {
+      this.isSoftwareGl = true;
+      this.renderer = null;
+    } else {
+      this.isSoftwareGl = VoxelEngine.detectSoftwareGl();
 
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: !this.isSoftwareGl,
-      powerPreference: 'high-performance',
-    });
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.94;
-    this.renderer.setPixelRatio(this.isSoftwareGl ? 1 : Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = !this.isSoftwareGl;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      const renderer = new THREE.WebGLRenderer({
+        antialias: !this.isSoftwareGl,
+        powerPreference: 'high-performance',
+      });
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 0.94;
+      renderer.setPixelRatio(this.isSoftwareGl ? 1 : Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = !this.isSoftwareGl;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    const width = Math.max(1, container.clientWidth);
-    const height = Math.max(1, container.clientHeight);
-    this.renderer.setSize(width, height);
-    container.innerHTML = '';
-    container.appendChild(this.renderer.domElement);
+      width = Math.max(1, container.clientWidth);
+      height = Math.max(1, container.clientHeight);
+      renderer.setSize(width, height);
+      container.innerHTML = '';
+      container.appendChild(renderer.domElement);
+      this.renderer = renderer;
+    }
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#A7D8F7');
     this.scene.fog = new THREE.Fog('#C5E6FA', 34, 88);
 
-    // Mandatory Studio PMREM Environment Map on every device (calibrated intensity so matte voxels keep rich saturation)
-    const pmrem = new THREE.PMREMGenerator(this.renderer);
-    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    if (this.renderer) {
+      // Mandatory Studio PMREM Environment Map on every device (calibrated intensity so matte voxels keep rich saturation)
+      const pmrem = new THREE.PMREMGenerator(this.renderer);
+      this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      pmrem.dispose();
+    }
     this.scene.environmentIntensity = 0.42;
-    pmrem.dispose();
 
     this.camera = new THREE.PerspectiveCamera(42, width / height, 0.5, 160);
     this.camera.position.set(11, 10.5, 20);
@@ -521,16 +570,18 @@ export class VoxelEngine {
       this.bolts.push({ mesh, life: 0 });
     }
 
-    this.resizeObserver = new ResizeObserver(() => this.handleResize());
-    this.resizeObserver.observe(container);
+    if (!this.headless && container) {
+      this.resizeObserver = new ResizeObserver(() => this.handleResize());
+      this.resizeObserver.observe(container);
 
-    window.addEventListener('keydown', this.handleKeyDown);
-    window.addEventListener('keyup', this.handleKeyUp);
-    window.addEventListener('blur', this.handleBlur);
-    document.addEventListener('visibilitychange', this.handleVisibility);
+      window.addEventListener('keydown', this.handleKeyDown);
+      window.addEventListener('keyup', this.handleKeyUp);
+      window.addEventListener('blur', this.handleBlur);
+      document.addEventListener('visibilitychange', this.handleVisibility);
 
-    this.lastTimeMs = performance.now();
-    this.scheduleNextFrame();
+      this.lastTimeMs = performance.now();
+      this.scheduleNextFrame();
+    }
   }
 
   private configureWeather(biomeId: BiomeId): void {
@@ -644,7 +695,7 @@ export class VoxelEngine {
   }
 
   private handleResize(): void {
-    if (this.disposed) return;
+    if (this.disposed || !this.container || !this.renderer) return;
     const w = Math.max(1, this.container.clientWidth);
     const h = Math.max(1, this.container.clientHeight);
     this.camera.aspect = w / h;
@@ -802,13 +853,13 @@ export class VoxelEngine {
     });
 
     if (!this.isSoftwareGl) {
-      this.renderer.compile(this.scene, this.camera);
+      this.renderer?.compile(this.scene, this.camera);
     }
     this.camPos.set(10.8, 9.6, 18.6);
     this.camLook.set(0.4, 2.4, -1.2);
     this.camera.position.copy(this.camPos);
     this.camera.lookAt(this.camLook);
-    this.renderer.render(this.scene, this.camera);
+    this.renderer?.render(this.scene, this.camera);
   }
 
   public startExpedition(
@@ -837,6 +888,7 @@ export class VoxelEngine {
     this.expeditionEnded = false;
     this.pendingVictory = false;
     this.resultSent = false;
+    this.telemetry = VoxelEngine.emptyTelemetry();
     this.confettiTimer = 0;
     this.bossIntroTimer = 0;
     this.bossIntroActor = null;
@@ -941,7 +993,7 @@ export class VoxelEngine {
     this.emitHudSnapshot();
 
     if (!this.isSoftwareGl) {
-      this.renderer.compile(this.scene, this.camera);
+      this.renderer?.compile(this.scene, this.camera);
     }
   }
 
@@ -1038,6 +1090,9 @@ export class VoxelEngine {
     // Entrée de boss : il tombe du ciel pendant une courte cinématique (combat gelé)
     const boss = isBossWave ? this.enemies.find((e) => e.isBoss && !e.removed && !e.fainted) : undefined;
     if (boss) {
+      this.telemetry.bossAppearedAt = this.expeditionElapsed;
+      this.telemetry.phaseStartedAt[0] = this.expeditionElapsed;
+      this.telemetry.bossMaxPhases = boss.bossMaxPhases;
       this.bossIntroActor = boss;
       this.bossIntroTimer = BOSS_INTRO_SEC;
       this.bossDropY = 11;
@@ -1826,6 +1881,7 @@ export class VoxelEngine {
       target.telegraphing = false;
       target.hasAttackToken = false;
       target.statuses = {};
+      if (target.isBoss && !target.isAlly) this.telemetry.bossDefeatedAt = this.expeditionElapsed;
       soundFx.playKo();
       this.hitstopTimer = Math.max(this.hitstopTimer, target.isBoss ? 0.075 : 0.04);
       this.trauma = Math.min(1, this.trauma + (target.isBoss ? 0.65 : 0.25));
@@ -1847,6 +1903,11 @@ export class VoxelEngine {
   }
 
   private onBossPhaseShift(boss: CombatActor, phase: 2 | 3): void {
+    this.telemetry.phaseStartedAt[phase - 1] = this.expeditionElapsed;
+    // un saut direct de la phase 1 à la phase 3 fait commencer (et finir) la phase 2 au même instant
+    if (phase === 3 && this.telemetry.phaseStartedAt[1] < 0) {
+      this.telemetry.phaseStartedAt[1] = this.expeditionElapsed;
+    }
     soundFx.playBossPhase();
     const label = phase === 3 ? 'PHASE 3 : SURCHARGE !' : 'PHASE 2 : FUREUR !';
     const auraColor = phase === 3 ? '#F4B942' : '#F43F5E';
@@ -2096,7 +2157,7 @@ export class VoxelEngine {
   }
 
   private afterDraw(cb: () => void): void {
-    if (this.disposed) return;
+    if (this.disposed || !this.renderer) return;
     const gl = this.renderer.getContext() as WebGL2RenderingContext;
     const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
     gl.flush();
@@ -2119,7 +2180,36 @@ export class VoxelEngine {
     const now = performance.now();
     const rawDt = Math.max(0.001, (now - this.lastTimeMs) / 1000);
     this.lastTimeMs = now;
-    const dt = Math.min(rawDt, 0.05);
+    this.advance(Math.min(rawDt, 0.05));
+    this.renderer?.render(this.scene, this.camera);
+    this.scheduleNextFrame();
+  }
+
+  /**
+   * Avance la simulation d'un pas fixe, sans horloge ni rendu.
+   * Réservé au mode headless (`npm run sim`) : en jeu, c'est `tick()` qui pilote.
+   */
+  public stepSimulation(dt: number): void {
+    if (this.disposed) return;
+    this.advance(Math.min(Math.max(dt, 0.001), 0.05));
+  }
+
+  public getCombatTelemetry(): CombatTelemetry {
+    return {
+      ...this.telemetry,
+      phaseStartedAt: [...this.telemetry.phaseStartedAt],
+      castsByPhase: [...this.telemetry.castsByPhase],
+      patternsByPhase: [
+        [...this.telemetry.patternsByPhase[0]],
+        [...this.telemetry.patternsByPhase[1]],
+        [...this.telemetry.patternsByPhase[2]],
+      ],
+      elapsed: this.expeditionElapsed,
+    };
+  }
+
+  /** Un pas de jeu complet (logique + caméra), commun à la boucle temps réel et au mode headless. */
+  private advance(dt: number): void {
     this.elapsedTotal += dt;
 
     if (this.waterUniform) {
@@ -2159,8 +2249,6 @@ export class VoxelEngine {
     }
 
     this.updateCamera(dt);
-    this.renderer.render(this.scene, this.camera);
-    this.scheduleNextFrame();
   }
 
   private updateCamp(dt: number): void {
@@ -2607,6 +2695,10 @@ export class VoxelEngine {
                   ? [0]
                   : [0, 1, 2];
           const pattern = cycle[enemy.bossPatternIndex % cycle.length];
+          this.telemetry.castsByPhase[phase - 1] += 1;
+          if (!this.telemetry.patternsByPhase[phase - 1].includes(pattern)) {
+            this.telemetry.patternsByPhase[phase - 1].push(pattern);
+          }
           enemy.bossPatternIndex += 1;
           const cooldownAfter = phase === 3 ? 2.8 : phase === 2 ? 3.4 : 4.6;
 
@@ -3439,13 +3531,15 @@ export class VoxelEngine {
 
   public dispose(): void {
     this.disposed = true;
-    cancelAnimationFrame(this.frameId);
-    clearTimeout(this.frameId);
-    this.resizeObserver.disconnect();
-    window.removeEventListener('keydown', this.handleKeyDown);
-    window.removeEventListener('keyup', this.handleKeyUp);
-    window.removeEventListener('blur', this.handleBlur);
-    document.removeEventListener('visibilitychange', this.handleVisibility);
+    if (!this.headless) {
+      cancelAnimationFrame(this.frameId);
+      clearTimeout(this.frameId);
+      this.resizeObserver?.disconnect();
+      window.removeEventListener('keydown', this.handleKeyDown);
+      window.removeEventListener('keyup', this.handleKeyUp);
+      window.removeEventListener('blur', this.handleBlur);
+      document.removeEventListener('visibilitychange', this.handleVisibility);
+    }
     this.clearProjectilesAndTelegraphs();
     this.clearGroup(this.worldGroup);
     this.clearGroup(this.actorsGroup);
@@ -3458,6 +3552,6 @@ export class VoxelEngine {
     this.weatherMesh.dispose();
     this.boltGeo?.dispose();
     this.boltMat?.dispose();
-    this.renderer.dispose();
+    this.renderer?.dispose();
   }
 }

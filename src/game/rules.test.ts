@@ -52,6 +52,7 @@ import {
   SPECIES,
   STAGES,
 } from './catalog';
+import { buildPreviewQuery, evolvedFormAtLevel, getReferenceConfig, listReferenceConfigs } from './previewConfigs';
 import { normalizeSettings } from './settings';
 
 test('elemental type effectiveness returns accurate multipliers', () => {
@@ -730,4 +731,31 @@ test('Giga: équilibrage des nouveaux biomes — réglé par niveau, anciens niv
       assert.equal(stage.waves.length, 3, stage.id);
     }
   }
+});
+
+test('Socle: chaque niveau a une escouade de référence valide (aperçu et simulation)', () => {
+  const all = listReferenceConfigs();
+  assert.equal(all.length, STAGES.length);
+  for (const { stage, config } of all) {
+    assert.equal(config.squad.length, 3, stage.id);
+    for (const id of config.squad) assert.ok(SPECIES[id], `${stage.id} -> ${id}`);
+    assert.ok(config.level >= 1 && config.level <= 50, stage.id);
+    assert.ok(config.bonus > 0, stage.id);
+    assert.ok(buildPreviewQuery(stage).startsWith(`?stage=${stage.id}&squad=`));
+  }
+  // Les configurations fixées à la main sont celles des URL d'aperçu documentées
+  assert.deepEqual(getReferenceConfig(STAGES.find((s) => s.id === 'tundra-3')!), {
+    squad: ['ramurgel', 'cryolithe', 'auroramure'],
+    level: 44,
+    bonus: 1100,
+  });
+  // Dérivation des anciens niveaux : les lignées de départ évoluent avec le niveau
+  assert.equal(evolvedFormAtLevel('pyrocube', 7), 'pyrocube');
+  assert.equal(evolvedFormAtLevel('pyrocube', 8), 'flambrix');
+  assert.equal(evolvedFormAtLevel('pyrocube', 16), 'ignisaur');
+  assert.equal(evolvedFormAtLevel('nimbulle', 50), 'cumulord');
+  assert.deepEqual(getReferenceConfig(STAGES[0]).squad, ['pyrocube', 'aquabloc', 'bourgeon']);
+  // Renvoie une copie : modifier le résultat ne pollue pas la table
+  getReferenceConfig(STAGES[12]).squad.push('x');
+  assert.equal(getReferenceConfig(STAGES[12]).squad.length, 3);
 });
