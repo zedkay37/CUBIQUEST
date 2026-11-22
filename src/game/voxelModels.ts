@@ -135,6 +135,8 @@ export function getRigTopY(species: SpeciesDef): number {
       return 1.6;
     case 'golem':
       return 2.1;
+    case 'lizard':
+      return 1.35;
     case 'serpentine':
       return 1.6;
     default:
@@ -414,6 +416,52 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
     const legR = makeBox(0.32, 0.3, 0.34, secondaryMat, 0.3, 0.15, 0.06);
     bodyPivot.add(legL, legR);
     legs.push(legL, legR);
+  } else if (arch === 'lizard') {
+    // Lézard de braise : corps long au ras du sol, pattes écartées, crête de flammes, queue à bout ardent (Braizard / Cendrox)
+    bodyPivot.add(makeBox(0.7, 0.42, 1.3, primaryMat, 0, 0.42, 0));
+    bodyPivot.add(makeBox(0.5, 0.12, 1.0, bellyMat, 0, 0.2, 0.04));
+    bodyPivot.add(makeBox(0.6, 0.44, 0.56, primaryMat, 0, 0.56, 0.86));
+    bodyPivot.add(makeBox(0.44, 0.24, 0.24, secondaryMat, 0, 0.46, 1.22));
+    bodyPivot.add(makeBox(0.13, 0.16, 0.08, eyeMat, -0.2, 0.68, 1.15, false));
+    bodyPivot.add(makeBox(0.13, 0.16, 0.08, eyeMat, 0.2, 0.68, 1.15, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, -0.18, 0.72, 1.16, false));
+    bodyPivot.add(makeBox(0.05, 0.05, 0.09, eyeHighlightMat, 0.22, 0.72, 1.16, false));
+    // Queue articulée (elle balaie de gauche à droite)
+    const lizardTail = new THREE.Group();
+    lizardTail.position.set(0, 0.4, -0.65);
+    lizardTail.add(makeBox(0.4, 0.3, 0.5, primaryMat, 0, 0, -0.22));
+    lizardTail.add(makeBox(0.26, 0.22, 0.46, secondaryMat, 0, -0.02, -0.66));
+    lizardTail.add(makeBox(0.24, 0.3, 0.24, accentMat, 0, 0.08, -0.98));
+    bodyPivot.add(lizardTail);
+    extras.push(lizardTail);
+    // Crête de flammes : plus haute et plus longue au stade final
+    const crestBase = stage >= 3 ? 0.78 : 0.66;
+    const crestZ = stage >= 3 ? [0.56, 0.2, -0.16, -0.5] : [0.5, 0.1, -0.3];
+    crestZ.forEach((cz, i) => {
+      const flame = makeBox(0.14, (i % 2 === 0 ? 0.24 : 0.34) + (stage >= 3 ? 0.08 : 0), 0.2, accentMat, 0, crestBase + 0.14, cz, false);
+      bodyPivot.add(flame);
+      extras.push(flame);
+    });
+    const lizardLegs: [number, number][] = [
+      [-0.46, 0.42],
+      [0.46, 0.42],
+      [-0.46, -0.38],
+      [0.46, -0.38],
+    ];
+    for (const [lx, lz] of lizardLegs) {
+      const leg = makeBox(0.22, 0.26, 0.24, secondaryMat, lx, 0.13, lz);
+      bodyPivot.add(leg);
+      legs.push(leg);
+    }
+    if (stage >= 3) {
+      // plaques de charbon sur le dos, cornes, flancs fissurés qui rougeoient
+      bodyPivot.add(makeBox(0.84, 0.14, 0.44, secondaryMat, 0, 0.7, 0.34));
+      bodyPivot.add(makeBox(0.84, 0.14, 0.44, secondaryMat, 0, 0.7, -0.26));
+      bodyPivot.add(makeBox(0.12, 0.3, 0.12, secondaryMat, -0.22, 0.92, 0.7));
+      bodyPivot.add(makeBox(0.12, 0.3, 0.12, secondaryMat, 0.22, 0.92, 0.7));
+      bodyPivot.add(makeBox(0.05, 0.12, 0.56, accentMat, -0.36, 0.42, 0.02, false));
+      bodyPivot.add(makeBox(0.05, 0.12, 0.56, accentMat, 0.36, 0.42, 0.02, false));
+    }
   } else if (arch === 'floating') {
     // Hovering Psychic crystal Cubimon with orbiting satellites (Psycube / Lunabloc / Aetherion)
     bodyPivot.add(makeBox(0.84, 0.86, 0.84, primaryMat, 0, 0.96, 0));

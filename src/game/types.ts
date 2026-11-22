@@ -10,6 +10,7 @@ export type CreatureArchetype =
   | 'crab'
   | 'winged'
   | 'horned'
+  | 'lizard'
   | 'floating'
   // Giga Update : nouvelles silhouettes
   | 'antlered'

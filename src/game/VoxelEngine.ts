@@ -3324,6 +3324,13 @@ export class VoxelEngine {
         case 'golem':
           extra.rotation.y = Math.sin(elapsed * 0.9 + seed) * 0.08;
           break;
+        case 'lizard':
+          if (idx === 0) {
+            extra.rotation.y = Math.sin(elapsed * 3 + seed) * 0.35; // la queue balaie
+          } else {
+            extra.scale.y = 1 + Math.sin(elapsed * 9 + idx * 1.7 + seed) * 0.18; // la crête vacille
+          }
+          break;
         case 'serpentine': {
           // ondulation qui se propage de la tête vers la queue
           const wave = elapsed * (isMoving ? 9 : 4) + seed - idx * 0.85;
