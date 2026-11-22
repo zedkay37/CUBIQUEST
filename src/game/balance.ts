@@ -25,7 +25,7 @@ export interface StageTuning {
 
 /**
  * Pourquoi ces multiplicateurs existent : avec la formule d'origine, une escouade équipée tue un
- * boss de fin de jeu en 1 à 2 secondes (voir docs/sim/00-reference-avant.md), ses mécaniques
+ * boss de fin de jeu en 1 à 2 secondes (voir docs/archives/sim/00-reference-avant.md), ses mécaniques
  * n'apparaissent donc jamais. Les nouveaux niveaux allongent les combats (PV) et allègent les
  * coups (attaque) pour laisser le temps de lire et d'esquiver.
  *

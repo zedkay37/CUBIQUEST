@@ -3,15 +3,19 @@
 RPG 3D voxel (React 19 + Three.js + Vite + Tailwind 4), inspiré de Pokémon Quest. Textes du jeu en français.
 Tout le contenu est 100 % original : aucun nom ni design Pokémon réel.
 
-## Cadre fixé par le propriétaire du projet
+## Cadre du projet
 
-Le propriétaire dirige la vision. Sans demande explicite de sa part :
+Le cadre du projet est `docs/plan/PLAN_DIRECTEUR.md`. Il autorise les changements de mécanique décrits dans ses fiches, et seulement ceux-là.
 
-- **Autorisé** : nouveaux Cubimons, biomes/niveaux, sorts, recettes, ingrédients ; amélioration des écrans existants ; corrections, performances, tests, outillage, documentation.
-- **Interdit** : nouveaux modes de jeu, nouvelles mécaniques ou systèmes, nouveaux éléments ou statuts, nouveaux menus, musique. Tout nouveau contenu réutilise ce qui existe (6 éléments, 5 styles de sorts, 6 statuts, 6 réactions, attaques télégraphiées et kits de boss existants).
-- Ne pas modifier `server.ts` ni le Codex (prompt Gemini). Aucun asset externe, aucune dépendance payante.
-- Tout nouveau contenu respecte `STYLE.md`.
-- Un commit par lignée de Cubimons et un commit par biome, pour qu'on puisse retirer l'un sans casser le reste. Concrètement : insérer chaque lignée à un endroit DIFFÉRENT des fichiers partagés (jamais deux ajouts sur des lignes voisines), lui donner son propre fichier de test, ne pas la référencer depuis une autre lignée ou un autre biome, puis vérifier avec `git revert --no-commit <hash> && npm run check`.
+### Lancer une session
+
+Le plan se lit dans le dépôt ; une session se lance avec un prompt court (modèle complet : partie 7 du plan).
+
+1. Dans PowerShell : `cd $HOMEdevelopmentCUBIQUEST`, puis `claude --permission-mode auto`.
+2. Coller le prompt de lancement de la partie 7 en changeant le numéro de session (`S04`, `S05`...). À partir de la deuxième session, y ajouter la validation de la session précédente (« avance `main` sur le tag `sNN-final` ») et les retours de jeu.
+3. La session lit, dans l'ordre : « Règles générales pour Claude Code » (partie 7, R1 à R16), le lexique (5.12), sa fiche (partie 8), puis les sections que la fiche demande. Si la fiche ne se termine pas par « — FIN DE LA FICHE Sxx — », elle s'arrête.
+4. Elle travaille sur la branche de la fiche depuis le tag de départ, pose un tag `sNN-avant-<section>` avant chaque section et `sNN-final` à la fin, puis écrit `docs/rapports/SNN.md`.
+5. `main` n'avance que lorsque le propriétaire a validé la session (porte ou contrôle de la fiche).
 
 ## Commandes
 
@@ -59,7 +63,10 @@ tools/simFight.ts          Un combat headless (commun à sim et golden) : profil
 tools/texts.ts             Outil `npm run texts`.
 tools/census.ts            Outil `npm run census`.
 tools/headlessDom.ts       Faux DOM + aléatoire à graine pour faire tourner le moteur sous Node.
-docs/sim/                  Tableaux de mesure et `golden-master.json`.
+docs/sim/                  `golden-master.json` et tableaux de mesure de la session en cours.
+docs/plan/                 PLAN_DIRECTEUR.md : le cadre du projet et les fiches de session.
+docs/rapports/             Un rapport par session (`SNN.md`).
+docs/archives/             Comptes rendus, tableaux de mesure et captures des sessions précédentes.
 ```
 
 Flux de données : `i18n/fr` -> `catalog` + `balance` -> `rules` (pur) -> `VoxelEngine` + `engine/*` (simulation + rendu) -> `App` -> composants.
@@ -110,6 +117,7 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 
 ## Conventions
 
+- **Contenu retirable** : tout nouveau contenu respecte `STYLE.md`. Un commit par lignée et un commit par biome : insérer chaque lignée à un endroit DIFFÉRENT des fichiers partagés (jamais deux ajouts sur des lignes voisines), lui donner son propre fichier de test, ne pas la référencer depuis une autre lignée ou un autre biome, puis vérifier avec `git revert --no-commit <hash> && npm run check`.
 - **Data-driven** : un Cubimon, un sort ou un niveau s'ajoute dans `catalog.ts`. Le moteur ne doit pas contenir de cas particulier par espèce ; les différences passent par des champs (`archetype`, `stage`, `bossKit`...).
 - **Textes** : tout texte visible vit dans `src/i18n/fr.ts` (`FR.ui.<composant>`, `FR.engine`, `FR.rules`, `FR.balance`, `FR.catalog.<TABLE>.<id>`). Un texte à trous est une fonction (`FR.ui.teamDrawer.nivRequis(niveau)`). Pour un nouveau Cubimon : ses données dans `catalog.ts`, son nom et ses descriptions dans `fr.ts`. `npm run texts` doit rester à zéro. Trois fichiers gardent leurs textes en place : `CodexDrawer.tsx` (Codex, non modifié par prudence), `GalleryPage.tsx` et `DebugOverlay.tsx` (outils de développement).
 - **Règles pures testées** : toute nouvelle règle va dans `rules.ts` avec un test. Les fonctions qui tirent au hasard prennent un `rng` en paramètre (défaut `Math.random`) pour être testables.
@@ -144,7 +152,7 @@ npm run sim -- --reactions 0                   # réactions élémentaires coup�
 - **Un seul combat ne prouve rien.** La session 1 avait réglé les niveaux sur un combat chacun dans un navigateur headless lent : le résultat ne tenait pas (un niveau annoncé gagné était perdu à 100 %).
 - Le navigateur headless ne reflète pas de façon fiable la vitesse ni l'issue des combats réels (selon la machine et la session, il tourne en rendu logiciel à ~10 images/s ou en accéléré à 60). Pour l'équilibrage, utiliser `npm run sim` ; le navigateur headless ne sert qu'aux captures d'écran, aux compteurs de `?debug=1` (draw calls, triangles) et à vérifier l'absence d'erreur console. Les FPS se mesurent sur une vraie machine.
 - **Tirages aléatoires et golden** : les effets visuels (particules, météo, tremblement) tirent dans le même `Math.random` que le combat, et three.js y tire aussi l'identifiant (UUID) de chaque objet, géométrie ou matériau créé. Ajouter, retirer ou déplacer un tirage, ou créer un objet three.js de plus ou de moins pendant un combat, change donc le golden, même si rien ne change à l'écran. Une optimisation de rendu doit créer exactement les mêmes objets, ou être traitée comme un changement de jeu (golden réenregistré, validé par un humain).
-- **Retirer un contenu d'avant la session « Fondations »** : les `git revert <hash>` listés dans `GIGA_UPDATE_2.md` entrent en conflit depuis le découpage du moteur et le déplacement des textes. Une lignée se retire à la main : ses entrées dans `catalog.ts` et `i18n/fr.ts`, sa branche dans `models/creatures.ts`, son cas dans `engine/actors.ts` (`animateRigPose`), son fichier de test. La règle « un commit par lignée » reste valable pour tout nouveau contenu.
+- **Retirer un contenu d'avant la session « Fondations »** : les `git revert <hash>` listés dans `docs/archives/GIGA_UPDATE_2.md` entrent en conflit depuis le découpage du moteur et le déplacement des textes. Une lignée se retire à la main : ses entrées dans `catalog.ts` et `i18n/fr.ts`, sa branche dans `models/creatures.ts`, son cas dans `engine/actors.ts` (`animateRigPose`), son fichier de test. La règle « un commit par lignée » reste valable pour tout nouveau contenu.
 - `VoxelEngine` continue de tourner sous l'écran de fin (fête de victoire). Le verrou `resultSent` empêche de renvoyer les récompenses : ne pas le retirer (test dédié).
 - Changer de scène : `loadCampScene` et `startExpedition` doivent remettre à zéro tout état d'animation (entrée de boss, évolution, télégraphes). Tout nouvel état transitoire doit y être réinitialisé, et couvert dans `engine.test.ts`.
 - Les modules de `engine/` s'importent les uns les autres en cercle : c'est sans danger tant qu'ils n'exécutent rien au chargement. Ne pas y ajouter de code de premier niveau qui appelle un autre module.

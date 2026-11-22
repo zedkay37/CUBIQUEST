@@ -15,7 +15,7 @@ import path from 'node:path';
 
 import { parse } from '@babel/parser';
 
-/** Fichiers volontairement laissés tels quels (voir GIGA_FONDATIONS.md). */
+/** Fichiers volontairement laissés tels quels (voir docs/archives/GIGA_FONDATIONS.md). */
 const EXCEPTIONS: Record<string, string> = {
   'src/components/CodexDrawer.tsx': 'Codex : consigne permanente « ne pas modifier le Codex »',
   'src/components/GalleryPage.tsx': 'outil de développement (?gallery=1), jamais vu par le joueur',
