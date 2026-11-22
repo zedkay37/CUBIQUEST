@@ -166,7 +166,7 @@ function parseArgs(argv: string[]): {
     brief: argv.includes('--brief'),
     set: get('set'),
     scale: get('scale'),
-    profile: get('profile') === 'active' ? 'active' : get('profile') === 'expert' ? 'expert' : 'auto',
+    profile: (['active', 'expert', 'kite'] as const).find((p) => p === get('profile')) ?? 'auto',
     cubes: get('cubes') !== '0',
   };
 }

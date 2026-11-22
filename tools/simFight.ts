@@ -13,6 +13,10 @@
  *               volontaire, mais un sort prêt depuis plus de 2,5 s part s'il ne gâche pas un cube qui mûrit ;
  *               Déchaînement dès 100 %, sauf si un Trio est possible dans la seconde. Il esquive comme `active`.
  *               Il lit les recharges et les cubes dans l'état du moteur (outil seulement).
+ *  - `kite`   : mode « Manuel » en « hit and run » (retour du propriétaire, S05) : sorts comme `active`,
+ *               esquive comme `active`, et le meneur s'éloigne dès qu'un ennemi s'approche à moins de
+ *               KITE_FLEE_DIST, puis revient au contact quand plus personne n'est à portée d'attaque.
+ *               Il appuie sur les touches de déplacement comme un joueur (ZQSD).
  *
  * `cubes: false` coupe les cubes d’élément par une option du moteur réservée aux outils
  * (le jeu normal ne la passe jamais).
@@ -28,7 +32,7 @@ const { VoxelEngine } = await import('../src/game/VoxelEngine');
 
 export { STAGES, SPECIES, getReferenceConfig };
 export type StageDef = (typeof STAGES)[number];
-export type SimProfile = 'auto' | 'active' | 'expert';
+export type SimProfile = 'auto' | 'active' | 'expert' | 'kite';
 
 export interface FightOptions {
   profile?: SimProfile;
@@ -80,6 +84,39 @@ export interface FightResult {
 }
 
 type Engine = InstanceType<typeof VoxelEngine>;
+
+const KITE_FLEE_DIST = 2.6;
+const KITE_FLEE_SEC = 0.7;
+
+/** Profil « kite » : tient une direction de déplacement (touches du jeu) selon la distance aux ennemis. */
+function kiteStep(engine: Engine, state: { fleeFor: number }, dt: number): void {
+  const leader = engine.allies.find((a) => !a.fainted);
+  engine.heldKeys.clear();
+  if (!leader) return;
+  let nearest: (typeof engine.enemies)[number] | null = null;
+  let best = Infinity;
+  for (const e of engine.enemies) {
+    if (e.fainted || e.removed) continue;
+    const d = Math.hypot(e.x - leader.x, e.z - leader.z);
+    if (d < best) {
+      best = d;
+      nearest = e;
+    }
+  }
+  if (!nearest) return;
+  let dx = nearest.x - leader.x;
+  let dz = nearest.z - leader.z;
+  if (best < KITE_FLEE_DIST + (nearest.isBoss ? 1 : 0)) state.fleeFor = KITE_FLEE_SEC;
+  if (state.fleeFor > 0) {
+    state.fleeFor -= dt;
+    dx = -dx;
+    dz = -dz;
+  } else if (best <= leader.attackRange) {
+    return; // à portée : on frappe sur place
+  }
+  if (Math.abs(dx) > 0.3 * Math.abs(dz)) engine.heldKeys.add(dx > 0 ? 'KeyD' : 'KeyA');
+  if (Math.abs(dz) > 0.3 * Math.abs(dx)) engine.heldKeys.add(dz > 0 ? 'KeyS' : 'KeyW');
+}
 
 /** Profil « expert » : une décision par pas de simulation. `readySince` : depuis quand chaque sort est prêt. */
 function expertStep(engine: Engine, readySince: number[], dt: number): void {
@@ -159,7 +196,8 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
       createOwnedCreature(id, config.level, config.bonus, `sim_${i}`),
     );
     engine.setScreenState('playing');
-    engine.startExpedition(stage, creatures, [], profile === 'auto' ? 'auto' : 'semi');
+    engine.startExpedition(stage, creatures, [], profile === 'auto' ? 'auto' : profile === 'kite' ? 'manual' : 'semi');
+    const kite = { fleeFor: 0 };
 
     let t = 0;
     let hazardSeenFor = 0;
@@ -168,7 +206,8 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
     while (!outcome && t < MAX_FIGHT_SEC) {
       if (ultimatesAtBoss < 0 && engine.getCombatTelemetry().bossAppearedAt >= 0) ultimatesAtBoss = engine.ultimatesUsed;
       if (profile === 'expert' && enemiesRemaining > 0) expertStep(engine, readySince, STEP);
-      if (profile === 'active' && enemiesRemaining > 0) {
+      if (profile === 'kite') kiteStep(engine, kite, STEP);
+      if ((profile === 'active' || profile === 'kite') && enemiesRemaining > 0) {
         for (let slot = 0; slot < 3; slot++) engine.triggerAllySkill(slot);
         engine.triggerUltimate();
       }
