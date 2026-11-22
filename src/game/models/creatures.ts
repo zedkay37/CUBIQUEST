@@ -1,5 +1,5 @@
 /**
- * Modèles des Cubimons : une construction par silhouette (`archetype`), teintée par la palette de l'espèce.
+ * Modèles des créatures : une construction par silhouette (`archetype`), teintée par la palette de l'espèce.
  */
 import * as THREE from 'three';
 import { SPECIES } from '../catalog';
@@ -49,7 +49,7 @@ export function getRigTopY(species: SpeciesDef): number {
 }
 
 /**
- * Builds a charismatic 6-12 part composite voxel Cubimon anchored at bottom-center (y = 0)
+ * Builds a charismatic 6-12 part composite voxel creature anchored at bottom-center (y = 0)
  */
 export function buildVoxelCreature(speciesId: string, scaleOverride?: number): VoxelCreatureRig {
   const species = SPECIES[speciesId] ?? SPECIES.pyrocube;
@@ -197,7 +197,7 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
       extras.push(spores);
     }
   } else if (arch === 'shelled') {
-    // Armored turtle/blaster Cubimon (Aquabloc line)
+    // Armored turtle/blaster creature (Aquabloc line)
     bodyPivot.add(makeBox(0.86, 0.88, 0.82, primaryMat, 0, 0.68, 0.06));
     bodyPivot.add(makeBox(0.68, 0.56, 0.16, bellyMat, 0, 0.58, 0.44));
     // Back shell (2-layer)
@@ -264,7 +264,7 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
       bodyPivot.add(makeBox(0.1, 0.2, 0.1, accentMat, -0.12, 1.06, -0.3));
     }
   } else if (arch === 'winged') {
-    // Majestic winged dragon / thunderbird Cubimon (Ignisaur / Raicube)
+    // Majestic winged dragon / thunderbird creature (Ignisaur / Raicube)
     bodyPivot.add(makeBox(0.88, 0.94, 0.88, primaryMat, 0, 0.72, 0));
     bodyPivot.add(makeBox(0.64, 0.56, 0.16, bellyMat, 0, 0.58, 0.42));
     // Crown horns / crest
@@ -299,7 +299,7 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
     bodyPivot.add(legL, legR);
     legs.push(legL, legR);
   } else if (arch === 'horned') {
-    // Heavy armored / magma horned Cubimon (Cailloc / Granitox / Magmadrake / Flambrix)
+    // Heavy armored / magma horned creature (Cailloc / Granitox / Magmadrake / Flambrix)
     bodyPivot.add(makeBox(1.04, 0.88, 0.94, primaryMat, 0, 0.68, 0));
     bodyPivot.add(makeBox(0.76, 0.48, 0.16, bellyMat, 0, 0.54, 0.44));
     // Shoulder armor plates
@@ -367,7 +367,7 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
       bodyPivot.add(makeBox(0.05, 0.12, 0.56, accentMat, 0.36, 0.42, 0.02, false));
     }
   } else if (arch === 'floating') {
-    // Hovering Psychic crystal Cubimon with orbiting satellites (Psycube / Lunabloc / Aetherion)
+    // Hovering Psychic crystal creature with orbiting satellites (Psycube / Lunabloc / Aetherion)
     bodyPivot.add(makeBox(0.84, 0.86, 0.84, primaryMat, 0, 0.96, 0));
     bodyPivot.add(makeBox(0.58, 0.48, 0.14, bellyMat, 0, 0.86, 0.41));
     // Psychic crown ears

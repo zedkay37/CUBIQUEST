@@ -26,7 +26,7 @@ function buildLineages(): SpeciesDef[][] {
 
 /**
  * Galerie de revue (`?gallery=1`) — outil de développement, pas un écran du jeu.
- * Affiche chaque Cubimon en 3D (face et profil) à chaque stade avec ses données, et un aperçu de chaque biome.
+ * Affiche chaque créature en 3D (face et profil) à chaque stade avec ses données, et un aperçu de chaque biome.
  */
 export function GalleryPage() {
   const lineages = useMemo(buildLineages, []);
@@ -57,7 +57,7 @@ export function GalleryPage() {
         <p className="text-xs font-bold uppercase tracking-widest text-[#F4B942]">Outil de développement</p>
         <h1 className="font-display text-3xl font-extrabold">Galerie de revue</h1>
         <p className="mt-1 text-sm text-[#B8C2D1]">
-          {speciesCount} Cubimons en {lineages.length} lignées · {BIOME_ORDER.length} biomes · {STAGES.length} niveaux.
+          {speciesCount} créatures en {lineages.length} lignées · {BIOME_ORDER.length} biomes · {STAGES.length} niveaux.
           Images fixes rendues avec les modèles et l’éclairage du jeu.{' '}
           <a className="underline text-[#38BDF8]" href="?">
             Retour au jeu
@@ -67,7 +67,7 @@ export function GalleryPage() {
         {error && <p className="mt-3 text-sm text-[#E85D3F]">Rendu impossible : {error}</p>}
       </header>
 
-      <section className="max-w-6xl mx-auto space-y-4" aria-label="Cubimons par lignée">
+      <section className="max-w-6xl mx-auto space-y-4" aria-label="Créatures par lignée">
         {lineages.map((chain) => (
           <div key={chain[0].id} className="voxel-panel rounded-2xl p-3 sm:p-4" data-lineage={chain[0].id}>
             <h2 className="font-display text-lg font-bold mb-3 flex items-center gap-2">

@@ -7,7 +7,7 @@ import { buildVoxelCreature } from './voxelModels';
 
 installHeadlessDom();
 
-test('Style: chaque Cubimon respecte les plages de STYLE.md', () => {
+test('Style: chaque créature respecte les plages de STYLE.md', () => {
   const issues = Object.values(SPECIES).flatMap((s) => checkSpeciesStyle(s));
   assert.deepEqual(issues, []);
 });
@@ -44,7 +44,7 @@ test('Style: lignées — 2 ou 3 stades, même élément, un seul changement de 
   assert.equal(seen.size, Object.keys(SPECIES).length);
 });
 
-test('Style: chaque Cubimon se recrute à la Marmite et son modèle voxel se construit', () => {
+test('Style: chaque créature se recrute à la Marmite et son modèle voxel se construit', () => {
   for (const species of Object.values(SPECIES)) {
     assert.ok(
       RECIPES.some((r) => r.poolSpeciesIds.includes(species.id)),

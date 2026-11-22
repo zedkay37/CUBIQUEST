@@ -1,7 +1,7 @@
 /**
  * Plages chiffrées de STYLE.md, sous forme vérifiable par les tests.
  * Elles ont été RELEVÉES sur les 29 espèces existantes en session 2 (elles ne sont pas inventées) :
- * tout nouveau Cubimon doit y entrer. Si une plage doit bouger, c'est une décision de direction :
+ * toute nouvelle créature doit y entrer. Si une plage doit bouger, c'est une décision de direction :
  * modifier STYLE.md et ce fichier ensemble.
  */
 import { MOVES, SPECIES } from './catalog';

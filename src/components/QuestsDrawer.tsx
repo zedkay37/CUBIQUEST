@@ -17,7 +17,7 @@ import {
   importSaveFromJson,
 } from '../game/rules';
 import type { QuestReward, SaveState } from '../game/types';
-import { FR } from '../i18n/fr';
+import { FR, GAME_TITLE } from '../i18n/fr';
 
 type DrawerSection = 'missions' | 'achievements' | 'save';
 type AchievementFilter = 'all' | 'claimable' | 'completed';
@@ -103,7 +103,7 @@ export function QuestsDrawer({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cubiquest-sauvegarde-v${save.version}.json`;
+    a.download = `${GAME_TITLE.toLowerCase()}-sauvegarde-v${save.version}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -136,7 +136,7 @@ export function QuestsDrawer({
     setConfirmReset(false);
     setFeedback({
       kind: 'success',
-      text: FR.ui.questsDrawer.sauvegardeRestaureeCubimonsNiveaux(res.save.roster.length, res.save.completedStageIds.length, STAGES.length),
+      text: FR.ui.questsDrawer.sauvegardeRestaureeCreaturesNiveaux(res.save.roster.length, res.save.completedStageIds.length, STAGES.length),
     });
   };
 
@@ -415,7 +415,7 @@ export function QuestsDrawer({
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#202838] border border-[#39445A] p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.cubimons}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[#B8C2D1]">{FR.ui.questsDrawer.creatures}</p>
                   <p className="font-mono-num text-lg font-bold text-[#2FB97A] mt-0.5">
                     {save.roster.length}
                   </p>

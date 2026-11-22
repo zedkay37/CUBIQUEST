@@ -100,7 +100,7 @@ export function startExpedition(
   self.envAnimate = env.animate ?? null;
   configureWeather(self, stage.biomeId);
 
-  // Spawn 3 allied Cubimons in an open clearing facing forward (+X/-Z toward wave)
+  // Spawn 3 allied creatures in an open clearing facing forward (+X/-Z toward wave)
   self.allies = squadCreatures.slice(0, 3).map((c, idx) => {
     const species = SPECIES[c.speciesId] ?? SPECIES.pyrocube;
     const stats = computeCreatureStats(c, allStones);

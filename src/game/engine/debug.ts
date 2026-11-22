@@ -16,7 +16,7 @@ export interface EngineDebugStats {
   textures: number;
   /** Particules actives (pool de taille fixe). */
   particles: number;
-  /** Cubimons présents : promeneurs au camp, alliés et ennemis en expédition. */
+  /** créatures présents : promeneurs au camp, alliés et ennemis en expédition. */
   entities: number;
 }
 

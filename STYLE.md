@@ -3,7 +3,7 @@
 Ce document décrit ce qui **existe** dans le jeu (relevé sur le catalogue et les modèles, session 2). Il ne fixe aucune nouveauté.
 Tout nouveau contenu doit s'y conformer. Les chiffres viennent de `src/game/catalog.ts` et `src/game/voxelModels.ts`.
 
-## 1. Créatures (« Cubimons »)
+## 1. Créatures
 
 ### 1.1 Lignées
 

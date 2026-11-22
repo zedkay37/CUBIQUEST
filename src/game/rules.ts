@@ -776,7 +776,7 @@ export function applyExpeditionRewards(
       level += 1;
     }
     if (level > startLevel) {
-      leveledUpNames.push(FR.rules.niv(SPECIES[c.speciesId]?.name ?? FR.rules.cubimon, level));
+      leveledUpNames.push(FR.rules.niv(SPECIES[c.speciesId]?.name ?? FR.rules.creature, level));
     }
     return { ...c, level, xp };
   });
@@ -1584,7 +1584,7 @@ export function importSaveFromJson(
   if (!migrated) {
     return {
       ok: false,
-      error: FR.rules.sauvegardeCubiquestNonReconnueOuIncomplete,
+      error: FR.rules.sauvegardeNonReconnueOuIncomplete,
     };
   }
   return { ok: true, save: migrated };

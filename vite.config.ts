@@ -4,11 +4,20 @@ import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+import {GAME_FULL_TITLE} from './src/i18n/fr';
+
 export default defineConfig(() => {
   return {
     plugins: [
       react(),
       tailwindcss(),
+      // Le titre du jeu vit dans src/i18n/fr.ts : index.html ne contient que le repère %GAME_FULL_TITLE%.
+      {
+        name: 'game-title-in-html',
+        transformIndexHtml(html: string): string {
+          return html.replaceAll('%GAME_FULL_TITLE%', GAME_FULL_TITLE);
+        },
+      },
       // Copies src/assets into dist/ so root-relative URLs like
       // "/src/assets/images/..." (e.g. generate_image output) still resolve
       // in production builds. Do not remove.

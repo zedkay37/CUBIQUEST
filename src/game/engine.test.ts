@@ -254,7 +254,7 @@ test('diagnostic : getDebugStats compte les entités et ne mesure aucun rendu en
     const h = makeHarness();
     h.engine.loadCampScene(h.squad(STAGE_BY_ID['meadow-1']), null, 'idle');
     const camp = h.engine.getDebugStats();
-    assert.equal(camp.entities, 3, 'au camp : les 3 Cubimons de l’escouade');
+    assert.equal(camp.entities, 3, 'au camp : les 3 créatures de l’escouade');
     assert.equal(camp.drawCalls, 0);
     assert.equal(camp.frames, 0, 'aucune image affichée sans boucle de rendu');
 

@@ -3,13 +3,13 @@ import { ELEMENT_META, SPECIES } from '../game/catalog';
 import type { ElementType } from '../game/types';
 import { FR } from '../i18n/fr';
 
-export function CubiQuestTitleLockup() {
+export function TitleLockup() {
   return (
     <svg
       viewBox="0 0 560 156"
       className="w-[min(520px,88vw)] h-auto drop-shadow-[0_10px_24px_rgba(14,18,28,0.45)]"
       role="img"
-      aria-label={FR.ui.icons.cubiquestLIleAuxCubes}
+      aria-label={FR.ui.icons.titreComplet}
     >
       {/* Left voxel isometric crest cube */}
       <g transform="translate(24, 24)">
@@ -117,7 +117,7 @@ export function ElementIcon({
 }
 
 /**
- * Crisp isometric voxel portrait icon matched 1-to-1 with each Cubimon's 3D palette
+ * Crisp isometric voxel portrait icon matched 1-to-1 with each creature's 3D palette
  */
 export function VoxelCreatureAvatar({
   speciesId,

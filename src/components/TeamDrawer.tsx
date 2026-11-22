@@ -147,7 +147,7 @@ export function TeamDrawer({
             </div>
           </div>
 
-          {/* Column 2: Selected Cubimon Inspector + 3x3 Power Stone Board */}
+          {/* Column 2: Selected creature inspector + 3x3 Power Stone Board */}
           <div className="lg:col-span-5 space-y-3">
             {/* Creature Header Card */}
             <div className="rounded-xl bg-[#161C29] border border-[#344056] p-3">
@@ -176,7 +176,7 @@ export function TeamDrawer({
                   }
                   title={
                     !inSquad && save.squadIds.length >= 3
-                      ? FR.ui.teamDrawer.lEscouadeCompteDeja3Cubimons
+                      ? FR.ui.teamDrawer.lEscouadeCompteDeja3Creatures
                       : inSquad && save.squadIds.length <= 1
                         ? FR.ui.teamDrawer.lEscouadeDoitGarderAuMoins
                         : undefined

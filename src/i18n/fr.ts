@@ -11,13 +11,29 @@
  * Ce module ne contient que des données : il n'importe rien.
  * `npm run texts` liste les textes restés en dur dans l'interface.
  */
+/**
+ * Les noms propres du jeu, à UN seul endroit : les changer ici les change partout (textes, onglet du
+ * navigateur, nom du fichier de sauvegarde exporté). Seuls le nom du paquet npm et l'adresse du dépôt
+ * les répètent. Le titre ne change pas avant la session S17 ; « Cubin » est provisoire.
+ */
+/** Titre du jeu, en deux moitiés : le logo les colore séparément. */
+export const GAME_TITLE_PARTS = ['Cubi', 'Quest'] as const;
+export const GAME_TITLE = GAME_TITLE_PARTS.join('');
+/** Nom du monde, sans article puis avec (« sur l’Île aux Cubes », « de l’Île aux Cubes »). */
+export const WORLD_NAME_BARE = 'Île aux Cubes';
+export const WORLD_NAME = `l’${WORLD_NAME_BARE}`;
+/** Nom commun des créatures. */
+export const CREATURE_NOUN = { singular: 'Cubin', plural: 'Cubins' } as const;
+/** Titre complet : onglet du navigateur, logo. */
+export const GAME_FULL_TITLE = `${GAME_TITLE} : L’${WORLD_NAME_BARE}`;
+
 export const FR = {
   ui: {
     campHud: {
       platPret: 'Plat prêt !',
       cuisson: (a: string | number) => `Cuisson (${a})`,
       leCamp: 'Le Camp',
-      ileAuxCubes: 'Île aux Cubes',
+      ileAuxCubes: WORLD_NAME_BARE,
       puissance: 'Puissance',
       desactiverLeTremblementDeCamera: 'Désactiver le tremblement de caméra',
       activerLeTremblementDeCamera: 'Activer le tremblement de caméra',
@@ -36,7 +52,7 @@ export const FR = {
     },
     cookingDrawer: {
       marmiteDuCampement: 'Marmite du Campement',
-      placez5IngredientsPourCuisinerUn: 'Placez 5 ingrédients pour cuisiner un plat et attirer un nouveau Cubimon.',
+      placez5IngredientsPourCuisinerUn: `Placez 5 ingrédients pour cuisiner un plat et attirer un nouveau ${CREATURE_NOUN.singular}.`,
       chaudron: 'Chaudron',
       recettes: 'Recettes (',
       fermerLaMarmite: 'Fermer la marmite',
@@ -67,7 +83,7 @@ export const FR = {
       avantDegustation: ' avant dégustation.',
       terminerMaintenant: 'Terminer maintenant',
       estPret: ' est prêt !',
-      unCubimonAttireParLOdeur: 'Un Cubimon attiré par l’odeur attend près du feu de camp.',
+      uneCreatureAttireeParLOdeur: `Un ${CREATURE_NOUN.singular} attiré par l’odeur attend près du feu de camp.`,
       accueillirLaRecrue: 'Accueillir la recrue',
       reserveDIngredients: 'Réserve d’ingrédients',
       mystique: 'Mystique',
@@ -132,10 +148,10 @@ export const FR = {
       toucheR: 'TOUCHE R',
     },
     icons: {
-      cubiquestLIleAuxCubes: 'CubiQuest : L\'Île aux Cubes',
-      cubi: 'CUBI',
-      quest: 'QUEST',
-      lIleAuxCubes: 'L’ÎLE AUX CUBES',
+      titreComplet: GAME_FULL_TITLE,
+      cubi: GAME_TITLE_PARTS[0].toUpperCase(),
+      quest: GAME_TITLE_PARTS[1].toUpperCase(),
+      lIleAuxCubes: `L’${WORLD_NAME_BARE}`.toUpperCase(),
     },
     outcomeModal: {
       victoire: 'Victoire',
@@ -178,7 +194,7 @@ export const FR = {
       fichierDeSauvegardeTelechargeJson: 'Fichier de sauvegarde téléchargé (.json).',
       sauvegardeCopieeDansLePressePapiers: 'Sauvegarde copiée dans le presse-papiers.',
       impossibleDAccederAuPressePapiers: 'Impossible d’accéder au presse-papiers. Utilisez le bouton Télécharger (.json).',
-      sauvegardeRestaureeCubimonsNiveaux: (a: string | number, b: string | number, c: string | number) => `Sauvegarde restaurée (${a} Cubimons, ${b}/${c} niveaux).`,
+      sauvegardeRestaureeCreaturesNiveaux: (a: string | number, b: string | number, c: string | number) => `Sauvegarde restaurée (${a} ${CREATURE_NOUN.plural}, ${b}/${c} niveaux).`,
       erreurLorsDeLaLectureDu: 'Erreur lors de la lecture du fichier JSON.',
       journalDuCampV02: 'Journal du Camp · V0.2',
       quetesSuccesSauvegarde: 'Quêtes, Succès & Sauvegarde',
@@ -190,7 +206,7 @@ export const FR = {
       recompense: 'Récompense : ',
       reclamer: 'Réclamer',
       enCours: 'En cours',
-      paliersPermanentsDeVotreAventureSur: 'Paliers permanents de votre aventure sur l’Île aux Cubes.',
+      paliersPermanentsDeVotreAventureSur: `Paliers permanents de votre aventure sur ${WORLD_NAME}.`,
       tous: 'Tous',
       aReclamer: (a: string | number) => `À réclamer (${a})`,
       termines: 'Terminés',
@@ -200,7 +216,7 @@ export const FR = {
       expeditions: 'Expéditions',
       reactions: 'Réactions',
       comboMax: 'Combo Max',
-      cubimons: 'Cubimons',
+      creatures: CREATURE_NOUN.plural,
       exporterVotreSauvegardeLocaleV: 'Exporter votre sauvegarde locale (v',
       conservezUneCopieDeVotreEquipe: 'Conservez une copie de votre équipe, vos galets, vos ingrédients et vos succès au format JSON.',
       telechargerJson: 'Télécharger (.json)',
@@ -208,16 +224,16 @@ export const FR = {
       copierLeJson: 'Copier le JSON',
       importerUneSauvegardeJson: 'Importer une sauvegarde (.json)',
       choisirUnFichierJson: 'Choisir un fichier .json',
-      ouCollezIciLeContenuJson: 'Ou collez ici le contenu JSON d’une sauvegarde CubiQuest (v1 ou v2)...',
+      ouCollezIciLeContenuJson: `Ou collez ici le contenu JSON d’une sauvegarde ${GAME_TITLE}...`,
       validerImporter: 'Valider & Importer',
       reinitialiserLaSauvegarde: 'Réinitialiser la sauvegarde',
-      repartDeZeroSurLIle: 'Repart de zéro sur l’Île aux Cubes (pensez à exporter votre JSON avant).',
+      repartDeZeroSurLIle: `Repart de zéro sur ${WORLD_NAME} (pensez à exporter votre JSON avant).`,
       reinitialiser: 'Réinitialiser',
       annuler: 'Annuler',
       confirmerLaRemiseAZero: 'Confirmer la remise à zéro',
     },
     starterModal: {
-      choisissezVotrePremierCubimon: 'Choisissez votre premier Cubimon',
+      choisissezVotrePremiereCreature: `Choisissez votre premier ${CREATURE_NOUN.singular}`,
       deuxEclaireursVousRejoindrontAussitotPour: 'Deux éclaireurs vous rejoindront aussitôt pour former votre escouade de 3 au Camp.',
       tank: 'Tank',
       distance: 'Distance',
@@ -249,8 +265,8 @@ export const FR = {
       escouade: 'Escouade',
       niv: 'Niv. ',
       xp: ' · XP',
-      lEscouadeCompteDeja3Cubimons: 'L’escouade compte déjà 3 Cubimons : retirez-en un d’abord.',
-      lEscouadeDoitGarderAuMoins: 'L’escouade doit garder au moins un Cubimon.',
+      lEscouadeCompteDeja3Creatures: `L’escouade compte déjà 3 ${CREATURE_NOUN.plural} : retirez-en un d’abord.`,
+      lEscouadeDoitGarderAuMoins: `L’escouade doit garder au moins un ${CREATURE_NOUN.singular}.`,
       dernierMembre: 'Dernier membre',
       retirerEscouade: 'Retirer escouade',
       escouadeComplete: 'Escouade complète',
@@ -307,10 +323,10 @@ export const FR = {
   },
   rules: {
     niv: (a: string | number, b: string | number) => `${a} Niv.${b}`,
-    cubimon: 'Cubimon',
+    creature: CREATURE_NOUN.singular,
     leContenuJsonEstVide: 'Le contenu JSON est vide.',
     formatJsonInvalideVerifiezQueLe: 'Format JSON invalide. Vérifiez que le fichier n’est pas tronqué.',
-    sauvegardeCubiquestNonReconnueOuIncomplete: 'Sauvegarde CubiQuest non reconnue ou incomplète (version ou escouade manquante).',
+    sauvegardeNonReconnueOuIncomplete: `Sauvegarde ${GAME_TITLE} non reconnue ou incomplète (version ou escouade manquante).`,
   },
   balance: {
     anneauDeGivreCollezVousAu: 'Anneau de Givre — collez-vous au boss !',
@@ -561,7 +577,7 @@ export const FR = {
       },
       raicube: {
         name: 'Raicube',
-        dexNote: 'L’oiseau-éclair de l’Île aux Cubes : un battement d’ailes suffit à surcharger l’air.',
+        dexNote: `L’oiseau-éclair de ${WORLD_NAME} : un battement d’ailes suffit à surcharger l’air.`,
       },
       cailloc: {
         name: 'Cailloc',
@@ -675,7 +691,7 @@ export const FR = {
       },
       mystic_shard: {
         name: 'Fragment Mystique',
-        description: 'Relique prismatique rare capable d’attirer les Cubimons légendaires.',
+        description: `Relique prismatique rare capable d’attirer les ${CREATURE_NOUN.plural} légendaires.`,
       },
       snow_lichen: {
         name: 'Lichen des Neiges',
@@ -803,7 +819,7 @@ export const FR = {
       },
       camp_stew: {
         name: 'Ragoût du Camp',
-        description: 'La recette classique de l’Île aux Cubes : attire toutes les espèces de base.',
+        description: `La recette classique de ${WORLD_NAME} : attire toutes les espèces de base.`,
         hint: 'N’importe quel mélange varié de 5 ingrédients.',
       },
     },
@@ -1040,7 +1056,7 @@ export const FR = {
       },
       q_evolve_frontier: {
         title: 'Nouvelle Forme',
-        description: 'Faites évoluer 1 Cubimon au Camp.',
+        description: `Faites évoluer 1 ${CREATURE_NOUN.singular} au Camp.`,
         reward: {
           label: '2× Poivre d’Orage · 2× Miel Ambré',
         },
@@ -1105,7 +1121,7 @@ export const FR = {
       },
       ach_evolve_1: {
         title: 'Métamorphose',
-        description: 'Faites évoluer votre premier Cubimon.',
+        description: `Faites évoluer votre premier ${CREATURE_NOUN.singular}.`,
         reward: {
           label: '1× Rune d’Ampleur · 3× Racine Ardente',
         },
@@ -1125,7 +1141,7 @@ export const FR = {
         },
       },
       ach_stages_12: {
-        title: 'Légende de l’Île aux Cubes',
+        title: `Légende de ${WORLD_NAME}`,
         description: 'Triomphez des 12 niveaux jusqu’au Cœur d’Aetherion.',
         reward: {
           label: '5× Fragment Mystique · Galet Or (+380–520)',
@@ -1161,7 +1177,7 @@ export const FR = {
       },
       ach_dex_all: {
         title: 'Bestiaire Complet',
-        description: (a: string | number) => `Découvrez les ${a} espèces de l’Île aux Cubes et de ses confins.`,
+        description: (a: string | number) => `Découvrez les ${a} espèces de ${WORLD_NAME} et de ses confins.`,
         reward: {
           label: '3× Fragment Mystique · Galet Or (+1000–1300)',
         },
@@ -1175,7 +1191,7 @@ export const FR = {
       },
       ach_evolve_5: {
         title: 'Éleveur Émérite',
-        description: 'Faites évoluer 5 Cubimons.',
+        description: `Faites évoluer 5 ${CREATURE_NOUN.plural}.`,
         reward: {
           label: '1× Rune de Force · 3× Poivre d’Orage',
         },

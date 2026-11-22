@@ -33,7 +33,7 @@ Le plan se lit dans le dépôt ; une session se lance avec un prompt court (mod�
 URL utiles en développement (aucune ne touche à la sauvegarde) :
 
 - `?stage=<id>` : lance un niveau avec son escouade de référence. Options : `&squad=a,b,c&lvl=N&bonus=N`.
-- `?gallery=1` : galerie de revue (tous les Cubimons en 3D + aperçu des biomes).
+- `?gallery=1` : galerie de revue (toutes les créatures en 3D + aperçu des biomes).
 - `?autostart=1&hour=0.8` : camp à une heure donnée (0 aube · 0.3 jour · 0.66 crépuscule · 0.8 nuit).
 - `?debug=1` : overlay de diagnostic (FPS, temps d'image, draw calls, triangles, géométries, textures, particules, entités). Se combine avec les autres. Détail des lignes dans `README.md`.
 
@@ -101,7 +101,7 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | Module | Rôle |
 | --- | --- |
 | `shared.ts` | Textures générées une fois, brique `makeBox`. |
-| `creatures.ts` | Cubimons par silhouette (`archetype`), barre de vie. |
+| `creatures.ts` | Créatures par silhouette (`archetype`), barre de vie. |
 | `campProps.ts` | Marmite et totem du camp. |
 | `biomes.ts` | Sol, décor instancié et éléments propres à chaque biome. |
 | `floatingText.ts` | Texte flottant (pool fixe). |
@@ -118,8 +118,8 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 ## Conventions
 
 - **Contenu retirable** : tout nouveau contenu respecte `STYLE.md`. Un commit par lignée et un commit par biome : insérer chaque lignée à un endroit DIFFÉRENT des fichiers partagés (jamais deux ajouts sur des lignes voisines), lui donner son propre fichier de test, ne pas la référencer depuis une autre lignée ou un autre biome, puis vérifier avec `git revert --no-commit <hash> && npm run check`.
-- **Data-driven** : un Cubimon, un sort ou un niveau s'ajoute dans `catalog.ts`. Le moteur ne doit pas contenir de cas particulier par espèce ; les différences passent par des champs (`archetype`, `stage`, `bossKit`...).
-- **Textes** : tout texte visible vit dans `src/i18n/fr.ts` (`FR.ui.<composant>`, `FR.engine`, `FR.rules`, `FR.balance`, `FR.catalog.<TABLE>.<id>`). Un texte à trous est une fonction (`FR.ui.teamDrawer.nivRequis(niveau)`). Pour un nouveau Cubimon : ses données dans `catalog.ts`, son nom et ses descriptions dans `fr.ts`. `npm run texts` doit rester à zéro. Trois fichiers gardent leurs textes en place : `CodexDrawer.tsx` (Codex, non modifié par prudence), `GalleryPage.tsx` et `DebugOverlay.tsx` (outils de développement).
+- **Data-driven** : une créature, un sort ou un niveau s'ajoute dans `catalog.ts`. Le moteur ne doit pas contenir de cas particulier par espèce ; les différences passent par des champs (`archetype`, `stage`, `bossKit`...).
+- **Textes** : tout texte visible vit dans `src/i18n/fr.ts` (`FR.ui.<composant>`, `FR.engine`, `FR.rules`, `FR.balance`, `FR.catalog.<TABLE>.<id>`). Un texte à trous est une fonction (`FR.ui.teamDrawer.nivRequis(niveau)`). Pour une nouvelle créature : ses données dans `catalog.ts`, son nom et ses descriptions dans `fr.ts`. Les noms propres du jeu (`GAME_TITLE`, `WORLD_NAME`, `CREATURE_NOUN`) sont des constantes en tête de `fr.ts` : ne jamais les réécrire en dur dans un texte. `npm run texts` doit rester à zéro. Trois fichiers gardent leurs textes en place : `CodexDrawer.tsx` (Codex, non modifié par prudence), `GalleryPage.tsx` et `DebugOverlay.tsx` (outils de développement).
 - **Règles pures testées** : toute nouvelle règle va dans `rules.ts` avec un test. Les fonctions qui tirent au hasard prennent un `rng` en paramètre (défaut `Math.random`) pour être testables.
 - **Moteur** : une nouvelle fonction va dans le module de `engine/` dont c'est le rôle, sous la forme `export function nom(self: VoxelEngine, ...)`. Viser moins de 800 lignes par fichier.
 - **Sauvegarde** : si la forme de `SaveState` change, incrémenter `SAVE_VERSION`, compléter `migrateSaveState` et tester depuis v1, v2 et v3. `migrateSaveState` normalise TOUT ce qu'il lit (créatures, pierres, marmite, quêtes) : y ajouter chaque nouveau champ. La clé de stockage ne change pas.

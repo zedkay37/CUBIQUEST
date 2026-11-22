@@ -18,7 +18,7 @@ export function StarterModal({ onSelectStarter }: StarterModalProps) {
       >
         <div className="mb-5 text-center">
           <h2 id="starter-dialog-title" className="font-display text-2xl sm:text-3xl font-bold">
-            {FR.ui.starterModal.choisissezVotrePremierCubimon}
+            {FR.ui.starterModal.choisissezVotrePremiereCreature}
           </h2>
           <p className="mt-1.5 text-sm text-[#B8C2D1]">
             {FR.ui.starterModal.deuxEclaireursVousRejoindrontAussitotPour}

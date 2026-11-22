@@ -112,7 +112,7 @@ export function CookingDrawer({
           </div>
         </div>
 
-        {/* Newly Recruited Cubimon Celebration Banner */}
+        {/* Bannière de la créature tout juste recrutée */}
         {recruitedPreview && (
           <div className="mx-5 mt-4 rounded-xl bg-[#202E2B] border-2 border-[#2FB97A] p-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -378,7 +378,7 @@ export function CookingDrawer({
                           {activeRecipe.name}{FR.ui.cookingDrawer.estPret}
                         </p>
                         <p className="text-xs text-[#CBD5E1]">
-                          {FR.ui.cookingDrawer.unCubimonAttireParLOdeur}
+                          {FR.ui.cookingDrawer.uneCreatureAttireeParLOdeur}
                         </p>
                       </div>
                       <button

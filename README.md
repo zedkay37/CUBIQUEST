@@ -45,7 +45,7 @@ Aucune ne modifie la sauvegarde. Elles se combinent (`?stage=tundra-3&debug=1`).
 | --- | --- |
 | `?debug=1` | Overlay de diagnostic en haut à gauche (voir ci-dessous). |
 | `?stage=<id>` | Lance un niveau avec son escouade de référence, en Auto. Options : `&squad=a,b,c&lvl=N&bonus=N`. |
-| `?gallery=1` | Galerie de revue : tous les Cubimons en 3D et un aperçu de chaque biome. |
+| `?gallery=1` | Galerie de revue : toutes les créatures en 3D et un aperçu de chaque biome. |
 | `?autostart=1&hour=0.8` | Camp directement, à une heure donnée (0 aube, 0.3 jour, 0.66 crépuscule, 0.8 nuit). |
 
 ### `?debug=1`
@@ -60,6 +60,6 @@ L'overlay est désactivé par défaut et n'est pas téléchargé sans le paramè
 | Triangles | Triangles dessinés dans la dernière image. |
 | Géométries, Textures | Objets en mémoire graphique. Un nombre qui monte sans fin d'un niveau à l'autre signale une fuite. |
 | Particules | Particules actives (le pool est plafonné à 320). |
-| Entités | Cubimons présents : promeneurs au camp, alliés et ennemis en expédition. |
+| Entités | Créatures présentes : promeneurs au camp, alliés et ennemis en expédition. |
 
 Pour comparer deux versions, mesurer au même endroit : par exemple `?stage=tundra-3&debug=1`, pendant la première vague.
