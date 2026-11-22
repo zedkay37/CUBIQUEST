@@ -28,6 +28,7 @@ Le plan se lit dans le dépôt ; une session se lance avec un prompt court (mod�
 | `npm run golden` | Golden master : rejoue 840 combats à graine fixe, échoue à la moindre différence (voir plus bas) |
 | `npm run sim` | Mesure d'équilibrage : combats headless sur le vrai moteur (voir plus bas) |
 | `npm run texts` | Liste les textes visibles restés en dur dans l'interface |
+| `npm run lexique` | Compte, fichier par fichier, les termes venus d'autres jeux (liste : `tools/lexiqueCore.ts`). Doit rester à zéro ; le test `lexique.test.ts` le vérifie. |
 | `npm run census -- <niveau>` | Compte les maillages d'une scène sans navigateur (nombres reproductibles, pour comparer avant / après) |
 
 URL utiles en développement (aucune ne touche à la sauvegarde) :
@@ -46,6 +47,7 @@ src/game/catalog.ts        DONNÉES : espèces, sorts, pierres, ingrédients, re
 src/game/balance.ts        ÉQUILIBRAGE des niveaux récents (multiplicateurs par niveau, kits de boss). Seul endroit à régler.
 src/game/previewConfigs.ts Escouades de référence par niveau (mode aperçu + simulation).
 src/game/rules.ts          RÈGLES PURES, sans DOM ni Three : dégâts, recettes, évolutions, récompenses, sauvegarde/migrations.
+src/game/legacyIds.ts      Anciens identifiants des sauvegardes (tables de conversion). Seul fichier du jeu qui a le droit de les citer.
 src/game/settings.ts       Options de confort (hors SaveState).
 src/game/audio.ts          Sons synthétisés (WebAudio), aucun fichier audio.
 src/game/VoxelEngine.ts    FAÇADE du moteur : état partagé, construction de la scène, API publique.
@@ -61,6 +63,7 @@ tools/sim.ts               Outil `npm run sim`.
 tools/golden.ts            Outil `npm run golden`.
 tools/simFight.ts          Un combat headless (commun à sim et golden) : profils « auto » et « joueur actif ».
 tools/texts.ts             Outil `npm run texts`.
+tools/lexique.ts           Outil `npm run lexique` ; `tools/lexiqueCore.ts` porte la liste des mots interdits (partagée avec le test).
 tools/census.ts            Outil `npm run census`.
 tools/headlessDom.ts       Faux DOM + aléatoire à graine pour faire tourner le moteur sous Node.
 docs/sim/                  `golden-master.json` et tableaux de mesure de la session en cours.
@@ -122,8 +125,9 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 - **Textes** : tout texte visible vit dans `src/i18n/fr.ts` (`FR.ui.<composant>`, `FR.engine`, `FR.rules`, `FR.balance`, `FR.catalog.<TABLE>.<id>`). Un texte à trous est une fonction (`FR.ui.teamDrawer.nivRequis(niveau)`). Pour une nouvelle créature : ses données dans `catalog.ts`, son nom et ses descriptions dans `fr.ts`. Les noms propres du jeu (`GAME_TITLE`, `WORLD_NAME`, `CREATURE_NOUN`) sont des constantes en tête de `fr.ts` : ne jamais les réécrire en dur dans un texte. `npm run texts` doit rester à zéro. Trois fichiers gardent leurs textes en place : `CodexDrawer.tsx` (Codex, non modifié par prudence), `GalleryPage.tsx` et `DebugOverlay.tsx` (outils de développement).
 - **Règles pures testées** : toute nouvelle règle va dans `rules.ts` avec un test. Les fonctions qui tirent au hasard prennent un `rng` en paramètre (défaut `Math.random`) pour être testables.
 - **Moteur** : une nouvelle fonction va dans le module de `engine/` dont c'est le rôle, sous la forme `export function nom(self: VoxelEngine, ...)`. Viser moins de 800 lignes par fichier.
-- **Sauvegarde** : si la forme de `SaveState` change, incrémenter `SAVE_VERSION`, compléter `migrateSaveState` et tester depuis v1, v2 et v3. `migrateSaveState` normalise TOUT ce qu'il lit (créatures, pierres, marmite, quêtes) : y ajouter chaque nouveau champ. La clé de stockage ne change pas.
+- **Sauvegarde** : si la forme de `SaveState` change, incrémenter `SAVE_VERSION` (4 aujourd'hui), compléter `migrateSaveState` et tester depuis toutes les versions précédentes (`saveV3.fixture.ts` est une vraie sauvegarde v3). Un identifiant renommé s'ajoute à `legacyIds.ts` : une ancienne sauvegarde se charge toujours, un identifiant inconnu est ignoré sans erreur. Les quêtes en cours reprennent textes et récompense de leur modèle au chargement. `migrateSaveState` normalise TOUT ce qu'il lit (créatures, pierres, marmite, quêtes) : y ajouter chaque nouveau champ. La clé de stockage ne change pas.
 - **Identifiants** en `snake_case` anglais ou sans accent (`glacier_crash`, `givrelin`) ; noms affichés en français.
+- **Vocabulaire** : celui du lexique du plan (section 5.12) : Esquive (`dodge`), Rune (`rune_*`, `RuneKind`, `runeBag`), Déchaînement, le Camp, Galets (affichage des `powerStone*`), Fragment Mystique. Aucun terme venu d'un autre jeu : `lexique.test.ts` échoue sinon.
 - **Performance** : géométries/matériaux partagés, `InstancedMesh` pour tout ce qui se répète, pools à taille fixe (particules 320, météo 96, éclairs 6, texte flottant 28). Tout objet retiré de la scène passe par `disposeObject()`. Mesurer avec `?debug=1` avant et après.
 - **Accessibilité** : respecter `prefers-reduced-motion` ; le tremblement de caméra se désactive.
 - Commentaires : expliquer le pourquoi, en français comme le reste du projet.

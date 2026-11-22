@@ -19,6 +19,8 @@ import {
   SAVE_VERSION,
 } from './rules';
 import type { PowerStone, SaveState } from './types';
+import { SAVE_V3_FIXTURE } from './saveV3.fixture';
+import { normalizedTerms, normalizeText } from '../../tools/lexiqueCore';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
@@ -281,4 +283,78 @@ test('Chargement: une sauvegarde illisible est copiée avant que le jeu ne repar
   } finally {
     g.window = previous;
   }
+});
+
+test('Sauvegarde: une sauvegarde v3 réaliste se charge en v4 sans perte, identifiants renommés', () => {
+  const v3 = clone(SAVE_V3_FIXTURE) as Record<string, any>;
+  assert.equal(v3.version, 3);
+  const m = migrateSaveState(clone(v3));
+  assert.ok(m !== null);
+  assert.equal(m.version, SAVE_VERSION);
+  assert.equal(SAVE_VERSION, 4);
+
+  // escouade et créatures : rien ne bouge, sauf le nom du champ des runes équipées
+  assert.deepEqual(m.squadIds, v3.squadIds);
+  assert.equal(m.roster.length, v3.roster.length);
+  m.roster.forEach((c, i) => {
+    const { moveStones: _old, ...before } = v3.roster[i];
+    const { runes: _now, ...after } = c;
+    assert.deepEqual(after, before);
+    assert.equal('moveStones' in c, false);
+  });
+  assert.deepEqual(m.roster[0].runes, ['rune_force', 'rune_vigueur']);
+  assert.deepEqual(m.roster[1].runes, ['rune_partage', null]);
+  assert.deepEqual(m.roster[2].runes, [null, null]);
+
+  // pierres, sac de runes (renommé, mêmes quantités), ingrédients, progression, compteurs
+  assert.deepEqual(m.powerStones, v3.powerStones);
+  assert.deepEqual(m.runeBag, {
+    rune_ampleur: 2, rune_cadence: 1, rune_force: 2, rune_partage: 0, rune_precision: 1, rune_vigueur: 1,
+  });
+  assert.equal('moveStoneBag' in m, false);
+  assert.deepEqual(m.ingredients, v3.ingredients);
+  assert.deepEqual(m.completedStageIds, v3.completedStageIds);
+  assert.equal(m.highestStageIndex, v3.highestStageIndex);
+  assert.equal(m.expeditionsCompleted, v3.expeditionsCompleted);
+  assert.deepEqual(m.stats, v3.stats);
+  assert.deepEqual(m.discoveredSpeciesIds, v3.discoveredSpeciesIds);
+  assert.deepEqual(m.claimedAchievementIds, v3.claimedAchievementIds);
+  assert.deepEqual(m.unlockedPotTiers, v3.unlockedPotTiers);
+
+  // cuisson en cours et recettes découvertes : mêmes recettes sous leur nouveau nom
+  assert.deepEqual(m.pot, { ...v3.pot, recipeId: 'summit_feast' });
+  assert.deepEqual(m.discoveredRecipeIds, ['camp_stew', 'fiery_soup', 'summit_feast']);
+
+  // quêtes : mêmes quêtes, même avancement, récompense au nouveau format
+  assert.deepEqual(m.activeQuests.map((q) => [q.uid, q.templateId, q.progress, q.target]),
+    v3.activeQuests.map((q: any) => [q.uid, q.templateId, q.progress, q.target]));
+  const runeQuest = m.activeQuests.find((q) => q.templateId === 'q_ult_1');
+  assert.equal(runeQuest?.reward.rune, 'rune_cadence');
+
+  // plus aucun ancien nom nulle part dans la sauvegarde chargée (textes de quêtes compris)
+  const dump = normalizeText(JSON.stringify(m));
+  for (const term of normalizedTerms()) assert.equal(dump.includes(term), false, `ancien terme « ${term} » encore présent`);
+
+  // stable : recharger la v4 ne change plus rien, et elle survit à un export / import
+  assert.deepEqual(migrateSaveState(clone(m)), m);
+  const round = importSaveFromJson(JSON.stringify(m));
+  assert.equal(round.ok, true);
+  if (round.ok) assert.deepEqual(round.save, m);
+});
+
+test('Sauvegarde: un identifiant inconnu est ignoré sans erreur', () => {
+  const v3 = clone(SAVE_V3_FIXTURE) as Record<string, any>;
+  v3.moveStoneBag.pierre_fantome = 3;
+  v3.roster[2].moveStones = ['pierre_fantome', 12];
+  v3.pot.recipeId = 'recette_fantome';
+  v3.discoveredRecipeIds.push('recette_fantome', 7);
+  const m = migrateSaveState(v3);
+  assert.ok(m !== null);
+  assert.equal('pierre_fantome' in m.runeBag, false);
+  assert.equal(Object.keys(m.runeBag).length, 6);
+  assert.deepEqual(m.roster[2].runes, [null, null]);
+  assert.equal(m.pot.status, 'idle'); // cuisson d'une recette inconnue : la marmite redevient libre
+  assert.equal(m.pot.recipeId, null);
+  assert.deepEqual(m.discoveredRecipeIds, ['camp_stew', 'fiery_soup', 'summit_feast']);
+  assert.equal(m.roster.length, 4);
 });
