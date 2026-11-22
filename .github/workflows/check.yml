@@ -1,0 +1,23 @@
+# Vérification automatique : mêmes contrôles que `npm run check` en local
+# (types, tests, golden master, build). Voir CLAUDE.md.
+name: check
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # même version majeure que la machine de développement : le golden master compare des
+          # nombres à virgule exacts, autant ne pas changer de moteur JavaScript entre les deux
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
