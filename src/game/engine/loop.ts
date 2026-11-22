@@ -4,6 +4,7 @@
  */
 import { updateStormAmbience, updateWeather } from './atmosphere';
 import { updateCamera } from './camera';
+import { updateCamp } from './camp';
 import { updateExpedition } from './expedition';
 import { updateParticles } from './fx';
 import type { VoxelEngine } from '../VoxelEngine';
@@ -89,7 +90,7 @@ export function advance(self: VoxelEngine, dt: number): void {
     }
 
     if (self.playMode === 'camp') {
-      self.updateCamp(dt);
+      updateCamp(self, dt);
     } else {
       updateExpedition(self, dt, simDt);
     }

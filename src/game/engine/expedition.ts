@@ -11,8 +11,10 @@ import { animateRigPose, updateEnemyDissolve } from './actors';
 import { updateAllies } from './allies';
 import { applyBiomeLighting, configureWeather } from './atmosphere';
 import { updateBossIntro } from './boss';
+import { clearGroup } from './camp';
 import { BOSS_INTRO_SEC } from './constants';
 import { updateEnemies } from './enemies';
+import { clearEvoRing } from './evolution';
 import {
   clearProjectilesAndTelegraphs,
   spawnConfetti,
@@ -69,7 +71,7 @@ export function startExpedition(
   self.bossIntroActor = null;
   self.bossIntroInfo = null;
   self.evo = null;
-  self.clearEvoRing();
+  clearEvoRing(self);
   self.endDelayTimer = 0;
   self.waveSpawnDelay = 0;
   self.trauma = 0;
@@ -77,8 +79,8 @@ export function startExpedition(
   self.heldKeys.clear();
   self.floatingText.clear();
   clearProjectilesAndTelegraphs(self);
-  self.clearGroup(self.worldGroup);
-  self.clearGroup(self.actorsGroup);
+  clearGroup(self, self.worldGroup);
+  clearGroup(self, self.actorsGroup);
   self.campWanderers = [];
   self.potLiquidMesh = null;
   self.potFireMesh = null;

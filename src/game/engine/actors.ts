@@ -7,6 +7,7 @@ import { STATUS_META } from '../catalog';
 import { computeStatusDuration } from '../rules';
 import type { StatusKind } from '../types';
 import { isHoverArchetype, type VoxelCreatureRig } from '../voxelModels';
+import { disposeObject } from './camp';
 import { ARENA_BOUND } from './constants';
 import { spawnParticleBurst } from './fx';
 import type { CombatActor } from './types';
@@ -219,6 +220,6 @@ export function updateEnemyDissolve(self: VoxelEngine, enemy: CombatActor, dt: n
   if (enemy.koDissolveTimer <= 0) {
     enemy.removed = true;
     self.actorsGroup.remove(enemy.rig.root);
-    self.disposeObject(enemy.rig.root);
+    disposeObject(self, enemy.rig.root);
   }
 }

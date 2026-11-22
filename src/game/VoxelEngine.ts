@@ -8,28 +8,14 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { soundFx } from './audio';
-import { BIOMES, MOVES, RECIPE_BY_ID } from './catalog';
-import { animateRigPose } from './engine/actors';
-import { applyBiomeLighting, configureWeather, updateDayNight } from './engine/atmosphere';
+import { BIOMES, MOVES } from './catalog';
+import { configureWeather } from './engine/atmosphere';
 import { fovForAspect, handleResize } from './engine/camera';
-import {
-  _color,
-  _dummy,
-  BOLT_POOL_SIZE,
-  EVO_CHARGE_SEC,
-  EVO_TOTAL_SEC,
-  EVO_X,
-  EVO_Z,
-  PARTICLE_POOL_SIZE,
-  WEATHER_COUNT,
-} from './engine/constants';
+import { clearGroup, loadCampScene, setPotVisual } from './engine/camp';
+import { _color, _dummy, BOLT_POOL_SIZE, PARTICLE_POOL_SIZE, WEATHER_COUNT } from './engine/constants';
+import { playEvolutionSequence } from './engine/evolution';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
-import {
-  clearProjectilesAndTelegraphs,
-  spawnElementBurst,
-  spawnParticleBurst,
-  spawnSteamCube,
-} from './engine/fx';
+import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
 import { advance, detectSoftwareGl, scheduleNextFrame } from './engine/loop';
 import { triggerAllySkill, triggerScatter, triggerUltimate } from './engine/skills';
 import type {
@@ -56,13 +42,7 @@ import type {
   StageDef,
   StatusKind,
 } from './types';
-import {
-  buildBiomeEnvironment,
-  buildCampLandmark,
-  buildCookingPotProp,
-  buildVoxelCreature,
-  FloatingTextPool,
-} from './voxelModels';
+import { FloatingTextPool } from './voxelModels';
 
 export type { CombatTelemetry, EngineCallbacks, EngineOptions } from './engine/types';
 
@@ -370,150 +350,15 @@ export class VoxelEngine {
   }
 
   public setPotVisual(recipeId: string | null, status: 'idle' | 'cooking' | 'ready'): void {
-    if (!this.potLiquidMesh) return;
-    const mat = this.potLiquidMesh.material as THREE.MeshStandardMaterial;
-    if (status === 'idle') {
-      this.potCookingColor = null;
-      mat.color.set('#38BDF8');
-      mat.emissive.set('#0284C7');
-      mat.emissiveIntensity = 0.2;
-    } else {
-      const hex = (recipeId && RECIPE_BY_ID[recipeId]?.soupHex) || '#F59E0B';
-      this.potCookingColor = hex;
-      mat.color.set(hex);
-      mat.emissive.set(hex);
-      mat.emissiveIntensity = status === 'ready' ? 0.75 : 0.42;
-    }
+    return setPotVisual(this, recipeId, status);
   }
 
-  clearGroup(group: THREE.Group): void {
-    while (group.children.length > 0) {
-      const child = group.children[0];
-      group.remove(child);
-      this.disposeObject(child);
-    }
-  }
-
-  /** Libère géométries et matériaux d'un sous-arbre retiré de la scène (les textures partagées sont conservées). */
-  disposeObject(obj: THREE.Object3D): void {
-    obj.traverse((node) => {
-      const mesh = node as THREE.Mesh;
-      if (mesh.geometry) mesh.geometry.dispose();
-      if ((node as THREE.InstancedMesh).isInstancedMesh) (node as THREE.InstancedMesh).dispose();
-      const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
-      if (!mat) return;
-      for (const m of Array.isArray(mat) ? mat : [mat]) {
-        const map = (m as THREE.MeshStandardMaterial).map;
-        if (map && map.userData.ownedByScene) map.dispose();
-        m.dispose();
-      }
-    });
-  }
   public loadCampScene(
     squadCreatures: OwnedCreature[],
     potRecipeId: string | null,
     potStatus: 'idle' | 'cooking' | 'ready',
   ): void {
-    this.playMode = 'camp';
-    this.activeStage = null;
-    this.allies = [];
-    this.enemies = [];
-    clearProjectilesAndTelegraphs(this);
-
-    this.clearGroup(this.worldGroup);
-    this.clearGroup(this.actorsGroup);
-    this.campWanderers = [];
-    this.evo = null; // le rig d'évolution vient d'être libéré avec actorsGroup
-    this.clearEvoRing();
-    this.bossIntroTimer = 0;
-    this.bossIntroActor = null;
-    this.bossIntroInfo = null;
-    this.resultSent = false;
-    this.pendingVictory = false;
-
-    const biome = BIOMES.meadow;
-    this.scene.background = new THREE.Color(biome.skyHex);
-    this.scene.fog = new THREE.Fog(biome.fogHex, 30, 82);
-    this.floatingText.clear();
-    const env = buildBiomeEnvironment(biome, true);
-    this.worldGroup.add(env.group);
-    this.waterUniform = env.waterUniform;
-    this.cloudGroup = env.cloudGroup;
-    this.envAnimate = env.animate ?? null;
-    configureWeather(this, 'meadow');
-    applyBiomeLighting(this, 'meadow');
-
-    // Tall waystone + explorer tent landmark framed in initial vista
-    const landmark = buildCampLandmark();
-    landmark.position.set(4.5, 0, -5.5);
-    this.worldGroup.add(landmark);
-
-    // Central Cooking Pot
-    const pot = buildCookingPotProp();
-    pot.group.position.set(0, 0, -1.2);
-    this.worldGroup.add(pot.group);
-    this.potLiquidMesh = pot.liquidMesh;
-    this.potFireMesh = pot.fireMesh;
-
-    // Lueur du feu : éteinte de jour, elle éclaire le cœur du camp la nuit
-    this.potLight = new THREE.PointLight('#FFAE5A', 0, 19, 1.5);
-    this.potLight.position.set(0, 2.1, -0.4);
-    this.worldGroup.add(this.potLight);
-
-    // Étoiles : petits cubes lointains, invisibles de jour (une seule InstancedMesh)
-    const starCount = 90;
-    const stars = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial({ color: '#F4F7FF', transparent: true, opacity: 0, depthWrite: false, fog: false }),
-      starCount,
-    );
-    for (let i = 0; i < starCount; i++) {
-      // répartition déterministe sur une demi-sphère (pas d'aléatoire : le ciel est le même à chaque visite)
-      const az = i * 2.399963;
-      const el = 0.02 + (((i * 37) % 100) / 100) * 0.7; // surtout près de l'horizon : la caméra du camp regarde vers le bas
-      const r = 92;
-      _dummy.position.set(Math.cos(az) * Math.cos(el) * r, Math.sin(el) * r, Math.sin(az) * Math.cos(el) * r);
-      _dummy.rotation.set(0, 0, 0);
-      _dummy.scale.setScalar(0.35 + ((i * 13) % 5) * 0.12);
-      _dummy.updateMatrix();
-      stars.setMatrixAt(i, _dummy.matrix);
-    }
-    stars.frustumCulled = false;
-    this.worldGroup.add(stars);
-    this.campStars = stars;
-    this.setPotVisual(potRecipeId, potStatus);
-
-    // Spawn active squad roaming happily around the camp
-    squadCreatures.slice(0, 3).forEach((c, idx) => {
-      const rig = buildVoxelCreature(c.speciesId);
-      const angle = (idx / 3) * Math.PI * 2 + 0.6;
-      const rx = Math.cos(angle) * 4.2;
-      const rz = Math.sin(angle) * 3.8 + 1.8;
-      rig.root.position.set(rx, 0, rz);
-      this.actorsGroup.add(rig.root);
-      this.campWanderers.push({
-        uid: c.uid,
-        rig,
-        x: rx,
-        z: rz,
-        targetX: rx,
-        targetZ: rz,
-        waitTimer: 0.8 + idx * 0.6,
-        walkPhase: idx * 1.4,
-        facing: 0,
-        emoteTimer: 3 + idx * 2.5,
-        emoteT: 0,
-      });
-    });
-
-    if (!this.isSoftwareGl) {
-      this.renderer?.compile(this.scene, this.camera);
-    }
-    this.camPos.set(10.8, 9.6, 18.6);
-    this.camLook.set(0.4, 2.4, -1.2);
-    this.camera.position.copy(this.camPos);
-    this.camera.lookAt(this.camLook);
-    this.renderer?.render(this.scene, this.camera);
+    return loadCampScene(this, squadCreatures, potRecipeId, potStatus);
   }
 
   public startExpedition(
@@ -530,152 +375,12 @@ export class VoxelEngine {
     if (Number.isFinite(t)) this.campClock = ((t % 1) + 1) % 1;
   }
 
-  /**
-   * Animation d'évolution au camp : la créature s'élève en tournoyant dans un halo blanc,
-   * puis la nouvelle forme apparaît dans une gerbe d'étincelles. `onDone` recharge le camp.
-   */
   public playEvolutionSequence(
     fromSpeciesId: string,
     toSpeciesId: string,
     callbacks: { onReveal?: () => void; onDone: () => void },
   ): void {
-    if (this.playMode !== 'camp' || this.disposed) {
-      callbacks.onReveal?.();
-      callbacks.onDone();
-      return;
-    }
-    if (this.evo) {
-      this.actorsGroup.remove(this.evo.rig.root);
-      this.disposeObject(this.evo.rig.root);
-    }
-    const rig = buildVoxelCreature(fromSpeciesId);
-    rig.root.position.set(EVO_X, 0, EVO_Z);
-    this.actorsGroup.add(rig.root);
-    this.evo = {
-      t: 0,
-      revealed: false,
-      rig,
-      baseScale: rig.root.scale.x,
-      toSpeciesId,
-      spawnAcc: 0,
-      onReveal: callbacks.onReveal,
-      onDone: callbacks.onDone,
-    };
-    soundFx.playEvolutionCharge();
-  }
-
-  clearEvoRing(): void {
-    if (!this.evoRing) return;
-    this.fxGroup.remove(this.evoRing);
-    this.evoRing.geometry.dispose();
-    (this.evoRing.material as THREE.Material).dispose();
-    this.evoRing = null;
-  }
-
-  updateEvolution(dt: number): void {
-    if (this.evoRing) {
-      this.evoRingT += dt;
-      const k = Math.min(1, this.evoRingT / 0.6);
-      this.evoRing.scale.setScalar(0.6 + k * 6.5);
-      (this.evoRing.material as THREE.MeshBasicMaterial).opacity = (1 - k) * 0.85;
-      if (k >= 1) this.clearEvoRing();
-    }
-
-    const evo = this.evo;
-    if (!evo) return;
-    evo.t += dt;
-
-    if (!evo.revealed) {
-      // Phase 1 — charge : lévitation, toupie de plus en plus rapide, halo blanc croissant
-      const p = Math.min(1, evo.t / EVO_CHARGE_SEC);
-      animateRigPose(this, evo.rig, 0, false, 1, this.elapsedTotal);
-      evo.rig.root.position.y = p * p * 0.9;
-      evo.rig.root.rotation.y += dt * (2 + p * p * 26);
-      evo.rig.root.scale.setScalar(evo.baseScale * (1 + Math.sin(evo.t * (8 + p * 20)) * 0.06 * p));
-      for (const m of evo.rig.flashMaterials) {
-        m.emissive.set('#FFFFFF');
-        m.emissiveIntensity = p * p * 1.5;
-      }
-      // étincelles aspirées en spirale vers la créature
-      evo.spawnAcc += dt;
-      while (evo.spawnAcc > 0.045) {
-        evo.spawnAcc -= 0.045;
-        const slot = this.particles[this.particleCursor];
-        this.particleCursor = (this.particleCursor + 1) % PARTICLE_POOL_SIZE;
-        const ang = Math.random() * Math.PI * 2;
-        const r = 2.2 + Math.random() * 1.2;
-        const life = 0.45 + Math.random() * 0.2;
-        slot.active = true;
-        slot.x = EVO_X + Math.cos(ang) * r;
-        slot.y = 0.3 + Math.random() * 2.2;
-        slot.z = EVO_Z + Math.sin(ang) * r;
-        slot.vx = (-Math.cos(ang) * r) / life - Math.sin(ang) * 1.6;
-        slot.vy = (1.0 - slot.y) / life;
-        slot.vz = (-Math.sin(ang) * r) / life + Math.cos(ang) * 1.6;
-        slot.maxLife = life;
-        slot.life = life;
-        slot.size = 0.12 + Math.random() * 0.1;
-        slot.colorHex = Math.random() < 0.5 ? '#FFFFFF' : evo.rig.species.palette.accent;
-        slot.gravity = 0;
-        slot.drag = 0;
-        slot.stretchY = 1;
-        slot.bounce = 0;
-      }
-
-      if (evo.t >= EVO_CHARGE_SEC) {
-        // Bascule : l'ancienne forme est libérée, la nouvelle surgit
-        this.actorsGroup.remove(evo.rig.root);
-        this.disposeObject(evo.rig.root);
-        const next = buildVoxelCreature(evo.toSpeciesId);
-        next.root.position.set(EVO_X, 0.9, EVO_Z);
-        this.actorsGroup.add(next.root);
-        evo.rig = next;
-        evo.baseScale = next.root.scale.x;
-        evo.revealed = true;
-        soundFx.playEvolutionBurst();
-        spawnParticleBurst(this, EVO_X, 1.3, EVO_Z, '#FFFFFF', 26, 7.5);
-        spawnParticleBurst(this, EVO_X, 1.3, EVO_Z, '#F4B942', 26, 6.0);
-        spawnElementBurst(this, EVO_X, 1.0, EVO_Z, next.species.element, 22, 1.6);
-        this.trauma = Math.min(1, this.trauma + 0.35);
-        this.lightningFlash = Math.max(this.lightningFlash, this.shakeEnabled ? 0.6 : 0.25);
-        this.clearEvoRing();
-        const ring = new THREE.Mesh(
-          new THREE.RingGeometry(0.82, 1, 32),
-          new THREE.MeshBasicMaterial({
-            color: '#FFF7D6',
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.85,
-            depthWrite: false,
-          }),
-        );
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.set(EVO_X, 0.08, EVO_Z);
-        this.fxGroup.add(ring);
-        this.evoRing = ring;
-        this.evoRingT = 0;
-        evo.onReveal?.();
-      }
-      return;
-    }
-
-    // Phase 2 — révélation : apparition avec rebond, sauts de joie, fontaine dorée
-    const q = Math.min(1, (evo.t - EVO_CHARGE_SEC) / (EVO_TOTAL_SEC - EVO_CHARGE_SEC));
-    const pop = q < 0.2 ? 0.3 + (q / 0.2) * 0.95 : 1.25 - Math.min(1, (q - 0.2) / 0.15) * 0.25;
-    evo.rig.root.scale.setScalar(evo.baseScale * pop);
-    evo.rig.root.position.y = Math.max(0, 0.9 - q * 3.6);
-    evo.rig.root.rotation.y = THREE.MathUtils.damp(evo.rig.root.rotation.y, 0.2, 6, dt);
-    animateRigPose(this, evo.rig, this.elapsedTotal * 9, q > 0.3, 1, this.elapsedTotal);
-    evo.spawnAcc += dt;
-    if (evo.spawnAcc > 0.16) {
-      evo.spawnAcc = 0;
-      spawnParticleBurst(this, EVO_X + (Math.random() - 0.5) * 2, 0.4, EVO_Z + (Math.random() - 0.5) * 1.5, '#F4B942', 4, 3.2);
-    }
-    if (evo.t >= EVO_TOTAL_SEC) {
-      const done = evo.onDone;
-      this.evo = null; // le rig reste en scène : onDone recharge le camp, qui le libère
-      done();
-    }
+    return playEvolutionSequence(this, fromSpeciesId, toSpeciesId, callbacks);
   }
 
   public triggerAllySkill(slotIndex: number): boolean {
@@ -741,72 +446,6 @@ export class VoxelEngine {
       ],
       elapsed: this.expeditionElapsed,
     };
-  }
-
-  updateCamp(dt: number): void {
-    updateDayNight(this, dt);
-    this.updateEvolution(dt);
-
-    // Animate cooking pot embers & steam cubes
-    if (this.potFireMesh) {
-      const flicker = 0.92 + Math.sin(this.elapsedTotal * 14) * 0.14;
-      this.potFireMesh.scale.set(flicker, 0.85 + Math.cos(this.elapsedTotal * 11) * 0.22, flicker);
-    }
-    this.potSteamTimer -= dt;
-    if (this.potSteamTimer <= 0) {
-      this.potSteamTimer = this.potCookingColor ? 0.22 : 0.65;
-      spawnSteamCube(this, 0, 1.65, -1.2, this.potCookingColor ?? '#E2F3FF');
-    }
-
-    for (const w of this.campWanderers) {
-      let lift = 0;
-      if (this.evo) {
-        // Toute l'escouade s'arrête pour regarder la métamorphose
-        w.facing = Math.atan2(EVO_X - w.x, EVO_Z - w.z);
-        animateRigPose(this, w.rig, w.walkPhase, false, 1, this.elapsedTotal);
-      } else {
-        const dx = w.targetX - w.x;
-        const dz = w.targetZ - w.z;
-        const dist = Math.hypot(dx, dz);
-        if (dist > 0.25) {
-          const spd = 2.2;
-          const step = Math.min(dist, spd * dt);
-          w.x += (dx / dist) * step;
-          w.z += (dz / dist) * step;
-          w.facing = Math.atan2(dx, dz);
-          w.walkPhase += step * 4.4;
-          animateRigPose(this, w.rig, w.walkPhase, true, 1, this.elapsedTotal);
-        } else {
-          w.waitTimer -= dt;
-          // Émote d'attente : un petit saut de joie de temps en temps
-          w.emoteTimer -= dt;
-          if (w.emoteT <= 0 && w.emoteTimer <= 0) {
-            w.emoteT = 0.55;
-            w.emoteTimer = 5 + Math.random() * 7;
-            spawnParticleBurst(this, w.x, 1.5, w.z, w.rig.species.palette.accent, 4, 2.2);
-            if (this.screenState === 'playing') soundFx.playIdleChirp();
-          }
-          let squash = 1;
-          if (w.emoteT > 0) {
-            w.emoteT = Math.max(0, w.emoteT - dt);
-            const k = 1 - w.emoteT / 0.55;
-            lift = Math.sin(k * Math.PI) * 0.6;
-            squash = 1 + Math.sin(k * Math.PI * 2) * 0.12;
-          }
-          animateRigPose(this, w.rig, w.walkPhase, false, squash, this.elapsedTotal);
-          if (w.waitTimer <= 0 && w.emoteT <= 0) {
-            const ang = Math.random() * Math.PI * 2;
-            const r = 2.8 + Math.random() * 4.6;
-            w.targetX = Math.cos(ang) * r;
-            w.targetZ = Math.sin(ang) * r + 1.2;
-            w.waitTimer = 1.8 + Math.random() * 2.4;
-          }
-        }
-      }
-      w.rig.bodyPivot.position.y += lift; // l'ombre de contact reste au sol
-      w.rig.root.position.set(w.x, 0, w.z);
-      w.rig.root.rotation.y = w.facing;
-    }
   }
 
   emitHudSnapshot(): void {
@@ -883,8 +522,8 @@ export class VoxelEngine {
       document.removeEventListener('visibilitychange', this.handleVisibility);
     }
     clearProjectilesAndTelegraphs(this);
-    this.clearGroup(this.worldGroup);
-    this.clearGroup(this.actorsGroup);
+    clearGroup(this, this.worldGroup);
+    clearGroup(this, this.actorsGroup);
     this.floatingText.dispose();
     this.particleMesh.geometry.dispose();
     (this.particleMesh.material as THREE.Material).dispose();
