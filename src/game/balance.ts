@@ -57,10 +57,10 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   // avant 10 / 0.45 / 1.9 (70 %, phases 2 et 3 de 4 s)   -> ~74 %, phases 12 / 6,5 / 9 s
   'stormpeak-3': { enemyHpMult: 10, enemyAtkMult: 0.3, bossHpMult: 4.0 },
   // --- Canyon d'Ambre (session 2, réglé directement avec `npm run sim`) ---
-  // canyon-1 : seuil très raide — attaque 0.70 => 95 %, 0.71 => 0 % ; réglé par les PV du boss (5.0 => 95 %, 5.4 => 56 %)
-  'canyon-1': { enemyHpMult: 10, enemyAtkMult: 0.6, bossHpMult: 5.3 }, // ~78 %, boss ~21 s
-  'canyon-2': { enemyHpMult: 10, enemyAtkMult: 0.338, bossHpMult: 4.0 }, // ~66 %, boss ~26 s
-  'canyon-3': { enemyHpMult: 10, enemyAtkMult: 0.313, bossHpMult: 6.0 }, // ~69 %, phases 16 / 8 / 8 s
+  // canyon-1 : seuil très raide — attaque 0.46 => 85 %, 0.465 => 44 % ; affiné par les PV du boss (5.3 => 85 %, 5.5 => 53 %)
+  'canyon-1': { enemyHpMult: 10, enemyAtkMult: 0.46, bossHpMult: 5.4 },
+  'canyon-2': { enemyHpMult: 10, enemyAtkMult: 0.322, bossHpMult: 4.0 },
+  'canyon-3': { enemyHpMult: 10, enemyAtkMult: 0.325, bossHpMult: 6.0 },
 };
 
 /**

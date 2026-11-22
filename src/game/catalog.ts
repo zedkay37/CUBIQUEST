@@ -2487,8 +2487,8 @@ const RAW_STAGES: StageDef[] = [
       {
         enemies: [
           { speciesId: 'chevrok', level: 52, ai: 'charger' },
-          { speciesId: 'cendrox', level: 52, ai: 'chaser' },
-          { speciesId: 'amanitox', level: 52, ai: 'kiter' },
+          { speciesId: 'magmadrake', level: 52, ai: 'chaser' },
+          { speciesId: 'raicube', level: 52, ai: 'kiter' },
         ],
       },
       {
@@ -2513,7 +2513,7 @@ const RAW_STAGES: StageDef[] = [
     stageNumber: 2,
     name: 'Arche des Fossiles',
     recommendedPower: 15100,
-    bossSpeciesId: 'cendrox',
+    bossSpeciesId: 'magmadrake',
     bossKit: 'amber',
     dropIngredients: ['mesa_fig', 'amber_resin', 'cloud_fluff'],
     stonePowerRange: [1120, 1500],
@@ -2522,21 +2522,21 @@ const RAW_STAGES: StageDef[] = [
       {
         enemies: [
           { speciesId: 'mouflambre', level: 55, ai: 'chaser' },
-          { speciesId: 'crabastion', level: 55, ai: 'chaser' },
+          { speciesId: 'abyssocube', level: 55, ai: 'chaser' },
           { speciesId: 'nimbulle', level: 55, ai: 'kiter' },
         ],
       },
       {
         enemies: [
           { speciesId: 'mouflambre', level: 56, ai: 'charger' },
-          { speciesId: 'amanitox', level: 56, ai: 'kiter' },
+          { speciesId: 'aetherion', level: 56, ai: 'kiter' },
           { speciesId: 'glaciatitan', level: 56, ai: 'chaser' },
         ],
       },
       {
         enemies: [
           { speciesId: 'chevrok', level: 56, ai: 'chaser' },
-          { speciesId: 'cendrox', level: 58, ai: 'boss', isBoss: true },
+          { speciesId: 'magmadrake', level: 58, ai: 'boss', isBoss: true },
         ],
       },
     ],
@@ -2557,7 +2557,7 @@ const RAW_STAGES: StageDef[] = [
       {
         enemies: [
           { speciesId: 'mouflambre', level: 57, ai: 'charger' },
-          { speciesId: 'cendrox', level: 57, ai: 'chaser' },
+          { speciesId: 'glaciatitan', level: 57, ai: 'chaser' },
           { speciesId: 'tempestrix', level: 57, ai: 'kiter' },
         ],
       },
