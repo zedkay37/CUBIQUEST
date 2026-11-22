@@ -60,7 +60,8 @@ export function ExpeditionDrawer({
         </div>
 
         {/* Biome Tabs */}
-        <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-[#2A3346]">
+        {/* Petits écrans : une seule ligne défilante au lieu de sept onglets empilés */}
+        <div className="flex sm:flex-wrap items-center gap-2 px-5 py-3 border-b border-[#2A3346] overflow-x-auto sm:overflow-visible cubi-scroll">
           {BIOME_ORDER.map((bId) => {
             const b = BIOMES[bId];
             const unlocked = isBiomeUnlocked(save, bId);
@@ -199,6 +200,12 @@ export function ExpeditionDrawer({
               </div>
             </div>
 
+            <div className="space-y-2">
+            {isStageLocked && activeStage.index > 0 && (
+              <p className="text-xs font-semibold text-[#F4B942] text-center">
+                Niveau verrouillé : terminez d’abord « {STAGES[activeStage.index - 1].name} ».
+              </p>
+            )}
             <button
               type="button"
               disabled={isStageLocked || save.squadIds.length === 0}
@@ -208,6 +215,7 @@ export function ExpeditionDrawer({
               <Play className="w-4 h-4 fill-current" />
               <span>Lancer l’expédition</span>
             </button>
+            </div>
           </div>
         </div>
       </div>

@@ -236,8 +236,10 @@ const CAMP_SKY_KEYS = [
   skyKey(0.1, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52, 0.42), // jour
   skyKey(0.52, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52, 0.42),
   skyKey(0.64, '#F0A774', '#F3C3A0', '#FFB27A', 0.95, 0.42, 0.3), // crépuscule
-  skyKey(0.74, '#27345E', '#34437A', '#A9BCFF', 0.42, 0.28, 0.13), // nuit claire (lune bleutée)
-  skyKey(0.92, '#27345E', '#34437A', '#A9BCFF', 0.42, 0.28, 0.13),
+  // Nuit : ciel vraiment sombre, clair de lune faible. La lisibilité vient du feu de la marmite
+  // (lumière chaude ponctuelle, voir updateDayNight) et non d'un éclairage ambiant élevé.
+  skyKey(0.74, '#0A0F24', '#121936', '#8FA8FF', 0.2, 0.15, 0.05),
+  skyKey(0.92, '#0A0F24', '#121936', '#8FA8FF', 0.2, 0.15, 0.05),
   skyKey(1.0, '#F6C9A0', '#F8DDC6', '#FFD2A6', 1.0, 0.46, 0.34),
 ];
 
@@ -398,6 +400,8 @@ export class VoxelEngine {
   private potFireMesh: THREE.Mesh | null = null;
   private potCookingColor: string | null = null;
   private potSteamTimer = 0;
+  private potLight: THREE.PointLight | null = null; // lueur chaude du feu, visible la nuit
+  private campStars: THREE.InstancedMesh | null = null;
   private campWanderers: CampWanderer[] = [];
 
   // Expedition runtime
@@ -493,7 +497,7 @@ export class VoxelEngine {
     }
     this.scene.environmentIntensity = 0.42;
 
-    this.camera = new THREE.PerspectiveCamera(42, width / height, 0.5, 160);
+    this.camera = new THREE.PerspectiveCamera(VoxelEngine.fovForAspect(width / height), width / height, 0.5, 160);
     this.camera.position.set(11, 10.5, 20);
     this.camera.lookAt(0, 2.2, -1);
 
@@ -694,6 +698,15 @@ export class VoxelEngine {
       soundFx.playThunder();
     }
   }
+  /**
+   * Champ de vision vertical : 42° en paysage (inchangé). En portrait, on l'ouvre progressivement
+   * pour que l'escouade et ses adversaires restent dans le cadre d'un écran étroit.
+   */
+  private static fovForAspect(aspect: number): number {
+    if (!(aspect < 1)) return 42;
+    return THREE.MathUtils.clamp(42 + (1 - aspect) * 46, 42, 72);
+  }
+
   private static detectSoftwareGl(): boolean {
     try {
       const gl = document.createElement('canvas').getContext('webgl2');
@@ -713,6 +726,7 @@ export class VoxelEngine {
     const w = Math.max(1, this.container.clientWidth);
     const h = Math.max(1, this.container.clientHeight);
     this.camera.aspect = w / h;
+    this.camera.fov = VoxelEngine.fovForAspect(w / h);
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
     this.renderer.render(this.scene, this.camera);
@@ -841,6 +855,33 @@ export class VoxelEngine {
     this.worldGroup.add(pot.group);
     this.potLiquidMesh = pot.liquidMesh;
     this.potFireMesh = pot.fireMesh;
+
+    // Lueur du feu : éteinte de jour, elle éclaire le cœur du camp la nuit
+    this.potLight = new THREE.PointLight('#FFAE5A', 0, 19, 1.5);
+    this.potLight.position.set(0, 2.1, -0.4);
+    this.worldGroup.add(this.potLight);
+
+    // Étoiles : petits cubes lointains, invisibles de jour (une seule InstancedMesh)
+    const starCount = 90;
+    const stars = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshBasicMaterial({ color: '#F4F7FF', transparent: true, opacity: 0, depthWrite: false, fog: false }),
+      starCount,
+    );
+    for (let i = 0; i < starCount; i++) {
+      // répartition déterministe sur une demi-sphère (pas d'aléatoire : le ciel est le même à chaque visite)
+      const az = i * 2.399963;
+      const el = 0.02 + (((i * 37) % 100) / 100) * 0.7; // surtout près de l'horizon : la caméra du camp regarde vers le bas
+      const r = 92;
+      _dummy.position.set(Math.cos(az) * Math.cos(el) * r, Math.sin(el) * r, Math.sin(az) * Math.cos(el) * r);
+      _dummy.rotation.set(0, 0, 0);
+      _dummy.scale.setScalar(0.35 + ((i * 13) % 5) * 0.12);
+      _dummy.updateMatrix();
+      stars.setMatrixAt(i, _dummy.matrix);
+    }
+    stars.frustumCulled = false;
+    this.worldGroup.add(stars);
+    this.campStars = stars;
     this.setPotVisual(potRecipeId, potStatus);
 
     // Spawn active squad roaming happily around the camp
@@ -921,6 +962,8 @@ export class VoxelEngine {
     this.campWanderers = [];
     this.potLiquidMesh = null;
     this.potFireMesh = null;
+    this.potLight = null;
+    this.campStars = null;
 
     const biome = BIOMES[stage.biomeId];
     this.scene.background = new THREE.Color(biome.skyHex);
@@ -1245,6 +1288,17 @@ export class VoxelEngine {
     this.keyLight.intensity = THREE.MathUtils.lerp(a.keyI, b.keyI, f);
     this.baseHemiIntensity = THREE.MathUtils.lerp(a.hemiI, b.hemiI, f);
     this.scene.environmentIntensity = THREE.MathUtils.lerp(a.envI, b.envI, f);
+
+    // 0 en plein jour, 1 en pleine nuit : pilote la lueur du feu et les étoiles
+    const night = THREE.MathUtils.clamp((0.42 - this.scene.environmentIntensity) / 0.37, 0, 1);
+    if (this.potLight) {
+      const flicker = 0.92 + Math.sin(this.elapsedTotal * 11) * 0.05 + Math.sin(this.elapsedTotal * 17.3) * 0.03;
+      this.potLight.intensity = night * 60 * flicker;
+    }
+    if (this.campStars) {
+      (this.campStars.material as THREE.MeshBasicMaterial).opacity = night * night * 0.95;
+      this.campStars.visible = night > 0.02;
+    }
   }
 
   /**

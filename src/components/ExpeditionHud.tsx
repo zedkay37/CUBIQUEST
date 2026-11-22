@@ -292,8 +292,9 @@ export function ExpeditionHud({
       </AnimatePresence>
 
       {/* Bottom Perimeter Dock: 3 Squad Cards + Scatter + Ultimate */}
-      <div className="flex items-end justify-center gap-2 sm:gap-2.5 pointer-events-auto">
-        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 w-[min(600px,64vw)]">
+      {/* Petits écrans : les 3 cartes occupent toute la largeur, Dispersion et Ultime passent dessous */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-center gap-2 sm:gap-2.5 pointer-events-auto">
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 w-full sm:w-[min(600px,64vw)]">
           {hud.units.map((u, idx) => {
             const hpRatio = Math.max(0, Math.min(1, u.hp / Math.max(1, u.maxHp)));
             const shieldRatio = Math.max(0, Math.min(1, u.shieldHp / Math.max(1, u.maxHp)));
@@ -312,7 +313,7 @@ export function ExpeditionHud({
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <VoxelCreatureAvatar speciesId={u.speciesId} size={34} className="shrink-0" />
+                  <VoxelCreatureAvatar speciesId={u.speciesId} size={34} className="shrink-0 hidden sm:block" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
                       <span className="font-display font-bold text-xs sm:text-sm text-[#FAF7F0] truncate">
@@ -395,6 +396,7 @@ export function ExpeditionHud({
           })}
         </div>
 
+        <div className="flex gap-2 sm:contents">
         {/* Iconic Scatter Dodge Button */}
         <button
           type="button"
@@ -404,7 +406,7 @@ export function ExpeditionHud({
             e.currentTarget.blur();
             onScatter();
           }}
-          className={`voxel-btn relative overflow-hidden cursor-pointer h-[106px] w-[84px] sm:w-[98px] rounded-xl border-2 flex flex-col items-center justify-center gap-1 shrink-0 ${
+          className={`voxel-btn relative overflow-hidden cursor-pointer h-14 flex-1 flex-row gap-2 sm:h-[106px] sm:flex-none sm:w-[98px] sm:flex-col sm:gap-1 rounded-xl border-2 flex items-center justify-center shrink-0 ${
             scatterReady
               ? 'bg-[#E85D3F] hover:bg-[#F06D50] border-[#141925] text-[#FAF7F0]'
               : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
@@ -435,7 +437,7 @@ export function ExpeditionHud({
             e.currentTarget.blur();
             onUltimate();
           }}
-          className={`voxel-btn relative overflow-hidden cursor-pointer h-[106px] w-[84px] sm:w-[98px] rounded-xl border-2 flex flex-col items-center justify-center gap-1 shrink-0 ${
+          className={`voxel-btn relative overflow-hidden cursor-pointer h-14 flex-1 flex-row gap-2 sm:h-[106px] sm:flex-none sm:w-[98px] sm:flex-col sm:gap-1 rounded-xl border-2 flex items-center justify-center shrink-0 ${
             ultimateReady
               ? 'bg-[#F4B942] hover:bg-[#F7C964] border-[#141925] text-[#0F172A]'
               : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
@@ -456,6 +458,7 @@ export function ExpeditionHud({
             {ultimateReady ? 'TOUCHE R' : `${hud.ultimateCharge}%`}
           </span>
         </button>
+        </div>
       </div>
     </div>
   );

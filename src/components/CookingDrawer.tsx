@@ -70,8 +70,8 @@ export function CookingDrawer({
         className="voxel-panel w-full max-w-4xl max-h-[86vh] rounded-2xl flex flex-col overflow-hidden text-[#FAF7F0]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-[#39445A]">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4 border-b border-[#39445A]">
+          <div className="min-w-0 flex-1 basis-56">
             <h2 id="cooking-drawer-title" className="font-display text-xl sm:text-2xl font-bold">
               Marmite du Campement
             </h2>
@@ -311,11 +311,16 @@ export function CookingDrawer({
                           <button
                             type="button"
                             disabled={!canCook}
+                            title={
+                              canCook
+                                ? undefined
+                                : `Chaque emplacement coûte ${costPerSlot} ingrédient${costPerSlot > 1 ? 's' : ''} avec ce chaudron.`
+                            }
                             onClick={onStartCooking}
                             className="voxel-btn cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed px-4 py-2.5 rounded-xl bg-[#E85D3F] hover:bg-[#F06D50] text-[#FAF7F0] font-display font-bold text-sm border-2 border-[#141925] flex items-center gap-1.5 whitespace-nowrap shrink-0"
                           >
                             <Flame className="w-4 h-4" />
-                            Lancer la cuisson
+                            {canCook ? 'Lancer la cuisson' : 'Stock insuffisant'}
                           </button>
                         </div>
                       ) : (

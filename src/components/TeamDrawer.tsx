@@ -75,7 +75,7 @@ export function TeamDrawer({
         className="voxel-panel w-full max-w-5xl max-h-[88vh] rounded-2xl flex flex-col overflow-hidden text-[#FAF7F0]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-[#39445A]">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4 border-b border-[#39445A]">
           <div>
             <h2 id="team-drawer-title" className="font-display text-xl sm:text-2xl font-bold">
               Escouade & Grille de Pierres de Pouvoir
@@ -170,7 +170,16 @@ export function TeamDrawer({
 
                 <button
                   type="button"
-                  disabled={!inSquad && save.squadIds.length >= 3}
+                  disabled={
+                    (!inSquad && save.squadIds.length >= 3) || (inSquad && save.squadIds.length <= 1)
+                  }
+                  title={
+                    !inSquad && save.squadIds.length >= 3
+                      ? 'L’escouade compte déjà 3 Cubimons : retirez-en un d’abord.'
+                      : inSquad && save.squadIds.length <= 1
+                        ? 'L’escouade doit garder au moins un Cubimon.'
+                        : undefined
+                  }
                   onClick={() => onToggleSquadMember(creature.uid)}
                   className={`voxel-btn cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg text-xs font-bold border whitespace-nowrap shrink-0 ${
                     inSquad
@@ -178,7 +187,13 @@ export function TeamDrawer({
                       : 'bg-[#2FB97A] border-[#141925] text-[#0F172A]'
                   }`}
                 >
-                  {inSquad ? 'Retirer escouade' : 'Mettre en escouade'}
+                  {inSquad
+                    ? save.squadIds.length <= 1
+                      ? 'Dernier membre'
+                      : 'Retirer escouade'
+                    : save.squadIds.length >= 3
+                      ? 'Escouade complète'
+                      : 'Mettre en escouade'}
                 </button>
               </div>
 
@@ -399,6 +414,11 @@ export function TeamDrawer({
                     key={stone.id}
                     type="button"
                     disabled={!compatible || isOnSelectedSlot}
+                    title={
+                      compatible
+                        ? undefined
+                        : 'L’emplacement sélectionné n’accepte pas ce type de pierre (ou il est encore verrouillé).'
+                    }
                     onClick={() => onEquipStone(creature.uid, selectedSlotIdx, stone.id)}
                     className={`w-full text-left rounded-xl p-3 border-2 transition-colors flex items-center justify-between gap-2 ${
                       isOnSelectedSlot
@@ -432,7 +452,7 @@ export function TeamDrawer({
                     </div>
                     <div className="text-right shrink-0">
                       <span className="text-[10px] font-bold uppercase text-[#F4B942] block">
-                        {isOnSelectedSlot ? 'Équipée' : compatible ? 'Équiper' : 'Incompat.'}
+                        {isOnSelectedSlot ? 'Équipée' : compatible ? 'Équiper' : 'Mauvais type'}
                       </span>
                       {ownerName && !isOnSelectedSlot && (
                         <span className="text-[10px] text-[#94A3B8]">{ownerName}</span>
