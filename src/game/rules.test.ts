@@ -725,22 +725,25 @@ test('Giga: écran de victoire — étoiles et annonce du biome débloqué', () 
   assert.equal(replay.unlockedNextStageName, null);
 });
 
-test('Giga: équilibrage des nouveaux biomes — réglé par niveau, anciens niveaux intacts', () => {
-  // Les 12 niveaux historiques n'ont aucune entrée d'équilibrage ; tous les nouveaux en ont une
-  const historic = STAGES.slice(0, FRONTIER_STAGE_INDEX).map((s) => s.id);
-  assert.equal(historic.length, 12);
-  for (const id of historic) assert.equal(STAGE_TUNING[id], undefined, id);
-  for (const id of Object.keys(STAGE_TUNING)) assert.ok(STAGES.some((s) => s.id === id), id);
-  for (const stage of STAGES.slice(FRONTIER_STAGE_INDEX)) {
-    assert.deepEqual(
-      { enemyHpMult: stage.enemyHpMult, enemyAtkMult: stage.enemyAtkMult, bossHpMult: stage.bossHpMult },
-      STAGE_TUNING[stage.id],
-      stage.id,
-    );
+test('Équilibrage: chaque niveau a une entrée STAGE_TUNING, aux multiplicateurs bornés', () => {
+  assert.deepEqual(Object.keys(STAGE_TUNING).sort(), STAGES.map((s) => s.id).sort());
+  for (const stage of STAGES) {
+    const t = STAGE_TUNING[stage.id];
+    // les valeurs de balance.ts sont bien celles que le moteur reçoit
+    assert.deepEqual({ enemyHpMult: stage.enemyHpMult, enemyAtkMult: stage.enemyAtkMult, bossHpMult: stage.bossHpMult }, t, stage.id);
+    assert.ok(t.enemyHpMult >= 0.5 && t.enemyHpMult <= 12, `${stage.id} : PV ennemis ${t.enemyHpMult}`);
+    assert.ok(t.enemyAtkMult >= 0.2 && t.enemyAtkMult <= 1.5, `${stage.id} : attaque ${t.enemyAtkMult}`);
+    // PV du boss : multiplicateur supplémentaire, plafond plus large (les boss des premiers niveaux partent de très bas)
+    assert.ok(t.bossHpMult >= 0.5 && t.bossHpMult <= 25, `${stage.id} : PV du boss ${t.bossHpMult}`);
+    assert.equal(stage.waves.length, 3, stage.id);
+    if (stage.index >= FRONTIER_STAGE_INDEX) {
+      assert.ok(stage.bossKit && stage.bossKit !== 'classic' && BOSS_KITS[stage.bossKit], stage.id);
+    } else {
+      assert.equal(stage.bossKit, undefined, stage.id);
+    }
   }
-  // Signature d'équilibrage des 12 niveaux historiques : puissance conseillée, XP, Pierres, boss,
-  // niveaux et IA de chaque vague. Toute retouche de ces chiffres casse ce test (les ESPÈCES des
-  // vagues n'y figurent pas : varier les rencontres ne change pas la formule).
+  // Contenu des 12 premiers niveaux : puissance conseillée, XP, Galets, boss, niveaux et IA des vagues.
+  // S03 ne règle que les multiplicateurs de STAGE_TUNING ; ce contenu bouge en S05 (mettre à jour ici).
   const signature = STAGES.slice(0, FRONTIER_STAGE_INDEX)
     .map(
       (s) =>
@@ -753,22 +756,6 @@ test('Giga: équilibrage des nouveaux biomes — réglé par niveau, anciens niv
     'meadow-1:700:95:25-55:feuilloc:2chas+2char/3chas+3kite+3chas/3chas+5boss!|meadow-2:1050:140:45-85:sparkube:5char+5chas+5kite/6kite+6chas+6char/6char+8boss!|meadow-3:1450:210:70-115:bourgeoliath:8chas+8kite+8char/9chas+9kite+9chas/9chas+11boss!|shore-1:1850:270:95-145:corallix:10char+10chas+10kite/11chas+11char+11kite/11chas+13boss!|shore-2:2250:340:120-180:raicube:13kite+13chas+13char/14char+14kite+14chas/14kite+16boss!|shore-3:2700:420:150-220:abyssocube:15chas+15kite+15char/16chas+16kite+16chas/16chas+18boss!|volcano-1:3200:510:185-260:granitox:17kite+17chas+17char/18kite+18chas+18char/18chas+20boss!|volcano-2:3750:620:220-310:ignisaur:20kite+20char+20chas/21kite+21chas+21kite/21kite+23boss!|volcano-3:4400:760:260-360:magmadrake:22chas+22kite+22char/23chas+23kite+23kite/23chas+25boss!|sanctuary-1:5100:920:310-420:lunabloc:25kite+25chas+25char/26kite+26chas+26kite/26kite+28boss!|sanctuary-2:5900:1120:360-490:ignisaur:28chas+28kite+28char/29chas+29kite+29kite/29char+31boss!|sanctuary-3:6800:1500:440-620:aetherion:31chas+31kite+31char/32chas+32chas+32kite/32kite+35boss!',
   );
 
-  for (const stage of STAGES) {
-    if (stage.index < FRONTIER_STAGE_INDEX) {
-      // L'équilibrage historique ne bouge pas
-      assert.equal(stage.enemyHpMult, undefined, stage.id);
-      assert.equal(stage.enemyAtkMult, undefined, stage.id);
-      assert.equal(stage.bossHpMult, undefined, stage.id);
-      assert.equal(stage.bossKit, undefined, stage.id);
-    } else {
-      // Combats plus longs (PV) mais coups moins lourds : place aux mécaniques télégraphiées
-      assert.ok((stage.enemyHpMult ?? 1) > 1, stage.id);
-      assert.ok((stage.enemyAtkMult ?? 1) > 0 && (stage.enemyAtkMult ?? 1) < 1, stage.id);
-      assert.ok(stage.bossKit && stage.bossKit !== 'classic' && BOSS_KITS[stage.bossKit], stage.id);
-      assert.ok((stage.bossHpMult ?? 1) >= 1, stage.id);
-      assert.equal(stage.waves.length, 3, stage.id);
-    }
-  }
 });
 
 test('Socle: chaque niveau a une escouade de référence valide (aperçu et simulation)', () => {

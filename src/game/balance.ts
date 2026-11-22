@@ -1,12 +1,14 @@
 /**
- * ÉQUILIBRAGE — toutes les valeurs réglables des niveaux ajoutés depuis la Giga Update.
+ * ÉQUILIBRAGE — toutes les valeurs réglables des 21 niveaux.
  *
- * Règle du projet : les 12 niveaux historiques (Prairie -> Sanctuaire) n'ont AUCUNE entrée ici
- * et gardent la formule d'origine (un test le vérifie). Tout se règle dans ce fichier, puis se
- * mesure avec `npm run sim` (voir CLAUDE.md).
+ * Chaque niveau a une entrée dans STAGE_TUNING (un test le vérifie, ainsi que des bornes : PV ennemis
+ * 0,5 à 12, attaque 0,2 à 1,5, PV du boss 0,5 à 25). Tout se règle dans ce fichier, puis se mesure avec
+ * `npm run sim` (voir CLAUDE.md), sur au moins 40 combats et 3 graines.
  *
- * Cibles de réglage, mesurées en « Auto Total » avec les escouades de `previewConfigs.ts` :
- *  - 50 à 85 % de victoires ;
+ * Cibles, mesurées en « Auto Total » avec les escouades de `previewConfigs.ts` :
+ *  - niveaux récents (Toundra et après) : 50 à 85 % de victoires ;
+ *  - douze premiers niveaux (session S03, a minima) : meadow-1 au moins 90 %, les autres 75 à 95 %,
+ *    boss d'au moins 8 s ; le vrai réglage de toute la campagne viendra en S05 ;
  *  - chaque phase de boss dure assez pour que le boss y lance au moins une attaque télégraphiée.
  *
  * Ce fichier ne doit rien importer du catalogue (le catalogue l'importe).
@@ -43,6 +45,33 @@ export interface StageTuning {
  * l'ancienne valeur de la session 1 (réglée sur 1 seul combat par niveau) et le taux mesuré.
  */
 export const STAGE_TUNING: Record<string, StageTuning> = {
+  // --- Douze premiers niveaux (S03 : a minima). Avant : formule d'origine, soit 1 / 1 / 1. ---
+  // Mesures : 40 combats x graines 1, 2, 3, en Auto. « boss » = durée moyenne du combat de boss.
+  // meadow-1 : avant 21 % (le boss tuait l'escouade de niveau 4 en ~5 s) -> 96 %, boss ~13 s
+  'meadow-1': { enemyHpMult: 1, enemyAtkMult: 0.25, bossHpMult: 9 },
+  // avant 100 %, boss 2 s -> 77 %, boss ~13 s (seuil raide : bossHpMult 10.5 => 58 %)
+  'meadow-2': { enemyHpMult: 1, enemyAtkMult: 0.25, bossHpMult: 11 },
+  // avant 85 %, boss 3 s -> 88 %, boss ~14 s, attaque annoncée dans les 3 phases
+  'meadow-3': { enemyHpMult: 0.5, enemyAtkMult: 0.2, bossHpMult: 16 },
+  // avant 100 %, boss 2 s -> 88 %, boss ~11 s
+  'shore-1': { enemyHpMult: 1, enemyAtkMult: 0.35, bossHpMult: 10 },
+  // avant 98 %, boss 3 s -> 82 %, boss ~12 s
+  'shore-2': { enemyHpMult: 1, enemyAtkMult: 0.2, bossHpMult: 9 },
+  // avant 100 %, boss 0,5 s -> 87 %, boss ~17 s (phase 3 : attaque annoncée dans 93 % des combats)
+  'shore-3': { enemyHpMult: 0.55, enemyAtkMult: 0.2, bossHpMult: 22 },
+  // avant 100 %, boss 1 s -> 93 %, boss ~12 s
+  'volcano-1': { enemyHpMult: 1, enemyAtkMult: 0.4, bossHpMult: 13 },
+  // avant 100 %, boss 1 s -> 83 %, boss ~12 s
+  'volcano-2': { enemyHpMult: 1, enemyAtkMult: 0.25, bossHpMult: 12 },
+  // avant 100 %, boss 1 s -> 89 %, boss ~15 s
+  'volcano-3': { enemyHpMult: 1, enemyAtkMult: 0.25, bossHpMult: 12 },
+  // avant 100 %, boss 0,4 s -> 87 %, boss ~12 s (phase 1 : 98 %)
+  'sanctuary-1': { enemyHpMult: 1, enemyAtkMult: 0.36, bossHpMult: 13 },
+  // avant 100 %, boss 1 s -> 84 %, boss ~15 s
+  'sanctuary-2': { enemyHpMult: 1, enemyAtkMult: 0.2, bossHpMult: 13 },
+  // avant 100 %, boss 1,5 s -> 77 %, boss ~12 s. NON ATTEINT : phase 2 trop courte (attaque annoncée
+  // dans 60 % des combats) ; allonger le boss fait chuter les victoires sous 50 %. À reprendre en S05.
+  'sanctuary-3': { enemyHpMult: 0.7, enemyAtkMult: 0.2, bossHpMult: 15 },
   // --- Toundra Boréale ---
   // avant 8 / 0.6 / 2.2 (75 %, boss 14 s)                -> ~61 %, boss ~24 s
   'tundra-1': { enemyHpMult: 8, enemyAtkMult: 0.274, bossHpMult: 3.4 },
