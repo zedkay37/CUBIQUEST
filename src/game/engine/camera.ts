@@ -2,6 +2,7 @@
  * Caméra : cadrage selon le format d'écran, suivi de l'escouade, tremblement.
  */
 import * as THREE from 'three';
+import { findNearestLiving } from './actors';
 import { _vecA, _vecB, _vecC, EVO_X, EVO_Z } from './constants';
 import type { VoxelEngine } from '../VoxelEngine';
 
@@ -61,7 +62,7 @@ export function updateCamera(self: VoxelEngine, dt: number): void {
       sx /= count;
       sz /= count;
     }
-    const nearestEnemy = self.findNearestLiving(sx, sz, self.enemies);
+    const nearestEnemy = findNearestLiving(self, sx, sz, self.enemies);
     const focusX = nearestEnemy ? sx * 0.72 + nearestEnemy.x * 0.28 : sx;
     const focusZ = nearestEnemy ? sz * 0.72 + nearestEnemy.z * 0.28 : sz;
 

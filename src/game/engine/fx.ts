@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { soundFx } from '../audio';
 import type { ElementType } from '../types';
 import { _color, _dummy, CONFETTI_COLORS, ELEMENT_FX, PARTICLE_POOL_SIZE } from './constants';
+import { applyDamageToActor } from './damage';
 import type { ActiveProjectile } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 
@@ -313,7 +314,8 @@ export function updateProjectiles(self: VoxelEngine, dt: number, simDt: number):
         for (const t of targets) {
           if (t.fainted || t.removed) continue;
           if (Math.hypot(t.x - p.x, t.z - p.z) <= p.aoeRadius + (t.isBoss ? 1.0 : 0.45)) {
-            self.applyDamageToActor(
+            applyDamageToActor(
+              self,
               t,
               p.damage,
               p.casterUnit,

@@ -16,7 +16,14 @@ import {
   FROST_KIT,
   STORM_KIT,
 } from './balance';
-import { BIOMES, MOVES, RECIPE_BY_ID, SPECIES, STATUS_META } from './catalog';
+import { BIOMES, MOVES, RECIPE_BY_ID, SPECIES } from './catalog';
+import {
+  animateRigPose,
+  applyStatusToActor,
+  findNearestLiving,
+  updateActorCommon,
+  updateEnemyDissolve,
+} from './engine/actors';
 import { applyBiomeLighting, configureWeather, spawnBolt, updateDayNight } from './engine/atmosphere';
 import { fovForAspect, handleResize } from './engine/camera';
 import {
@@ -33,6 +40,7 @@ import {
   PARTICLE_POOL_SIZE,
   WEATHER_COUNT,
 } from './engine/constants';
+import { applyDamageToActor } from './engine/damage';
 import {
   clearProjectilesAndTelegraphs,
   spawnConfetti,
@@ -59,17 +67,7 @@ import type {
   WeatherKind,
   WeatherMote,
 } from './engine/types';
-import {
-  calculateDamage,
-  computeBossPhase,
-  computeCreatureStats,
-  computeStatusDuration,
-  computeUltimateCharge,
-  getMoveModifiers,
-  getStatusForElement,
-  getTypeEffectiveness,
-  resolveElementalReaction,
-} from './rules';
+import { calculateDamage, computeCreatureStats, computeUltimateCharge, getMoveModifiers } from './rules';
 import type {
   BiomeId,
   ControlMode,
@@ -88,9 +86,6 @@ import {
   buildCookingPotProp,
   buildVoxelCreature,
   FloatingTextPool,
-  getRigTopY,
-  isHoverArchetype,
-  type VoxelCreatureRig,
 } from './voxelModels';
 
 export type { CombatTelemetry, EngineCallbacks, EngineOptions } from './engine/types';
@@ -837,22 +832,10 @@ export class VoxelEngine {
     }
   }
 
-  updateEnemyDissolve(enemy: CombatActor, dt: number): void {
-    enemy.koDissolveTimer -= dt;
-    enemy.rig.bodyPivot.rotation.z = THREE.MathUtils.damp(enemy.rig.bodyPivot.rotation.z, -Math.PI / 2, 10, dt);
-    const s = Math.max(0.01, enemy.koDissolveTimer / 0.42) * enemy.rig.species.scale * (enemy.isBoss ? 1.48 : 0.96);
-    enemy.rig.root.scale.setScalar(s);
-    if (enemy.koDissolveTimer <= 0) {
-      enemy.removed = true;
-      this.actorsGroup.remove(enemy.rig.root);
-      this.disposeObject(enemy.rig.root);
-    }
-  }
-
   /** Après la fin du combat : les K.O. se dissolvent, et en cas de victoire l'escouade fait la fête. */
   updateEndSequence(dt: number): void {
     for (const enemy of this.enemies) {
-      if (!enemy.removed && enemy.fainted) this.updateEnemyDissolve(enemy, dt);
+      if (!enemy.removed && enemy.fainted) updateEnemyDissolve(this, enemy, dt);
     }
     if (!this.pendingVictory) return;
 
@@ -865,7 +848,7 @@ export class VoxelEngine {
       const hopT = this.elapsedTotal * 8.5 + i * 1.3;
       ally.rig.root.position.set(ally.x, 0, ally.z);
       ally.rig.root.rotation.y = Math.sin(this.elapsedTotal * 3 + i * 2.1) * 0.7;
-      this.animateRigPose(ally.rig, hopT, true, 1 + Math.sin(hopT * 2) * 0.07, this.elapsedTotal);
+      animateRigPose(this, ally.rig, hopT, true, 1 + Math.sin(hopT * 2) * 0.07, this.elapsedTotal);
       ally.rig.bodyPivot.position.y += Math.abs(Math.sin(hopT)) * 0.4;
       ally.rig.bodyPivot.rotation.z = 0;
       if (ally.rig.hpBarBg) ally.rig.hpBarBg.visible = false;
@@ -947,7 +930,7 @@ export class VoxelEngine {
     if (!evo.revealed) {
       // Phase 1 — charge : lévitation, toupie de plus en plus rapide, halo blanc croissant
       const p = Math.min(1, evo.t / EVO_CHARGE_SEC);
-      this.animateRigPose(evo.rig, 0, false, 1, this.elapsedTotal);
+      animateRigPose(this, evo.rig, 0, false, 1, this.elapsedTotal);
       evo.rig.root.position.y = p * p * 0.9;
       evo.rig.root.rotation.y += dt * (2 + p * p * 26);
       evo.rig.root.scale.setScalar(evo.baseScale * (1 + Math.sin(evo.t * (8 + p * 20)) * 0.06 * p));
@@ -1024,7 +1007,7 @@ export class VoxelEngine {
     evo.rig.root.scale.setScalar(evo.baseScale * pop);
     evo.rig.root.position.y = Math.max(0, 0.9 - q * 3.6);
     evo.rig.root.rotation.y = THREE.MathUtils.damp(evo.rig.root.rotation.y, 0.2, 6, dt);
-    this.animateRigPose(evo.rig, this.elapsedTotal * 9, q > 0.3, 1, this.elapsedTotal);
+    animateRigPose(this, evo.rig, this.elapsedTotal * 9, q > 0.3, 1, this.elapsedTotal);
     evo.spawnAcc += dt;
     if (evo.spawnAcc > 0.16) {
       evo.spawnAcc = 0;
@@ -1177,7 +1160,8 @@ export class VoxelEngine {
       const leadAlly = livingAllies[0];
       const baseUltDmg = Math.round(combinedAtk * 1.35);
       for (const enemy of livingEnemies) {
-        this.applyDamageToActor(
+        applyDamageToActor(
+          this,
           enemy,
           baseUltDmg,
           leadAlly,
@@ -1206,7 +1190,7 @@ export class VoxelEngine {
     unit.squashY = 1.28;
     soundFx.playSkill(move.element);
 
-    const target = this.findNearestLiving(unit.x, unit.z, this.enemies);
+    const target = findNearestLiving(this, unit.x, unit.z, this.enemies);
     const radius = move.aoeRadius * mods.radiusMult;
 
     if (move.style === 'buff') {
@@ -1293,7 +1277,8 @@ export class VoxelEngine {
           unit.critRate,
           unit.moveStones,
         );
-        this.applyDamageToActor(
+        applyDamageToActor(
+          this,
           enemy,
           res.damage,
           unit,
@@ -1311,298 +1296,6 @@ export class VoxelEngine {
       this.hitstopTimer = Math.max(this.hitstopTimer, 0.045);
       this.trauma = Math.min(1, this.trauma + 0.38);
     }
-  }
-
-  getPrimaryStatus(actor: CombatActor): StatusKind | null {
-    const keys = Object.keys(actor.statuses) as StatusKind[];
-    for (const k of keys) {
-      const inst = actor.statuses[k];
-      if (inst && inst.remaining > 0) return k;
-    }
-    return null;
-  }
-
-  applyStatusToActor(target: CombatActor, kind: StatusKind, sourceAtk: number): void {
-    const duration = computeStatusDuration(kind, target.statusRes);
-    target.statuses[kind] = {
-      remaining: duration,
-      tickTimer: 0.9,
-      sourceAtk,
-    };
-    if (kind === 'shocked' && !target.isBoss) {
-      target.stunTimer = Math.max(target.stunTimer, 0.95);
-    }
-  }
-
-  applyDamageToActor(
-    target: CombatActor,
-    rawDamage: number,
-    attacker: CombatActor | undefined,
-    isHeavy: boolean,
-    isCrit: boolean,
-    fxColor: string,
-    incomingElement?: ElementType,
-    isSkillHit = false,
-  ): void {
-    if (target.fainted || target.removed || target.invulnTimer > 0) return;
-
-    let dmg = rawDamage;
-
-    // Sunder (+25% damage taken)
-    if (target.statuses.sunder && target.statuses.sunder.remaining > 0) {
-      dmg *= 1.25;
-    }
-
-    // Check V0.2 Elemental Reactions when an ally skill hits a target carrying an elemental status
-    if (attacker?.isAlly && isSkillHit && incomingElement && !target.isAlly) {
-      const existing = this.getPrimaryStatus(target);
-      const reaction = this.reactionsEnabled ? resolveElementalReaction(existing, incomingElement) : null;
-      if (reaction && existing) {
-        delete target.statuses[existing];
-        dmg *= reaction.damageMult;
-        this.reactionsTriggered += 1;
-        this.ultimateCharge = computeUltimateCharge(this.ultimateCharge, reaction.ultimateBonus);
-        this.lastReactionLabel = reaction.name;
-        this.lastReactionColor = reaction.color;
-        this.lastReactionTimer = 2.4;
-        soundFx.playReaction();
-        this.hitstopTimer = Math.max(this.hitstopTimer, 0.055);
-        this.trauma = Math.min(1, this.trauma + 0.34);
-        spawnShockwaveRing(this, target.x, target.z, 3.6, reaction.color);
-        spawnParticleBurst(this, target.x, 1.1, target.z, reaction.color, 22, 6.2);
-        this.floatingText.spawn(target.x, 2.55, target.z, reaction.name, reaction.color, 1.25, 1.1);
-
-        // Reaction secondary mechanical effects
-        if (reaction.effect === 'aoe_burn') {
-          for (const other of this.enemies) {
-            if (other.id !== target.id && !other.fainted && !other.removed) {
-              if (Math.hypot(other.x - target.x, other.z - target.z) <= 4.4) {
-                this.applyStatusToActor(other, 'burn', attacker.atk);
-                other.hp = Math.max(1, other.hp - Math.round(rawDamage * 0.45));
-                this.floatingText.spawn(other.x, 1.9, other.z, `-${Math.round(rawDamage * 0.45)}`, '#FB923C', 0.9);
-              }
-            }
-          }
-        } else if (reaction.effect === 'chain_stun') {
-          let chains = 0;
-          for (const other of this.enemies) {
-            if (chains >= 2) break;
-            if (other.id !== target.id && !other.fainted && !other.removed) {
-              if (Math.hypot(other.x - target.x, other.z - target.z) <= 5.5) {
-                chains += 1;
-                this.applyStatusToActor(other, 'shocked', attacker.atk);
-                const chainDmg = Math.round(rawDamage * 0.55);
-                other.hp = Math.max(1, other.hp - chainDmg);
-                spawnParticleBurst(this, other.x, 0.9, other.z, '#FACC15', 10, 4.5);
-                this.floatingText.spawn(other.x, 2.0, other.z, `${chainDmg}`, '#FACC15', 0.95);
-              }
-            }
-          }
-        } else if (reaction.effect === 'knockback') {
-          const dx = target.x - attacker.x;
-          const dz = target.z - attacker.z;
-          const len = Math.max(0.01, Math.hypot(dx, dz));
-          const kb = target.isBoss ? 3.5 : 8.2;
-          target.vx += (dx / len) * kb;
-          target.vz += (dz / len) * kb;
-        } else if (reaction.effect === 'team_shield') {
-          for (const ally of this.allies) {
-            if (!ally.fainted) {
-              const shieldGain = Math.round(ally.maxHp * 0.15);
-              ally.shieldHp = Math.min(Math.round(ally.maxHp * 0.35), ally.shieldHp + shieldGain);
-              spawnParticleBurst(this, ally.x, 0.9, ally.z, '#EAB308', 8, 3.2);
-              this.floatingText.spawn(ally.x, 2.0, ally.z, `+${shieldGain} BOUCL.`, '#FDE047', 0.85);
-            }
-          }
-        } else if (reaction.effect === 'cd_spread') {
-          attacker.skillCooldown = Math.max(0.4, attacker.skillCooldown - 1.5);
-          for (const other of this.enemies) {
-            if (other.id !== target.id && !other.fainted && !other.removed) {
-              if (Math.hypot(other.x - target.x, other.z - target.z) <= 4.8) {
-                this.applyStatusToActor(other, existing, attacker.atk);
-              }
-            }
-          }
-        }
-      } else {
-        const applied = getStatusForElement(incomingElement);
-        this.applyStatusToActor(target, applied, attacker.atk);
-      }
-    }
-
-    const defMult = target.buffTimer > 0 ? 0.65 : 1.0;
-    let finalDmg = Math.max(1, Math.round(dmg * defMult));
-
-    // Absorb damage with Crystallize shield if present
-    if (target.shieldHp > 0) {
-      const absorbed = Math.min(target.shieldHp, finalDmg);
-      target.shieldHp -= absorbed;
-      finalDmg -= absorbed;
-    }
-
-    if (finalDmg > 0) {
-      target.hp = Math.max(0, target.hp - finalDmg);
-    }
-    target.flashTimer = isHeavy || isCrit ? 0.11 : 0.07;
-    target.squashY = 0.76;
-    const effectiveness =
-      incomingElement && !target.isAlly
-        ? getTypeEffectiveness(incomingElement, target.rig.species.element)
-        : 1;
-
-    // 3D Floating Damage Number
-    const numY = getRigTopY(target.rig.species) + 0.15;
-    if (finalDmg > 0) {
-      // Lisible d'un coup d'œil : critique doré, super efficace orange, résisté gris
-      const textColor = target.isAlly
-        ? '#FCA5A5'
-        : isCrit
-          ? '#FFE066'
-          : effectiveness > 1
-            ? '#FDBA74'
-            : effectiveness < 1
-              ? '#94A3B8'
-              : '#FAF7F0';
-      const label = isCrit ? `${finalDmg}!` : `${finalDmg}`;
-      const effScale = effectiveness > 1 ? 1.12 : effectiveness < 1 ? 0.9 : 1;
-      this.floatingText.spawn(
-        target.x,
-        numY,
-        target.z,
-        label,
-        textColor,
-        (isCrit ? 1.2 : isHeavy ? 1.02 : 0.84) * effScale,
-        0.78,
-      );
-    } else {
-      this.floatingText.spawn(target.x, numY, target.z, 'BLOQUÉ', '#FDE047', 0.82, 0.65);
-    }
-
-    if (attacker?.isAlly && !target.isAlly) {
-      this.damageDealt += finalDmg;
-      this.comboCount += 1;
-      this.comboTimer = 4.8;
-      if (this.comboCount > this.maxCombo) this.maxCombo = this.comboCount;
-      this.ultimateCharge = computeUltimateCharge(this.ultimateCharge, isSkillHit ? 6.5 : 2.8);
-
-      if (attacker.hitHeal > 0 && !attacker.fainted && finalDmg > 0) {
-        const heal = Math.max(1, Math.round((finalDmg * attacker.hitHeal) / 100));
-        attacker.hp = Math.min(attacker.maxHp, attacker.hp + heal);
-      }
-      // Pierre Sangsue : la compétence rend une part des dégâts au lanceur
-      if (isSkillHit && !attacker.fainted && finalDmg > 0 && attacker.moveStones.includes('leech')) {
-        const leech = getMoveModifiers(attacker.moveStones).leechRatio;
-        attacker.hp = Math.min(attacker.maxHp, attacker.hp + Math.max(1, Math.round(finalDmg * leech)));
-      }
-    }
-
-    // Check Boss Phase Shift!
-    if (target.isBoss && target.hp > 0) {
-      const nextPhase = computeBossPhase(target.hp, target.maxHp, target.bossMaxPhases === 3);
-      if (nextPhase > target.bossPhase && nextPhase !== 1) {
-        target.bossPhase = nextPhase;
-        this.onBossPhaseShift(target, nextPhase);
-      }
-    }
-
-    // Directional knockback
-    if (attacker) {
-      const dx = target.x - attacker.x;
-      const dz = target.z - attacker.z;
-      const len = Math.max(0.01, Math.hypot(dx, dz));
-      const kb = (isHeavy ? 4.8 : 2.0) * (target.isBoss ? 0.35 : 1.0);
-      target.vx += (dx / len) * kb;
-      target.vz += (dz / len) * kb;
-    }
-
-    soundFx.playHit(isHeavy, isCrit);
-    if (incomingElement) {
-      soundFx.playElementImpact(incomingElement, isHeavy);
-      spawnElementBurst(this, target.x, 0.85, target.z, incomingElement, isHeavy ? 12 : 5, isHeavy ? 1.15 : 0.8);
-      if (isCrit) spawnParticleBurst(this, target.x, 1.0, target.z, '#FFE066', 6, 4.6);
-    } else {
-      spawnParticleBurst(this, target.x, 0.85, target.z, isCrit ? '#FFE066' : fxColor, isHeavy ? 14 : 6, isHeavy ? 5.2 : 3.2);
-    }
-
-    if (isCrit || isHeavy) {
-      this.trauma = Math.min(1, this.trauma + (isCrit ? 0.3 : 0.18));
-    }
-    if (isCrit && !target.isAlly) {
-      // léger hit-stop sur critique pour faire claquer l'impact
-      this.hitstopTimer = Math.max(this.hitstopTimer, 0.032);
-    }
-
-    if (target.hp <= 0) {
-      target.fainted = true;
-      target.telegraphing = false;
-      target.hasAttackToken = false;
-      target.statuses = {};
-      if (target.isBoss && !target.isAlly) this.telemetry.bossDefeatedAt = this.expeditionElapsed;
-      soundFx.playKo();
-      this.hitstopTimer = Math.max(this.hitstopTimer, target.isBoss ? 0.075 : 0.04);
-      this.trauma = Math.min(1, this.trauma + (target.isBoss ? 0.65 : 0.25));
-      spawnParticleBurst(
-        this,
-        target.x,
-        0.8,
-        target.z,
-        target.rig.species.palette.primary,
-        target.isBoss ? 28 : 16,
-        6.0,
-      );
-
-      if (target.isAlly) {
-        target.reviveTimer = 11.0;
-      } else {
-        target.koDissolveTimer = 0.42;
-      }
-    }
-  }
-
-  onBossPhaseShift(boss: CombatActor, phase: 2 | 3): void {
-    this.telemetry.phaseStartedAt[phase - 1] = this.expeditionElapsed;
-    // un saut direct de la phase 1 à la phase 3 fait commencer (et finir) la phase 2 au même instant
-    if (phase === 3 && this.telemetry.phaseStartedAt[1] < 0) {
-      this.telemetry.phaseStartedAt[1] = this.expeditionElapsed;
-    }
-    soundFx.playBossPhase();
-    const label = phase === 3 ? 'PHASE 3 : SURCHARGE !' : 'PHASE 2 : FUREUR !';
-    const auraColor = phase === 3 ? '#F4B942' : '#F43F5E';
-    this.bannerText = `${boss.name} — ${label}`;
-    this.bannerTimer = 2.6;
-    this.trauma = Math.min(1, this.trauma + 0.55);
-    this.hitstopTimer = Math.max(this.hitstopTimer, 0.06);
-    spawnShockwaveRing(this, boss.x, boss.z, 6.2, auraColor);
-    spawnParticleBurst(this, boss.x, 1.3, boss.z, auraColor, 30, 6.8);
-    this.floatingText.spawn(boss.x, 3.0, boss.z, label, auraColor, 1.35, 1.25);
-
-    // Gentle non-lethal pushback so player clearly reads the phase transition
-    for (const ally of this.allies) {
-      if (ally.fainted) continue;
-      const dx = ally.x - boss.x;
-      const dz = ally.z - boss.z;
-      const dist = Math.max(0.01, Math.hypot(dx, dz));
-      if (dist < 6.0) {
-        ally.vx += (dx / dist) * 6.5;
-        ally.vz += (dz / dist) * 6.5;
-      }
-    }
-    boss.skillCooldown = 1.4;
-    this.emitHudSnapshot();
-  }
-
-  findNearestLiving(x: number, z: number, list: CombatActor[]): CombatActor | null {
-    let best: CombatActor | null = null;
-    let bestDistSq = Infinity;
-    for (const a of list) {
-      if (a.fainted || a.removed) continue;
-      const d2 = (a.x - x) * (a.x - x) + (a.z - z) * (a.z - z);
-      if (d2 < bestDistSq) {
-        bestDistSq = d2;
-        best = a;
-      }
-    }
-    return best;
   }
 
   /**
@@ -1673,7 +1366,7 @@ export class VoxelEngine {
       if (this.evo) {
         // Toute l'escouade s'arrête pour regarder la métamorphose
         w.facing = Math.atan2(EVO_X - w.x, EVO_Z - w.z);
-        this.animateRigPose(w.rig, w.walkPhase, false, 1, this.elapsedTotal);
+        animateRigPose(this, w.rig, w.walkPhase, false, 1, this.elapsedTotal);
       } else {
         const dx = w.targetX - w.x;
         const dz = w.targetZ - w.z;
@@ -1685,7 +1378,7 @@ export class VoxelEngine {
           w.z += (dz / dist) * step;
           w.facing = Math.atan2(dx, dz);
           w.walkPhase += step * 4.4;
-          this.animateRigPose(w.rig, w.walkPhase, true, 1, this.elapsedTotal);
+          animateRigPose(this, w.rig, w.walkPhase, true, 1, this.elapsedTotal);
         } else {
           w.waitTimer -= dt;
           // Émote d'attente : un petit saut de joie de temps en temps
@@ -1703,7 +1396,7 @@ export class VoxelEngine {
             lift = Math.sin(k * Math.PI) * 0.6;
             squash = 1 + Math.sin(k * Math.PI * 2) * 0.12;
           }
-          this.animateRigPose(w.rig, w.walkPhase, false, squash, this.elapsedTotal);
+          animateRigPose(this, w.rig, w.walkPhase, false, squash, this.elapsedTotal);
           if (w.waitTimer <= 0 && w.emoteT <= 0) {
             const ang = Math.random() * Math.PI * 2;
             const r = 2.8 + Math.random() * 4.6;
@@ -1827,7 +1520,7 @@ export class VoxelEngine {
     const leader = this.allies.find((a) => !a.fainted) ?? this.allies[0];
     for (let i = 0; i < this.allies.length; i++) {
       const ally = this.allies[i];
-      this.updateActorCommon(ally, dt, simDt);
+      updateActorCommon(this, ally, dt, simDt);
 
       if (ally.fainted) {
         ally.reviveTimer = Math.max(0, ally.reviveTimer - simDt);
@@ -1851,18 +1544,18 @@ export class VoxelEngine {
         ally.z = THREE.MathUtils.clamp(ally.z + ally.scatterDirZ * dashSpd * simDt, -ARENA_BOUND, ARENA_BOUND);
         ally.facing = Math.atan2(ally.scatterDirX, ally.scatterDirZ);
         ally.walkPhase += dashSpd * simDt * 3.2;
-        this.animateRigPose(ally.rig, ally.walkPhase, true, ally.squashY, this.elapsedTotal);
+        animateRigPose(this, ally.rig, ally.walkPhase, true, ally.squashY, this.elapsedTotal);
         continue;
       }
 
-      const target = this.findNearestLiving(ally.x, ally.z, this.enemies);
+      const target = findNearestLiving(this, ally.x, ally.z, this.enemies);
       let moved = false;
 
       const allySpeedMult = ally.statuses.rooted ? 0.45 : ally.statuses.soaked ? 0.78 : 1.0;
       const effectiveSpeed = ally.moveSpeed * allySpeedMult;
 
       if (ally.stunTimer > 0) {
-        this.animateRigPose(ally.rig, ally.walkPhase, false, 0.88, this.elapsedTotal);
+        animateRigPose(this, ally.rig, ally.walkPhase, false, 0.88, this.elapsedTotal);
         continue;
       }
 
@@ -1932,7 +1625,8 @@ export class VoxelEngine {
               casterUnit: ally,
             });
           } else {
-            this.applyDamageToActor(
+            applyDamageToActor(
+              this,
               target,
               res.damage,
               ally,
@@ -1955,7 +1649,7 @@ export class VoxelEngine {
         }
       }
 
-      this.animateRigPose(ally.rig, ally.walkPhase, moved, ally.squashY, this.elapsedTotal);
+      animateRigPose(this, ally.rig, ally.walkPhase, moved, ally.squashY, this.elapsedTotal);
     }
 
     // Soft separation between living allies so they never overlap
@@ -1986,13 +1680,13 @@ export class VoxelEngine {
     // Update Enemies (4 distinct AI policies: chaser, kiter, charger, boss)
     for (const enemy of this.enemies) {
       if (enemy.removed) continue;
-      this.updateActorCommon(enemy, dt, simDt);
+      updateActorCommon(this, enemy, dt, simDt);
 
       if (enemy.fainted) {
-        this.updateEnemyDissolve(enemy, dt);
+        updateEnemyDissolve(this, enemy, dt);
         continue;
       }
-      const target = this.findNearestLiving(enemy.x, enemy.z, this.allies);
+      const target = findNearestLiving(this, enemy.x, enemy.z, this.allies);
       if (!target) continue;
 
       const dx = target.x - enemy.x;
@@ -2018,12 +1712,12 @@ export class VoxelEngine {
 
       if (enemy.telegraphing) {
         // Hold crouch stance during attack telegraph
-        this.animateRigPose(enemy.rig, enemy.walkPhase, false, 0.84, this.elapsedTotal);
+        animateRigPose(this, enemy.rig, enemy.walkPhase, false, 0.84, this.elapsedTotal);
         continue;
       }
 
       if (enemy.stunTimer > 0) {
-        this.animateRigPose(enemy.rig, enemy.walkPhase, false, 0.88, this.elapsedTotal);
+        animateRigPose(this, enemy.rig, enemy.walkPhase, false, 0.88, this.elapsedTotal);
         continue;
       }
 
@@ -2086,7 +1780,7 @@ export class VoxelEngine {
             spawnParticleBurst(this, enemy.x, 0.7, enemy.z, enemy.rig.species.palette.accent, 14, 5.0);
             for (const ally of this.allies) {
               if (!ally.fainted && Math.hypot(ally.x - enemy.x, ally.z - enemy.z) <= 2.2) {
-                this.applyDamageToActor(ally, Math.round(enemy.atk * 1.45), enemy, true, false, '#EF4444');
+                applyDamageToActor(this, ally, Math.round(enemy.atk * 1.45), enemy, true, false, '#EF4444');
               }
             }
           });
@@ -2115,7 +1809,7 @@ export class VoxelEngine {
           enemy.basicCooldown = phase >= 2 ? 1.25 : 1.7;
           enemy.squashY = 1.22;
           if (!confusedMiss) {
-            this.applyDamageToActor(target, enemy.atk, enemy, false, false, enemy.rig.species.palette.accent);
+            applyDamageToActor(this, target, enemy.atk, enemy, false, false, enemy.rig.species.palette.accent);
           }
         }
       } else {
@@ -2129,12 +1823,12 @@ export class VoxelEngine {
           enemy.basicCooldown = 1.55;
           enemy.squashY = 1.18;
           if (!confusedMiss) {
-            this.applyDamageToActor(target, enemy.atk, enemy, false, false, enemy.rig.species.palette.accent);
+            applyDamageToActor(this, target, enemy.atk, enemy, false, false, enemy.rig.species.palette.accent);
           }
         }
       }
 
-      this.animateRigPose(enemy.rig, enemy.walkPhase, moved, enemy.squashY, this.elapsedTotal);
+      animateRigPose(this, enemy.rig, enemy.walkPhase, moved, enemy.squashY, this.elapsedTotal);
     }
   }
 
@@ -2171,7 +1865,7 @@ export class VoxelEngine {
         this.trauma = Math.min(1, this.trauma + 0.45);
         for (const ally of this.allies) {
           if (!ally.fainted && Math.hypot(ally.x - tx, ally.z - tz) <= aoeRad + 0.4) {
-            this.applyDamageToActor(ally, Math.round(enemy.atk * 1.65), enemy, true, false, '#F43F5E');
+            applyDamageToActor(this, ally, Math.round(enemy.atk * 1.65), enemy, true, false, '#F43F5E');
           }
         }
         if (phase >= 2) {
@@ -2217,7 +1911,7 @@ export class VoxelEngine {
           const proj = relX * perpX + relZ * perpZ;
           const side = Math.abs(relX * dirX + relZ * dirZ);
           if (proj >= -0.6 && proj <= chargeLen * 0.75 + 0.6 && side <= 1.35) {
-            this.applyDamageToActor(ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F4B942');
+            applyDamageToActor(this, ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F4B942');
           }
         }
       });
@@ -2240,7 +1934,7 @@ export class VoxelEngine {
           const proj = relX * dirX + relZ * dirZ;
           const side = Math.abs(relX * -dirZ + relZ * dirX);
           if (proj >= -0.5 && proj <= chargeLen + 0.8 && side <= 1.65) {
-            this.applyDamageToActor(ally, Math.round(enemy.atk * 1.6), enemy, true, false, '#F43F5E');
+            applyDamageToActor(this, ally, Math.round(enemy.atk * 1.6), enemy, true, false, '#F43F5E');
           }
         }
       });
@@ -2266,7 +1960,7 @@ export class VoxelEngine {
           this.trauma = Math.min(1, this.trauma + 0.25);
           for (const ally of this.allies) {
             if (!ally.fainted && Math.hypot(ally.x - mx, ally.z - mz) <= meteorRad + 0.35) {
-              this.applyDamageToActor(ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F97316');
+              applyDamageToActor(this, ally, Math.round(enemy.atk * 1.35), enemy, true, false, '#F97316');
             }
           }
         });
@@ -2312,10 +2006,10 @@ export class VoxelEngine {
             const d = Math.hypot(ally.x - bx, ally.z - bz);
             if (d >= inner && d <= outer + 0.4) {
               const exposed = ally.invulnTimer <= 0;
-              this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.ringDamage), enemy, true, false, ringTheme.burstColor);
+              applyDamageToActor(this, ally, Math.round(enemy.atk * FROST_KIT.ringDamage), enemy, true, false, ringTheme.burstColor);
               if (exposed && !ally.fainted) {
                 for (const status of ringTheme.statuses[phase === 1 ? 0 : 1]) {
-                  this.applyStatusToActor(ally, status, enemy.atk);
+                  applyStatusToActor(this, ally, status, enemy.atk);
                 }
               }
             }
@@ -2346,7 +2040,7 @@ export class VoxelEngine {
                     !ally.fainted &&
                     Math.hypot(ally.x - bx, ally.z - bz) <= inner + FROST_KIT.aftershockMargin + 0.4
                   ) {
-                    this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.aftershockDamage), enemy, true, false, ringTheme.aftershockColor);
+                    applyDamageToActor(this, ally, Math.round(enemy.atk * FROST_KIT.aftershockDamage), enemy, true, false, ringTheme.aftershockColor);
                   }
                 }
                 if (phase === 3) {
@@ -2428,8 +2122,8 @@ export class VoxelEngine {
               ) {
                 const exposed = ally.invulnTimer <= 0;
                 if (exposed) struck.add(ally.id);
-                this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.strikeDamage), enemy, true, false, strikeTheme.color);
-                if (exposed && !ally.fainted) this.applyStatusToActor(ally, strikeTheme.status, enemy.atk);
+                applyDamageToActor(this, ally, Math.round(enemy.atk * STORM_KIT.strikeDamage), enemy, true, false, strikeTheme.color);
+                if (exposed && !ally.fainted) applyStatusToActor(this, ally, strikeTheme.status, enemy.atk);
               }
             }
           },
@@ -2474,8 +2168,8 @@ export class VoxelEngine {
           for (const ally of this.allies) {
             if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= eyeRad + 0.4) {
               const exposed = ally.invulnTimer <= 0;
-              this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.eyeDamage), enemy, true, false, eyeTheme.color);
-              if (exposed && !ally.fainted) this.applyStatusToActor(ally, eyeTheme.status, enemy.atk);
+              applyDamageToActor(this, ally, Math.round(enemy.atk * STORM_KIT.eyeDamage), enemy, true, false, eyeTheme.color);
+              if (exposed && !ally.fainted) applyStatusToActor(this, ally, eyeTheme.status, enemy.atk);
             }
           }
         },
@@ -2527,169 +2221,6 @@ export class VoxelEngine {
       this.hudEmitAccum = 0;
       this.emitHudSnapshot();
     }
-  }
-
-  updateActorCommon(actor: CombatActor, dt: number, simDt: number): void {
-    // Knockback velocity decay
-    if (Math.hypot(actor.vx, actor.vz) > 0.05) {
-      actor.x = THREE.MathUtils.clamp(actor.x + actor.vx * simDt, -ARENA_BOUND, ARENA_BOUND);
-      actor.z = THREE.MathUtils.clamp(actor.z + actor.vz * simDt, -ARENA_BOUND, ARENA_BOUND);
-      const decay = Math.exp(-8.5 * simDt);
-      actor.vx *= decay;
-      actor.vz *= decay;
-    }
-
-    actor.basicCooldown = Math.max(0, actor.basicCooldown - simDt);
-    actor.skillCooldown = Math.max(0, actor.skillCooldown - simDt);
-    actor.buffTimer = Math.max(0, actor.buffTimer - simDt);
-    actor.invulnTimer = Math.max(0, actor.invulnTimer - simDt);
-    actor.stunTimer = Math.max(0, actor.stunTimer - simDt);
-    actor.squashY = THREE.MathUtils.damp(actor.squashY, 1, 12, dt);
-
-    // Tick elemental statuses & Burn DoT
-    if (!actor.fainted && !actor.removed && simDt > 0) {
-      const keys = Object.keys(actor.statuses) as StatusKind[];
-      for (const k of keys) {
-        const inst = actor.statuses[k];
-        if (!inst) continue;
-        inst.remaining -= simDt;
-        if (k === 'burn') {
-          inst.tickTimer -= simDt;
-          if (inst.tickTimer <= 0) {
-            inst.tickTimer = 1.0;
-            const burnDmg = Math.max(6, Math.round(inst.sourceAtk * 0.22));
-            actor.hp = Math.max(1, actor.hp - burnDmg);
-            spawnParticleBurst(this, actor.x, 1.0, actor.z, STATUS_META.burn.color, 4, 2.2);
-            this.floatingText.spawn(actor.x, 1.9, actor.z, `${burnDmg}`, STATUS_META.burn.color, 0.78, 0.65);
-            if (!actor.isAlly) this.damageDealt += burnDmg;
-          }
-        }
-        if (inst.remaining <= 0) {
-          delete actor.statuses[k];
-        }
-      }
-    }
-
-    // Hit flash emissive highlight & Boss phase rage aura
-    if (actor.flashTimer > 0) {
-      actor.flashTimer = Math.max(0, actor.flashTimer - dt);
-      const white = actor.flashTimer > 0;
-      actor.rig.flashMaterials.forEach((m, idx) => {
-        if (white) {
-          m.emissive.set('#FFFFFF');
-          m.emissiveIntensity = 0.85;
-        } else if (actor.isBoss && actor.bossPhase >= 2) {
-          m.emissive.set(actor.bossPhase === 3 ? '#F4B942' : '#F43F5E');
-          m.emissiveIntensity = 0.34;
-        } else {
-          m.emissive.copy(actor.rig.baseEmissives[idx]);
-          m.emissiveIntensity = actor.buffTimer > 0 ? 0.35 : 0.15;
-        }
-      });
-    } else if (actor.isBoss && actor.bossPhase >= 2) {
-      const pulse = 0.28 + Math.sin(this.elapsedTotal * 5.2) * 0.1;
-      actor.rig.flashMaterials.forEach((m) => {
-        m.emissive.set(actor.bossPhase === 3 ? '#F4B942' : '#F43F5E');
-        m.emissiveIntensity = pulse;
-      });
-    }
-
-    actor.rig.root.position.set(actor.x, 0, actor.z);
-    actor.rig.root.rotation.y = actor.facing;
-
-    // Update world-space HP bar orientation & fill scale (world-space lookAt ignores parent yaw)
-    if (actor.rig.hpBarBg && actor.rig.hpBarFill) {
-      actor.rig.hpBarBg.visible = !actor.fainted;
-      actor.rig.hpBarBg.lookAt(this.camera.position);
-      const ratio = Math.max(0.001, actor.hp / Math.max(1, actor.maxHp));
-      actor.rig.hpBarFill.scale.x = ratio;
-    }
-  }
-
-  animateRigPose(
-    rig: VoxelCreatureRig,
-    walkPhase: number,
-    isMoving: boolean,
-    squashY: number,
-    elapsed: number,
-  ): void {
-    const arch = rig.species.archetype;
-    // Déphasage par créature : personne ne respire ni ne se balance à l'unisson
-    const seed = rig.root.id * 1.37;
-    const hopAmp = arch === 'serpentine' ? 0.08 : 0.24;
-    const hop = isMoving ? Math.abs(Math.sin(walkPhase)) * hopAmp : Math.sin(elapsed * 2.8 + seed) * 0.04;
-    const hover = isHoverArchetype(arch) ? 0.16 + Math.sin(elapsed * 3.5 + seed) * 0.12 : 0;
-    rig.bodyPivot.position.y = hop + hover;
-
-    // Idle : respiration + regard qui se promène quand la créature est à l'arrêt
-    const breath = isMoving ? 0 : Math.sin(elapsed * 2.1 + seed) * 0.022;
-    const sy = squashY * (1 + breath);
-    const invXZ = 1 / Math.sqrt(Math.max(0.5, sy));
-    rig.bodyPivot.scale.set(invXZ, sy, invXZ);
-    rig.bodyPivot.rotation.y = isMoving ? 0 : Math.sin(elapsed * 0.7 + seed) * 0.16;
-    rig.bodyPivot.rotation.x = isMoving ? 0 : Math.sin(elapsed * 1.3 + seed * 0.7) * 0.025;
-
-    // Leg gait sync (les bras du golem font partie de la démarche)
-    rig.legs.forEach((leg, idx) => {
-      const sign = idx % 2 === 0 ? 1 : -1;
-      leg.rotation.x = isMoving ? Math.sin(walkPhase) * 0.45 * sign : 0;
-    });
-
-    // Wings / orbiting psychic cubes / tail wag / antlers / body segments / rain strands
-    rig.extras.forEach((extra, idx) => {
-      switch (arch) {
-        case 'floating':
-          extra.rotation.y = elapsed * 2.2;
-          break;
-        case 'winged':
-          if (idx < 2) {
-            const dir = idx === 0 ? 1 : -1;
-            extra.rotation.z = Math.sin(elapsed * 7.5) * 0.32 * dir;
-          } else {
-            extra.rotation.y = Math.sin(elapsed * 5.2 + idx) * 0.25;
-          }
-          break;
-        case 'fungal':
-          if (idx === 0) {
-            // le chapeau dodeline
-            extra.rotation.z = Math.sin(elapsed * 2.2 + seed) * 0.06;
-            extra.rotation.x = Math.sin(elapsed * 1.7 + seed) * 0.04;
-          } else {
-            extra.rotation.y = elapsed * 1.1; // spores en orbite
-          }
-          break;
-        case 'antlered':
-          extra.rotation.z = Math.sin(elapsed * 1.6 + seed + idx) * 0.05;
-          break;
-        case 'crab':
-          // les pinces s'ouvrent et se referment en alternance
-          extra.rotation.x = Math.sin(elapsed * 3.2 + seed + idx * Math.PI) * 0.16;
-          break;
-        case 'golem':
-          extra.rotation.y = Math.sin(elapsed * 0.9 + seed) * 0.08;
-          break;
-        case 'lizard':
-          if (idx === 0) {
-            extra.rotation.y = Math.sin(elapsed * 3 + seed) * 0.35; // la queue balaie
-          } else {
-            extra.scale.y = 1 + Math.sin(elapsed * 9 + idx * 1.7 + seed) * 0.18; // la crête vacille
-          }
-          break;
-        case 'serpentine': {
-          // ondulation qui se propage de la tête vers la queue
-          const wave = elapsed * (isMoving ? 9 : 4) + seed - idx * 0.85;
-          extra.position.x = Math.sin(wave) * 0.07 * Math.min(4, idx + 1);
-          extra.rotation.y = Math.cos(wave) * 0.22;
-          break;
-        }
-        case 'jelly':
-          extra.rotation.x = Math.sin(elapsed * 2.4 + idx * 1.3 + seed) * 0.3;
-          extra.rotation.z = Math.cos(elapsed * 2.0 + idx) * 0.22;
-          break;
-        default:
-          extra.rotation.y = Math.sin(elapsed * 5.2 + idx) * 0.25;
-      }
-    });
   }
 
   emitHudSnapshot(): void {
