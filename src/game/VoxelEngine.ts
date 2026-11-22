@@ -18,17 +18,22 @@ import {
 } from './balance';
 import { BIOMES, MOVES, RECIPE_BY_ID, SPECIES, STATUS_META } from './catalog';
 import {
+  applyBiomeLighting,
+  configureWeather,
+  spawnBolt,
+  updateDayNight,
+  updateStormAmbience,
+  updateWeather,
+} from './engine/atmosphere';
+import {
   _color,
   _dummy,
   _vecA,
   _vecB,
   _vecC,
   ARENA_BOUND,
-  BIOME_LIGHTING,
   BOLT_POOL_SIZE,
   BOSS_INTRO_SEC,
-  CAMP_DAY_LENGTH,
-  CAMP_SKY_KEYS,
   EVO_CHARGE_SEC,
   EVO_TOTAL_SEC,
   EVO_X,
@@ -36,7 +41,6 @@ import {
   MAX_ATTACK_TOKENS,
   PARTICLE_POOL_SIZE,
   WEATHER_COUNT,
-  WEATHER_PROFILES,
 } from './engine/constants';
 import {
   clearProjectilesAndTelegraphs,
@@ -350,7 +354,7 @@ export class VoxelEngine {
     this.weatherMesh.frustumCulled = false;
     this.weatherMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.fxGroup.add(this.weatherMesh);
-    this.configureWeather('meadow');
+    configureWeather(this, 'meadow');
 
     // Pool d'éclairs voxel (géométrie + matériau partagés)
     this.boltGeo = new THREE.BoxGeometry(0.3, 1, 0.3);
@@ -377,102 +381,6 @@ export class VoxelEngine {
     }
   }
 
-  configureWeather(biomeId: BiomeId): void {
-    this.activeBiomeId = biomeId;
-    const profile = WEATHER_PROFILES[biomeId];
-    const kind = profile.kind;
-    this.weatherKind = kind;
-    this.weatherCount = profile.count;
-    this.weatherMesh.count = profile.count;
-    this.weatherMotes = [];
-    const stormy = biomeId === 'stormpeak';
-
-    for (let i = 0; i < profile.count; i++) {
-      const small = 0.14 + Math.random() * 0.08;
-      const mote: WeatherMote = {
-        x: (Math.random() - 0.5) * 34,
-        y: 0.8 + Math.random() * 12,
-        z: (Math.random() - 0.5) * 34,
-        vx:
-          kind === 'rain'
-            ? stormy
-              ? -5.2
-              : -2.2
-            : kind === 'snow'
-              ? 0.9 + Math.random() * 0.7
-              : kind === 'rise'
-                ? (Math.random() - 0.5) * 1.1
-                : (Math.random() - 0.5) * 0.9 + (profile.wind ?? 0),
-        vy:
-          kind === 'rain'
-            ? (stormy ? -16 : -11.5) - Math.random() * 3
-            : kind === 'rise'
-              ? 1.6 + Math.random() * 1.8
-              : kind === 'float'
-                ? 0.45 + Math.random() * 0.55
-                : kind === 'snow'
-                  ? -1.3 - Math.random() * 1.1
-                  : -0.55 - Math.random() * 0.4,
-        vz: kind === 'rain' ? 1.4 : (Math.random() - 0.5) * 0.8,
-        sizeX: kind === 'rain' ? 0.06 : kind === 'snow' ? small * 0.8 : small,
-        sizeY: kind === 'rain' ? (stormy ? 0.9 : 0.65) : kind === 'snow' ? small * 0.8 : small,
-        sizeZ: kind === 'rain' ? 0.06 : kind === 'snow' ? small * 0.8 : small,
-        phase: Math.random() * Math.PI * 2,
-      };
-      this.weatherMotes.push(mote);
-      this.weatherMesh.setColorAt(i, _color.set(profile.colors[i % profile.colors.length]));
-    }
-    if (this.weatherMesh.instanceColor) {
-      this.weatherMesh.instanceColor.needsUpdate = true;
-    }
-  }
-
-  applyBiomeLighting(biomeId: BiomeId): void {
-    const light = BIOME_LIGHTING[biomeId];
-    this.hemiLight.color.set(light.sky);
-    this.hemiLight.groundColor.set(light.ground);
-    this.keyLight.color.set(light.key);
-    this.keyLight.intensity = 1.28;
-    this.baseHemiIntensity = 0.52;
-    this.scene.environmentIntensity = 0.42;
-    this.lightningFlash = 0;
-    this.stormTimer = 3 + Math.random() * 3;
-  }
-
-  /** Éclair voxel bref (pool fixe) + flash lumineux. */
-  spawnBolt(x: number, z: number, height = 11): void {
-    const bolt = this.bolts[this.boltCursor];
-    this.boltCursor = (this.boltCursor + 1) % this.bolts.length;
-    bolt.mesh.position.set(x, 0, z);
-    bolt.mesh.scale.set(1, height, 1);
-    bolt.mesh.rotation.z = (Math.random() - 0.5) * 0.22;
-    bolt.mesh.visible = true;
-    bolt.life = 0.16;
-    this.lightningFlash = Math.max(this.lightningFlash, this.shakeEnabled ? 0.55 : 0.2);
-  }
-
-  updateStormAmbience(dt: number): void {
-    for (const bolt of this.bolts) {
-      if (bolt.life > 0) {
-        bolt.life -= dt;
-        bolt.mesh.visible = bolt.life > 0;
-      }
-    }
-    if (this.lightningFlash > 0) {
-      this.lightningFlash = Math.max(0, this.lightningFlash - dt * 3.6);
-    }
-    this.hemiLight.intensity = this.baseHemiIntensity + this.lightningFlash * 1.5;
-
-    // Orage d'ambiance : la foudre tombe au loin toutes les quelques secondes
-    if (this.activeBiomeId !== 'stormpeak' || this.playMode !== 'expedition') return;
-    this.stormTimer -= dt;
-    if (this.stormTimer <= 0) {
-      this.stormTimer = 5 + Math.random() * 6;
-      const ang = Math.random() * Math.PI * 2;
-      this.spawnBolt(Math.cos(ang) * 21, Math.sin(ang) * 21, 17);
-      soundFx.playThunder();
-    }
-  }
   /**
    * Champ de vision vertical : 42° en paysage (inchangé). En portrait, on l'ouvre progressivement
    * pour que l'escouade et ses adversaires restent dans le cadre d'un écran étroit.
@@ -616,8 +524,8 @@ export class VoxelEngine {
     this.waterUniform = env.waterUniform;
     this.cloudGroup = env.cloudGroup;
     this.envAnimate = env.animate ?? null;
-    this.configureWeather('meadow');
-    this.applyBiomeLighting('meadow');
+    configureWeather(this, 'meadow');
+    applyBiomeLighting(this, 'meadow');
 
     // Tall waystone + explorer tent landmark framed in initial vista
     const landmark = buildCampLandmark();
@@ -743,13 +651,13 @@ export class VoxelEngine {
     const biome = BIOMES[stage.biomeId];
     this.scene.background = new THREE.Color(biome.skyHex);
     this.scene.fog = new THREE.Fog(biome.fogHex, 30, 84);
-    this.applyBiomeLighting(biome.id);
+    applyBiomeLighting(this, biome.id);
     const env = buildBiomeEnvironment(biome, false);
     this.worldGroup.add(env.group);
     this.waterUniform = env.waterUniform;
     this.cloudGroup = env.cloudGroup;
     this.envAnimate = env.animate ?? null;
-    this.configureWeather(stage.biomeId);
+    configureWeather(this, stage.biomeId);
 
     // Spawn 3 allied Cubimons in an open clearing facing forward (+X/-Z toward wave)
     this.allies = squadCreatures.slice(0, 3).map((c, idx) => {
@@ -1022,34 +930,6 @@ export class VoxelEngine {
   /** Règle l'heure du camp (0 = aube, 0.3 = plein jour, 0.64 = crépuscule, 0.8 = nuit). */
   public setCampClock(t: number): void {
     if (Number.isFinite(t)) this.campClock = ((t % 1) + 1) % 1;
-  }
-
-  /** Cycle jour/nuit doux du camp : ciel, brume et lumières interpolés entre des clés. */
-  updateDayNight(dt: number): void {
-    this.campClock = (this.campClock + dt / CAMP_DAY_LENGTH) % 1;
-    let idx = 0;
-    while (idx < CAMP_SKY_KEYS.length - 2 && this.campClock >= CAMP_SKY_KEYS[idx + 1].t) idx += 1;
-    const a = CAMP_SKY_KEYS[idx];
-    const b = CAMP_SKY_KEYS[idx + 1];
-    const raw = THREE.MathUtils.clamp((this.campClock - a.t) / Math.max(0.0001, b.t - a.t), 0, 1);
-    const f = raw * raw * (3 - 2 * raw);
-    if (this.scene.background instanceof THREE.Color) this.scene.background.lerpColors(a.sky, b.sky, f);
-    if (this.scene.fog) this.scene.fog.color.lerpColors(a.fog, b.fog, f);
-    this.keyLight.color.lerpColors(a.key, b.key, f);
-    this.keyLight.intensity = THREE.MathUtils.lerp(a.keyI, b.keyI, f);
-    this.baseHemiIntensity = THREE.MathUtils.lerp(a.hemiI, b.hemiI, f);
-    this.scene.environmentIntensity = THREE.MathUtils.lerp(a.envI, b.envI, f);
-
-    // 0 en plein jour, 1 en pleine nuit : pilote la lueur du feu et les étoiles
-    const night = THREE.MathUtils.clamp((0.42 - this.scene.environmentIntensity) / 0.37, 0, 1);
-    if (this.potLight) {
-      const flicker = 0.92 + Math.sin(this.elapsedTotal * 11) * 0.05 + Math.sin(this.elapsedTotal * 17.3) * 0.03;
-      this.potLight.intensity = night * 60 * flicker;
-    }
-    if (this.campStars) {
-      (this.campStars.material as THREE.MeshBasicMaterial).opacity = night * night * 0.95;
-      this.campStars.visible = night > 0.02;
-    }
   }
 
   /**
@@ -1889,8 +1769,8 @@ export class VoxelEngine {
       }
 
       updateParticles(this, dt);
-      this.updateWeather(dt);
-      this.updateStormAmbience(dt);
+      updateWeather(this, dt);
+      updateStormAmbience(this, dt);
       this.floatingText.update(dt);
     }
 
@@ -1898,7 +1778,7 @@ export class VoxelEngine {
   }
 
   updateCamp(dt: number): void {
-    this.updateDayNight(dt);
+    updateDayNight(this, dt);
     this.updateEvolution(dt);
 
     // Animate cooking pot embers & steam cubes
@@ -2657,7 +2537,7 @@ export class VoxelEngine {
             }
             if (enemy.fainted || enemy.removed) return;
             if (strikeTheme.lightning) {
-              this.spawnBolt(sx, sz);
+              spawnBolt(this, sx, sz);
               if (k % 3 === 0) soundFx.playThunder();
             } else if (k % 3 === 0) {
               soundFx.playHit(true, false);
@@ -2707,7 +2587,7 @@ export class VoxelEngine {
           enemy.pullTimer = 0;
           if (enemy.fainted || enemy.removed) return;
           if (eyeTheme.lightning) {
-            this.spawnBolt(bx, bz, 14);
+            spawnBolt(this, bx, bz, 14);
             soundFx.playThunder();
           } else {
             soundFx.playHit(true, false);
@@ -2936,53 +2816,6 @@ export class VoxelEngine {
     });
   }
 
-  updateWeather(dt: number): void {
-    const kind = this.weatherKind;
-    const isRain = kind === 'rain';
-    const sway = isRain ? 0.15 : kind === 'snow' ? 0.9 : 0.65;
-
-    for (let i = 0; i < this.weatherCount; i++) {
-      const m = this.weatherMotes[i];
-      if (!m) continue;
-      m.phase += dt * (kind === 'float' ? 1.8 : 2.6);
-      m.x += (m.vx + Math.sin(m.phase) * sway) * dt;
-      m.y += m.vy * dt;
-      m.z += (m.vz + Math.cos(m.phase * 0.8) * (isRain ? 0.15 : 0.55)) * dt;
-
-      // Wrap seamlessly inside biome volume
-      if (kind === 'rise') {
-        if (m.y > 14) {
-          m.y = 0.5;
-          m.x = (Math.random() - 0.5) * 34;
-          m.z = (Math.random() - 0.5) * 34;
-        }
-      } else if (kind === 'float') {
-        if (m.y > 15 || m.y < 1.2) {
-          m.vy *= -1;
-        }
-      } else if (m.y < 0.3) {
-        m.y = 11 + Math.random() * 6;
-        m.x = (Math.random() - 0.5) * 36;
-        m.z = (Math.random() - 0.5) * 36;
-      }
-
-      if (m.x > 20) m.x = -20;
-      else if (m.x < -20) m.x = 20;
-      if (m.z > 20) m.z = -20;
-      else if (m.z < -20) m.z = 20;
-
-      _dummy.position.set(m.x, m.y, m.z);
-      if (isRain) {
-        _dummy.rotation.set(0, 0, m.vx < -4 ? 0.3 : 0.12);
-      } else {
-        _dummy.rotation.set(m.phase * 0.7, m.phase * 0.9, 0);
-      }
-      _dummy.scale.set(m.sizeX, m.sizeY, m.sizeZ);
-      _dummy.updateMatrix();
-      this.weatherMesh.setMatrixAt(i, _dummy.matrix);
-    }
-    this.weatherMesh.instanceMatrix.needsUpdate = true;
-  }
   updateCamera(dt: number): void {
     if (this.screenState === 'title') {
       // Atmospheric isometric diorama orbit with upper sky negative space for the Title Lockup
