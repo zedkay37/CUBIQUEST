@@ -53,7 +53,7 @@ export function startExpedition(
   self.waveIndex = 0;
   self.expeditionElapsed = 0;
   self.damageDealt = 0;
-  self.scatterCooldown = 0;
+  self.dodgeCooldown = 0;
   self.ultimateCharge = 25; // Start with 25% momentum so player reaches Ultimate cleanly
   self.comboCount = 0;
   self.comboTimer = 0;
@@ -147,9 +147,9 @@ export function startExpedition(
       flashTimer: 0,
       invulnTimer: 0,
       stunTimer: 0,
-      scatterTimer: 0,
-      scatterDirX: 0,
-      scatterDirZ: 0,
+      dodgeTimer: 0,
+      dodgeDirX: 0,
+      dodgeDirZ: 0,
       walkPhase: 0,
       squashY: 1,
       fainted: false,
@@ -186,7 +186,7 @@ export function spawnWave(self: VoxelEngine, index: number): void {
   self.waveIndex = index;
   const isBossWave = index === self.activeStage.waves.length - 1;
   self.bannerText = isBossWave
-    ? FR.engine.alerteBossPreparezDispersion
+    ? FR.engine.alerteBossPreparezLEsquive
     : FR.engine.vague(index + 1, self.activeStage.waves.length);
   self.bannerTimer = 2.4;
 
@@ -246,9 +246,9 @@ export function spawnWave(self: VoxelEngine, index: number): void {
       flashTimer: 0,
       invulnTimer: 0,
       stunTimer: 0,
-      scatterTimer: 0,
-      scatterDirX: 0,
-      scatterDirZ: 0,
+      dodgeTimer: 0,
+      dodgeDirX: 0,
+      dodgeDirZ: 0,
       walkPhase: 0,
       squashY: 1,
       fainted: false,
@@ -308,7 +308,7 @@ export function updateExpedition(self: VoxelEngine, dt: number, simDt: number): 
     simDt = 0;
   }
   self.expeditionElapsed += simDt;
-  if (self.scatterCooldown > 0) self.scatterCooldown = Math.max(0, self.scatterCooldown - simDt);
+  if (self.dodgeCooldown > 0) self.dodgeCooldown = Math.max(0, self.dodgeCooldown - simDt);
   if (self.bannerTimer > 0) {
     self.bannerTimer = Math.max(0, self.bannerTimer - dt);
     if (self.bannerTimer === 0) self.bannerText = null;

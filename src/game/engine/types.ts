@@ -94,9 +94,9 @@ export interface CombatActor {
   flashTimer: number;
   invulnTimer: number;
   stunTimer: number;
-  scatterTimer: number;
-  scatterDirX: number;
-  scatterDirZ: number;
+  dodgeTimer: number;
+  dodgeDirX: number;
+  dodgeDirZ: number;
   walkPhase: number;
   squashY: number;
   fainted: boolean;

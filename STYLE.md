@@ -167,7 +167,7 @@ Un nouveau boss se compose en choisissant un kit existant ; il ne reçoit pas d'
 
 ## 5. Ton des textes
 
-- Français, vouvoiement du joueur dans l'interface (« Placez 5 ingrédients », « Préparez Dispersion ! »).
+- Français, vouvoiement du joueur dans l'interface (« Placez 5 ingrédients », « Préparez l'Esquive ! »).
 - Registre chaleureux et clair, jamais ironique ni sombre. Vocabulaire du camp, de la cuisine et de l'exploration.
 - Annonces de combat en capitales avec point d'exclamation (« ALERTE BOSS ! », « ÉVAPORATION ! », « CUBI-DÉCHAÎNEMENT ! »).
 - Consignes de boss : nom de l'attaque, tiret, action à faire (« Anneau de Givre — collez-vous au boss ! »).

@@ -2,11 +2,11 @@
  * Un combat headless sur le VRAI moteur, commun à `npm run sim` (mesure) et `npm run golden` (garde-fou).
  *
  * Profils de contrôle :
- *  - `auto`   : « Auto Total » du jeu (le moteur lance sorts et ultime, jamais Dispersion) ;
+ *  - `auto`   : « Auto Total » du jeu (le moteur lance sorts et ultime, jamais l'Esquive) ;
  *  - `active` : mode « Semi » du jeu piloté par un script qui imite un joueur appliqué, uniquement via
  *               les commandes publiques du moteur (les mêmes que les boutons du HUD) :
  *               sort lancé dès qu'il est prêt et qu'il reste un ennemi, ultime dès 100 %,
- *               Dispersion 0,45 s après l'apparition d'un télégraphe.
+ *               Esquive 0,45 s après l'apparition d'un télégraphe.
  *
  * `reactions: false` coupe les réactions élémentaires par une option du moteur réservée aux outils
  * (le jeu normal ne la passe jamais).
@@ -118,7 +118,7 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
         }
         if (engine.getDebugInfo().telegraphs > 0) {
           hazardSeenFor += STEP;
-          if (hazardSeenFor >= ACTIVE_DODGE_DELAY && engine.triggerScatter()) hazardSeenFor = 0;
+          if (hazardSeenFor >= ACTIVE_DODGE_DELAY && engine.triggerDodge()) hazardSeenFor = 0;
         } else {
           hazardSeenFor = 0;
         }

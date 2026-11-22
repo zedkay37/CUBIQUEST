@@ -56,12 +56,12 @@ export function updateAllies(self: VoxelEngine, dt: number, simDt: number): void
 
     ally.rig.bodyPivot.rotation.z = THREE.MathUtils.damp(ally.rig.bodyPivot.rotation.z, 0, 12, dt);
 
-    if (ally.scatterTimer > 0) {
-      ally.scatterTimer = Math.max(0, ally.scatterTimer - simDt);
+    if (ally.dodgeTimer > 0) {
+      ally.dodgeTimer = Math.max(0, ally.dodgeTimer - simDt);
       const dashSpd = ally.moveSpeed * 2.55;
-      ally.x = THREE.MathUtils.clamp(ally.x + ally.scatterDirX * dashSpd * simDt, -ARENA_BOUND, ARENA_BOUND);
-      ally.z = THREE.MathUtils.clamp(ally.z + ally.scatterDirZ * dashSpd * simDt, -ARENA_BOUND, ARENA_BOUND);
-      ally.facing = Math.atan2(ally.scatterDirX, ally.scatterDirZ);
+      ally.x = THREE.MathUtils.clamp(ally.x + ally.dodgeDirX * dashSpd * simDt, -ARENA_BOUND, ARENA_BOUND);
+      ally.z = THREE.MathUtils.clamp(ally.z + ally.dodgeDirZ * dashSpd * simDt, -ARENA_BOUND, ARENA_BOUND);
+      ally.facing = Math.atan2(ally.dodgeDirX, ally.dodgeDirZ);
       ally.walkPhase += dashSpd * simDt * 3.2;
       animateRigPose(self, ally.rig, ally.walkPhase, true, ally.squashY, self.elapsedTotal);
       continue;

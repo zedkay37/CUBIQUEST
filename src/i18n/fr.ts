@@ -124,8 +124,8 @@ export const FR = {
       reanimS: (a: string | number) => `Réanim. ${a}s`,
       def: 'DEF+',
       lancerAvec: (a: string | number, b: string | number) => `Lancer ${a} avec ${b}`,
-      dispersionDeLEscouade: 'Dispersion de l\'escouade',
-      dispersion: 'Dispersion',
+      esquiveDeLEscouade: 'Esquive de l\'escouade',
+      esquive: 'Esquive',
       espace: 'ESPACE',
       declencherLUltimeDEscouade: 'Déclencher l\'Ultime d\'escouade',
       ultime: 'Ultime',
@@ -144,7 +144,7 @@ export const FR = {
       etoileSur3: (a: string | number, b: string | number) => `${a} étoile${b} sur 3`,
       expeditionReussie: 'Expédition réussie !',
       escouadeVaincue: 'Escouade vaincue',
-      siPresDuButGardezDispersion: 'Si près du but ! Gardez Dispersion pour ses attaques télégraphiées.',
+      siPresDuButGardezLEsquive: 'Si près du but ! Gardez l\'Esquive pour ses attaques télégraphiées.',
       renforcezVosPierresDePouvoirOu: 'Renforcez vos Pierres de Pouvoir ou tentez une recrue à la Marmite.',
       temps: 'Temps',
       vagues: 'Vagues',
@@ -285,11 +285,11 @@ export const FR = {
       continuerLAventure: 'Continuer l’aventure',
       commencerLAventure: 'Commencer l’aventure',
       nouvelleIle: 'Nouvelle île',
-      t123SortsEspaceDispersion: '1 / 2 / 3 Sorts · Espace Dispersion · R Ultime · ZQSD Déplacer · E Auto · P Pause',
+      t123SortsEspaceEsquive: '1 / 2 / 3 Sorts · Espace Esquive · R Ultime · ZQSD Déplacer · E Auto · P Pause',
     },
   },
   engine: {
-    alerteBossPreparezDispersion: 'ALERTE BOSS ! Préparez Dispersion !',
+    alerteBossPreparezLEsquive: 'ALERTE BOSS ! Préparez l\'Esquive !',
     contrecoupEloignezVous: 'Contrecoup — éloignez-vous !',
     boucl: (a: string | number) => `+${a} BOUCL.`,
     bloque: 'BLOQUÉ',
@@ -315,9 +315,9 @@ export const FR = {
   balance: {
     anneauDeGivreCollezVousAu: 'Anneau de Givre — collez-vous au boss !',
     foudreEnRafaleSortezDeLa: 'Foudre en Rafale — sortez de la ligne !',
-    ilDuCycloneDispersionPourFuir: 'Œil du Cyclone — Dispersion pour fuir le centre !',
+    ilDuCycloneEsquivePourFuir: 'Œil du Cyclone — Esquive pour fuir le centre !',
     anneauDAmbreCollezVousAu: 'Anneau d’Ambre — collez-vous au boss !',
-    tourbillonDeSableDispersionPourFuir: 'Tourbillon de Sable — Dispersion pour fuir le centre !',
+    tourbillonDeSableEsquivePourFuir: 'Tourbillon de Sable — Esquive pour fuir le centre !',
   },
   catalog: {
     ELEMENT_META: {
@@ -991,7 +991,7 @@ export const FR = {
       },
       q_dodge_2: {
         title: 'Réflexes de Cube',
-        description: 'Réussissez 2 Esquives Parfaites avec Dispersion pendant un télégraphe.',
+        description: 'Réussissez 2 Esquives Parfaites pendant un télégraphe.',
         reward: {
           label: '1× Pierre Partage · 3× Galet Fossile',
         },

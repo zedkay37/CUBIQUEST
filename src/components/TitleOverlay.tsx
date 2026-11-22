@@ -50,7 +50,7 @@ export function TitleOverlay({
         </div>
 
         <p className="text-xs sm:text-sm font-medium text-[#FAF7F0] hud-text-stroke tracking-wide text-center">
-          {FR.ui.titleOverlay.t123SortsEspaceDispersion}
+          {FR.ui.titleOverlay.t123SortsEspaceEsquive}
         </p>
       </div>
     </div>

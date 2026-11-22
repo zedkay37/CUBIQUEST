@@ -18,7 +18,7 @@
  *    par un générateur à graine : le code du jeu n'est pas modifié et se comporte comme d'habitude
  *    dans le navigateur.
  *
- * Limite à garder en tête : « Auto Total » ne se sert jamais de Dispersion. Un joueur qui esquive
+ * Limite à garder en tête : « Auto Total » ne se sert jamais de l'Esquive. Un joueur qui esquive
  * fait mieux que ces chiffres.
  */
 import fs from 'node:fs';
@@ -106,7 +106,7 @@ export function toMarkdown(
   const control =
     profile === 'auto'
       ? 'contrôle « Auto Total » (aucune esquive)'
-      : 'profil « joueur actif » (mode Semi : sorts et ultime dès que prêts, Dispersion sur télégraphe)';
+      : 'profil « joueur actif » (mode Semi : sorts et ultime dès que prêts, Esquive sur télégraphe)';
   const lines = [
     `Simulation headless — ${runs} combats par niveau, graine ${seed}, ${control}${reactions ? '' : ', réactions élémentaires coupées'}.`,
     '',

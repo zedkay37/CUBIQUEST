@@ -176,7 +176,7 @@ export function OutcomeModal({
           ) : (
             <p className="mt-1 text-xs text-[#B8C2D1]">
               {outcome.bossHpPercentRemaining > 0 && outcome.bossHpPercentRemaining <= 35
-                ? FR.ui.outcomeModal.siPresDuButGardezDispersion
+                ? FR.ui.outcomeModal.siPresDuButGardezLEsquive
                 : FR.ui.outcomeModal.renforcezVosPierresDePouvoirOu}
             </p>
           )}

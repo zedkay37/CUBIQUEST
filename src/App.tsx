@@ -348,7 +348,7 @@ export default function App() {
             engineRef.current?.triggerAllySkill(2);
           } else if (e.code === 'Space') {
             e.preventDefault();
-            engineRef.current?.triggerScatter();
+            engineRef.current?.triggerDodge();
           } else if (e.code === 'KeyR' && !e.repeat) {
             engineRef.current?.triggerUltimate();
           }
@@ -719,7 +719,7 @@ export default function App() {
           hud={hudSnapshot}
           muted={muted}
           onCastSkill={(idx) => engineRef.current?.triggerAllySkill(idx)}
-          onScatter={() => engineRef.current?.triggerScatter()}
+          onDodge={() => engineRef.current?.triggerDodge()}
           onUltimate={() => engineRef.current?.triggerUltimate()}
           onToggleControlMode={handleToggleControlMode}
           onToggleMute={handleToggleMute}

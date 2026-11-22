@@ -49,7 +49,7 @@ export function updateBossIntro(self: VoxelEngine, dt: number): void {
     self.bossIntroActor = null;
     self.bossIntroInfo = null;
     self.bossDropY = 0;
-    self.bannerText = FR.engine.alerteBossPreparezDispersion;
+    self.bannerText = FR.engine.alerteBossPreparezLEsquive;
     self.bannerTimer = 2.2;
     emitHudSnapshot(self);
   }
@@ -355,7 +355,7 @@ export function castBossPattern(self: VoxelEngine, enemy: CombatActor, target: C
     }
   } else {
     // Aspiration puis détonation (kit Orage à l'origine) : l'escouade est tirée vers le boss.
-    // Réponse attendue : Dispersion (qui annule l'aspiration) pour sortir du cercle.
+    // Réponse attendue : Esquive (qui annule l'aspiration) pour sortir du cercle.
     const eyeTheme = kitDef.eye ?? DEFAULT_EYE_THEME;
     const eyeRad = STORM_KIT.eyeRadius[phase - 1];
     const windup = STORM_KIT.eyeWindup[phase - 1];

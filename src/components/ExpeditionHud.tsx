@@ -3,14 +3,14 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Pause, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { ELEMENT_META, STATUS_META } from '../game/catalog';
 import type { ControlMode, ExpeditionHudSnapshot } from '../game/types';
-import { ElementIcon, ScatterIcon, VoxelCreatureAvatar } from './Icons';
+import { ElementIcon, DodgeIcon, VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
 
 interface ExpeditionHudProps {
   hud: ExpeditionHudSnapshot;
   muted: boolean;
   onCastSkill: (index: number) => void;
-  onScatter: () => void;
+  onDodge: () => void;
   onUltimate: () => void;
   onToggleControlMode: () => void;
   onToggleMute: () => void;
@@ -27,16 +27,16 @@ export function ExpeditionHud({
   hud,
   muted,
   onCastSkill,
-  onScatter,
+  onDodge,
   onUltimate,
   onToggleControlMode,
   onToggleMute,
   onPause,
 }: ExpeditionHudProps) {
-  const scatterReady = hud.scatterCooldown <= 0.05;
-  const scatterRatio = Math.max(
+  const dodgeReady = hud.dodgeCooldown <= 0.05;
+  const dodgeRatio = Math.max(
     0,
-    Math.min(1, 1 - hud.scatterCooldown / Math.max(0.1, hud.scatterMaxCooldown)),
+    Math.min(1, 1 - hud.dodgeCooldown / Math.max(0.1, hud.dodgeMaxCooldown)),
   );
   const ultimateReady = hud.ultimateCharge >= 100;
   const ultimateRatio = Math.max(0, Math.min(1, hud.ultimateCharge / 100));
@@ -292,8 +292,8 @@ export function ExpeditionHud({
         )}
       </AnimatePresence>
 
-      {/* Bottom Perimeter Dock: 3 Squad Cards + Scatter + Ultimate */}
-      {/* Petits écrans : les 3 cartes occupent toute la largeur, Dispersion et Ultime passent dessous */}
+      {/* Bottom Perimeter Dock: 3 Squad Cards + Dodge + Ultimate */}
+      {/* Petits écrans : les 3 cartes occupent toute la largeur, Esquive et Ultime passent dessous */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-center gap-2 sm:gap-2.5 pointer-events-auto">
         <div className="grid grid-cols-3 gap-2 sm:gap-2.5 w-full sm:w-[min(600px,64vw)]">
           {hud.units.map((u, idx) => {
@@ -398,34 +398,34 @@ export function ExpeditionHud({
         </div>
 
         <div className="flex gap-2 sm:contents">
-        {/* Iconic Scatter Dodge Button */}
+        {/* Iconic Dodge Button */}
         <button
           type="button"
           tabIndex={-1}
-          disabled={!scatterReady}
+          disabled={!dodgeReady}
           onClick={(e) => {
             e.currentTarget.blur();
-            onScatter();
+            onDodge();
           }}
           className={`voxel-btn relative overflow-hidden cursor-pointer h-14 flex-1 flex-row gap-2 sm:h-[106px] sm:flex-none sm:w-[98px] sm:flex-col sm:gap-1 rounded-xl border-2 flex items-center justify-center shrink-0 ${
-            scatterReady
+            dodgeReady
               ? 'bg-[#E85D3F] hover:bg-[#F06D50] border-[#141925] text-[#FAF7F0]'
               : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
           }`}
-          aria-label={FR.ui.expeditionHud.dispersionDeLEscouade}
+          aria-label={FR.ui.expeditionHud.esquiveDeLEscouade}
         >
-          {!scatterReady && (
+          {!dodgeReady && (
             <div
               className="absolute inset-x-0 bottom-0 bg-[#E85D3F]/25 origin-bottom pointer-events-none"
-              style={{ height: `${scatterRatio * 100}%` }}
+              style={{ height: `${dodgeRatio * 100}%` }}
             />
           )}
-          <ScatterIcon size={24} />
+          <DodgeIcon size={24} />
           <span className="relative z-10 font-display font-bold text-xs leading-none">
-            {FR.ui.expeditionHud.dispersion}
+            {FR.ui.expeditionHud.esquive}
           </span>
           <span className="relative z-10 font-mono-num text-[10px] opacity-90">
-            {scatterReady ? FR.ui.expeditionHud.espace : `${hud.scatterCooldown.toFixed(1)}s`}
+            {dodgeReady ? FR.ui.expeditionHud.espace : `${hud.dodgeCooldown.toFixed(1)}s`}
           </span>
         </button>
 

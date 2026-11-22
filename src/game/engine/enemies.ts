@@ -37,7 +37,7 @@ export function updateEnemies(self: VoxelEngine, dt: number, simDt: number): voi
     if (enemy.pullTimer > 0) {
       enemy.pullTimer = Math.max(0, enemy.pullTimer - simDt);
       for (const ally of self.allies) {
-        if (ally.fainted || ally.scatterTimer > 0) continue;
+        if (ally.fainted || ally.dodgeTimer > 0) continue;
         const px = enemy.x - ally.x;
         const pz = enemy.z - ally.z;
         const pd = Math.hypot(px, pz);

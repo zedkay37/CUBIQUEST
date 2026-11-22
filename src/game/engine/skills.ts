@@ -1,5 +1,5 @@
 /**
- * Commandes de combat du joueur : sort d'un allié, Dispersion (esquive), ultime d'escouade.
+ * Commandes de combat du joueur : sort d'un allié, Esquive, ultime d'escouade.
  */
 import * as THREE from 'three';
 import { soundFx } from '../audio';
@@ -30,18 +30,18 @@ export function triggerAllySkill(self: VoxelEngine, slotIndex: number): boolean 
   return true;
 }
 
-export function triggerScatter(self: VoxelEngine): boolean {
+export function triggerDodge(self: VoxelEngine): boolean {
   if (
     self.playMode !== 'expedition' ||
     self.screenState !== 'playing' ||
     self.expeditionEnded ||
     self.bossIntroTimer > 0 ||
-    self.scatterCooldown > 0
+    self.dodgeCooldown > 0
   ) {
     return false;
   }
-  self.scatterCooldown = self.scatterMaxCooldown;
-  soundFx.playScatter();
+  self.dodgeCooldown = self.dodgeMaxCooldown;
+  soundFx.playDodge();
 
   // Perfect Dodge check: if any enemy hazard telegraph is active right now, reward the squad!
   const activeHazard = self.telegraphs.some((tg) => tg.isEnemyHazard);
@@ -88,9 +88,9 @@ export function triggerScatter(self: VoxelEngine): boolean {
       dx = rx;
       dz = rz;
     }
-    ally.scatterDirX = dx;
-    ally.scatterDirZ = dz;
-    ally.scatterTimer = 0.42;
+    ally.dodgeDirX = dx;
+    ally.dodgeDirZ = dz;
+    ally.dodgeTimer = 0.42;
     ally.invulnTimer = activeHazard ? 0.8 : 0.55;
     ally.squashY = 1.24;
     spawnParticleBurst(self, ally.x, 0.5, ally.z, activeHazard ? '#38BDF8' : '#FAF7F0', 10, 4.2);

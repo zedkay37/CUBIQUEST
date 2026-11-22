@@ -135,7 +135,7 @@ export const DEFAULT_STRIKE_THEME: StrikeTheme = {
   lightning: true,
 };
 export const DEFAULT_EYE_THEME: StrikeTheme = {
-  label: FR.balance.ilDuCycloneDispersionPourFuir,
+  label: FR.balance.ilDuCycloneEsquivePourFuir,
   color: '#FACC15',
   fx: 'electric',
   status: 'shocked',
@@ -170,7 +170,7 @@ export const BOSS_KITS: Record<BossKit, BossKitDef> = {
       sound: 'impact',
     },
     eye: {
-      label: FR.balance.tourbillonDeSableDispersionPourFuir,
+      label: FR.balance.tourbillonDeSableEsquivePourFuir,
       color: '#B91C1C',
       fx: 'rock',
       status: 'sunder',

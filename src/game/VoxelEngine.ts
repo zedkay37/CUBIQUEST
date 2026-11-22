@@ -18,7 +18,7 @@ import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
 import { getDebugStats, type EngineDebugStats } from './engine/debug';
 import { emitHudSnapshot } from './engine/hud';
 import { advance, detectSoftwareGl, scheduleNextFrame } from './engine/loop';
-import { triggerAllySkill, triggerScatter, triggerUltimate } from './engine/skills';
+import { triggerAllySkill, triggerDodge, triggerUltimate } from './engine/skills';
 import type {
   ActiveProjectile,
   CampWanderer,
@@ -132,8 +132,8 @@ export class VoxelEngine {
   waveIndex = 0;
   expeditionElapsed = 0;
   damageDealt = 0;
-  scatterCooldown = 0;
-  readonly scatterMaxCooldown = 5.0;
+  dodgeCooldown = 0;
+  readonly dodgeMaxCooldown = 5.0;
   ultimateCharge = 0;
   comboCount = 0;
   comboTimer = 0;
@@ -390,8 +390,8 @@ export class VoxelEngine {
     return triggerAllySkill(this, slotIndex);
   }
 
-  public triggerScatter(): boolean {
-    return triggerScatter(this);
+  public triggerDodge(): boolean {
+    return triggerDodge(this);
   }
 
   public triggerUltimate(): boolean {

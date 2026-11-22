@@ -363,8 +363,8 @@ export interface ExpeditionHudSnapshot {
   waveIndex: number; // 0-based
   totalWaves: number;
   elapsedSec: number;
-  scatterCooldown: number;
-  scatterMaxCooldown: number;
+  dodgeCooldown: number;
+  dodgeMaxCooldown: number;
   ultimateCharge: number; // 0..100
   comboCount: number;
   comboTimer: number;

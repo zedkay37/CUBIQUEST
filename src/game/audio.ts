@@ -237,7 +237,7 @@ class ToyboxAudio {
     this.playTone(f2 * 0.75, f2 * 1.15, 0.14, 'triangle', 0.07, 0.06);
   }
 
-  public playScatter(): void {
+  public playDodge(): void {
     this.playTone(380, 920, 0.14, 'triangle', 0.12);
     this.playTone(520, 1180, 0.12, 'sine', 0.08, 0.05);
   }

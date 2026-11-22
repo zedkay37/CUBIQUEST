@@ -89,7 +89,7 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | `allies.ts` | Alliés : déplacement, attaque de base, sort automatique. |
 | `enemies.ts` | IA des ennemis : poursuiveur, tireur, chargeur, boss (déplacement, jetons d'attaque). |
 | `boss.ts` | Entrée en scène du boss et attaques télégraphiées (patterns 0 à 5, pilotés par `BOSS_KITS`). |
-| `skills.ts` | Commandes du joueur : sort d'un allié, Dispersion, ultime. |
+| `skills.ts` | Commandes du joueur : sort d'un allié, Esquive, ultime. |
 | `damage.ts` | Résolution d'un coup : faiblesses, statuts, réactions, boucliers, K.O., phases du boss. |
 | `actors.ts` | État commun des acteurs, pose animée des modèles, recherche de cible, disparition. |
 | `fx.ts` | Particules, projectiles, ondes de choc, télégraphes au sol, confettis. |
@@ -135,7 +135,7 @@ npm run sim                                    # tous les niveaux x 10 combats, 
 npm run sim -- --brief --runs 40 --stages tundra-3,stormpeak-3
 npm run sim -- --stages tundra-3 --set tundra-3=9/0.28/3.2   # essai SANS toucher balance.ts (PV ennemis / attaque / PV boss)
 npm run sim -- --seed 2 --out docs/sim/mon-tableau.md
-npm run sim -- --profile active                # profil « joueur actif » : sorts et ultime dès que prêts, Dispersion sur télégraphe
+npm run sim -- --profile active                # profil « joueur actif » : sorts et ultime dès que prêts, Esquive sur télégraphe
 npm run sim -- --reactions 0                   # réactions élémentaires coupées (option d'outil)
 ```
 
@@ -144,7 +144,7 @@ npm run sim -- --reactions 0                   # réactions élémentaires coup�
 - Cibles pour un nouveau niveau : 50 à 85 % de victoires en « auto » ; chaque phase de boss assez longue pour qu'il y lance au moins une attaque télégraphiée (colonne « ≥ 1 attaque » à 100 %).
 - Les 12 niveaux historiques (Prairie -> Sanctuaire) ne se rééquilibrent pas : un test vérifie leur signature (puissance, XP, Pierres, boss, niveaux et IA des vagues). Changer l'ESPÈCE d'un ennemi y reste possible, mais remesurer : sur le tout premier niveau, un seul échange faisait passer l'Auto de 20 % à 100 %.
 - Kits de boss : `BOSS_KITS` (balance.ts) décrit la rotation des 6 attaques existantes et leur habillage. Un nouveau kit se compose là, sans toucher au moteur.
-- « Auto Total » n'utilise jamais Dispersion : un joueur qui esquive fait mieux que le tableau. Le profil « joueur actif » est un script simple, pas un vrai joueur.
+- « Auto Total » n'utilise jamais l'Esquive : un joueur qui esquive fait mieux que le tableau. Le profil « joueur actif » est un script simple, pas un vrai joueur.
 
 ## Pièges connus
 
