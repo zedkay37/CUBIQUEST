@@ -23,7 +23,7 @@ import {
   updateTelegraphs,
 } from './fx';
 import { emitHudSnapshot } from './hud';
-import { triggerUltimate } from './skills';
+import { triggerUltimate, updatePendingUltimateHits } from './skills';
 import type { CombatTelemetry, ExpeditionResult } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
 import { FR } from '../../i18n/fr';
@@ -59,6 +59,7 @@ export function startExpedition(
   self.lastSlowMoAt = -10;
   self.cubesPlaced = 0;
   self.ultimateLockTimer = 0;
+  self.pendingUltHits = null;
   self.burstsTriggered = 0;
   self.weakBurstsTriggered = 0;
   self.triosTriggered = 0;
@@ -339,6 +340,7 @@ export function updateExpedition(self: VoxelEngine, dt: number, simDt: number): 
     triggerUltimate(self);
   }
 
+  updatePendingUltimateHits(self, simDt);
   updateAllies(self, dt, simDt);
   updateEnemies(self, dt, simDt);
 

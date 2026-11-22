@@ -299,7 +299,10 @@ test('outils : l’option cubes=false coupe les cubes, le jeu normal les garde',
 
 /** Un combat mené jusqu'à l'instant où le dernier ennemi tombe (bannière « VICTOIRE », résultat pas encore envoyé). */
 function runToVictoryBanner(h: Harness, secured: unknown[]): void {
-  h.start('volcano-1');
+  // escouade surpuissante : le test porte sur la victoire, pas sur l'équilibrage
+  const stage = STAGE_BY_ID['volcano-1'];
+  h.engine.setScreenState('playing');
+  h.engine.startExpedition(stage, ['ignisaur', 'abyssocube', 'bourgeoliath'].map((id, i) => createOwnedCreature(id, 50, 3000, `fort_${i}`)), [], 'auto');
   h.run(240, () => h.engine.expeditionEnded && h.engine.pendingVictory);
   assert.equal(h.engine.pendingVictory, true, 'le combat de référence doit être gagné');
   assert.equal(h.results.length, 0, 'la fête de victoire n’est pas finie : l’écran de fin n’est pas encore demandé');
@@ -408,6 +411,37 @@ test('Cubes: un sort de zone ne déclenche qu’un Éclat à effet et qu’un Tr
     const trioCast = newCast();
     for (const e of enemies) applyDamageToActor(h.engine, e, 10, caster, true, false, '#fff', 'electric', true, trioCast);
     assert.equal(h.engine.triosTriggered, 1);
+    h.engine.dispose();
+  });
+});
+
+test('Déchaînement: l’effet suit le meneur, plus de soin automatique, pas de charge pendant 2 s', () => {
+  withSeededRandom(6, () => {
+    const h = makeHarness();
+    h.start('tundra-1'); // meneur : Ignisaur (Feu)
+    h.engine.controlMode = 'semi';
+    h.run(3);
+    const leader = h.engine.allies[0];
+    assert.equal(leader.rig.species.element, 'fire');
+    const mate = h.engine.allies[1];
+    mate.hp = Math.round(mate.maxHp * 0.5);
+    const hpBefore = mate.hp;
+    h.engine.ultimateCharge = 100;
+    assert.equal(h.engine.triggerUltimate(), true);
+    assert.equal(mate.hp, hpBefore, 'meneur Feu : aucun soin');
+    assert.equal(h.engine.ultimateLockTimer, 2);
+    // pendant le verrou, aucun geste ne recharge
+    h.run(1.5);
+    assert.equal(h.engine.ultimateCharge, 0);
+    // meneur Psy : les trois sorts sont prêts
+    for (const a of h.engine.allies) a.skillCooldown = 4;
+    const psy = h.engine.allies[0];
+    const realElement = psy.rig.species.element;
+    (psy.rig.species as { element: string }).element = 'psychic';
+    h.engine.ultimateCharge = 100;
+    h.engine.triggerUltimate();
+    (psy.rig.species as { element: string }).element = realElement;
+    for (const a of h.engine.allies) if (!a.fainted) assert.equal(a.skillCooldown, 0);
     h.engine.dispose();
   });
 });

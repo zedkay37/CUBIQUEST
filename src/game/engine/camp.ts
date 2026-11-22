@@ -65,6 +65,7 @@ export function loadCampScene(
   self.resultSent = false;
   self.pendingVictory = false;
   self.victorySecured = false;
+  self.pendingUltHits = null;
 
   const biome = BIOMES.meadow;
   self.scene.background = new THREE.Color(biome.skyHex);

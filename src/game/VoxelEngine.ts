@@ -14,6 +14,7 @@ import { clearGroup, loadCampScene, setPotVisual } from './engine/camp';
 import { _color, _dummy, BOLT_POOL_SIZE, PARTICLE_POOL_SIZE, WEATHER_COUNT } from './engine/constants';
 import { playEvolutionSequence } from './engine/evolution';
 import { createCubeMeshes } from './engine/cubeFx';
+import type { CastContext } from './engine/cubes';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
 import { getDebugStats, type EngineDebugStats } from './engine/debug';
@@ -148,6 +149,8 @@ export class VoxelEngine {
   cubesPlaced = 0;
   /** Pas de charge de Déchaînement tant qu'il dure (après un Déchaînement). */
   ultimateLockTimer = 0;
+  /** Déchaînement Eau : coups restants sur la cible, espacés (engine/skills.ts). */
+  pendingUltHits: { target: CombatActor; caster: CombatActor; damage: number; remaining: number; timer: number; cast: CastContext } | null = null;
   burstsTriggered = 0;
   weakBurstsTriggered = 0;
   triosTriggered = 0;

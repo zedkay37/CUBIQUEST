@@ -57,6 +57,10 @@ export function TeamDrawer({
   const stats = computeCreatureStats(creature, save.powerStones);
   const move = MOVES[creature.moveId] ?? MOVES.ember_burst;
   const squadPower = computeSquadPower(save);
+  // Le meneur (premier de l'escouade) décide de l'effet du Déchaînement
+  const leaderUid = save.squadIds[0];
+  const leaderCreature = save.roster.find((c) => c.uid === leaderUid);
+  const leaderElement = leaderCreature ? SPECIES[leaderCreature.speciesId]?.element : undefined;
   const inSquad = save.squadIds.includes(creature.uid);
   const evolvable = canEvolve(creature);
   const nextEvoSpecies = species.evolvesTo ? SPECIES[species.evolvesTo] : null;
@@ -88,6 +92,11 @@ export function TeamDrawer({
               </strong>{' '}
               · {save.squadIds.length}{FR.ui.teamDrawer.t3Actifs}{save.roster.length}{FR.ui.teamDrawer.compagnonsAuCamp}
             </p>
+            {leaderElement && (
+              <p className="text-xs text-[#B8C2D1] mt-0.5">
+                {FR.ui.teamDrawer.dechainementDuMeneur(FR.ui.ultimateWords[leaderElement])} {FR.ui.ultimateEffects[leaderElement]}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -137,7 +146,9 @@ export function TeamDrawer({
                       <div className="flex items-center justify-between text-[11px] mt-0.5">
                         <span className="font-mono-num text-[#F4B942]">{st.power}</span>
                         {isActive && (
-                          <span className="text-[10px] font-bold text-[#2FB97A]">{FR.ui.teamDrawer.escouade}</span>
+                          <span className="text-[10px] font-bold text-[#2FB97A]">
+                            {save.squadIds[0] === c.uid ? FR.ui.teamDrawer.meneur : FR.ui.teamDrawer.escouade}
+                          </span>
                         )}
                       </div>
                     </div>

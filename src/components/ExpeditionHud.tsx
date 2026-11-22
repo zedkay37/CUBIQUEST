@@ -446,9 +446,10 @@ export function ExpeditionHud({
           }}
           className={`voxel-btn relative overflow-hidden cursor-pointer h-14 flex-1 flex-row gap-2 sm:h-[106px] sm:flex-none sm:w-[98px] sm:flex-col sm:gap-1 rounded-xl border-2 flex items-center justify-center shrink-0 ${
             ultimateReady
-              ? 'bg-[#F4B942] hover:bg-[#F7C964] border-[#141925] text-[#0F172A]'
+              ? 'hover:brightness-110 border-[#141925] text-[#0F172A]'
               : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
           }`}
+          style={ultimateReady ? { backgroundColor: hud.leaderElement ? ELEMENT_META[hud.leaderElement].color : '#F4B942' } : undefined}
           aria-label={FR.ui.expeditionHud.declencherLUltimeDEscouade}
         >
           {!ultimateReady && (
@@ -457,9 +458,15 @@ export function ExpeditionHud({
               style={{ height: `${ultimateRatio * 100}%` }}
             />
           )}
-          <Sparkles className="relative z-10 w-6 h-6" />
+          {hud.leaderElement ? (
+            <span className="relative z-10">
+              <ElementIcon element={hud.leaderElement} size={24} />
+            </span>
+          ) : (
+            <Sparkles className="relative z-10 w-6 h-6" />
+          )}
           <span className="relative z-10 font-display font-bold text-xs leading-none">
-            {FR.ui.expeditionHud.ultime}
+            {hud.leaderElement ? FR.ui.ultimateWords[hud.leaderElement] : FR.ui.expeditionHud.ultime}
           </span>
           <span className="relative z-10 font-mono-num text-[10px] font-bold">
             {ultimateReady ? FR.ui.expeditionHud.toucheR : `${hud.ultimateCharge}%`}

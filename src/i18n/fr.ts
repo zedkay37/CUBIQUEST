@@ -29,6 +29,24 @@ export const GAME_FULL_TITLE = `${GAME_TITLE} : L’${WORLD_NAME_BARE}`;
 
 export const FR = {
   ui: {
+    /** Mot du Déchaînement selon l'élément du meneur (bouton, écran d'équipe). */
+    ultimateWords: {
+      fire: 'Explosion',
+      water: 'Triple coup',
+      grass: 'Soin',
+      electric: 'Étourdissement',
+      rock: 'Bouclier',
+      psychic: 'Recharges',
+    },
+    /** Effet du Déchaînement selon le meneur (écran d'équipe). */
+    ultimateEffects: {
+      fire: 'Dégâts renforcés sur tous les ennemis.',
+      water: 'Trois coups sur l’ennemi le plus solide.',
+      grass: 'Dégâts sur tous, et l’escouade récupère 30 % de ses PV.',
+      electric: 'Dégâts sur tous, et ils sont étourdis 2 s (1 s pour un boss).',
+      rock: 'Dégâts sur tous, et bouclier de 35 % des PV pour chaque allié.',
+      psychic: 'Dégâts sur tous, et les trois sorts sont prêts.',
+    },
     campHud: {
       platPret: 'Plat prêt !',
       cuisson: (a: string | number) => `Cuisson (${a})`,
@@ -273,6 +291,8 @@ export const FR = {
       compagnons: 'Compagnons (',
       n: 'N.',
       escouade: 'Escouade',
+      meneur: 'Meneur',
+      dechainementDuMeneur: (a: string | number) => `Déchaînement du meneur : ${a}.`,
       niv: 'Niv. ',
       xp: ' · XP',
       lEscouadeCompteDeja3Creatures: `L’escouade compte déjà 3 ${CREATURE_NOUN.plural} : retirez-en un d’abord.`,
@@ -330,6 +350,7 @@ export const FR = {
     victoireExpeditionReussie: 'VICTOIRE ! Expédition réussie !',
     esquiveParfaite: 'ESQUIVE PARFAITE !',
     dechainement: 'DÉCHAÎNEMENT !',
+    dechainementDe: (a: string | number) => `DÉCHAÎNEMENT · ${a}`,
     tropTot: 'Trop tôt !',
     eclatNomme: (a: string | number) => `ÉCLAT · ${a}`,
     trio: 'TRIO !',

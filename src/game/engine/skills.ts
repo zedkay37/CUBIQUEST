@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { soundFx } from '../audio';
 import { MOVES } from '../catalog';
-import { ULTIMATE_CHARGE } from '../balance';
+import { ULTIMATE_CHARGE, ULTIMATE_KIT } from '../balance';
 import { calculateDamage, computeUltimateCharge, getMoveModifiers } from '../rules';
 import { findNearestLiving } from './actors';
 import { applyCubeRule, gainUltimateCharge, isTargetedMove, newCast, pickTargetFor, SUPPORT_RANGE } from './cubes';
@@ -120,6 +120,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
   if (livingAllies.length === 0) return false;
 
   self.ultimateCharge = 0;
+  self.ultimateLockTimer = ULTIMATE_CHARGE.lockAfterUltimate;
   self.ultimatesUsed += 1;
   soundFx.playUltimate();
   self.hitstopTimer = 0.085;
@@ -127,16 +128,26 @@ export function triggerUltimate(self: VoxelEngine): boolean {
   self.bannerText = FR.engine.dechainement;
   self.bannerTimer = 1.8;
 
+  // Le meneur (premier compagnon vivant, dans l'ordre de l'escouade) décide de l'effet
+  const leader = livingAllies[0];
+  const element = leader.rig.species.element;
   let combinedAtk = 0;
   for (const ally of livingAllies) {
     combinedAtk += ally.atk;
-    ally.invulnTimer = Math.max(ally.invulnTimer, 0.9);
+    ally.invulnTimer = Math.max(ally.invulnTimer, ULTIMATE_KIT.invulnSec);
     ally.squashY = 1.38;
-    const heal = Math.round(ally.maxHp * 0.22);
-    ally.hp = Math.min(ally.maxHp, ally.hp + heal);
     spawnParticleBurst(self, ally.x, 1.0, ally.z, ally.rig.species.palette.accent, 18, 6.2);
-    self.floatingText.spawn(ally.x, 2.1, ally.z, FR.engine.pv(heal), '#4ADE80', 1.0, 0.9);
     spawnShockwaveRing(self, ally.x, ally.z, 5.5, ally.rig.species.palette.accent);
+    if (element === 'grass') {
+      const heal = Math.round(ally.maxHp * ULTIMATE_KIT.grassHealRatio);
+      ally.hp = Math.min(ally.maxHp, ally.hp + heal);
+      self.floatingText.spawn(ally.x, 2.1, ally.z, FR.engine.pv(heal), '#4ADE80', 1.0, 0.9);
+    } else if (element === 'rock') {
+      ally.shieldHp = Math.max(ally.shieldHp, Math.round(ally.maxHp * ULTIMATE_KIT.rockShieldRatio));
+      self.floatingText.spawn(ally.x, 2.1, ally.z, FR.engine.boucl(ally.shieldHp), '#FDE047', 1.0, 0.9);
+    } else if (element === 'psychic') {
+      ally.skillCooldown = 0;
+    }
   }
 
   const livingEnemies = self.enemies.filter((e) => !e.fainted && !e.removed);
@@ -151,29 +162,44 @@ export function triggerUltimate(self: VoxelEngine): boolean {
     cz /= livingEnemies.length;
     spawnShockwaveRing(self, cx, cz, 8.5, '#F4B942');
     spawnParticleBurst(self, cx, 1.2, cz, '#FFE066', 36, 7.4);
-    self.floatingText.spawn(cx, 2.9, cz, FR.engine.dechainement, '#F4B942', 1.4, 1.15);
+    self.floatingText.spawn(cx, 2.9, cz, FR.engine.dechainementDe(FR.ui.ultimateWords[element]), '#F4B942', 1.4, 1.15);
 
-    const leadAlly = livingAllies[0];
-    const baseUltDmg = Math.round(combinedAtk * 1.35);
+    const baseUltDmg = Math.round(combinedAtk * ULTIMATE_KIT.baseMult);
+    // Un seul lancer : le Déchaînement compte comme un sort de l'élément du meneur
     const cast = newCast();
-    for (const enemy of livingEnemies) {
-      applyDamageToActor(
-        self,
-        enemy,
-        baseUltDmg,
-        leadAlly,
-        true,
-        true,
-        '#F4B942',
-        leadAlly.rig.species.element,
-        true,
-        cast,
-      );
+    if (element === 'water') {
+      // Triple coup sur l'ennemi le plus solide, coups espacés
+      let target = livingEnemies[0];
+      for (const e of livingEnemies) if (e.hp > target.hp) target = e;
+      applyDamageToActor(self, target, baseUltDmg, leader, true, true, '#F4B942', element, true, cast);
+      self.pendingUltHits = { target, caster: leader, damage: baseUltDmg, remaining: ULTIMATE_KIT.waterHits - 1, timer: ULTIMATE_KIT.waterHitGap, cast };
+    } else {
+      const dmg = element === 'fire' ? Math.round(baseUltDmg * ULTIMATE_KIT.fireMult) : baseUltDmg;
+      for (const enemy of livingEnemies) {
+        applyDamageToActor(self, enemy, dmg, leader, true, true, '#F4B942', element, true, cast);
+        if (element === 'electric' && !enemy.fainted) {
+          enemy.stunTimer = Math.max(enemy.stunTimer, enemy.isBoss ? ULTIMATE_KIT.electricStunBoss : ULTIMATE_KIT.electricStun);
+        }
+      }
     }
   }
 
   emitHudSnapshot(self);
   return true;
+}
+
+/** Déchaînement Eau : les coups suivants du triple coup. */
+export function updatePendingUltimateHits(self: VoxelEngine, simDt: number): void {
+  const p = self.pendingUltHits;
+  if (!p || simDt <= 0) return;
+  p.timer -= simDt;
+  if (p.timer > 0) return;
+  if (!p.target.fainted && !p.target.removed) {
+    applyDamageToActor(self, p.target, p.damage, p.caster, true, true, '#F4B942', p.caster.rig.species.element, true, p.cast);
+  }
+  p.remaining -= 1;
+  p.timer = ULTIMATE_KIT.waterHitGap;
+  if (p.remaining <= 0 || p.target.fainted) self.pendingUltHits = null;
 }
 
 export function executeAllySkill(self: VoxelEngine, unit: CombatActor): void {
