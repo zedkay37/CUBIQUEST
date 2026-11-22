@@ -54,6 +54,7 @@ import {
 } from './catalog';
 import { buildPreviewQuery, evolvedFormAtLevel, getReferenceConfig, listReferenceConfigs } from './previewConfigs';
 import { normalizeSettings } from './settings';
+import { STAGE_TUNING } from './balance';
 
 test('elemental type effectiveness returns accurate multipliers', () => {
   assert.equal(getTypeEffectiveness('water', 'fire'), 1.5);
@@ -715,6 +716,33 @@ test('Giga: écran de victoire — étoiles et annonce du biome débloqué', () 
 });
 
 test('Giga: équilibrage des nouveaux biomes — réglé par niveau, anciens niveaux intacts', () => {
+  // Les 12 niveaux historiques n'ont aucune entrée d'équilibrage ; tous les nouveaux en ont une
+  const historic = STAGES.slice(0, FRONTIER_STAGE_INDEX).map((s) => s.id);
+  assert.equal(historic.length, 12);
+  for (const id of historic) assert.equal(STAGE_TUNING[id], undefined, id);
+  for (const id of Object.keys(STAGE_TUNING)) assert.ok(STAGES.some((s) => s.id === id), id);
+  for (const stage of STAGES.slice(FRONTIER_STAGE_INDEX)) {
+    assert.deepEqual(
+      { enemyHpMult: stage.enemyHpMult, enemyAtkMult: stage.enemyAtkMult, bossHpMult: stage.bossHpMult },
+      STAGE_TUNING[stage.id],
+      stage.id,
+    );
+  }
+  // Signature d'équilibrage des 12 niveaux historiques : puissance conseillée, XP, Pierres, boss,
+  // niveaux et IA de chaque vague. Toute retouche de ces chiffres casse ce test (les ESPÈCES des
+  // vagues n'y figurent pas : varier les rencontres ne change pas la formule).
+  const signature = STAGES.slice(0, FRONTIER_STAGE_INDEX)
+    .map(
+      (s) =>
+        `${s.id}:${s.recommendedPower}:${s.xpReward}:${s.stonePowerRange.join('-')}:${s.bossSpeciesId}:` +
+        s.waves.map((w) => w.enemies.map((e) => `${e.level}${e.ai[0]}${e.isBoss ? '!' : ''}`).join('+')).join('/'),
+    )
+    .join('|');
+  assert.equal(
+    signature,
+    'meadow-1:700:95:25-55:feuilloc:2c+2c/3c+3k+3c/3c+5b!|meadow-2:1050:140:45-85:sparkube:5c+5c+5k/6k+6c+6c/6c+8b!|meadow-3:1450:210:70-115:bourgeoliath:8c+8k+8c/9c+9k+9c/9c+11b!|shore-1:1850:270:95-145:corallix:10c+10c+10k/11c+11c+11k/11c+13b!|shore-2:2250:340:120-180:raicube:13k+13c+13c/14c+14k+14c/14k+16b!|shore-3:2700:420:150-220:abyssocube:15c+15k+15c/16c+16k+16c/16c+18b!|volcano-1:3200:510:185-260:granitox:17k+17c+17c/18k+18c+18c/18c+20b!|volcano-2:3750:620:220-310:ignisaur:20k+20c+20c/21k+21c+21k/21k+23b!|volcano-3:4400:760:260-360:magmadrake:22c+22k+22c/23c+23k+23k/23c+25b!|sanctuary-1:5100:920:310-420:lunabloc:25k+25c+25c/26k+26c+26k/26k+28b!|sanctuary-2:5900:1120:360-490:ignisaur:28c+28k+28c/29c+29k+29k/29c+31b!|sanctuary-3:6800:1500:440-620:aetherion:31c+31k+31c/32c+32c+32k/32k+35b!',
+  );
+
   for (const stage of STAGES) {
     if (stage.index < FRONTIER_STAGE_INDEX) {
       // L'équilibrage historique ne bouge pas

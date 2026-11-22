@@ -1,3 +1,4 @@
+import { STAGE_TUNING } from './balance';
 import type {
   AchievementDef,
   BiomeDef,
@@ -1476,7 +1477,8 @@ export const BIOME_ORDER: BiomeId[] = [
   'stormpeak',
 ];
 
-export const STAGES: StageDef[] = [
+/** Définitions brutes des niveaux ; l'équilibrage des nouveaux niveaux est appliqué plus bas depuis balance.ts. */
+const RAW_STAGES: StageDef[] = [
   // === MEADOW ===
   {
     id: 'meadow-1',
@@ -1902,9 +1904,6 @@ export const STAGES: StageDef[] = [
     recommendedPower: 7600,
     bossSpeciesId: 'ramurgel',
     bossKit: 'frost',
-    enemyHpMult: 8,
-    enemyAtkMult: 0.6,
-    bossHpMult: 2.2,
     dropIngredients: ['snow_lichen', 'frost_crystal', 'pebble_gray'],
     stonePowerRange: [520, 700],
     xpReward: 1750,
@@ -1940,9 +1939,6 @@ export const STAGES: StageDef[] = [
     recommendedPower: 8400,
     bossSpeciesId: 'cryolithe',
     bossKit: 'frost',
-    enemyHpMult: 8.5,
-    enemyAtkMult: 0.5,
-    bossHpMult: 1.8,
     dropIngredients: ['snow_lichen', 'aurora_petal', 'pebble_gray'],
     stonePowerRange: [580, 780],
     xpReward: 2000,
@@ -1978,9 +1974,6 @@ export const STAGES: StageDef[] = [
     recommendedPower: 9300,
     bossSpeciesId: 'glaciatitan',
     bossKit: 'frost',
-    enemyHpMult: 9,
-    enemyAtkMult: 0.5,
-    bossHpMult: 1.6,
     dropIngredients: ['aurora_petal', 'snow_lichen', 'frost_crystal', 'mystic_shard'],
     stonePowerRange: [650, 880],
     xpReward: 2400,
@@ -2018,9 +2011,6 @@ export const STAGES: StageDef[] = [
     recommendedPower: 10200,
     bossSpeciesId: 'serpeclair',
     bossKit: 'storm',
-    enemyHpMult: 9,
-    enemyAtkMult: 0.48,
-    bossHpMult: 2,
     dropIngredients: ['storm_pepper', 'cloud_fluff', 'sun_pollen'],
     stonePowerRange: [720, 960],
     xpReward: 2800,
@@ -2056,9 +2046,6 @@ export const STAGES: StageDef[] = [
     recommendedPower: 11200,
     bossSpeciesId: 'cumulord',
     bossKit: 'storm',
-    enemyHpMult: 9.5,
-    enemyAtkMult: 0.45,
-    bossHpMult: 1.8,
     dropIngredients: ['cloud_fluff', 'storm_pepper', 'aurora_petal'],
     stonePowerRange: [800, 1060],
     xpReward: 3250,
@@ -2094,9 +2081,6 @@ export const STAGES: StageDef[] = [
     recommendedPower: 12400,
     bossSpeciesId: 'tempestrix',
     bossKit: 'storm',
-    enemyHpMult: 10,
-    enemyAtkMult: 0.45,
-    bossHpMult: 1.9,
     dropIngredients: ['storm_pepper', 'cloud_fluff', 'aurora_petal', 'mystic_shard'],
     stonePowerRange: [900, 1200],
     xpReward: 3900,
@@ -2124,6 +2108,14 @@ export const STAGES: StageDef[] = [
     ],
   },
 ];
+
+/**
+ * Niveaux du jeu. Les multiplicateurs d'équilibrage (PV / attaque des ennemis, PV du boss)
+ * viennent exclusivement de STAGE_TUNING (balance.ts) : un niveau sans entrée garde la formule d'origine.
+ */
+export const STAGES: StageDef[] = RAW_STAGES.map((stage) =>
+  STAGE_TUNING[stage.id] ? { ...stage, ...STAGE_TUNING[stage.id] } : stage,
+);
 
 /** Index du premier niveau des biomes de la Giga Update (Toundra Boréale). */
 export const FRONTIER_STAGE_INDEX = STAGES.findIndex((s) => s.biomeId === 'tundra');

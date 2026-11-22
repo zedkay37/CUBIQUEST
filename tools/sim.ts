@@ -5,6 +5,9 @@
  *   npm run sim -- --runs 30 --stages tundra-3,stormpeak-3
  *   npm run sim -- --seed 7 --out docs/sim/reference.md
  *   npm run sim -- --json                         # sortie brute
+ *   npm run sim -- --brief                        # une ligne par niveau (pratique pour régler)
+ *   npm run sim -- --stages tundra-3 --set tundra-3=14/0.4/1.8
+ *        # essaie des multiplicateurs (PV ennemis / attaque / PV boss) SANS toucher à balance.ts
  *
  * Fonctionnement :
  *  - le VRAI moteur (`VoxelEngine`) tourne en mode headless, pas à pas fixe de 1/60 s ;
@@ -213,7 +216,15 @@ export function toMarkdown(summaries: StageSummary[], runs: number, seed: number
   return lines.join('\n') + '\n';
 }
 
-function parseArgs(argv: string[]): { runs: number; seed: number; stages: string[] | null; out: string | null; json: boolean } {
+function parseArgs(argv: string[]): {
+  runs: number;
+  seed: number;
+  stages: string[] | null;
+  out: string | null;
+  json: boolean;
+  brief: boolean;
+  set: string | null;
+} {
   const get = (name: string): string | null => {
     const i = argv.indexOf(`--${name}`);
     return i >= 0 && i + 1 < argv.length ? argv[i + 1] : null;
@@ -224,7 +235,23 @@ function parseArgs(argv: string[]): { runs: number; seed: number; stages: string
     stages: get('stages')?.split(',').map((s) => s.trim()).filter(Boolean) ?? null,
     out: get('out'),
     json: argv.includes('--json'),
+    brief: argv.includes('--brief'),
+    set: get('set'),
   };
+}
+
+function briefLine(s: StageSummary): string {
+  const ph = s.phases
+    .filter((p): p is NonNullable<typeof p> => p !== null)
+    .map((p, i) =>
+      p.reached === 0
+        ? `P${i + 1} jamais`
+        : `P${i + 1} ${p.durationAvg.toFixed(1)}s(min ${p.durationMin.toFixed(1)}) ${p.castsAvg.toFixed(1)}att ${Math.round(p.withCast * 100)}%`,
+    )
+    .join(' | ');
+  return `${s.stageId.padEnd(12)} ${pct(s.winRate).padStart(5)}  total ${s.durationAvg.toFixed(1)}s  boss ${
+    s.bossFightAvg === null ? '-' : s.bossFightAvg.toFixed(1) + 's'
+  }  ${ph}${s.bossHpOnDefeatAvg === null ? '' : `  | défaites: boss ${Math.round(s.bossHpOnDefeatAvg)}%`}`;
 }
 
 const args = parseArgs(process.argv.slice(2));
@@ -232,6 +259,22 @@ const selected = args.stages ? STAGES.filter((s) => args.stages!.includes(s.id))
 if (selected.length === 0) {
   console.error(`Aucun niveau trouvé. Identifiants valides : ${STAGES.map((s) => s.id).join(', ')}`);
   process.exit(1);
+}
+
+// Essai de réglage : --set id=pvEnnemis/attaque/pvBoss[,id=...] (en mémoire, pour ce processus seulement)
+if (args.set) {
+  for (const part of args.set.split(',')) {
+    const [id, values] = part.split('=');
+    const stage = STAGES.find((s) => s.id === id);
+    const [hp, atk, boss] = (values ?? '').split('/').map(Number);
+    if (!stage || ![hp, atk, boss].every((n) => Number.isFinite(n) && n > 0)) {
+      console.error(`--set invalide : ${part} (attendu id=pvEnnemis/attaque/pvBoss)`);
+      process.exit(1);
+    }
+    stage.enemyHpMult = hp;
+    stage.enemyAtkMult = atk;
+    stage.bossHpMult = boss;
+  }
 }
 
 const started = Date.now();
@@ -243,8 +286,10 @@ for (const stage of selected) {
     fights.push(runFight(stage, args.seed * 100003 + stage.index * 1009 + run));
   }
   summaries.push(summarize(stage, fights));
-  if (!args.json) process.stderr.write(`  ${stage.id} : ${pct(summaries[summaries.length - 1].winRate)}\n`);
+  if (args.brief) console.log(briefLine(summaries[summaries.length - 1]));
+  else if (!args.json) process.stderr.write(`  ${stage.id} : ${pct(summaries[summaries.length - 1].winRate)}\n`);
 }
+if (args.brief) process.exit(0);
 
 if (args.json) {
   console.log(JSON.stringify(summaries, null, 2));

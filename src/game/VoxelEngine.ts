@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { soundFx } from './audio';
+import { FROST_KIT, STORM_KIT } from './balance';
 import { BIOMES, MOVES, RECIPE_BY_ID, SPECIES, STATUS_META } from './catalog';
 import {
   calculateDamage,
@@ -2585,8 +2586,8 @@ export class VoxelEngine {
           const pz = enemy.z - ally.z;
           const pd = Math.hypot(px, pz);
           if (pd > 1.8) {
-            ally.x += (px / pd) * 3.1 * simDt;
-            ally.z += (pz / pd) * 3.1 * simDt;
+            ally.x += (px / pd) * STORM_KIT.pullSpeed * simDt;
+            ally.z += (pz / pd) * STORM_KIT.pullSpeed * simDt;
           }
         }
       }
@@ -2821,9 +2822,9 @@ export class VoxelEngine {
           } else if (pattern === 3) {
             // Kit GIVRE — Anneau de Givre : couronne glacée autour du boss.
             // Zone sûre = au contact du boss. En phase 2+, un contrecoup central oblige à ressortir.
-            const inner = 2.7;
-            const outer = phase === 1 ? 7.0 : 8.2;
-            const windup = phase === 3 ? 0.8 : phase === 2 ? 0.9 : 1.05;
+            const inner = FROST_KIT.safeRadius;
+            const outer = FROST_KIT.ringRadius[phase - 1];
+            const windup = FROST_KIT.ringWindup[phase - 1];
             const bx = enemy.x;
             const bz = enemy.z;
             const hasFollowUp = phase >= 2;
@@ -2853,7 +2854,7 @@ export class VoxelEngine {
                   const d = Math.hypot(ally.x - bx, ally.z - bz);
                   if (d >= inner && d <= outer + 0.4) {
                     const exposed = ally.invulnTimer <= 0;
-                    this.applyDamageToActor(ally, Math.round(enemy.atk * 1.5), enemy, true, false, '#7DD3FC');
+                    this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.ringDamage), enemy, true, false, '#7DD3FC');
                     if (exposed && !ally.fainted) {
                       this.applyStatusToActor(ally, 'soaked', enemy.atk);
                       if (phase >= 2) this.applyStatusToActor(ally, 'rooted', enemy.atk);
@@ -2866,8 +2867,8 @@ export class VoxelEngine {
                   this.spawnEnemyTelegraph(
                     bx,
                     bz,
-                    inner + 0.9,
-                    0.78,
+                    inner + FROST_KIT.aftershockMargin,
+                    FROST_KIT.aftershockWindup,
                     false,
                     0,
                     0,
@@ -2877,18 +2878,21 @@ export class VoxelEngine {
                       enemy.skillCooldown = cooldownAfter;
                       if (enemy.fainted || enemy.removed) return;
                       soundFx.playFrostCrack();
-                      this.spawnShockwaveRing(bx, bz, inner + 0.9, '#E0F2FE');
+                      this.spawnShockwaveRing(bx, bz, inner + FROST_KIT.aftershockMargin, '#E0F2FE');
                       this.spawnElementBurst(bx, 0.6, bz, 'rock', 16, 1.3);
                       this.trauma = Math.min(1, this.trauma + 0.3);
                       for (const ally of this.allies) {
-                        if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= inner + 1.3) {
-                          this.applyDamageToActor(ally, Math.round(enemy.atk * 1.4), enemy, true, false, '#E0F2FE');
+                        if (
+                          !ally.fainted &&
+                          Math.hypot(ally.x - bx, ally.z - bz) <= inner + FROST_KIT.aftershockMargin + 0.4
+                        ) {
+                          this.applyDamageToActor(ally, Math.round(enemy.atk * FROST_KIT.aftershockDamage), enemy, true, false, '#E0F2FE');
                         }
                       }
                       if (phase === 3) {
                         // Phase 3 : éclats de glace en étoile
-                        for (let k = 0; k < 6; k++) {
-                          const shardAng = (k / 6) * Math.PI * 2 + 0.3;
+                        for (let k = 0; k < FROST_KIT.shardCount; k++) {
+                          const shardAng = (k / FROST_KIT.shardCount) * Math.PI * 2 + 0.3;
                           this.spawnProjectile({
                             x: bx,
                             y: 0.9,
@@ -2898,7 +2902,7 @@ export class VoxelEngine {
                             radius: 0.36,
                             life: 1.7,
                             fromAlly: false,
-                            damage: Math.round(enemy.atk * 0.85),
+                            damage: Math.round(enemy.atk * FROST_KIT.shardDamage),
                             elementColor: '#A5F3FC',
                             aoeRadius: 1.1,
                             isCrit: false,
@@ -2918,8 +2922,8 @@ export class VoxelEngine {
             // On l'évite en sortant de la ligne.
             const dirX = dx / dist;
             const dirZ = dz / dist;
-            const strikes = phase === 3 ? 9 : phase === 2 ? 7 : 5;
-            const strikeRad = 1.9;
+            const strikes = STORM_KIT.strikeCount[phase - 1];
+            const strikeRad = STORM_KIT.strikeRadius;
             const bx = enemy.x;
             const bz = enemy.z;
             // Les cercles se chevauchent : chaque allié n'encaisse qu'UN impact par rafale
@@ -2935,7 +2939,7 @@ export class VoxelEngine {
                 sx,
                 sz,
                 strikeRad,
-                0.72 + k * 0.14,
+                STORM_KIT.strikeFirstDelay + k * STORM_KIT.strikeInterval,
                 false,
                 0,
                 0,
@@ -2958,7 +2962,7 @@ export class VoxelEngine {
                     ) {
                       const exposed = ally.invulnTimer <= 0;
                       if (exposed) struck.add(ally.id);
-                      this.applyDamageToActor(ally, Math.round(enemy.atk * 1.25), enemy, true, false, '#FACC15');
+                      this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.strikeDamage), enemy, true, false, '#FACC15');
                       if (exposed && !ally.fainted) this.applyStatusToActor(ally, 'shocked', enemy.atk);
                     }
                   }
@@ -2969,8 +2973,8 @@ export class VoxelEngine {
           } else {
             // Kit ORAGE — Œil du Cyclone : le vent aspire l'escouade vers le boss, puis tout détone.
             // Réponse attendue : Dispersion (qui annule l'aspiration) pour sortir du cercle.
-            const eyeRad = phase === 3 ? 6.6 : 6.0;
-            const windup = phase === 3 ? 1.2 : 1.35;
+            const eyeRad = STORM_KIT.eyeRadius[phase - 1];
+            const windup = STORM_KIT.eyeWindup[phase - 1];
             const bx = enemy.x;
             const bz = enemy.z;
             enemy.pullTimer = windup;
@@ -2998,7 +3002,7 @@ export class VoxelEngine {
                 for (const ally of this.allies) {
                   if (!ally.fainted && Math.hypot(ally.x - bx, ally.z - bz) <= eyeRad + 0.4) {
                     const exposed = ally.invulnTimer <= 0;
-                    this.applyDamageToActor(ally, Math.round(enemy.atk * 1.4), enemy, true, false, '#FACC15');
+                    this.applyDamageToActor(ally, Math.round(enemy.atk * STORM_KIT.eyeDamage), enemy, true, false, '#FACC15');
                     if (exposed && !ally.fainted) this.applyStatusToActor(ally, 'shocked', enemy.atk);
                   }
                 }
