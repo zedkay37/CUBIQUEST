@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { SPECIES } from './catalog';
 import type { BiomeDef } from './types';
-import { buildBiomeEnvironment, buildVoxelCreature, getRigTopY } from './voxelModels';
+import { buildBiomeEnvironment, buildVoxelCreature } from './voxelModels';
 
 export interface GalleryShots {
   /** Pour chaque espèce : [vue trois-quarts face, vue de profil]. */
@@ -73,9 +73,11 @@ export function renderGalleryShots(speciesIds: string[], biomes: BiomeDef[]): Ga
     if (!species) continue;
     const rig = buildVoxelCreature(id);
     scene.add(rig.root);
-    const top = getRigTopY(species) * species.scale;
-    const centerY = top * 0.46;
-    const dist = Math.max(3.5, top * 2.25);
+    // cadrage sur la boîte englobante réelle : les silhouettes larges (crabe) ou longues ne sont pas rognées
+    const bounds = new THREE.Box3().setFromObject(rig.bodyPivot);
+    const size = bounds.getSize(new THREE.Vector3());
+    const centerY = (bounds.min.y + bounds.max.y) / 2;
+    const dist = (Math.max(size.x, size.y, size.z) / 2 / Math.tan((15 * Math.PI) / 180)) * 1.22;
     pedestal.scale.set(species.scale, 1, species.scale);
     const views: [number, number][] = [
       [0.62, 0.78], // trois-quarts face
