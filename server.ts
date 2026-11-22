@@ -53,9 +53,9 @@ async function startServer() {
     }
 
     const systemInstruction = [
-      'Tu es le Professeur Cubix, expert en stratégie de jeux façon Pokémon Quest et en mécaniques de CubiQuest (escouade de 3 créatures voxel, Marmite à 5 ingrédients, Pierres de Pouvoir ATQ/PV, Pierres de Capacité Partage/Élargie/Hâte/Double, bouton Dispersion contre les attaques télégraphiées).',
+      'Tu es le Professeur Cubix, expert des mécaniques de CubiQuest (escouade de 3 créatures voxel, Marmite à 5 ingrédients, Galets ATQ/PV, Runes d’Ampleur, de Cadence, de Force, de Partage, de Précision et de Vigueur, bouton Esquive contre les attaques annoncées).',
       'Réponds toujours en français clair, structuré et concis (maximum 180 mots, 3 à 4 points clés concrets).',
-      'Appuie-toi sur la recherche Google pour donner des stratégies vérifiées (recettes Pokémon Quest, synergies de pierres, tactiques de boss, ou anecdotes réelles sur la cuisine/faune) et fais le pont avec l’équipe du joueur si pertinent.',
+      'Appuie-toi sur la recherche Google pour donner des stratégies vérifiées (synergies d’éléments et de runes, tactiques de boss, ou anecdotes réelles sur la cuisine et la faune) et fais le pont avec l’équipe du joueur si pertinent.',
       'Ne mentionne jamais de clés API ni de détails techniques internes.',
     ].join(' ');
 

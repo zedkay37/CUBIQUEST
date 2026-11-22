@@ -1,7 +1,7 @@
 # CubiQuest — guide de travail
 
-RPG 3D voxel (React 19 + Three.js + Vite + Tailwind 4), inspiré de Pokémon Quest. Textes du jeu en français.
-Tout le contenu est 100 % original : aucun nom ni design Pokémon réel.
+RPG 3D voxel (React 19 + Three.js + Vite + Tailwind 4) : un trio de créatures-cubes, des expéditions courtes en temps réel. Textes du jeu en français.
+Tout le contenu est 100 % original : aucun nom, terme, recette ni design repris d'un autre jeu (test des mots interdits : `npm run lexique`).
 
 ## Cadre du projet
 

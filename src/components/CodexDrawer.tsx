@@ -12,9 +12,9 @@ interface CodexDrawerProps {
 }
 
 const PRESET_QUERIES = [
-  'Quelles sont les meilleures recettes dans Pokémon Quest pour bien démarrer ?',
-  'Comment fonctionne la stratégie des Pierres Partage et du Vampirisme en combat ?',
-  'Quels conseils pour esquiver les attaques de Boss avec Dispersion ?',
+  'Quelles recettes préparer à la Marmite pour bien démarrer ?',
+  'Comment tirer parti des Runes de Partage et de Vigueur en combat ?',
+  'Quels conseils pour éviter les attaques de Boss avec Esquive ?',
   'Quelles synergies de types élémentaires fonctionnent le mieux pour une équipe de 3 ?',
 ];
 
@@ -165,7 +165,7 @@ export function CodexDrawer({
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Ex. : Meilleures recettes Pokémon Quest, astuces Boss, synergies de pierres..."
+                  placeholder="Ex. : Recettes pour débuter, astuces Boss, synergies de runes..."
                   className="flex-1 rounded-xl bg-[#141A26] border-2 border-[#344056] focus:border-[#F4B942] focus:outline-none px-4 py-2.5 text-sm text-[#FAF7F0] placeholder:text-[#64748B]"
                 />
                 <button

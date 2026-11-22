@@ -78,7 +78,7 @@ Le ventre (`belly`) est toujours une version très claire du corps ou un crème 
 - Les stades suivants montent en gravité avec des suffixes sonores : `-ix` (Flambrix, Corallix, Tempestrix), `-ox` (Granitox), `-saur`, `-drake`, `-liath`, `-titan`, `-lord`, `-ion`.
 - Les lignées récentes partent d'un mot de nature : Givr**elin**, Ramur**gel**, Aurora**mure**, Crépit**il**, Serpé**clair**, Nimb**ulle**.
 - Accents français autorisés dans le nom affiché ; identifiant en minuscules sans accent (`bourgeon`, `serpeclair`).
-- Jamais de nom Pokémon existant ni de calque évident.
+- Jamais de nom repris d'un autre jeu ni de calque évident.
 
 ### 1.6 Textes de créature (`dexNote`)
 

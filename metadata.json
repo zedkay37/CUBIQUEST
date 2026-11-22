@@ -1,6 +1,6 @@
 {
   "name": "CubiQuest : L'Île aux Cubes",
-  "description": "Un jeu d'action-aventure RPG 3D en voxel inspiré de Pokémon Quest : expéditions en temps réel, marmite culinaire, grille de Pierres de Pouvoir, évolutions et Codex stratégique connecté à Google Search.",
+  "description": "Un jeu d'action-aventure en 3D voxel : menez un trio de créatures-cubes dans des expéditions courtes en temps réel, à travers 7 biomes et 21 niveaux.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

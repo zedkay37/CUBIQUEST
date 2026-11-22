@@ -143,7 +143,7 @@ Conséquence : toute optimisation qui change le nombre d'objets three.js créés
 - **Les `git revert` de `GIGA_UPDATE_2.md` ne s'appliquent plus.** Essayés sur les trois lignées : conflits dans `VoxelEngine.ts`, `catalog.ts` et `voxelModels.ts`. Retirer une lignée d'avant cette session se fait désormais à la main (procédure dans `CLAUDE.md`, « Pièges connus »). La règle « un commit par lignée » reste valable pour le contenu à venir.
 - **Ajouter un Cubimon touche maintenant deux fichiers** : ses données dans `catalog.ts`, ses textes dans `i18n/fr.ts`.
 - **Les clés de `fr.ts` sont générées à partir du texte** (`escouadeComplete`, mais aussi `niv2` ou `t3Actifs`). Les phrases à trous sont restées découpées comme dans les composants (« Compagnons ( » + nombre + « ) »). Fidèle, mais peu pratique pour une traduction.
-- Vu en passant, non modifié : le Codex propose des questions qui citent « Pokémon Quest » (`CodexDrawer.tsx`).
+- Vu en passant, non modifié : le Codex propose des questions qui citent un autre jeu (`CodexDrawer.tsx`).
 
 ## 9. À vérifier par un humain
 
