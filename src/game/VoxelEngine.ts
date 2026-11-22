@@ -278,6 +278,11 @@ export interface EngineOptions {
    * La simulation avance uniquement via `stepSimulation(dt)` (outil `npm run sim`).
    */
   headless?: boolean;
+  /**
+   * `false` coupe les réactions élémentaires. Réservé aux outils de mesure (`npm run sim`,
+   * `npm run golden`) : le jeu ne passe jamais cette option, les réactions y sont toujours actives.
+   */
+  reactions?: boolean;
 }
 
 export interface EngineCallbacks {
@@ -330,6 +335,7 @@ const MAX_ATTACK_TOKENS = 3;
 export class VoxelEngine {
   private container: HTMLElement | null;
   private headless: boolean;
+  private reactionsEnabled: boolean;
   private renderer: THREE.WebGLRenderer | null;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
@@ -456,6 +462,7 @@ export class VoxelEngine {
     this.container = container;
     this.callbacks = callbacks;
     this.headless = Boolean(options.headless) || !container;
+    this.reactionsEnabled = options.reactions !== false;
 
     let width = 1280;
     let height = 720;
@@ -1768,7 +1775,7 @@ export class VoxelEngine {
     // Check V0.2 Elemental Reactions when an ally skill hits a target carrying an elemental status
     if (attacker?.isAlly && isSkillHit && incomingElement && !target.isAlly) {
       const existing = this.getPrimaryStatus(target);
-      const reaction = resolveElementalReaction(existing, incomingElement);
+      const reaction = this.reactionsEnabled ? resolveElementalReaction(existing, incomingElement) : null;
       if (reaction && existing) {
         delete target.statuses[existing];
         dmg *= reaction.damageMult;

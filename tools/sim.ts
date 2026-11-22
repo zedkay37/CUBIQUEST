@@ -6,6 +6,8 @@
  *   npm run sim -- --seed 7 --out docs/sim/reference.md
  *   npm run sim -- --json                         # sortie brute
  *   npm run sim -- --brief                        # une ligne par niveau (pratique pour régler)
+ *   npm run sim -- --profile active               # profil « joueur actif » (voir tools/simFight.ts)
+ *   npm run sim -- --reactions 0                  # réactions élémentaires coupées (option d'outil)
  *   npm run sim -- --stages tundra-3 --set tundra-3=14/0.4/1.8
  *        # essaie des multiplicateurs (PV ennemis / attaque / PV boss) SANS toucher à balance.ts
  *
@@ -22,83 +24,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { installHeadlessDom, withSeededRandom } from './headlessDom';
-
-installHeadlessDom();
-const noop = (): void => {};
-const { STAGES, SPECIES } = await import('../src/game/catalog');
-const { getReferenceConfig } = await import('../src/game/previewConfigs');
-const { createOwnedCreature } = await import('../src/game/rules');
-const { VoxelEngine } = await import('../src/game/VoxelEngine');
-type StageDef = (typeof STAGES)[number];
-
-const STEP = 1 / 60;
-const MAX_FIGHT_SEC = 300;
-
-interface FightResult {
-  victory: boolean;
-  timedOut: boolean;
-  duration: number;
-  bossHpPct: number;
-  bossAppearedAt: number;
-  /** Durée de chaque phase atteinte (null si jamais atteinte). */
-  phaseDurations: (number | null)[];
-  castsByPhase: number[];
-  patternsByPhase: number[][];
-  bossMaxPhases: number;
-}
-
-function runFight(stage: StageDef, seed: number): FightResult {
-  const config = getReferenceConfig(stage);
-  return withSeededRandom(seed, () => {
-    let outcome: { victory: boolean; bossHpPercentRemaining: number } | null = null;
-    const engine = new VoxelEngine(
-      null,
-      {
-        onHudUpdate: noop,
-        onExpeditionComplete: (result) => {
-          outcome = result;
-        },
-      },
-      { headless: true },
-    );
-    const creatures = config.squad.map((id, i) =>
-      createOwnedCreature(id, config.level, config.bonus, `sim_${i}`),
-    );
-    engine.setScreenState('playing');
-    engine.startExpedition(stage, creatures, [], 'auto');
-
-    let t = 0;
-    while (!outcome && t < MAX_FIGHT_SEC) {
-      engine.stepSimulation(STEP);
-      t += STEP;
-    }
-    const tel = engine.getCombatTelemetry();
-    engine.dispose();
-
-    const final = outcome as { victory: boolean; bossHpPercentRemaining: number } | null;
-    const end = tel.elapsed;
-    const phaseDurations: (number | null)[] = [0, 1, 2].map((i) => {
-      const start = tel.phaseStartedAt[i];
-      if (start < 0 || i >= tel.bossMaxPhases) return null;
-      const nextStart = i < 2 ? tel.phaseStartedAt[i + 1] : -1;
-      const stop = nextStart >= 0 ? nextStart : tel.bossDefeatedAt >= 0 ? tel.bossDefeatedAt : end;
-      return Math.max(0, stop - start);
-    });
-    return {
-      victory: Boolean(final?.victory),
-      timedOut: !final,
-      duration: end,
-      bossHpPct: final ? (final.victory ? 0 : final.bossHpPercentRemaining) : 100,
-      bossAppearedAt: tel.bossAppearedAt,
-      phaseDurations,
-      castsByPhase: tel.castsByPhase,
-      patternsByPhase: tel.patternsByPhase,
-      bossMaxPhases: tel.bossMaxPhases,
-    };
-  });
-}
-
+import {
+  fightSeed,
+  getReferenceConfig,
+  runFight,
+  SPECIES,
+  STAGES,
+  type FightResult,
+  type SimProfile,
+  type StageDef,
+} from './simFight';
 export interface StageSummary {
   stageId: string;
   stageName: string;
@@ -161,9 +96,19 @@ function phaseCell(p: StageSummary['phases'][number]): string {
   return `${sec(p.durationAvg)} (min ${sec(p.durationMin)}) · ${p.castsAvg.toFixed(1)} att. · ${pct(p.withCast)}`;
 }
 
-export function toMarkdown(summaries: StageSummary[], runs: number, seed: number): string {
+export function toMarkdown(
+  summaries: StageSummary[],
+  runs: number,
+  seed: number,
+  profile: SimProfile = 'auto',
+  reactions = true,
+): string {
+  const control =
+    profile === 'auto'
+      ? 'contrôle « Auto Total » (aucune esquive)'
+      : 'profil « joueur actif » (mode Semi : sorts et ultime dès que prêts, Dispersion sur télégraphe)';
   const lines = [
-    `Simulation headless — ${runs} combats par niveau, graine ${seed}, contrôle « Auto Total » (aucune esquive).`,
+    `Simulation headless — ${runs} combats par niveau, graine ${seed}, ${control}${reactions ? '' : ', réactions élémentaires coupées'}.`,
     '',
     'Colonnes de phase : durée moyenne (durée minimale) · attaques télégraphiées lancées en moyenne · part des combats où le boss en a lancé au moins une dans cette phase.',
     '',
@@ -190,6 +135,8 @@ function parseArgs(argv: string[]): {
   json: boolean;
   brief: boolean;
   set: string | null;
+  profile: SimProfile;
+  reactions: boolean;
 } {
   const get = (name: string): string | null => {
     const i = argv.indexOf(`--${name}`);
@@ -203,6 +150,8 @@ function parseArgs(argv: string[]): {
     json: argv.includes('--json'),
     brief: argv.includes('--brief'),
     set: get('set'),
+    profile: get('profile') === 'active' ? 'active' : 'auto',
+    reactions: get('reactions') !== '0',
   };
 }
 
@@ -248,8 +197,9 @@ const summaries: StageSummary[] = [];
 for (const stage of selected) {
   const fights: FightResult[] = [];
   for (let run = 0; run < args.runs; run++) {
-    // graine propre à chaque combat : stable d'une exécution à l'autre, différente d'un niveau à l'autre
-    fights.push(runFight(stage, args.seed * 100003 + stage.index * 1009 + run));
+    fights.push(
+      runFight(stage, fightSeed(args.seed, stage, run), { profile: args.profile, reactions: args.reactions }),
+    );
   }
   summaries.push(summarize(stage, fights));
   if (args.brief) console.log(briefLine(summaries[summaries.length - 1]));
@@ -260,7 +210,7 @@ if (args.brief) process.exit(0);
 if (args.json) {
   console.log(JSON.stringify(summaries, null, 2));
 } else {
-  const md = toMarkdown(summaries, args.runs, args.seed);
+  const md = toMarkdown(summaries, args.runs, args.seed, args.profile, args.reactions);
   console.log(md);
   if (args.out) {
     fs.mkdirSync(path.dirname(args.out), { recursive: true });

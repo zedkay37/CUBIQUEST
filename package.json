@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit",
     "test": "tsx --test \"src/game/*.test.ts\"",
     "sim": "tsx tools/sim.ts",
-    "check": "tsc --noEmit && tsx --test \"src/game/*.test.ts\" && vite build"
+    "golden": "tsx tools/golden.ts",
+    "check": "tsc --noEmit && tsx --test \"src/game/*.test.ts\" && tsx tools/golden.ts && vite build"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",
