@@ -23,9 +23,9 @@ Tout ce qui vient du jeu (identifiants, noms, éléments, lignées, stades, enne
 | ignisaur | Ignisaur | feu | Pyrocube | final (rare ; boss volcano-2, sanctuary-2) | 18×21×23 | bipède massif, ailes repliées plaquées | plaques de lave sur le dos | 2 |
 | braizard | Braizard | feu | Braizard | 1 | 17×37×12 | quadrupède bas et fin (type « Coureur de Cendres ») | fente de lave dans la gueule | **1 (pilote)** |
 | cendrox | Cendrox | feu | Braizard | final (rare) | 17×37×13 | quadrupède prédateur (= **Calcinarque légendaire**, à confirmer) | fissures, cornes incandescentes, ligne dorsale | **1 (pilote)** |
-| aquabloc | Aquabloc | eau | Aquabloc | 1 (trio de départ « Marée ») | 17×19×14 | trapu à carapace | dôme de récif | **1 (pilote)** |
-| corallix | Corallix | eau | Aquabloc | 2 (boss shore-1) | 17×19×14 | trapu à carapace, pattes plus hautes | dôme → branches de corail | **1 (pilote)** |
-| abyssocube | Abyssocube | eau | Aquabloc | final (rare ; boss shore-3) | 17×19×14 | colosse à carapace | corail → veines lumineuses des abysses | **1 (pilote)** |
+| aquabloc | Aquabloc | eau | Aquabloc | 1 (trio de départ « Marée ») | 17×19×14 | « bœuf de récif » : quadrupède trapu à carapace en bandes, tête basse sous un bouclier de nacre | dôme de récif, bourgeon de corail, un joint lumineux | **1 (pilote)** |
+| corallix | Corallix | eau | Aquabloc | 2 (boss shore-1) | 17×19×14 | bœuf de récif, pattes plus hautes | branches de corail sur les épaules, joints et bord de carapace lumineux | **1 (pilote)** |
+| abyssocube | Abyssocube | eau | Aquabloc | final (rare ; boss shore-3) | 17×19×14 | colosse de récif, coudes sortis | flèches de corail en deux rangées, veines et gorge lumineuses des abysses | **1 (pilote)** |
 | crabloc | Crabloc | eau | Crabloc | 1 | 24×20×17 | large et bas, à pinces | pinces | 3 |
 | crabastion | Crabastion | eau | Crabloc | final (rare) | 27×24×17 | forteresse à pinces | pinces → tourelles de carapace | 3 |
 | bourgeon | Bourgéon | plante | Bourgéon | 1 (trio « Marée ») | 17×17×18 | quadrupède trapu | bourgeon sur le dos | 4 |

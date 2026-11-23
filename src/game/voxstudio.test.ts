@@ -34,3 +34,16 @@ test('vox:check (BESTIAIRE) : la référence passe ; un fichier abîmé est refu
   v149.writeInt32LE(149, 4);
   assert.ok(checkVox(v149).some((e) => e.includes('version')));
 });
+
+test('vox:build (BESTIAIRE) : les .vox du dépôt sont ceux que donnent les scripts (déterministes) et passent vox:check', async () => {
+  const { readdirSync } = await import('node:fs');
+  const ids = readdirSync('tools/vox-studio/species').filter((f) => f.endsWith('.ts') && !f.startsWith('_'));
+  assert.ok(ids.length >= 5);
+  for (const f of ids) {
+    const s = (await import(`../../tools/vox-studio/species/${f}`)) as { ID: string; PALETTE: Parameters<typeof writeVoxBytes>[1]; build: typeof build };
+    const bytes = writeVoxBytes(s.build(), s.PALETTE);
+    const disk = new Uint8Array(readFileSync(`src/assets/vox/${s.ID}.vox`));
+    assert.ok(bytes.length === disk.length && bytes.every((b, i) => b === disk[i]), `${s.ID} : src/assets/vox à régénérer (npm run vox:build)`);
+    assert.deepEqual(checkVox(Buffer.from(disk)), [], s.ID);
+  }
+});

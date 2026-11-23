@@ -7,6 +7,14 @@ import { TELEGRAPH_KIT } from '../balance';
 
 /** Distance au centre du cadre au-delà de laquelle une zone sort de l'écran (estimation pour le cadrage par défaut). */
 const CAMERA_FRAME_REACH = 11;
+/**
+ * BESTIAIRE (outil de comparaison, `?cam=proche`) : hauteur et recul de la caméra de combat. Le jeu garde 15,8 / 16,5 ;
+ * la caméra proche du sprint STYLES vaut 7,5 / 10. Le moteur headless ne l'appelle jamais : aucun effet sur le golden.
+ */
+let combatCam = { up: 15.8, back: 16.5 };
+export function setCombatCameraDistance(up: number, back: number): void {
+  combatCam = { up, back };
+}
 import { _vecA, _vecB, _vecC, EVO_X, EVO_Z } from './constants';
 import type { VoxelEngine } from '../VoxelEngine';
 import { resizePostFx } from './postfx';
@@ -92,7 +100,7 @@ export function updateCamera(self: VoxelEngine, dt: number): void {
       self.camBackoff += (wanted - self.camBackoff) * (1 - Math.exp(-3 * dt));
       // ART2 (R17) : sur un écran en hauteur (téléphone), la caméra recule pour garder toute la mêlée en vue
       const narrow = self.camera.aspect < 0.8 ? 1.35 : 1;
-      _vecA.set(focusX, 15.8 * self.camBackoff * narrow, focusZ + 16.5 * self.camBackoff * narrow);
+      _vecA.set(focusX, combatCam.up * self.camBackoff * narrow, focusZ + combatCam.back * self.camBackoff * narrow);
       _vecB.set(focusX, 0.7, focusZ);
       // Sprint Art : léger balancement d'accompagnement, et zoom bref (0,9 s) sur le Déchaînement
       _vecA.x += Math.sin(self.expeditionElapsed * 0.35) * 0.6;

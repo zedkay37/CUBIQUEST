@@ -6,6 +6,9 @@ import {setSculptDetail, setSculptModels} from './game/models/creatures';
 import {setArtDecor, setDecorDetail} from './game/models/meadowDecor';
 import {loadSettings} from './game/settings';
 import {setCreatureRim} from './game/models/voxelSculpt';
+import {setCombatCameraDistance} from './game/engine/camera';
+// BESTIAIRE : `?cam=proche` pour comparer avec la caméra plus proche du sprint STYLES (outil ; le jeu garde la sienne)
+if (new URLSearchParams(window.location.search).get('cam') === 'proche') setCombatCameraDistance(7.5, 10);
 import {parseVox, registerVoxModel} from './game/models/voxFile';
 
 // `?gallery=1` : galerie de revue des créatures et des biomes (outil de développement, le jeu n'est pas lancé).

@@ -27,7 +27,7 @@ async function load(file: string): Promise<Script> {
 }
 
 let failed = false;
-const species = existsSync(join(HERE, 'species')) ? readdirSync(join(HERE, 'species')).filter((f) => f.endsWith('.ts')) : [];
+const species = existsSync(join(HERE, 'species')) ? readdirSync(join(HERE, 'species')).filter((f) => f.endsWith('.ts') && !f.startsWith('_')) : [];
 if (!species.length) console.log('vox:build : aucune créature dans tools/vox-studio/species/ (rien à écrire).');
 mkdirSync('src/assets/vox', { recursive: true });
 for (const f of species) {
