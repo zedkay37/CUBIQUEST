@@ -53,7 +53,7 @@ const flambrix: SculptDef = {
     B([0, 0.58, 0], [0.38, 0.38, 0.35], 'primary'),
     B([0, 0.52, 0.24], [0.26, 0.26, 0.14], 'belly'),
     C([0.38, 0.74, 0.06], [0.52, 0.48, 0.16], 0.11, 'primary', 'body', true),
-    E([0.52, 0.44, 0.17], [0.1, 0.09, 0.1], 'secondary', 'body', true),
+    B([0.52, 0.44, 0.17], [0.085, 0.076, 0.085], 'secondary', 'body', true),
     // crête dorsale : trois pointes de braise
     K([0, 0.92, -0.28], [0.1, 0.22, 0.02], 'secondary'),
     K([0, 0.74, -0.38], [0.09, 0.2, 0.02], 'secondary'),
@@ -197,17 +197,17 @@ const cailloc: SculptDef = {
 const granitox: SculptDef = {
   ...LEGS,
   shapes: [
-    E([0, 0.62, 0], [0.5, 0.46, 0.44], 'primary'),
-    E([0, 0.56, 0.26], [0.3, 0.28, 0.18], 'belly'),
+    B([0, 0.62, 0], [0.425, 0.391, 0.374], 'primary'),
+    B([0, 0.56, 0.26], [0.255, 0.238, 0.153], 'belly'),
     // épaules de roc et fissures d'ambre
-    E([0.42, 0.88, -0.02], [0.2, 0.18, 0.2], 'secondary', 'body', true),
+    B([0.42, 0.88, -0.02], [0.17, 0.153, 0.17], 'secondary', 'body', true),
     B([0.16, 0.66, 0.42], [0.04, 0.16, 0.03], 'accent', 'body', true),
-    E([0, 0.86, -0.36], [0.24, 0.2, 0.12], 'secondary'),
-    E([0, 1.22, 0.1], [0.36, 0.26, 0.32], 'primary', 'head'),
+    B([0, 0.86, -0.36], [0.204, 0.17, 0.102], 'secondary'),
+    B([0, 1.22, 0.1], [0.33, 0.27, 0.3], 'primary', 'head'),
     K([0.2, 1.38, -0.02], [0.1, 0.26, 0.02], 'accent', 'crest', true),
     ...eyes(0.15, 1.24, 0.38),
     C([0.5, 0.7, 0.1], [0.64, 0.38, 0.18], 0.14, 'primary', 'body', true),
-    E([0.66, 0.32, 0.2], [0.14, 0.12, 0.14], 'secondary', 'body', true),
+    B([0.66, 0.32, 0.2], [0.119, 0.102, 0.119], 'secondary', 'body', true),
     B([0.24, 0.12, 0.04], [0.17, 0.12, 0.17], 'secondary', 'leg*', true),
   ],
 };
@@ -216,25 +216,28 @@ const magmadrake: SculptDef = {
   ...LEGS,
   extras: [{ group: 'tail', pivot: [0, 0.46, -0.4] }],
   shapes: [
-    E([0, 0.66, 0], [0.52, 0.46, 0.48], 'primary'),
-    E([0, 0.6, 0.28], [0.3, 0.28, 0.2], 'belly'),
+    B([0, 0.66, 0], [0.442, 0.391, 0.408], 'primary'),
+    B([0, 0.6, 0.28], [0.255, 0.238, 0.17], 'belly'),
     // veines de lave lumineuses
     B([0.2, 0.7, 0.4], [0.04, 0.2, 0.06], 'accent', 'body', true),
     B([0, 0.94, -0.36], [0.24, 0.05, 0.1], 'accent'),
-    E([0.42, 0.94, -0.06], [0.2, 0.16, 0.2], 'secondary', 'body', true),
-    E([0, 1.32, 0.16], [0.38, 0.32, 0.38], 'primary', 'head'),
-    E([0, 1.22, 0.46], [0.22, 0.12, 0.14], 'secondary', 'head'),
+    B([0.42, 0.94, -0.06], [0.17, 0.136, 0.17], 'secondary', 'body', true),
+    B([0, 1.32, 0.16], [0.34, 0.32, 0.34], 'primary', 'head'),
+    B([0, 1.22, 0.46], [0.187, 0.102, 0.119], 'secondary', 'head'),
     K([0.22, 1.5, -0.04], [0.1, 0.3, 0.02], 'secondary', 'crest', true),
     K([0.25, 1.72, -0.06], [0.06, 0.12, 0.01], 'accent', 'crest', true),
     ...eyes(0.17, 1.36, 0.46),
     C([0.5, 0.76, 0.1], [0.66, 0.42, 0.2], 0.14, 'primary', 'body', true),
     B([0.26, 0.12, 0.06], [0.17, 0.12, 0.18], 'secondary', 'leg*', true),
     C([0, 0.46, -0.4], [0, 0.56, -0.94], 0.13, 'primary', 'tail'),
-    E([0, 0.62, -1.02], [0.16, 0.16, 0.16], 'accent', 'tail'),
+    B([0, 0.62, -1.02], [0.136, 0.136, 0.136], 'accent', 'tail'),
   ],
 };
 
-/** Espèces refaites (les autres gardent leur ancien modèle jusqu'au second sprint). */
+/**
+ * Espèces refaites (les autres gardent leur ancien modèle jusqu'au second sprint).
+ * ART2 : les formes évoluées sont désormais faites de boîtes (plus de surface en escalier).
+ */
 export const SCULPT_DEFS: Record<string, SculptDef> = {
   pyrocube,
   flambrix,

@@ -78,7 +78,8 @@ export function renderGalleryShots(speciesIds: string[], biomes: BiomeDef[]): Ga
     const bounds = new THREE.Box3().setFromObject(rig.bodyPivot);
     const size = bounds.getSize(new THREE.Vector3());
     const centerY = (bounds.min.y + bounds.max.y) / 2;
-    const dist = (Math.max(size.x, size.y, size.z) / 2 / Math.tan((15 * Math.PI) / 180)) * 1.22;
+    // ART2 : la créature remplit au moins 70 % de la hauteur de la vignette (largeur bornée à 90 %)
+    const dist = Math.max(size.y / 0.8, Math.max(size.x, size.z) / 0.9) / 2 / Math.tan((15 * Math.PI) / 180);
     pedestal.scale.set(species.scale, 1, species.scale);
     const views: [number, number][] = [
       [0.62, 0.78], // trois-quarts face

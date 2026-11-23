@@ -92,7 +92,8 @@ function shoot(s: Studio, speciesId: string): string | null {
   const bounds = new THREE.Box3().setFromObject(framed);
   const size = bounds.getSize(new THREE.Vector3());
   const center = bounds.getCenter(new THREE.Vector3());
-  const dist = (Math.max(size.x, size.y, size.z) / 2 / Math.tan((14 * Math.PI) / 180)) * 1.12;
+  // ART2 : la créature remplit au moins 70 % de la hauteur du portrait (largeur bornée à 90 %)
+  const dist = Math.max(size.y / 0.8, Math.max(size.x, size.z) / 0.9) / 2 / Math.tan((14 * Math.PI) / 180);
   const dir = new THREE.Vector3(0.62, 0.3, 0.78).normalize();
   s.camera.position.copy(center).addScaledVector(dir, dist);
   s.camera.lookAt(center);

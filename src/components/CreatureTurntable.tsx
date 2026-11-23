@@ -71,7 +71,8 @@ export function CreatureTurntable({
     const bounds = new THREE.Box3().setFromObject(rig.bodyPivot);
     const center = bounds.getCenter(new THREE.Vector3());
     const s = bounds.getSize(new THREE.Vector3());
-    const dist = (Math.max(s.x, s.y, s.z) / 2 / Math.tan((14 * Math.PI) / 180)) * 1.15;
+    // ART2 : la créature remplit au moins 70 % de la hauteur du cadre (largeur bornée à 90 %)
+    const dist = Math.max(s.y / 0.8, Math.max(s.x, s.z) / 0.9) / 2 / Math.tan((14 * Math.PI) / 180);
     const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
     camera.position.set(center.x, center.y + dist * 0.28, center.z + dist);
     camera.lookAt(center);
