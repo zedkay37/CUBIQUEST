@@ -72,18 +72,18 @@ const SHAPES: Shape[] = [
   box([0, 1.42, 1.86], [0.3, 0.2, 0.26], 'primary', { group: 'head' }),
   wedge([1.95, 2.5], [1.22, 1.24], [1.52, 1.36], [0.27, 0.17], 'primary', { group: 'head' }),
   box([0, 1.56, 2.0], [0.26, 0.05, 0.1], 'secondary', { group: 'head' }), // arcade sourcilière, qui écrase le regard
-  box([0, 1.0, 2.1], [0.28, 0.11, 0.36], 'secondary', { group: 'head' }), // mâchoire inférieure
+  box([0, 1.0, 2.16], [0.29, 0.12, 0.4], 'secondary', { group: 'head' }), // mâchoire inférieure
   box([0, 1.15, 2.12], [0.21, 0.05, 0.3], 'accent', { group: 'head', glow: true }), // gueule de lave
   // crocs d'obsidienne : vers le bas depuis le museau, vers le haut depuis la mâchoire
   spike([0.16, 1.24, 2.38], [0.17, 1.02, 2.42], 0.07, 'belly', { group: 'head', mirror: true }),
   spike([0.08, 1.24, 2.2], [0.08, 1.06, 2.22], 0.055, 'belly', { group: 'head', mirror: true }),
-  spike([0.21, 1.08, 2.36], [0.22, 1.27, 2.4], 0.06, 'belly', { group: 'head', mirror: true }),
+  spike([0.22, 1.08, 2.44], [0.26, 1.4, 2.5], 0.08, 'belly', { group: 'head', mirror: true }),
   // yeux fendus, lumineux, sans reflet blanc
   box([0.2, 1.44, 2.13], [0.1, 0.055, 0.04], 'eye', { group: 'eye*', mirror: true, glow: true }),
   // cornes d'obsidienne pointées vers l'avant comme des lances ; la droite est ébréchée (plus courte, émoussée)
-  spike([0.23, 1.58, 1.78], [0.36, 1.8, 2.78], 0.12, 'belly', { group: 'head' }),
-  spike([-0.23, 1.58, 1.78], [-0.33, 1.74, 2.42], 0.12, 'belly', { group: 'head' }),
-  box([-0.33, 1.74, 2.4], [0.06, 0.05, 0.05], 'belly', { group: 'head' }),
+  spike([0.23, 1.58, 1.72], [0.4, 1.86, 2.95], 0.16, 'belly', { group: 'head' }),
+  spike([-0.23, 1.58, 1.72], [-0.35, 1.78, 2.5], 0.16, 'belly', { group: 'head' }),
+  box([-0.35, 1.78, 2.48], [0.08, 0.07, 0.06], 'belly', { group: 'head' }),
 
   // ---- crête de cristaux de magma, décroissante vers la queue (légèrement penchée vers l'arrière)
   spike([0, 2.12, 0.82], [0, 3.25, 0.58], 0.21, 'accent', { glow: true }),
@@ -94,6 +94,10 @@ const SHAPES: Shape[] = [
   spike([0, 1.22, -1.36], [0, 1.52, -1.52], 0.1, 'accent', { glow: true, group: 'tail' }),
   spike([0, 1.02, -1.86], [0, 1.26, -2.0], 0.09, 'accent', { glow: true, group: 'tail' }),
 
+  // ---- éperons d'obsidienne : épaules (vers le haut et le dehors), coudes (vers l'arrière) : des angles partout
+  spike([0.6, 1.95, 0.75], [0.92, 2.45, 0.55], 0.13, 'belly', { mirror: true }),
+  spike([0.82, 0.85, 0.62], [0.95, 0.95, 0.15], 0.1, 'belly', { mirror: true }),
+  spike([0.68, 0.95, -0.95], [0.82, 1.05, -1.35], 0.08, 'belly', { mirror: true }),
   // ---- pattes avant puissantes : épaule, avant-bras, pied, trois griffes noires
   box([0.62, 1.02, 0.82], [0.25, 0.42, 0.3], 'primary', { mirror: true }),
   box([0.64, 0.38, 0.92], [0.23, 0.32, 0.26], 'primary', { mirror: true }),

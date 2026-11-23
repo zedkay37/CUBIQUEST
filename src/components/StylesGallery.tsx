@@ -6,66 +6,98 @@ import { buildBiomeEnvironment } from '../game/models/biomes';
 import { setDecorNight } from '../game/models/meadowDecor';
 import { setCreatureNight, setCreatureRim } from '../game/models/voxelSculpt';
 import { withSaveSlot } from '../game/saveSlot';
-import { ALL_STYLES, buildAnyStyle, type AnyStyleId } from './styles/allStyles';
+import { ALL_STYLES, SUBJECTS, buildAnyStyle, type AnyStyleId } from './styles/allStyles';
 import type { LightContext, PostPass, StyledModel } from './styles/magmaStyles';
+import type { SubjectId } from './styles/subject';
 
 /**
- * `?gallery=styles` (sprints STYLES et STYLES2, outil de développement) : Magmadrake en vingt styles.
- * Un seul rendu WebGL découpé en cases ; à chaque case, seule sa variante est visible. Avec 20 cases, on en
- * redessine 5 par image, à tour de rôle (le reste de l'image est gardé) : la page reste fluide.
+ * `?gallery=styles` (sprints STYLES, STYLES2 et STYLES3, outil de développement) : Magmadrake et Calcinarque
+ * en vingt styles. Un seul rendu WebGL découpé en cases ; à chaque case, seule sa variante est visible. Avec
+ * beaucoup de cases, on en redessine 5 par image, à tour de rôle (le reste de l'image est gardé).
  * Les interrupteurs n'agissent que sur cette page : le jeu garde ses réglages. Textes en place : outil.
  *
- * Paramètres pour les captures : `&view=jeu`, `&tone=aucun|neutre`, `&sat=1`, `&aa=2`, `&cam=proche`, `&nuit=1`,
- * `&compare=C,G` (ou une lettre : A et cette lettre), `&focus=O` (plein écran).
+ * Paramètres pour les captures : `&creature=calcinarque`, `&view=jeu`, `&tone=aucun|neutre`, `&sat=1`, `&aa=2`,
+ * `&cam=proche`, `&nuit=1`, `&angle=face|profil`, `&silhouette=1`,
+ * `&compare=magmadrake:C,calcinarque:O` (ou des lettres : créature choisie), `&focus=O` (ou `calcinarque:O`).
  */
 type View = 'vitrine' | 'jeu';
 type Tone = 'actuel' | 'aucun' | 'neutre';
+type Angle = 'tourne' | 'face' | 'profil';
+interface Cell {
+  s: SubjectId;
+  id: AnyStyleId;
+}
 interface Settings {
+  creature: SubjectId;
   view: View;
   tone: Tone;
   sat: boolean;
   aa: boolean;
   closeCam: boolean;
   night: boolean;
-  compare: [AnyStyleId, AnyStyleId] | null;
-  focus: AnyStyleId | null;
+  angle: Angle;
+  silhouette: boolean;
+  compare: [Cell, Cell] | null;
+  focus: Cell | null;
 }
 
 const IDS = ALL_STYLES.map((s) => s.id);
+const SUBJECT_IDS: SubjectId[] = ['magmadrake', 'calcinarque'];
 const isId = (x: unknown): x is AnyStyleId => typeof x === 'string' && IDS.includes(x as AnyStyleId);
+const isSubject = (x: unknown): x is SubjectId => typeof x === 'string' && SUBJECT_IDS.includes(x as SubjectId);
 const params = new URLSearchParams(window.location.search);
-const compareParam = (params.get('compare') ?? '').split(',').filter(isId);
+const creatureParam: SubjectId = isSubject(params.get('creature')) ? (params.get('creature') as SubjectId) : 'magmadrake';
+/** « O » (créature choisie) ou « calcinarque:O ». */
+function parseCell(raw: string, fallback: SubjectId): Cell | null {
+  const [a, b] = raw.split(':');
+  if (b !== undefined) return isSubject(a) && isId(b) ? { s: a, id: b } : null;
+  return isId(a) ? { s: fallback, id: a } : null;
+}
+const compareParam = (params.get('compare') ?? '')
+  .split(',')
+  .map((x) => parseCell(x, creatureParam))
+  .filter((x): x is Cell => Boolean(x));
 const INITIAL: Settings = {
+  creature: creatureParam,
   view: params.get('view') === 'jeu' ? 'jeu' : 'vitrine',
   tone: params.get('tone') === 'aucun' ? 'aucun' : params.get('tone') === 'neutre' ? 'neutre' : 'actuel',
   sat: params.get('sat') === '1',
   aa: params.get('aa') === '2',
   closeCam: params.get('cam') === 'proche',
   night: params.get('nuit') === '1',
-  compare: compareParam.length >= 2 ? [compareParam[0], compareParam[1]] : compareParam.length === 1 ? ['A', compareParam[0]] : null,
-  focus: isId(params.get('focus')) ? (params.get('focus') as AnyStyleId) : null,
+  angle: params.get('angle') === 'face' ? 'face' : params.get('angle') === 'profil' ? 'profil' : 'tourne',
+  silhouette: params.get('silhouette') === '1',
+  compare: compareParam.length >= 2 ? [compareParam[0], compareParam[1]] : compareParam.length === 1 ? [{ s: creatureParam, id: 'A' }, compareParam[0]] : null,
+  focus: parseCell(params.get('focus') ?? '', creatureParam),
 };
 
 /** Caméra de combat du jeu (engine/camera.ts) : 42°, en haut et en arrière, visée un peu au-dessus du sol. */
 const GAME_CAM = { pos: new THREE.Vector3(0, 15.8, 16.5), target: new THREE.Vector3(0, 0.7, 0), fov: 42 };
 const CLOSE_CAM = { pos: new THREE.Vector3(0, 7.5, 10), target: new THREE.Vector3(0, 1.0, 0), fov: 42 };
-// visée au-dessus de la créature : elle se pose dans le bas de la case, sous les étiquettes
-const SHOWCASE_CAM = { pos: new THREE.Vector3(0, 2.9, 9.4), target: new THREE.Vector3(0, 2.15, 0), fov: 30 };
+// visée au-dessus de la créature : elle se pose dans le bas de la case, sous les étiquettes ; agrandie selon la créature
+const SHOWCASE_POS = new THREE.Vector3(0, 2.9, 9.4);
+const SHOWCASE_TARGET = new THREE.Vector3(0, 2.15, 0);
 
-const FAV_KEY = withSaveSlot('cubiquest-styles-favoris');
-function loadFavorites(): AnyStyleId[] {
-  try {
-    const raw: unknown = JSON.parse(localStorage.getItem(FAV_KEY) ?? '[]');
-    return Array.isArray(raw) ? raw.filter(isId) : [];
-  } catch {
-    return [];
+const favKey = (s: SubjectId) => withSaveSlot(s === 'magmadrake' ? 'cubiquest-styles-favoris' : `cubiquest-styles-favoris-${s}`);
+function loadFavorites(): Record<SubjectId, AnyStyleId[]> {
+  const out = { magmadrake: [], calcinarque: [] } as Record<SubjectId, AnyStyleId[]>;
+  for (const s of SUBJECT_IDS) {
+    try {
+      const raw: unknown = JSON.parse(localStorage.getItem(favKey(s)) ?? '[]');
+      out[s] = Array.isArray(raw) ? raw.filter(isId) : [];
+    } catch {
+      out[s] = [];
+    }
   }
+  return out;
 }
-function saveFavorites(list: AnyStyleId[]): void {
-  try {
-    localStorage.setItem(FAV_KEY, JSON.stringify(list));
-  } catch {
-    // navigation privée : les favoris ne sont pas gardés
+function saveFavorites(fav: Record<SubjectId, AnyStyleId[]>): void {
+  for (const s of SUBJECT_IDS) {
+    try {
+      localStorage.setItem(favKey(s), JSON.stringify(fav[s]));
+    } catch {
+      // navigation privée : les favoris ne sont pas gardés
+    }
   }
 }
 
@@ -74,11 +106,12 @@ interface Measure {
   triangles: number;
 }
 
-/** Disposition des cases selon le mode (grille, comparaison, plein écran). */
-function layoutFor(s: Settings, width: number, height: number): { list: AnyStyleId[]; cols: number; cellW: number; cellH: number } {
+/** Une case fait au moins 230 px de large : moins de colonnes quand la fenêtre est étroite ou zoomée. */
+const MIN_CELL = 230;
+function layoutFor(s: Settings, width: number, height: number): { list: Cell[]; cols: number; cellW: number; cellH: number } {
   if (s.focus) return { list: [s.focus], cols: 1, cellW: width, cellH: height };
-  const list = s.compare ? [...s.compare] : IDS;
-  const cols = s.compare ? 2 : width >= 1000 ? 5 : width >= 700 ? 4 : 2;
+  const list: Cell[] = s.compare ? [...s.compare] : IDS.map((id) => ({ s: s.creature, id }));
+  const cols = s.compare ? (width >= 2 * MIN_CELL ? 2 : 1) : Math.max(1, Math.min(5, Math.floor(width / MIN_CELL)));
   const cellW = Math.floor(width / cols);
   return { list, cols, cellW, cellH: Math.floor(cellW * 0.75) };
 }
@@ -103,10 +136,13 @@ void main() {
   });
 }
 
+const cellKey = (c: Cell) => `${c.s}:${c.id}`;
+const styleInfo = (id: AnyStyleId) => ALL_STYLES.find((s) => s.id === id)!;
+
 export function StylesGallery() {
   const [settings, setSettings] = useState<Settings>(INITIAL);
   const [measures, setMeasures] = useState<Record<string, Measure>>({});
-  const [favorites, setFavorites] = useState<AnyStyleId[]>(loadFavorites);
+  const [favorites, setFavorites] = useState<Record<SubjectId, AnyStyleId[]>>(loadFavorites);
   const [showRanking, setShowRanking] = useState(false);
   const [copied, setCopied] = useState('');
   const [pickSide, setPickSide] = useState<0 | 1>(1);
@@ -130,6 +166,7 @@ export function StylesGallery() {
     renderer.autoClear = false;
     renderer.info.autoReset = false;
     el.appendChild(renderer.domElement);
+    // la toile suit toujours la largeur de son cadre (correctif : elle débordait quand la fenêtre rétrécissait)
     renderer.domElement.style.display = 'block';
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.touchAction = 'none';
@@ -139,11 +176,11 @@ export function StylesGallery() {
     const key = new THREE.DirectionalLight('#FFEED1', 1.28);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
-    key.shadow.camera.left = -14;
-    key.shadow.camera.right = 14;
-    key.shadow.camera.top = 14;
-    key.shadow.camera.bottom = -14;
-    key.shadow.camera.far = 75;
+    key.shadow.camera.left = -16;
+    key.shadow.camera.right = 16;
+    key.shadow.camera.top = 16;
+    key.shadow.camera.bottom = -16;
+    key.shadow.camera.far = 80;
     key.shadow.bias = -0.0005;
     // lumière du jeu (VoxelEngine) : environnement de studio, contre-jour bleuté
     const pmrem = new THREE.PMREMGenerator(renderer);
@@ -156,24 +193,31 @@ export function StylesGallery() {
     setCreatureRim(true);
     const env = buildBiomeEnvironment(BIOMES.meadow, false);
     scene.add(env.group);
-    const models = new Map<AnyStyleId, StyledModel>();
-    for (const s of ALL_STYLES) {
-      const m = buildAnyStyle(s.id);
-      m.root.visible = false;
-      models.set(s.id, m);
-      scene.add(m.root);
-    }
-    const camera = new THREE.PerspectiveCamera(42, 4 / 3, 0.1, 200);
-    const fog = new THREE.Fog(BIOMES.meadow.fogHex, 34, 88);
+    // modèles construits à la demande (40 au plus) : la page s'ouvre vite
+    const models = new Map<string, StyledModel>();
+    const modelFor = (c: Cell): StyledModel => {
+      let m = models.get(cellKey(c));
+      if (!m) {
+        m = buildAnyStyle(c.id, c.s);
+        m.root.visible = false;
+        const content = m.root.children[0];
+        content.userData.baseScale = content.scale.clone();
+        models.set(cellKey(c), m);
+        scene.add(m.root);
+      }
+      return m;
+    };
+    const camera = new THREE.PerspectiveCamera(42, 4 / 3, 0.1, 300);
+    const fog = new THREE.Fog(BIOMES.meadow.fogHex, 34, 110);
+    const black = new THREE.MeshBasicMaterial({ color: '#000000' });
 
-    // passes d'image : une texture par variante, un quadrilatère plein écran
     const postScene = new THREE.Scene();
     const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
     quad.frustumCulled = false;
     postScene.add(quad);
-    const postMats = new Map<AnyStyleId, THREE.ShaderMaterial>();
-    const targets = new Map<AnyStyleId, THREE.WebGLRenderTarget>();
+    const postMats = new Map<string, THREE.ShaderMaterial>();
+    const targets = new Map<string, THREE.WebGLRenderTarget>();
 
     let frame = 0;
     let cursor = 0;
@@ -192,13 +236,16 @@ export function StylesGallery() {
       const ratio = Math.min(Math.min(window.devicePixelRatio || 1, 2) * (s.aa ? 2 : 1), 4);
       if (renderer.getPixelRatio() !== ratio) renderer.setPixelRatio(ratio);
       const size = renderer.getSize(new THREE.Vector2());
-      if (size.x !== w || size.y !== rows * cellH) renderer.setSize(w, rows * cellH, true);
+      if (size.x !== w || size.y !== rows * cellH) {
+        renderer.setSize(w, rows * cellH, false);
+        renderer.domElement.style.height = `${rows * cellH}px`;
+      }
 
       renderer.toneMapping = s.tone === 'aucun' ? THREE.NoToneMapping : s.tone === 'neutre' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = s.tone === 'actuel' ? 0.94 : 1;
       renderer.domElement.style.filter = s.sat ? 'saturate(1.2)' : 'none';
 
-      const inGame = s.view === 'jeu';
+      const inGame = s.view === 'jeu' && !s.silhouette;
       if (inGame) {
         hemi.color.set('#B4DFFF');
         hemi.groundColor.set('#7D6044');
@@ -216,22 +263,25 @@ export function StylesGallery() {
         hemi.intensity = s.night ? 0.2 : 0.55;
         key.intensity = s.night ? 0.35 : 1.5;
         key.color.set(s.night ? '#8FA8FF' : '#FFF1DA');
-        key.position.set(4, 6, 6);
+        key.position.set(4, 6, 6).multiplyScalar(2);
         rim.color.set('#9CC8FF');
         rim.intensity = s.night ? 0.3 : 0.7;
-        rim.position.set(-5, 4, -6);
+        rim.position.set(-5, 4, -6).multiplyScalar(2);
         scene.environmentIntensity = s.night ? 0.08 : 0.5;
       }
       const night = s.night ? 1 : 0;
-      setCreatureNight(night);
       setDecorNight(night);
-      models.forEach((m) => m.setNight(night));
       env.group.visible = inGame;
       scene.fog = inGame ? fog : null;
       fog.color.set(s.night ? '#121936' : BIOMES.meadow.fogHex);
-      scene.background = new THREE.Color(inGame ? (s.night ? '#0A0F24' : BIOMES.meadow.skyHex) : s.night ? '#14172A' : '#3A3F4B');
+      scene.background = new THREE.Color(s.silhouette ? '#FFFFFF' : inGame ? (s.night ? '#0A0F24' : BIOMES.meadow.skyHex) : s.night ? '#14172A' : '#3A3F4B');
+      scene.overrideMaterial = s.silhouette ? black : null;
       env.animate?.(t);
-      const cam = inGame ? (s.closeCam ? CLOSE_CAM : GAME_CAM) : SHOWCASE_CAM;
+      // Vitrine : cadrage de la plus grande créature affichée, pour que les tailles restent comparables
+      const frameScale = Math.max(...list.map((c) => SUBJECTS[c.s].frame));
+      // la visée remonte moins vite que la taille : une grande créature reste entière dans la case
+      const showcase = { pos: SHOWCASE_POS.clone().multiplyScalar(frameScale), target: new THREE.Vector3(0, SHOWCASE_TARGET.y * frameScale - (frameScale - 1) * 1.4, 0), fov: 30 };
+      const cam = inGame ? (s.closeCam ? CLOSE_CAM : GAME_CAM) : showcase;
       camera.fov = cam.fov;
       camera.aspect = cellW / cellH;
       camera.position.copy(cam.pos);
@@ -243,37 +293,55 @@ export function StylesGallery() {
       const all = layoutKey !== lastKey || list.length <= 4;
       lastKey = layoutKey;
       const perFrame = all ? list.length : 5;
-      const spin = s.focus ? yaw.current + (drag.current ? 0 : t * 0.25) : t * 0.45;
+      const spin =
+        s.angle === 'face' ? 0 : s.angle === 'profil' ? Math.PI / 2 : s.focus ? yaw.current + (drag.current ? 0 : t * 0.25) : t * 0.45;
       for (let k = 0; k < perFrame; k++) {
         const i = all ? k : (cursor + k) % list.length;
-        const id = list[i];
-        const model = models.get(id)!;
+        const c = list[i];
+        const model = modelFor(c);
         models.forEach((m) => (m.root.visible = false));
         model.root.visible = true;
-        model.root.rotation.y = spin;
+        model.root.rotation.y = spin + (s.focus && s.angle !== 'tourne' ? yaw.current : 0);
+        // ombres au sol cachées pour les silhouettes
+        model.root.children.forEach((ch) => {
+          if ((ch as THREE.Mesh).geometry instanceof THREE.CircleGeometry) ch.visible = !s.silhouette;
+        });
+        // repos de Calcinarque : respiration lente et lave qui pulse doucement (toutes les variantes)
+        let glow = night;
+        if (c.s === 'calcinarque') {
+          const content = model.root.children[0];
+          const base = content.userData.baseScale as THREE.Vector3;
+          content.scale.set(base.x, base.y * (1 + 0.014 * Math.sin(t * 1.3)), base.z * (1 + 0.006 * Math.sin(t * 1.3)));
+          glow = night + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
+        }
+        setCreatureNight(glow);
+        model.setNight(glow);
+        model.animate?.(t);
         const x = (i % cols) * cellW;
         const y = (rows - 1 - Math.floor(i / cols)) * cellH; // WebGL : origine en bas
         renderer.info.reset();
-        model.before?.(ctx);
-        if (model.post) {
-          const scale = model.post.scale ?? 1;
+        if (!s.silhouette) model.before?.(ctx);
+        const post = s.silhouette ? undefined : model.post;
+        if (post) {
+          const scale = post.scale ?? 1;
           const tw = Math.max(8, Math.round(cellW * ratio * scale));
           const th = Math.max(8, Math.round(cellH * ratio * scale));
-          let rt = targets.get(id);
+          const kk = cellKey(c);
+          let rt = targets.get(kk);
           if (!rt || rt.width !== tw || rt.height !== th) {
             rt?.dispose();
-            const filter = model.post.nearest ? THREE.NearestFilter : THREE.LinearFilter;
-            rt = new THREE.WebGLRenderTarget(tw, th, { type: THREE.HalfFloatType, minFilter: filter, magFilter: filter, samples: model.post.nearest ? 0 : 4 });
-            targets.set(id, rt);
+            const filter = post.nearest ? THREE.NearestFilter : THREE.LinearFilter;
+            rt = new THREE.WebGLRenderTarget(tw, th, { type: THREE.HalfFloatType, minFilter: filter, magFilter: filter, samples: post.nearest ? 0 : 4 });
+            targets.set(kk, rt);
           }
           renderer.setRenderTarget(rt);
           renderer.clear();
           renderer.render(scene, camera);
           renderer.setRenderTarget(null);
-          let pm = postMats.get(id);
+          let pm = postMats.get(c.id);
           if (!pm) {
-            pm = postMaterial(model.post);
-            postMats.set(id, pm);
+            pm = postMaterial(post);
+            postMats.set(c.id, pm);
           }
           pm.uniforms.tDiffuse.value = rt.texture;
           (pm.uniforms.uResolution.value as THREE.Vector2).set(tw, th);
@@ -287,20 +355,21 @@ export function StylesGallery() {
           renderer.clear();
           renderer.render(scene, camera);
         }
-        model.after?.(ctx);
-        latest[id] = { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
+        if (!s.silhouette) model.after?.(ctx);
+        latest[cellKey(c)] = { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
       }
       cursor = (cursor + perFrame) % Math.max(1, list.length);
       frame += 1;
       if (frame % 30 === 1) setMeasures({ ...latest });
     };
     loop();
-    const onResize = () => setWidth(el.clientWidth);
-    onResize();
-    window.addEventListener('resize', onResize);
+    // largeur suivie par un observateur : la grille se recompose quand la fenêtre change ou que la page est zoomée
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    observer.observe(el);
+    setWidth(el.clientWidth);
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener('resize', onResize);
+      observer.disconnect();
       setCreatureNight(0);
       setDecorNight(0);
       targets.forEach((rt) => rt.dispose());
@@ -311,14 +380,15 @@ export function StylesGallery() {
 
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings((s) => ({ ...s, [k]: v }));
   const btn = (on: boolean) => `voxel-btn min-h-[44px] rounded-lg border-2 px-3 text-sm font-semibold ${on ? 'block-btn-primary' : 'block-btn-secondary'}`;
-  const toggleFav = (id: AnyStyleId) => setFavorites((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
-  const move = (i: number, d: -1 | 1) =>
+  const toggleFav = (c: Cell) =>
+    setFavorites((f) => ({ ...f, [c.s]: f[c.s].includes(c.id) ? f[c.s].filter((x) => x !== c.id) : [...f[c.s], c.id] }));
+  const move = (sub: SubjectId, i: number, d: -1 | 1) =>
     setFavorites((f) => {
       const j = i + d;
-      if (j < 0 || j >= f.length) return f;
-      const n = [...f];
+      if (j < 0 || j >= f[sub].length) return f;
+      const n = [...f[sub]];
       [n[i], n[j]] = [n[j], n[i]];
-      return n;
+      return { ...f, [sub]: n };
     });
   const choiceText = () => {
     const opts: string[] = [];
@@ -328,7 +398,8 @@ export function StylesGallery() {
     if (settings.aa) opts.push('anticrénelage renforcé');
     if (settings.night) opts.push('nuit');
     opts.push(settings.view === 'jeu' ? 'vue en jeu' : 'vue vitrine');
-    return `Favoris : ${favorites.length ? favorites.join(', ') : 'aucun'} — ${opts.join(', ')}`;
+    const favs = SUBJECT_IDS.map((sub) => `${SUBJECTS[sub].label} : ${favorites[sub].length ? favorites[sub].join(', ') : 'aucun'}`).join(' ; ');
+    return `Favoris — ${favs} — ${opts.join(', ')}`;
   };
   const copyChoice = async () => {
     const text = choiceText();
@@ -345,21 +416,23 @@ export function StylesGallery() {
     }
     setCopied(text);
   };
-  const pick = (id: AnyStyleId) => {
-    const cur = settings.compare ?? ['A', 'C'];
-    set('compare', pickSide === 0 ? [id, cur[1]] : [cur[0], id]);
-  };
+  const cmp = settings.compare ?? [
+    { s: settings.creature, id: 'A' },
+    { s: settings.creature, id: 'C' },
+  ];
+  const setSide = (side: 0 | 1, cell: Cell) => set('compare', side === 0 ? [cell, cmp[1]] : [cmp[0], cell]);
 
   const w = width || (typeof window !== 'undefined' ? window.innerWidth - 32 : 1000);
   const layout = layoutFor(settings, w, Math.max(200, (typeof window !== 'undefined' ? window.innerHeight : 800) - 70));
   const rows = Math.ceil(layout.list.length / layout.cols);
   const compact = !settings.compare && !settings.focus;
+  const creatureLabel = SUBJECTS[settings.creature].label;
 
   return (
-    <div className="min-h-screen bg-[#0F1420] px-4 py-6 text-[#FAF7F0] sm:px-8">
+    <div className="min-h-screen overflow-x-hidden bg-[#0F1420] px-4 py-6 text-[#FAF7F0] sm:px-8">
       <div className="mx-auto max-w-7xl">
         <p className="text-xs font-bold uppercase tracking-wider text-[#F4B942]">Outil de développement · exploration</p>
-        <h1 className="font-display text-3xl font-bold">Magmadrake en vingt styles</h1>
+        <h1 className="font-display text-3xl font-bold">{creatureLabel} en vingt styles</h1>
         <p className="mt-1 text-sm text-[#CBD5E1]">
           Même créature, même posture, mêmes proportions : seul le style change. Les réglages n'agissent que sur cette page.{' '}
           <a className="underline" href="?gallery=art">
@@ -367,7 +440,16 @@ export function StylesGallery() {
           </a>
         </p>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-[#CBD5E1]">Créature</span>
+          {SUBJECT_IDS.map((sub) => (
+            <button key={sub} type="button" className={btn(settings.creature === sub)} onClick={() => setSettings((st) => ({ ...st, creature: sub, focus: st.focus ? { s: sub, id: st.focus.id } : null }))}>
+              {SUBJECTS[sub].label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" className={btn(settings.view === 'vitrine')} onClick={() => set('view', 'vitrine')}>
             Vitrine
           </button>
@@ -392,14 +474,24 @@ export function StylesGallery() {
           <button type="button" className={btn(settings.night)} onClick={() => set('night', !settings.night)}>
             {settings.night ? 'Nuit' : 'Jour'}
           </button>
+          <span className="mx-1 self-center text-[#64748B]">|</span>
+          <button type="button" className={btn(settings.angle === 'face')} onClick={() => set('angle', settings.angle === 'face' ? 'tourne' : 'face')}>
+            {settings.angle === 'face' ? 'Reprendre la rotation' : 'Vue de face'}
+          </button>
+          <button type="button" className={btn(settings.angle === 'profil')} onClick={() => set('angle', settings.angle === 'profil' ? 'tourne' : 'profil')}>
+            {settings.angle === 'profil' ? 'Reprendre la rotation' : 'Profil'}
+          </button>
+          <button type="button" className={btn(settings.silhouette)} onClick={() => set('silhouette', !settings.silhouette)}>
+            Silhouettes
+          </button>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button type="button" className={btn(Boolean(settings.compare))} onClick={() => set('compare', settings.compare ? null : ['A', 'C'])}>
+          <button type="button" className={btn(Boolean(settings.compare))} onClick={() => set('compare', settings.compare ? null : cmp)}>
             {settings.compare ? 'Les vingt' : 'Comparer deux styles'}
           </button>
           <button type="button" className={btn(showRanking)} onClick={() => setShowRanking((v) => !v)}>
-            ★ Mon classement ({favorites.length})
+            ★ Mon classement ({favorites.magmadrake.length + favorites.calcinarque.length})
           </button>
           <button type="button" className={btn(false)} onClick={() => void copyChoice()}>
             Copier mon choix
@@ -411,16 +503,21 @@ export function StylesGallery() {
           <div className="mt-3 rounded-lg border-2 border-[#39445A] p-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-[#CBD5E1]">Choisir pour</span>
-              <button type="button" className={btn(pickSide === 0)} onClick={() => setPickSide(0)}>
-                Gauche : {settings.compare[0]}
-              </button>
-              <button type="button" className={btn(pickSide === 1)} onClick={() => setPickSide(1)}>
-                Droite : {settings.compare[1]}
-              </button>
+              {([0, 1] as const).map((side) => (
+                <button key={side} type="button" className={btn(pickSide === side)} onClick={() => setPickSide(side)}>
+                  {side === 0 ? 'Gauche' : 'Droite'} : {SUBJECTS[cmp[side].s].label} {cmp[side].id}
+                </button>
+              ))}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
+              {SUBJECT_IDS.map((sub) => (
+                <button key={sub} type="button" className={btn(cmp[pickSide].s === sub)} onClick={() => setSide(pickSide, { s: sub, id: cmp[pickSide].id })}>
+                  {SUBJECTS[sub].label}
+                </button>
+              ))}
+              <span className="mx-1 self-center text-[#64748B]">|</span>
               {IDS.map((id) => (
-                <button key={id} type="button" className={`${btn(settings.compare![pickSide] === id)} min-w-[44px] px-2`} onClick={() => pick(id)}>
+                <button key={id} type="button" className={`${btn(cmp[pickSide].id === id)} min-w-[44px] px-2`} onClick={() => setSide(pickSide, { s: cmp[pickSide].s, id })}>
                   {id}
                 </button>
               ))}
@@ -429,32 +526,33 @@ export function StylesGallery() {
         )}
 
         {showRanking && (
-          <div className="mt-3 rounded-lg border-2 border-[#F4B942]/60 p-3">
-            <p className="text-sm font-bold">Mon classement</p>
-            {favorites.length === 0 && <p className="mt-1 text-sm text-[#CBD5E1]">Aucune étoile : touche ☆ sur une case pour l'ajouter.</p>}
-            <ol className="mt-2 space-y-1">
-              {favorites.map((id, i) => {
-                const info = ALL_STYLES.find((s) => s.id === id)!;
-                return (
-                  <li key={id} className="flex items-center gap-2">
-                    <span className="w-8 text-right font-mono text-sm text-[#F4B942]">{i + 1}.</span>
-                    <span className="flex-1 text-sm">
-                      {info.id} · {info.name}
-                    </span>
-                    <button type="button" className={`${btn(false)} min-w-[44px] px-2`} onClick={() => move(i, -1)} aria-label="Monter">
-                      ↑
-                    </button>
-                    <button type="button" className={`${btn(false)} min-w-[44px] px-2`} onClick={() => move(i, 1)} aria-label="Descendre">
-                      ↓
-                    </button>
-                    <button type="button" className={`${btn(false)} min-w-[44px] px-2`} onClick={() => toggleFav(id)} aria-label="Retirer">
-                      ✕
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-            <p className="mt-2 font-mono text-xs text-[#CBD5E1]">{choiceText()}</p>
+          <div className="mt-3 grid gap-3 rounded-lg border-2 border-[#F4B942]/60 p-3 md:grid-cols-2">
+            {SUBJECT_IDS.map((sub) => (
+              <div key={sub}>
+                <p className="text-sm font-bold">Mon classement : {SUBJECTS[sub].label}</p>
+                {favorites[sub].length === 0 && <p className="mt-1 text-sm text-[#CBD5E1]">Aucune étoile : touche ☆ sur une case pour l'ajouter.</p>}
+                <ol className="mt-2 space-y-1">
+                  {favorites[sub].map((id, i) => (
+                    <li key={id} className="flex items-center gap-2">
+                      <span className="w-8 text-right font-mono text-sm text-[#F4B942]">{i + 1}.</span>
+                      <span className="flex-1 text-sm">
+                        {id} · {styleInfo(id).name}
+                      </span>
+                      <button type="button" className={`${btn(false)} min-w-[44px] px-2`} onClick={() => move(sub, i, -1)} aria-label="Monter">
+                        ↑
+                      </button>
+                      <button type="button" className={`${btn(false)} min-w-[44px] px-2`} onClick={() => move(sub, i, 1)} aria-label="Descendre">
+                        ↓
+                      </button>
+                      <button type="button" className={`${btn(false)} min-w-[44px] px-2`} onClick={() => toggleFav({ s: sub, id })} aria-label="Retirer">
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+            <p className="font-mono text-xs text-[#CBD5E1] md:col-span-2">{choiceText()}</p>
           </div>
         )}
 
@@ -465,13 +563,14 @@ export function StylesGallery() {
                 ✕ Fermer
               </button>
               <span className="text-sm">
-                {settings.focus} · {ALL_STYLES.find((s) => s.id === settings.focus)!.name} — glisser pour faire pivoter
+                {SUBJECTS[settings.focus.s].label} · {settings.focus.id} · {styleInfo(settings.focus.id).name} — glisser pour faire pivoter
               </span>
             </div>
           )}
-          <div className="relative overflow-hidden rounded-xl border-2 border-[#39445A]">
+          <div className="relative w-full overflow-hidden rounded-xl border-2 border-[#39445A]">
             <div
               ref={host}
+              className="w-full"
               onPointerDown={(e) => {
                 if (!settings.focus) return;
                 drag.current = { x: e.clientX, yaw: yaw.current };
@@ -488,26 +587,28 @@ export function StylesGallery() {
               }}
             />
             <div className="pointer-events-none absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${layout.cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
-              {layout.list.map((id, i) => {
-                const info = ALL_STYLES.find((s) => s.id === id)!;
-                const m = measures[id];
-                const fav = favorites.includes(id);
+              {layout.list.map((c, i) => {
+                const info = styleInfo(c.id);
+                const m = measures[cellKey(c)];
+                const fav = favorites[c.s].includes(c.id);
+                const mixed = Boolean(settings.compare) || Boolean(settings.focus);
                 return (
-                  <div key={`${id}-${i}`} className="relative border border-[#0F1420]/60 p-1.5">
-                    <p className={`inline-block rounded bg-[#0F1420]/80 px-2 py-0.5 font-bold ${compact ? 'text-xs' : 'text-sm'}`}>
+                  <div key={`${cellKey(c)}-${i}`} className="relative min-w-0 border border-[#0F1420]/60 p-1.5">
+                    <p className={`inline-block max-w-full truncate rounded bg-[#0F1420]/80 px-2 py-0.5 font-bold ${compact ? 'text-xs' : 'text-sm'}`}>
+                      {mixed ? `${SUBJECTS[c.s].label} · ` : ''}
                       {info.id} · {info.name}
                     </p>
                     {!compact && <p className="mt-1 max-w-[20rem] rounded bg-[#0F1420]/70 px-2 py-0.5 text-xs text-[#CBD5E1]">{info.note}</p>}
-                    <p className="mt-0.5 hidden rounded bg-[#0F1420]/70 px-1.5 py-0.5 font-mono text-[10px] text-[#CBD5E1] sm:block sm:w-fit">
+                    <p className="mt-0.5 hidden max-w-full truncate rounded bg-[#0F1420]/70 px-1.5 py-0.5 font-mono text-[10px] text-[#CBD5E1] sm:block sm:w-fit">
                       {info.risk}
                       {m ? ` · ${m.calls} appels · ${m.triangles.toLocaleString('fr-FR')} tri.` : ''}
                     </p>
                     {!settings.focus && (
                       <div className="pointer-events-auto absolute bottom-1 right-1 flex gap-1">
-                        <button type="button" className={`${btn(fav)} min-w-[44px] px-2`} onClick={() => toggleFav(id)} aria-pressed={fav} aria-label={`Favori ${id}`}>
+                        <button type="button" className={`${btn(fav)} min-w-[44px] px-2`} onClick={() => toggleFav(c)} aria-pressed={fav} aria-label={`Favori ${c.id}`}>
                           {fav ? '★' : '☆'}
                         </button>
-                        <button type="button" className={`${btn(false)} min-w-[44px] px-2`} onClick={() => set('focus', id)} aria-label={`Plein écran ${id}`}>
+                        <button type="button" className={`${btn(false)} min-w-[44px] px-2`} onClick={() => set('focus', c)} aria-label={`Plein écran ${c.id}`}>
                           ⤢
                         </button>
                       </div>
@@ -524,8 +625,9 @@ export function StylesGallery() {
           </p>
         )}
         <p className="mt-2 text-xs text-[#94A3B8]">
-          Vue « En jeu » : angle et champ de la caméra de combat. Lumière du combat en « En jeu », des portraits en « Vitrine ». Rendu sans le pipeline
-          d'effets du jeu (contour, occlusion, ciel en dégradé) : à comparer entre variantes, pas avec le jeu.
+          Vue « En jeu » : angle et champ de la caméra de combat, chaque créature à sa vraie taille. Lumière du combat en « En jeu », des portraits en
+          « Vitrine » (cadrée sur la plus grande créature affichée). Rendu sans le pipeline d'effets du jeu (contour, occlusion, ciel en dégradé) : à
+          comparer entre variantes, pas avec le jeu.
         </p>
       </div>
     </div>
