@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { CampHud, type CampDrawerTab } from './components/CampHud';
-import { CodexDrawer } from './components/CodexDrawer';
+import { CarnetDrawer } from './components/CarnetDrawer';
 import { AtelierDrawer } from './components/AtelierDrawer';
 import { HubOverlay } from './components/HubOverlay';
 import { SummonReveal, type SummonRevealProps } from './components/SummonReveal';
@@ -11,7 +11,6 @@ import { EvolutionOverlay } from './components/EvolutionOverlay';
 import { ArrivalScene } from './components/ui/moments';
 import { ExpeditionHud } from './components/ExpeditionHud';
 import { OutcomeModal } from './components/OutcomeModal';
-import { QuestsDrawer } from './components/QuestsDrawer';
 import { StarterModal } from './components/StarterModal';
 import { PauseModal } from './components/StatusModals';
 import type { ExpeditionResult, FirstTimeKind } from './game/engine/types';
@@ -40,7 +39,6 @@ import {
   unlockedFeatures,
   buildPreviewSave,
   claimAchievementReward,
-  claimQuestReward,
   countClaimableRewards,
   createInitialSaveState,
   createOwnedCreature,
@@ -51,6 +49,7 @@ import {
   persistSaveState,
   unequipPowerStone,
 } from './game/rules';
+import { claimCollectionTier } from './game/collection';
 import { appendJournal, loadJournal, markRetry, saveJournal } from './game/journal';
 import { escapeTarget, nextDrawer } from './game/uiNav';
 import type {
@@ -79,7 +78,7 @@ const isBench = typeof window !== 'undefined' && new URLSearchParams(window.loca
 
 /**
  * `?ui=<écran>` (outil de développement, captures) : ouvre directement un écran sans toucher à la sauvegarde.
- * Tiroirs du camp : expeditions, team, quests, codex (avec ?autostart=1). Départ : starter.
+ * Tiroirs du camp : expeditions, atelier, team, carnet (avec ?autostart=1). Départ : starter.
  * Avec ?stage=<id> : pause, victory, defeat. Évolution : evolution (avec ?autostart=1).
  */
 function getUiParam(): string | null {
@@ -342,7 +341,7 @@ export default function App() {
 
     // ?ui=... : écran ouvert d'office, pour les captures (rien n'est enregistré)
     const ui = getUiParam();
-    if (ui === 'expeditions' || ui === 'atelier' || ui === 'team' || ui === 'quests' || ui === 'codex') {
+    if (ui === 'expeditions' || ui === 'atelier' || ui === 'team' || ui === 'carnet') {
       setActiveDrawer(ui);
     } else if (ui === 'starter') {
       setScreenState('playing');
@@ -624,10 +623,10 @@ export default function App() {
       onDone: finish,
     });
   };
-  // V0.2 Quests, Achievements & Local Save Import/Reset handlers
-  const handleClaimQuest = (questUid: string) => {
+  // Carnet (A3.2) : exploits, paliers de collection, import de sauvegarde
+  const handleClaimTier = (at: number) => {
     soundFx.playRewardClaim();
-    setSave((prev) => claimQuestReward(prev, questUid));
+    setSave((prev) => claimCollectionTier(prev, at));
   };
 
   const handleClaimAchievement = (achId: string) => {
@@ -691,7 +690,7 @@ export default function App() {
           <HubOverlay
             getEngine={getEngine}
             enabled={!activeDrawer && !reveal && !arrival && !save.kitchenConversion}
-            isOpen={(id) => (id === 'map' ? true : unlockedFeatures(save).has(id === 'carnet' ? 'codex' : id))}
+            isOpen={(id) => (id === 'map' ? true : unlockedFeatures(save).has(id))}
             badges={{
               atelier: save.sealedCubes.length || false,
               carnet: claimableCount || false,
@@ -699,7 +698,7 @@ export default function App() {
             }}
             onOpen={(id) => {
               soundFx.playUiClick();
-              const tab = ({ map: 'expeditions', atelier: 'atelier', team: 'team', carnet: 'codex' } as const)[id];
+              const tab = ({ map: 'expeditions', atelier: 'atelier', team: 'team', carnet: 'carnet' } as const)[id];
               if (!save.unlocksSeen.includes(tab)) {
                 const next = markUnlockSeen(saveRef.current, tab);
                 saveRef.current = next;
@@ -775,11 +774,11 @@ export default function App() {
             />
           )}
 
-          {activeDrawer === 'quests' && (
-            <QuestsDrawer
+          {activeDrawer === 'carnet' && (
+            <CarnetDrawer
               save={save}
-              onClaimQuest={handleClaimQuest}
               onClaimAchievement={handleClaimAchievement}
+              onClaimTier={handleClaimTier}
               onImportSave={handleImportSave}
               onResetSave={handleNewAdventure}
               onReplayLessons={() => {
@@ -787,15 +786,8 @@ export default function App() {
                 saveRef.current = next;
                 setSave(next);
               }}
-              onClose={() => setActiveDrawer(null)}
-            />
-          )}
-
-          {activeDrawer === 'codex' && (
-            <CodexDrawer
-              save={save}
-              history={codexHistory}
-              onSaveAnswer={(ans) => setCodexHistory((prev) => [ans, ...prev])}
+              codexHistory={codexHistory}
+              onSaveCodexAnswer={(ans) => setCodexHistory((prev) => [ans, ...prev])}
               onClose={() => setActiveDrawer(null)}
             />
           )}

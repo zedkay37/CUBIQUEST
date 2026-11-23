@@ -234,30 +234,12 @@ export interface QuestReward {
   guaranteedRarity?: StoneRarity;
 }
 
-export interface QuestTemplate {
-  templateId: string;
-  title: string;
-  description: string;
-  metric: QuestMetric;
-  target: number;
-  reward: QuestReward;
-  /** La quête n'entre dans la rotation qu'une fois ce niveau débloqué. */
-  requiresStageIndex?: number;
-}
-
-export interface ActiveQuest {
-  uid: string;
-  templateId: string;
-  title: string;
-  description: string;
-  metric: QuestMetric;
-  progress: number;
-  target: number;
-  reward: QuestReward;
-}
+/** Thème d'un exploit (Carnet, A3.2). */
+export type AchievementTheme = 'combat' | 'collection' | 'exploration';
 
 export interface AchievementDef {
   id: string;
+  theme: AchievementTheme;
   title: string;
   description: string;
   metric: QuestMetric;
@@ -289,8 +271,10 @@ export interface SaveState {
   discoveredSpeciesIds: string[];
   expeditionsCompleted: number;
   stats: PlayerStats;
-  activeQuests: ActiveQuest[];
   claimedAchievementIds: string[];
+  /** Carnet (A3.2) : paliers de collection réclamés (leurs points) et titres / cadres obtenus (identifiants). */
+  collectionTiersClaimed: number[];
+  titles: string[];
   /** Gestes déjà expliqués par une bulle « première fois » (cube, Éclat faible, Éclat, Trio). */
   firstTimesSeen: string[];
   /** Consignes d'attaque déjà montrées, par type d'attaque (S05.2). */

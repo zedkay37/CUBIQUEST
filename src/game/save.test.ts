@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SPECIES, STAGES, QUEST_POOL } from './catalog';
+import { SPECIES, STAGES } from './catalog';
 import {
   addPowerStoneToBag,
   applyExpeditionRewards,
@@ -116,34 +116,51 @@ test('Sauvegarde: une pierre ne peut être équipée qu\'une fois, et une pierre
   assert.equal(m.roster[2].stoneBoard[0].stoneId, null);
 });
 
-test('Sauvegarde: des quêtes incohérentes reviennent à un état jouable', () => {
+test('Migration v9 -> v10 (A3.2) : quêtes supprimées, récompenses en attente accordées une fois', () => {
   const fresh = createInitialSaveState('pyrocube', true);
-
-  // quêtes mal formées (récompense absente) : remplacées par les quêtes de départ
-  const d = clone(fresh) as unknown as Record<string, unknown>;
-  d.activeQuests = [{ uid: 'q1', title: 'Cassée' }, null, 12];
-  const md = migrateSaveState(d)!;
-  assert.equal(md.activeQuests.length, 3);
-  for (const q of md.activeQuests) assert.equal(typeof q.reward.label, 'string');
-
-  // progression de quête hors bornes ramenée dans [0, cible]
-  const e = clone(fresh);
-  e.activeQuests[0].progress = 999;
-  e.activeQuests[1].progress = -7;
-  const me = migrateSaveState(e)!;
-  assert.equal(me.activeQuests[0].progress, me.activeQuests[0].target);
-  assert.equal(me.activeQuests[1].progress, 0);
-
-  // A2.2 : une quête retirée du jeu est remplacée seule ; les deux autres gardent leur avancement
-  const f = clone(fresh);
-  f.activeQuests[1] = { ...f.activeQuests[1], templateId: REMOVED_KITCHEN_QUEST_ID, progress: 1 };
-  f.activeQuests[2].progress = 1;
-  const mf = migrateSaveState(f)!;
-  assert.equal(mf.activeQuests[0].templateId, fresh.activeQuests[0].templateId);
-  assert.equal(mf.activeQuests[2].progress, 1);
-  assert.ok(QUEST_POOL.some((t) => t.templateId === mf.activeQuests[1].templateId));
-  assert.equal(new Set(mf.activeQuests.map((q) => q.templateId)).size, 3);
-  assert.equal(mf.activeQuests[1].progress, 0);
+  const v9 = clone(fresh) as unknown as Record<string, unknown>;
+  delete v9.collectionTiersClaimed;
+  delete v9.titles;
+  v9.version = 9;
+  v9.unlocksSeen = ['camp', 'quests'];
+  v9.activeQuests = [
+    // terminée, pas réclamée : Appât Eau + Rune de Cadence
+    { uid: 'quest_a', templateId: 'q_ult_1', title: 'x', description: 'x', metric: 'ultimatesUsed', progress: 1, target: 1, reward: { label: 'x' } },
+    // pas finie : rien
+    { uid: 'quest_b', templateId: 'q_dodge_2', title: 'x', description: 'x', metric: 'perfectDodges', progress: 1, target: 2, reward: { label: 'x' } },
+    // terminée, cube de Bois (+ Rune d'Ampleur)
+    { uid: 'quest_c', templateId: 'q_win_3', title: 'x', description: 'x', metric: 'expeditionsWon', progress: 3, target: 3, reward: { label: 'x' } },
+    // même quête recopiée (sauvegarde abîmée) : payée une seule fois
+    { uid: 'quest_c', templateId: 'q_win_3', progress: 3, target: 3 },
+    // quête retirée du jeu (cuisine) ou abîmée : ignorée sans erreur
+    { uid: 'quest_d', templateId: REMOVED_KITCHEN_QUEST_ID, progress: 9, target: 1 },
+    null,
+    12,
+  ];
+  const m = migrateSaveState(clone(v9))!;
+  assert.ok(m);
+  assert.equal(m.version, SAVE_VERSION);
+  assert.equal(SAVE_VERSION, 10);
+  assert.equal('activeQuests' in m, false);
+  assert.deepEqual(m.baits, { water: 1 });
+  assert.equal(m.runeBag.rune_cadence, fresh.runeBag.rune_cadence + 1);
+  assert.equal(m.runeBag.rune_partage, fresh.runeBag.rune_partage);
+  assert.equal(m.runeBag.rune_ampleur, fresh.runeBag.rune_ampleur + 1);
+  assert.deepEqual(m.sealedCubes.map((c) => c.material), ['wood']);
+  assert.deepEqual(m.collectionTiersClaimed, []);
+  assert.deepEqual(m.titles, []);
+  // la pastille vue des quêtes vaut pour le Carnet
+  assert.deepEqual(m.unlocksSeen, ['camp', 'carnet']);
+  // une quête qui donnait un Galet le tire avec le rng fourni
+  const withStone = migrateSaveState({ ...clone(v9), activeQuests: [{ uid: 'q', templateId: Object.keys(LEGACY_QUEST_IDS)[0], progress: 5, target: 3 }] }, () => 0.5)!;
+  assert.equal(withStone.powerStones.length, fresh.powerStones.length + 1);
+  assert.equal(withStone.powerStones[0].rarity, 'silver');
+  // stable : la v10 ne redonne rien
+  assert.deepEqual(migrateSaveState(clone(m)), m);
+  // champs v10 normalisés : paliers et titres inconnus ignorés, doublons retirés
+  const n = migrateSaveState({ ...clone(m), collectionTiersClaimed: [50, 50, 7, 'x', 120], titles: ['titre_pisteur', 'inconnu', 'titre_pisteur', 3] })!;
+  assert.deepEqual(n.collectionTiersClaimed, [50, 120]);
+  assert.deepEqual(n.titles, ['titre_pisteur']);
 });
 
 test('Sauvegarde: imports JSON invalides refusés avec un message, jamais d\'exception', () => {
@@ -184,7 +201,8 @@ test('Sauvegarde: imports JSON invalides refusés avec un message, jamais d\'exc
     assert.deepEqual(minimal.save.baits, {});
     assert.deepEqual(minimal.save.sealedCubes, []);
     assert.deepEqual(minimal.save.kitchenConversion, { baits: 0, crystal: 0, stone: 0, bonds: 0 });
-    assert.equal(minimal.save.activeQuests.length, 3);
+    assert.deepEqual(minimal.save.collectionTiersClaimed, []);
+    assert.deepEqual(minimal.save.titles, []);
     assert.deepEqual(minimal.save.powerStones, []);
   }
 });
@@ -275,13 +293,13 @@ test('Chargement: une sauvegarde illisible est copiée avant que le jeu ne repar
   }
 });
 
-test('Sauvegarde: une sauvegarde v3 réaliste se charge en v9 sans perte, identifiants renommés', () => {
+test('Sauvegarde: une sauvegarde v3 réaliste se charge en v10 sans perte, identifiants renommés', () => {
   const v3 = clone(SAVE_V3_FIXTURE) as Record<string, any>;
   assert.equal(v3.version, 3);
   const m = migrateSaveState(clone(v3));
   assert.ok(m !== null);
   assert.equal(m.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 9);
+  assert.equal(SAVE_VERSION, 10);
 
   // escouade et créatures : rien ne bouge, sauf le nom du champ des runes équipées
   assert.deepEqual(m.squadIds, v3.squadIds);
@@ -299,7 +317,8 @@ test('Sauvegarde: une sauvegarde v3 réaliste se charge en v9 sans perte, identi
   // pierres, sac de runes (renommé, mêmes quantités), progression, compteurs
   assert.deepEqual(m.powerStones, v3.powerStones);
   assert.deepEqual(m.runeBag, {
-    rune_ampleur: 2, rune_cadence: 1, rune_force: 2, rune_partage: 0, rune_precision: 1, rune_vigueur: 1,
+    // A3.2 : rune_cadence +1, récompense de la quête « q_ult_1 » terminée mais pas réclamée
+    rune_ampleur: 2, rune_cadence: 2, rune_force: 2, rune_partage: 0, rune_precision: 1, rune_vigueur: 1,
   });
   assert.equal('moveStoneBag' in m, false);
   assert.deepEqual(m.completedStageIds, v3.completedStageIds);
@@ -321,16 +340,16 @@ test('Sauvegarde: une sauvegarde v3 réaliste se charge en v9 sans perte, identi
   assert.deepEqual(m.claimedAchievementIds, v3.claimedAchievementIds);
   // A2.2 : l'ancienne cuisine est convertie (rouges 19 -> 3 Feu, bleus 17 -> 3 Eau, jaunes 20 -> 4 Foudre,
   // gris 11 -> 2 Roche ; 3 Fragments Mystiques -> 3 cubes Cristal ; le plat en route -> 1 cube Pierre)
-  assert.deepEqual(m.baits, { fire: 3, water: 3, electric: 4, rock: 2 });
+  // A3.2 : + les Appâts des quêtes terminées mais pas réclamées (q_win_1 : Feu et Eau ; q_ult_1 : Eau)
+  assert.deepEqual(m.baits, { fire: 4, water: 5, electric: 4, rock: 2 });
   assert.deepEqual(m.sealedCubes.map((c) => c.material), ['crystal', 'crystal', 'crystal', 'stone']);
-  assert.deepEqual(m.kitchenConversion, { baits: 12, crystal: 3, stone: 1, bonds: 0 });
+  assert.deepEqual(m.kitchenConversion, { baits: 12, crystal: 3, stone: 1, bonds: 0 }); // la cuisine seule
   for (const gone of Object.keys(KITCHEN_EARLY)) assert.equal(gone in m, false, gone);
 
-  // quêtes : mêmes quêtes, même avancement, récompense au nouveau format
-  assert.deepEqual(m.activeQuests.map((q) => [q.uid, q.templateId, q.progress, q.target]),
-    v3.activeQuests.map((q: any) => [q.uid, LEGACY_QUEST_IDS[q.templateId] ?? q.templateId, q.progress, q.target]));
-  const runeQuest = m.activeQuests.find((q) => q.templateId === 'q_ult_1');
-  assert.equal(runeQuest?.reward.rune, 'rune_cadence');
+  // quêtes : supprimées (A3.2) ; la quête renommée en v5 (q_bursts_3) n'était pas finie : pas de Galet
+  assert.equal('activeQuests' in m, false);
+  assert.deepEqual(m.powerStones, v3.powerStones);
+  assert.ok(v3.activeQuests.some((q: any) => q.templateId in LEGACY_QUEST_IDS));
 
   // plus aucun ancien nom nulle part dans la sauvegarde chargée (textes de quêtes compris)
   const dump = normalizeText(JSON.stringify(m));

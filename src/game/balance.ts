@@ -198,6 +198,45 @@ export const SUMMON = {
   duplicateAwakenBonus: 0.25,
 };
 
+/**
+ * Niveau de collection du Carnet (spec Atelier, A3.2) : points par découverte, calculés par
+ * `collectionPoints` (collection.ts) à partir de la sauvegarde, jamais stockés.
+ */
+export const COLLECTION_POINTS = {
+  /** Chaque forme possédée (espèce présente dans l'effectif). */
+  ownedForm: 10,
+  /** Chaque évolution vue (forme de stade 2 ou 3 découverte). */
+  evolutionSeen: 5,
+  /** Chaque étoile de Lien pleine. */
+  bondStar: 3,
+  variant: 8,
+  /** Chaque type de Rune obtenu (en sac ou équipé). */
+  rune: 5,
+  /** Chaque exploit réclamé. */
+  achievement: 4,
+};
+
+/**
+ * Paliers de collection : chacun se réclame une fois, d'un clic. `titles` : titres et cadres
+ * (identifiants ; leurs noms sont dans fr.ts, `FR.ui.carnet.titres`).
+ */
+export interface CollectionTier {
+  at: number;
+  cubes: CubeMaterial[];
+  baits?: Partial<Record<ElementType, number>>;
+  titles?: string[];
+}
+export const COLLECTION_TIERS: CollectionTier[] = [
+  { at: 50, cubes: ['wood'], baits: { fire: 1, water: 1 } },
+  { at: 120, cubes: ['wood', 'wood'], titles: ['titre_pisteur'] },
+  { at: 200, cubes: ['stone'], baits: { grass: 1, electric: 1 }, titles: ['cadre_bois'] },
+  { at: 300, cubes: ['stone', 'stone'], titles: ['titre_naturaliste'] },
+  { at: 420, cubes: ['crystal'], baits: { rock: 1, psychic: 1 }, titles: ['cadre_pierre'] },
+  { at: 560, cubes: ['crystal', 'stone'], titles: ['titre_erudit'] },
+  { at: 720, cubes: ['crystal', 'crystal'], baits: { fire: 1, water: 1, grass: 1 }, titles: ['cadre_cristal'] },
+  { at: 900, cubes: ['prism'], titles: ['titre_archiviste', 'cadre_prisme'] },
+];
+
 export const DODGE_KIT = {
   cooldown: 4,
   invuln: 0.5,

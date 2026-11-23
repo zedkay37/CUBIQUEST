@@ -7,13 +7,11 @@ import {
   canEquipStone,
   canEvolve,
   claimAchievementReward,
-  claimQuestReward,
   computeBossPhase,
   computeCreatureStats,
   computeHighestUnlockedStageIndex,
   getBiomeProgress,
   isBiomeUnlocked,
-  isQuestTemplateAvailable,
   computeSquadPower,
   computeStatusDuration,
   computeUltimateCharge,
@@ -53,7 +51,6 @@ import {
   FRONTIER_RUNE_KINDS,
   FRONTIER_STAGE_INDEX,
   RUNE_ORDER,
-  QUEST_POOL,
   BIOMES,
   ELEMENT_META,
   MOVES,
@@ -175,12 +172,13 @@ test('V0.2 boss phases and ultimate gauge clamp properly', () => {
   assert.equal(computeUltimateCharge(10, -25), 0);
 });
 
-test('V0.2 quests and achievements track progress, grant rewards, and rotate cleanly', () => {
+test('Exploits : la progression suit les statistiques, chaque exploit se réclame une fois', () => {
   let save = createInitialSaveState('pyrocube', true);
-  assert.equal(save.activeQuests.length, 3);
-  assert.equal(countClaimableRewards(save), 0);
+  assert.equal('activeQuests' in save, false); // A3.2 : plus de quêtes tournantes
+  // la partie neuve n'a que le premier palier de collection à réclamer (3 formes + 4 Runes = 50 points)
+  assert.equal(countClaimableRewards(save), 1);
 
-  // Advance progress to complete first expedition quest & achievement
+  // Advance progress to complete achievements
   save = recordPlayerProgress(save, {
     expeditionsWon: 2,
     bossesDefeated: 2,
@@ -190,15 +188,8 @@ test('V0.2 quests and achievements track progress, grant rewards, and rotate cle
     triosTriggered: 18,
   });
 
-  const firstQuest = save.activeQuests[0];
-  assert.equal(firstQuest.progress, firstQuest.target);
   assert.ok(countClaimableRewards(save) >= 2);
-
-  const prevStones = save.powerStones.length;
-  const afterQuestClaim = claimQuestReward(save, firstQuest.uid, () => 0.1);
-  assert.equal(afterQuestClaim.activeQuests.length, 3);
-  assert.notEqual(afterQuestClaim.activeQuests[0].uid, firstQuest.uid);
-  assert.ok(afterQuestClaim.powerStones.length >= prevStones);
+  const afterQuestClaim = save;
 
   // Claim an unlocked achievement once, verify idempotency
   const winAch = ACHIEVEMENTS.find((a) => a.id === 'ach_first_win')!;
@@ -234,7 +225,7 @@ test('V0.2 SaveState v1 -> v2 migration and JSON export/import validation', () =
   assert.equal(migrated.baits.fire, 3); // 19 rouges : 3 tranches de 5, le reste est perdu
   assert.equal(migrated.highestStageIndex, 4);
   assert.equal(migrated.stats.expeditionsWon, 7);
-  assert.equal(migrated.activeQuests.length, 3);
+  assert.equal('activeQuests' in migrated, false);
 
   const exported = exportSaveToJson(migrated);
   const imported = importSaveFromJson(exported);
@@ -455,11 +446,10 @@ test('Giga: Runes de Précision et de Vigueur — modificateurs, équipement et 
   assert.equal(applyExpeditionRewards(fresh, STAGES[0], true, stats, () => 0.4).nextSave.stats.frontierWins, 0);
 });
 
-test('Giga: quêtes et succès des nouveaux biomes', () => {
-  const ids = new Set(QUEST_POOL.map((q) => q.templateId));
-  assert.equal(ids.size, QUEST_POOL.length);
+test('Giga: succès des nouveaux biomes (exploits du Carnet)', () => {
   assert.equal(new Set(ACHIEVEMENTS.map((a) => a.id)).size, ACHIEVEMENTS.length);
-  for (const def of [...QUEST_POOL, ...ACHIEVEMENTS]) {
+  for (const def of ACHIEVEMENTS) {
+    assert.ok(['combat', 'collection', 'exploration'].includes(def.theme), def.id);
     for (const el of Object.keys(def.reward.baits ?? {})) assert.ok(ELEMENT_META[el as keyof typeof ELEMENT_META], el);
     assert.ok(!def.reward.cube || ['wood', 'stone', 'crystal', 'prism'].includes(def.reward.cube), def.reward.cube);
     assert.ok(def.metric !== ('dishesCooked' as string), 'plus de quête de cuisine');
@@ -468,46 +458,15 @@ test('Giga: quêtes et succès des nouveaux biomes', () => {
   assert.equal(dexAll.target, Object.keys(SPECIES).length);
   assert.ok(ACHIEVEMENTS.find((a) => a.id === 'ach_stages_18')!.target <= STAGES.length);
 
-  // Rotation : aucune quête des confins tant que la Toundra est fermée
-  const frontierTpl = QUEST_POOL.find((q) => q.templateId === 'q_frontier_win_2')!;
+  // Les victoires des confins font progresser les succès de biome
   const early = createInitialSaveState('pyrocube', true);
-  assert.equal(isQuestTemplateAvailable(frontierTpl, early), false);
-  assert.equal(isQuestTemplateAvailable(frontierTpl, { highestStageIndex: FRONTIER_STAGE_INDEX }), true);
-  let rotating = recordPlayerProgress(early, { expeditionsWon: 50, burstsTriggered: 50, ultimatesUsed: 50, perfectDodges: 50, bossesDefeated: 50 });
-  for (let i = 0; i < 40; i++) {
-    const done = rotating.activeQuests.find((q) => q.progress >= q.target);
-    if (!done) {
-      rotating = recordPlayerProgress(rotating, { expeditionsWon: 50, burstsTriggered: 50, ultimatesUsed: 50, perfectDodges: 50, bossesDefeated: 50 });
-      continue;
-    }
-    rotating = claimQuestReward(rotating, done.uid, () => (i % 10) / 10);
-    assert.equal(rotating.activeQuests.length, 3);
-    for (const q of rotating.activeQuests) {
-      const tpl = QUEST_POOL.find((t) => t.templateId === q.templateId)!;
-      assert.ok(isQuestTemplateAvailable(tpl, rotating), q.templateId);
-    }
-  }
-
-  // Une fois la Toundra ouverte, la quête progresse avec les victoires des confins uniquement
   const tundra1 = STAGES[FRONTIER_STAGE_INDEX];
-  let save: ReturnType<typeof createInitialSaveState> = {
-    ...early,
-    highestStageIndex: tundra1.index,
-    activeQuests: [
-      { uid: 'q_test', templateId: frontierTpl.templateId, title: frontierTpl.title, description: frontierTpl.description, metric: frontierTpl.metric, progress: 0, target: frontierTpl.target, reward: frontierTpl.reward },
-      ...early.activeQuests.slice(1),
-    ],
-  };
+  let save: ReturnType<typeof createInitialSaveState> = { ...early, highestStageIndex: tundra1.index };
   const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 10, bossHpPercentRemaining: 0 };
   save = applyExpeditionRewards(save, STAGES[0], true, stats, () => 0.9).nextSave;
-  assert.equal(save.activeQuests[0].progress, 0);
   save = applyExpeditionRewards(save, tundra1, true, stats, () => 0.9).nextSave;
   save = applyExpeditionRewards(save, STAGES[FRONTIER_STAGE_INDEX + 1], true, stats, () => 0.9).nextSave;
-  assert.equal(save.activeQuests[0].progress, 2);
-  const beforeBag = save.runeBag.rune_precision;
-  const claimed = claimQuestReward(save, 'q_test', () => 0.3);
-  assert.equal(claimed.runeBag.rune_precision, beforeBag + 1);
-  assert.equal(claimed.baits.water, (save.baits.water ?? 0) + 1);
+  assert.equal(save.stats.frontierWins, 2);
 
   // Succès de biome : progression dérivée des niveaux terminés, réclamation unique
   const tundraAch = ACHIEVEMENTS.find((a) => a.id === 'ach_tundra_clear')!;
@@ -531,7 +490,7 @@ function oldRuneId(kind: string): string {
 }
 
 test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intacte)', () => {
-  assert.equal(SAVE_VERSION, 9);
+  assert.equal(SAVE_VERSION, 10);
   const fresh = createInitialSaveState('aquabloc', true);
   // Sauvegarde v2 réaliste : pas de pierres/stats des confins, quête en cours, créature équipée
   const { frontierWins: _fw, ...v2Stats } = fresh.stats;
@@ -546,7 +505,12 @@ test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intact
     completedStageIds: STAGES.slice(0, 7).map((s) => s.id),
     expeditionsCompleted: 9,
     claimedAchievementIds: ['ach_first_win'],
-    activeQuests: fresh.activeQuests.map((q, i) => (i === 0 ? { ...q, progress: 1 } : q)),
+    // quête en cours (supprimées en v10) : la première, terminée, donne sa récompense à la migration
+    activeQuests: [
+      { uid: 'quest_init_1', templateId: 'q_win_1', progress: 1, target: 1 },
+      { uid: 'quest_init_2', templateId: 'q_bursts_3', progress: 1, target: 3 },
+    ],
+    baits: {},
   };
   const migrated = migrateSaveState(JSON.parse(JSON.stringify(v2)));
   assert.ok(migrated !== null);
@@ -556,7 +520,8 @@ test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intact
   assert.equal(migrated.stats.expeditionsWon, 9);
   assert.equal(migrated.stats.triosTriggered, 14);
   assert.equal(migrated.highestStageIndex, 7);
-  assert.equal(migrated.activeQuests[0].progress, 1);
+  assert.deepEqual(migrated.baits, { fire: 1, water: 1 });
+  assert.equal('activeQuests' in migrated, false);
   assert.deepEqual(migrated.claimedAchievementIds, ['ach_first_win']);
   assert.equal(migrated.roster[0].stoneBoard[0].stoneId, fresh.roster[0].stoneBoard[0].stoneId);
   assert.equal(isBiomeUnlocked(migrated, 'tundra'), false);
@@ -813,7 +778,7 @@ test('Ouvertures (S07.3): table UNLOCKS, compagnon après le premier boss, ancie
   assert.deepEqual([...unlockedFeatures(save)], []);
   const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 };
   const r1 = applyExpeditionRewards(save, STAGES[0], true, stats, () => 0.5);
-  assert.deepEqual(r1.outcome.newFeatures, ['camp', 'quests']);
+  assert.deepEqual(r1.outcome.newFeatures, ['camp', 'carnet']);
   save = r1.nextSave;
   assert.ok(unlockedFeatures(save).has('camp'));
   save = applyExpeditionRewards(save, STAGES[1], true, stats, () => 0.5).nextSave;
@@ -839,6 +804,6 @@ test('Ouvertures (S07.3): table UNLOCKS, compagnon après le premier boss, ancie
   // une sauvegarde d'avant S07 a tout ouvert, et ne reçoit pas de compagnon
   const old = migrateSaveState({ ...createInitialSaveState('braise', true), version: 7, allUnlocked: undefined, starterTrio: undefined })!;
   assert.equal(old.allUnlocked, true);
-  assert.equal(unlockedFeatures(old).size, 7); // A2.2 : plus d'onglet de cuisine ; A2.3 : l'Atelier
+  assert.equal(unlockedFeatures(old).size, 6); // A2.2 : plus d'onglet de cuisine ; A2.3 : l'Atelier ; A3.2 : le Carnet remplace quêtes et Codex
   assert.equal(markUnlockSeen(markUnlockSeen(save, 'team'), 'team').unlocksSeen.filter((f) => f === 'team').length, 1);
 });

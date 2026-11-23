@@ -1,5 +1,5 @@
 /**
- * Anciens identifiants des sauvegardes v1 à v8, convertis par `migrateSaveState` (rules.ts).
+ * Anciens identifiants des sauvegardes v1 à v9, convertis par `migrateSaveState` (rules.ts).
  *
  * C'est le SEUL fichier du jeu où ces anciens noms ont le droit d'apparaître : il est exempté du test
  * des mots interdits (tools/lexiqueCore.ts). N'y ajouter que des tables de conversion, et la seule
@@ -7,7 +7,7 @@
  * Un identifiant absent de ces tables et inconnu du catalogue est ignoré sans erreur.
  */
 import { BIOMES } from './catalog';
-import type { BiomeId, ElementType, RuneKind } from './types';
+import type { BiomeId, ElementType, QuestReward, RuneKind } from './types';
 
 /** Pierres de capacité (v1 à v3) -> runes (v4). */
 export const LEGACY_RUNE_IDS: Readonly<Record<string, RuneKind>> = {
@@ -31,6 +31,25 @@ export const LEGACY_STAT_FIELDS = {
 export const LEGACY_QUEST_IDS: Readonly<Record<string, string>> = {
   q_combos_3: 'q_bursts_3',
   q_combos_6: 'q_bursts_6',
+};
+
+/**
+ * Quêtes tournantes, supprimées en v10 (A3.2) : cible et récompense de chaque modèle, figées telles
+ * qu'elles étaient en v9. Seule `migrateSaveState` les lit, pour accorder la récompense d'une quête
+ * terminée mais pas réclamée. La récompense copiée dans une ancienne sauvegarde n'est pas relue
+ * (elle peut être à l'ancien format de la cuisine).
+ */
+export const LEGACY_QUEST_REWARDS: Readonly<Record<string, { target: number; reward: Omit<QuestReward, 'label'> }>> = {
+  q_win_1: { target: 1, reward: { baits: { fire: 1, water: 1 } } },
+  q_bursts_3: { target: 3, reward: { baits: { electric: 1 }, powerStoneRange: [65, 110], guaranteedRarity: 'silver' } },
+  q_ult_1: { target: 1, reward: { baits: { water: 1 }, rune: 'rune_cadence' } },
+  q_dodge_2: { target: 2, reward: { baits: { rock: 1 }, rune: 'rune_partage' } },
+  q_boss_2: { target: 2, reward: { cube: 'wood', powerStoneRange: [95, 150], guaranteedRarity: 'gold' } },
+  q_bursts_6: { target: 6, reward: { baits: { fire: 1 }, rune: 'rune_force' } },
+  q_win_3: { target: 3, reward: { cube: 'wood', rune: 'rune_ampleur' } },
+  q_frontier_win_2: { target: 2, reward: { baits: { water: 1 }, rune: 'rune_precision' } },
+  q_frontier_boss_3: { target: 3, reward: { rune: 'rune_vigueur', powerStoneRange: [700, 950], guaranteedRarity: 'gold' } },
+  q_evolve_frontier: { target: 1, reward: { baits: { electric: 1 } } },
 };
 
 /** Succès renommés en v5. */

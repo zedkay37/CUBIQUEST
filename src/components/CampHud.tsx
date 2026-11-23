@@ -5,7 +5,6 @@ import {
   ChevronUp,
   Compass,
   Home,
-  Trophy,
   Users,
   Vibrate,
   VibrateOff,
@@ -18,7 +17,7 @@ import { VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
 import { NewBadge } from './ui';
 
-export type CampDrawerTab = 'expeditions' | 'atelier' | 'team' | 'quests' | 'codex' | null;
+export type CampDrawerTab = 'expeditions' | 'atelier' | 'team' | 'carnet' | null;
 
 interface CampHudProps {
   save: SaveState;
@@ -67,7 +66,7 @@ export function CampHud({
     onSelectDrawer(tab);
   };
   // une phrase pour la dernière ouverture pas encore vue
-  const newest = (['atelier', 'team', 'codex', 'quests'] as const).find((t) => isNew(t));
+  const newest = (['atelier', 'team', 'carnet'] as const).find((t) => isNew(t));
   const squadPower = computeSquadPower(save);
   const squad = save.squadIds
     .map((uid) => save.roster.find((c) => c.uid === uid))
@@ -235,37 +234,22 @@ export function CampHud({
 
             <button
               type="button"
-              onClick={() => selectDrawer('quests')}
-              title={isNew('quests') ? FR.ui.campHud.nouveautes.quests : undefined}
-              className={`${isOpen('quests') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
-                activeDrawer === 'quests'
-                  ? 'block-btn-gold'
-                  : 'block-btn-secondary'
-              }`}
-            >
-              <Trophy className="w-4 h-4 text-[#F4B942]" />
-              <span>{FR.ui.campHud.quetes}</span>
-              {isNew('quests') && <NewBadge />}
-              {claimableCount > 0 && (
-                <span className="ui-new-badge font-mono-num text-[11px] font-bold rounded-[4px] bg-[#F4B942] text-[#1A0E08] px-1.5" aria-label={FR.ui.components.nouveau}>
-                  {claimableCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => selectDrawer('codex')}
-              title={isNew('codex') ? FR.ui.campHud.nouveautes.codex : undefined}
-              className={`${isOpen('codex') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
-                activeDrawer === 'codex'
+              onClick={() => selectDrawer('carnet')}
+              title={isNew('carnet') ? FR.ui.campHud.nouveautes.carnet : undefined}
+              className={`${isOpen('carnet') ? '' : 'hidden! '}voxel-btn cursor-pointer min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+                activeDrawer === 'carnet'
                   ? 'block-btn-gold'
                   : 'block-btn-secondary'
               }`}
             >
               <BookOpen className="w-4 h-4 text-[#C084FC]" />
-              <span>{import.meta.env.VITE_AI_CODEX === '1' ? FR.ui.campHud.codexWeb : FR.ui.campHud.codex}</span>
-              {isNew('codex') && <NewBadge />}
+              <span>{FR.ui.campHud.carnet}</span>
+              {isNew('carnet') && <NewBadge />}
+              {claimableCount > 0 && (
+                <span className="ui-new-badge font-mono-num text-[11px] font-bold rounded-[4px] bg-[#F4B942] text-[#1A0E08] px-1.5" aria-label={FR.ui.components.nouveau}>
+                  {claimableCount}
+                </span>
+              )}
             </button>
           </div>
         )}

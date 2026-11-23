@@ -17,7 +17,6 @@ import { parse } from '@babel/parser';
 
 /** Fichiers volontairement laissés tels quels (voir docs/archives/GIGA_FONDATIONS.md). */
 const EXCEPTIONS: Record<string, string> = {
-  'src/components/CodexDrawer.tsx': 'Codex : consigne permanente « ne pas modifier le Codex »',
   'src/components/GalleryPage.tsx': 'outil de développement (?gallery=1), jamais vu par le joueur',
   'src/components/RevealGallery.tsx': 'outil de développement (?gallery=reveal), jamais montré aux joueurs',
   'src/components/BenchOverlay.tsx': 'outil de développement (?bench=1), jamais montré aux joueurs',

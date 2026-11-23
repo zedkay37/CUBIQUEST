@@ -6,7 +6,6 @@ import {
   RUNE_ORDER,
   ELEMENT_META,
   MOVES,
-  QUEST_POOL,
   STARTER_TRIOS,
   STARTER_TRIO_IDS,
   STARTER_JOINER,
@@ -19,12 +18,12 @@ import {
   STAGES,
   STATUS_META,
 } from './catalog';
-import { CUBE_KIT, STAR_TIERS, SUMMON, XP_KIT, type CubeMaterial } from './balance';
+import { COLLECTION_TIERS, CUBE_KIT, STAR_TIERS, SUMMON, XP_KIT, type CubeMaterial } from './balance';
+import { claimableCollectionTiers } from './collection';
 import { addSealedCubes, bondMultiplier, lineageOf } from './summon';
 export { openSealedCube, addSealedCubes, lineageOf, displayedOdds, bondMultiplier } from './summon';
 import type {
   AchievementDef,
-  ActiveQuest,
   BiomeId,
   ComputedCreatureStats,
   ElementType,
@@ -38,7 +37,6 @@ import type {
   PowerStoneSubstat,
   QuestMetric,
   QuestReward,
-  QuestTemplate,
   SaveState,
   StageDef,
   StatusKind,
@@ -50,7 +48,7 @@ import type {
   DefeatAdvice,
 } from './types';
 import { FR } from '../i18n/fr';
-import { LEGACY_ACHIEVEMENT_IDS, LEGACY_QUEST_IDS, LEGACY_RUNE_IDS, LEGACY_STAT_FIELDS, readLegacyKitchen } from './legacyIds';
+import { LEGACY_ACHIEVEMENT_IDS, LEGACY_QUEST_IDS, LEGACY_QUEST_REWARDS, LEGACY_RUNE_IDS, LEGACY_STAT_FIELDS, readLegacyKitchen } from './legacyIds';
 
 /** Gestes expliqués une fois par une bulle (S04.3) ; la liste est rangée dans la sauvegarde. */
 export const FIRST_TIME_KINDS = ['cube', 'weak', 'burst', 'trio'] as const;
@@ -98,7 +96,7 @@ export const LEGACY_SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v1');
 //            `duplicates`), variantes (`variantsUnlocked`, `variantsOn`). A2.2 : l'ancienne cuisine disparaît, convertie en
 //            Appâts, cubes et Lien (`readLegacyKitchen`, legacyIds.ts) ; `kitchenConversion` garde le bilan.
 // La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 9.
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 export type RngFn = () => number;
 
@@ -1216,8 +1214,9 @@ export function createInitialSaveState(
     ),
     expeditionsCompleted: 0,
     stats: createEmptyStats(),
-    activeQuests: createInitialQuests(),
     claimedAchievementIds: [],
+    collectionTiersClaimed: [],
+    titles: [],
     firstTimesSeen: [],
     hazardHintsSeen: {},
     stageStars: {},
@@ -1251,27 +1250,6 @@ export function createEmptyStats(): PlayerStats {
   };
 }
 
-/** Une quête n'est proposée que si le niveau qu'elle exige est débloqué. */
-export function isQuestTemplateAvailable(
-  template: QuestTemplate,
-  save: Pick<SaveState, 'highestStageIndex'>,
-): boolean {
-  return (template.requiresStageIndex ?? 0) <= save.highestStageIndex;
-}
-
-export function createInitialQuests(): ActiveQuest[] {
-  return QUEST_POOL.slice(0, 3).map((tpl, idx) => ({
-    uid: `quest_init_${idx + 1}`,
-    templateId: tpl.templateId,
-    title: tpl.title,
-    description: tpl.description,
-    metric: tpl.metric,
-    progress: 0,
-    target: tpl.target,
-    reward: tpl.reward,
-  }));
-}
-
 export function recordPlayerProgress(
   save: SaveState,
   deltas: Partial<PlayerStats>,
@@ -1288,42 +1266,15 @@ export function recordPlayerProgress(
     frontierWins: (prevStats.frontierWins ?? 0) + (deltas.frontierWins ?? 0),
   };
 
-  const nextQuests = (save.activeQuests ?? createInitialQuests()).map((q) => {
-    const inc =
-      q.metric === 'expeditionsWon'
-        ? deltas.expeditionsWon ?? 0
-        : q.metric === 'burstsTriggered'
-          ? deltas.burstsTriggered ?? 0
-          : q.metric === 'ultimatesUsed'
-            ? deltas.ultimatesUsed ?? 0
-            : q.metric === 'perfectDodges'
-              ? deltas.perfectDodges ?? 0
-              : q.metric === 'bossesDefeated'
-                ? deltas.bossesDefeated ?? 0
-                : q.metric === 'evolutionsDone'
-                  ? deltas.evolutionsDone ?? 0
-                  : q.metric === 'frontierWins'
-                    ? deltas.frontierWins ?? 0
-                    : q.metric === 'triosTriggered'
-                      ? deltas.triosTriggered ?? 0
-                      : 0;
-    if (inc <= 0) return q;
-    return {
-      ...q,
-      progress: Math.min(q.target, q.progress + inc),
-    };
-  });
-
   return {
     ...save,
     stats: nextStats,
-    activeQuests: nextQuests,
   };
 }
 
 function applyRewardToSave(
   save: SaveState,
-  reward: QuestReward,
+  reward: Omit<QuestReward, 'label'>,
   rng: RngFn = Math.random,
 ): SaveState {
   const nextBaits = { ...save.baits };
@@ -1351,40 +1302,6 @@ function applyRewardToSave(
     powerStones: nextPowerStones,
   };
   return reward.cube ? addSealedCubes(rewarded, [reward.cube]).nextSave : rewarded;
-}
-
-export function claimQuestReward(
-  save: SaveState,
-  questUid: string,
-  rng: RngFn = Math.random,
-): SaveState {
-  const quest = save.activeQuests.find((q) => q.uid === questUid);
-  if (!quest || quest.progress < quest.target) return save;
-
-  const rewarded = applyRewardToSave(save, quest.reward, rng);
-  const currentTemplates = new Set(save.activeQuests.map((q) => q.templateId));
-  // Rotation limitée aux quêtes dont le contenu est déjà accessible au joueur
-  const eligible = QUEST_POOL.filter((t) => isQuestTemplateAvailable(t, save));
-  const candidates = eligible.filter((t) => !currentTemplates.has(t.templateId));
-  const nextTpl =
-    candidates[Math.floor(rng() * candidates.length)] ??
-    eligible[(eligible.findIndex((t) => t.templateId === quest.templateId) + 1) % eligible.length];
-
-  const replacement: ActiveQuest = {
-    uid: nextId('quest'),
-    templateId: nextTpl.templateId,
-    title: nextTpl.title,
-    description: nextTpl.description,
-    metric: nextTpl.metric,
-    progress: 0,
-    target: nextTpl.target,
-    reward: nextTpl.reward,
-  };
-
-  return {
-    ...rewarded,
-    activeQuests: rewarded.activeQuests.map((q) => (q.uid === questUid ? replacement : q)),
-  };
 }
 
 export function getAchievementProgress(save: SaveState, ach: AchievementDef): number {
@@ -1434,14 +1351,18 @@ export function claimAchievementReward(
   };
 }
 
-export function countClaimableRewards(save: SaveState): number {
-  const questsReady = (save.activeQuests ?? []).filter((q) => q.progress >= q.target).length;
-  const achReady = ACHIEVEMENTS.filter(
+/** Exploits prêts à réclamer (pas encore réclamés, objectif atteint). */
+export function countClaimableAchievements(save: SaveState): number {
+  return ACHIEVEMENTS.filter(
     (a) =>
       !(save.claimedAchievementIds ?? []).includes(a.id) &&
       getAchievementProgress(save, a) >= a.target,
   ).length;
-  return questsReady + achReady;
+}
+
+/** Pastille du Carnet (A3.2) : exploits et paliers de collection à réclamer. */
+export function countClaimableRewards(save: SaveState): number {
+  return countClaimableAchievements(save) + claimableCollectionTiers(save).length;
 }
 
 const ALL_STONE_RARITIES: StoneRarity[] = ['common', 'bronze', 'silver', 'gold'];
@@ -1572,55 +1493,14 @@ export function normalizeCreature(raw: unknown, freeStoneIds: Set<string>): Owne
   };
 }
 
-function normalizeQuests(raw: unknown): ActiveQuest[] {
-  if (!Array.isArray(raw) || raw.length !== 3) return createInitialQuests();
-  const quests: ActiveQuest[] = [];
-  for (const item of raw) {
-    const q = item as Partial<ActiveQuest> | null;
-    const target = Number(q?.target);
-    if (
-      !q ||
-      typeof q.uid !== 'string' ||
-      typeof q.templateId !== 'string' ||
-      typeof q.title !== 'string' ||
-      typeof q.description !== 'string' ||
-      // la métrique est reprise du modèle (elle a pu être renommée, ex. reactionsTriggered en v5)
-      !Number.isFinite(target) ||
-      target <= 0 ||
-      !q.reward ||
-      typeof q.reward !== 'object' ||
-      typeof q.reward.label !== 'string'
-    ) {
-      return createInitialQuests();
-    }
-    // Les textes et la récompense d'une quête sont copiés dans la sauvegarde : on les reprend du modèle,
-    // pour qu'une ancienne sauvegarde n'affiche pas d'ancien nom et ne garde pas d'ancien identifiant.
-    const templateId = Object.hasOwn(LEGACY_QUEST_IDS, q.templateId) ? LEGACY_QUEST_IDS[q.templateId] : q.templateId;
-    const known = QUEST_POOL.find((t) => t.templateId === templateId);
-    // A2.2 : une quête retirée du jeu (cuisine) est remplacée par une autre, sans toucher aux deux autres
-    const taken = new Set([...quests.map((x) => x.templateId), ...raw.map((x) => (x as Partial<ActiveQuest> | null)?.templateId)]);
-    const tpl = known ?? QUEST_POOL.find((t) => !t.requiresStageIndex && !taken.has(t.templateId));
-    if (!tpl) return createInitialQuests();
-    quests.push({
-      uid: q.uid,
-      templateId: tpl.templateId,
-      title: tpl.title,
-      description: tpl.description,
-      metric: tpl.metric,
-      progress: known ? Math.min(tpl.target, Math.max(0, Number(q.progress) || 0)) : 0,
-      target: tpl.target,
-      reward: tpl.reward,
-    });
-  }
-  return new Set(quests.map((q) => q.uid)).size === 3 ? quests : createInitialQuests();
-}
-
 /**
- * Migre une sauvegarde v1 à v8, ou normalise une v9, sans perdre la progression du joueur.
+ * Migre une sauvegarde v1 à v9, ou normalise une v10, sans perdre la progression du joueur.
+ * v1 à v9 -> v10 (A3.2) : quêtes tournantes supprimées, récompenses en attente accordées
+ * (`grantPendingQuestRewards`) ; ajoute les paliers de collection réclamés et les titres (vides).
+ * `rng` ne sert qu'à tirer le Galet d'une quête terminée qui en donnait un.
  * v1 à v8 -> v9 (A2.2) : l'ancienne cuisine est convertie (`readLegacyKitchen`, legacyIds.ts) : Appâts, cubes
  * Cristal et Pierre ; chaque doublon d'une lignée déjà possédée donne +1 Lien (★5 au plus) et compte comme doublon.
  * v3 -> v4 : identifiants renommés (runes) convertis par les tables de `legacyIds.ts` ;
- * les quêtes en cours reprennent les textes et la récompense de leur modèle.
  * v2 -> v3 : ajoute les Runes de Précision et de Vigueur (0) au sac, la stat frontierWins (0)
  * et ouvre la Toundra aux sauvegardes qui avaient déjà vaincu l'ancien dernier niveau.
  *
@@ -1628,12 +1508,12 @@ function normalizeQuests(raw: unknown): ActiveQuest[] {
  * validé et réparé ou ignoré, pour qu'aucune donnée abîmée ne fasse planter le jeu plus tard.
  * Renvoie null seulement si rien n'est récupérable (pas d'escouade, version inconnue).
  */
-export function migrateSaveState(raw: unknown): SaveState | null {
+export function migrateSaveState(raw: unknown, rng: RngFn = Math.random): SaveState | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const obj = raw as Partial<SaveState>;
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
   if (!Array.isArray(obj.squadIds)) return null;
-  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== 6 && obj.version !== 7 && obj.version !== 8 && obj.version !== SAVE_VERSION) return null;
+  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== 6 && obj.version !== 7 && obj.version !== 8 && obj.version !== 9 && obj.version !== SAVE_VERSION) return null;
 
   // Pierres de Pouvoir : valides, identifiants uniques
   const powerStones: PowerStone[] = [];
@@ -1705,7 +1585,6 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     discoveredSpeciesIds,
     expeditionsCompleted,
     stats,
-    activeQuests: normalizeQuests(obj.activeQuests),
     claimedAchievementIds: uniqueKnown(
       Array.isArray(obj.claimedAchievementIds)
         ? obj.claimedAchievementIds.map((id) => (typeof id === 'string' && Object.hasOwn(LEGACY_ACHIEVEMENT_IDS, id) ? LEGACY_ACHIEVEMENT_IDS[id] : id))
@@ -1720,13 +1599,48 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     // une sauvegarde d'avant S07 (v1 à v7) a déjà tout ouvert
     allUnlocked: typeof obj.allUnlocked === 'boolean' ? obj.allUnlocked : (obj.version as number) < 8,
     ...normalizeSummonState(obj),
-    unlocksSeen: Array.isArray(obj.unlocksSeen) ? UNLOCK_FEATURES.filter((f) => (obj.unlocksSeen as unknown[]).includes(f)) : [],
+    // v9 -> v10 : la pastille vue des quêtes (ou du Codex) vaut pour le Carnet
+    unlocksSeen: Array.isArray(obj.unlocksSeen)
+      ? UNLOCK_FEATURES.filter((f) => {
+          const seen = obj.unlocksSeen as unknown[];
+          return seen.includes(f) || (f === 'carnet' && (seen.includes('quests') || seen.includes('codex')));
+        })
+      : [],
     starTiersClaimed: Array.isArray(obj.starTiersClaimed)
       ? STAR_TIERS.map((t) => t.at).filter((at) => (obj.starTiersClaimed as unknown[]).includes(at))
       : [],
     kitchenConversion: normalizeKitchenConversion((obj as Record<string, unknown>).kitchenConversion),
+    collectionTiersClaimed: Array.isArray(obj.collectionTiersClaimed)
+      ? COLLECTION_TIERS.map((t) => t.at).filter((at) => (obj.collectionTiersClaimed as unknown[]).includes(at))
+      : [],
+    titles: uniqueKnown(obj.titles, (id) => COLLECTION_TIERS.some((t) => t.titles?.includes(id))),
   };
-  return (obj.version as number) < 9 ? convertLegacyKitchen(migrated, obj) : migrated;
+  const version = obj.version as number;
+  const withKitchen = version < 9 ? convertLegacyKitchen(migrated, obj) : migrated;
+  return version < 10 ? grantPendingQuestRewards(withKitchen, (raw as { activeQuests?: unknown }).activeQuests, rng) : withKitchen;
+}
+
+/**
+ * v1 à v9 -> v10 (A3.2) : les quêtes tournantes sont supprimées. Une quête en cours déjà terminée mais pas
+ * réclamée donne sa récompense (cible et récompense figées dans `LEGACY_QUEST_REWARDS`, legacyIds.ts) ;
+ * une quête inconnue ou pas finie ne donne rien. Une même quête n'est payée qu'une fois.
+ */
+function grantPendingQuestRewards(save: SaveState, rawQuests: unknown, rng: RngFn): SaveState {
+  if (!Array.isArray(rawQuests)) return save;
+  let next = save;
+  const paid = new Set<string>();
+  for (const item of rawQuests) {
+    if (!item || typeof item !== 'object') continue;
+    const q = item as { uid?: unknown; templateId?: unknown; progress?: unknown };
+    if (typeof q.templateId !== 'string') continue;
+    const templateId = Object.hasOwn(LEGACY_QUEST_IDS, q.templateId) ? LEGACY_QUEST_IDS[q.templateId] : q.templateId;
+    const def = Object.hasOwn(LEGACY_QUEST_REWARDS, templateId) ? LEGACY_QUEST_REWARDS[templateId] : undefined;
+    const key = typeof q.uid === 'string' ? q.uid : templateId;
+    if (!def || paid.has(key) || toCount(q.progress) < def.target) continue;
+    paid.add(key);
+    next = applyRewardToSave(next, def.reward, rng);
+  }
+  return next;
 }
 
 /** Bilan de la conversion de la cuisine lu dans une sauvegarde v9 (null s'il est absent ou abîmé). */

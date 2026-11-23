@@ -4,8 +4,8 @@ import { escapeTarget, nextDrawer } from './uiNav';
 
 test('Navigation (A1.2): un autre bouton du dock ferme l’écran en cours et ouvre le sien', () => {
   assert.equal(nextDrawer(null, 'team'), 'team');
-  assert.equal(nextDrawer('team', 'codex'), 'codex');
-  assert.equal(nextDrawer('codex', 'codex'), null);
+  assert.equal(nextDrawer('team', 'carnet'), 'carnet');
+  assert.equal(nextDrawer('carnet', 'carnet'), null);
 });
 
 test('Navigation (A1.2): Échap ferme toujours la fenêtre du dessus', () => {

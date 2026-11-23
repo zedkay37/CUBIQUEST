@@ -9,7 +9,6 @@ import type {
   MoveDef,
   RuneDef,
   RuneKind,
-  QuestTemplate,
   SpeciesDef,
   StageDef,
   StatusKind,
@@ -1401,19 +1400,19 @@ export type StarterTrioId = keyof typeof STARTER_TRIOS;
 
 /**
  * Ouvertures du premier quart d'heure (S07.3), lues par `unlockedFeatures` (rules.ts).
- * `quests` (qui porte les options et le journal de test) s'ouvre avec le camp : décision prise seul,
+ * `carnet` (qui porte les options et le journal de test) s'ouvre avec le camp : décision prise seul,
  * pour que les testeurs puissent exporter leur journal même bloqués au niveau 2.
+ * A3.2 : le Carnet remplace l'écran des quêtes ET le Codex (qui s'ouvrait après shore-1).
  */
-export type UnlockFeature = 'camp' | 'quests' | 'team' | 'auto' | 'atelier' | 'codex' | 'stones';
+export type UnlockFeature = 'camp' | 'carnet' | 'team' | 'auto' | 'atelier' | 'stones';
 export const UNLOCKS: { afterStageId: string; features: UnlockFeature[]; companion?: boolean }[] = [
-  { afterStageId: 'meadow-1', features: ['camp', 'quests'] },
+  { afterStageId: 'meadow-1', features: ['camp', 'carnet'] },
   { afterStageId: 'meadow-2', features: [] }, // la première évolution (niveau 8) occupe ce moment
   // A2 : l'Atelier s'ouvre avec le premier cube (garanti), donné par le premier boss
   { afterStageId: 'meadow-3', features: ['team', 'auto', 'atelier'], companion: true },
-  { afterStageId: 'shore-1', features: ['codex'] },
   { afterStageId: 'shore-3', features: ['stones'] },
 ];
-export const UNLOCK_FEATURES: UnlockFeature[] = ['camp', 'quests', 'team', 'auto', 'atelier', 'codex', 'stones'];
+export const UNLOCK_FEATURES: UnlockFeature[] = ['camp', 'carnet', 'team', 'auto', 'atelier', 'stones'];
 /**
  * Raretés d'invocation (spec Atelier, A2.1), par lignée (forme de base). Seules les formes de base sortent
  * des cubes ; la « forme éveillée » (stade 2) ne sort que d'un cube Prisme, pour une lignée déjà recrutée.
@@ -2335,7 +2334,6 @@ export const BURSTS: Record<ElementType, BurstDef> = {
   psychic: { id: 'echo', element: 'psychic', name: FR.catalog.BURSTS.echo.name, color: '#C084FC', damageMult: 1.35, effect: 'cd_spread', description: FR.catalog.BURSTS.echo.description },
 };
 
-// === V0.2 ROTATING QUEST POOL ===
 /**
  * DÉFIS DES NIVEAUX (S06.1) : la troisième étoile. Retour du propriétaire : aucun défi ne dépend des Éclats
  * ni des Trios. Types : esquives parfaites, chrono, aucune attaque annoncée subie, sans Déchaînement.
@@ -2366,139 +2364,11 @@ export const STAGE_CHALLENGES: Record<string, StageChallenge> = {
   'canyon-3': { kind: 'duration', maxSec: 70 },
 };
 
-export const QUEST_POOL: QuestTemplate[] = [
-  {
-    templateId: 'q_win_1',
-    title: FR.catalog.QUEST_POOL.q_win_1.title,
-    description: FR.catalog.QUEST_POOL.q_win_1.description,
-    metric: 'expeditionsWon',
-    target: 1,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_win_1.reward.label,
-      baits: { fire: 1, water: 1 },
-    },
-  },
-  {
-    templateId: 'q_bursts_3',
-    title: FR.catalog.QUEST_POOL.q_bursts_3.title,
-    description: FR.catalog.QUEST_POOL.q_bursts_3.description,
-    metric: 'burstsTriggered',
-    target: 3,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_bursts_3.reward.label,
-      baits: { electric: 1 },
-      powerStoneRange: [65, 110],
-      guaranteedRarity: 'silver',
-    },
-  },
-  {
-    templateId: 'q_ult_1',
-    title: FR.catalog.QUEST_POOL.q_ult_1.title,
-    description: FR.catalog.QUEST_POOL.q_ult_1.description,
-    metric: 'ultimatesUsed',
-    target: 1,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_ult_1.reward.label,
-      baits: { water: 1 },
-      rune: 'rune_cadence',
-    },
-  },
-  {
-    templateId: 'q_dodge_2',
-    title: FR.catalog.QUEST_POOL.q_dodge_2.title,
-    description: FR.catalog.QUEST_POOL.q_dodge_2.description,
-    metric: 'perfectDodges',
-    target: 2,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_dodge_2.reward.label,
-      baits: { rock: 1 },
-      rune: 'rune_partage',
-    },
-  },
-  {
-    templateId: 'q_boss_2',
-    title: FR.catalog.QUEST_POOL.q_boss_2.title,
-    description: FR.catalog.QUEST_POOL.q_boss_2.description,
-    metric: 'bossesDefeated',
-    target: 2,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_boss_2.reward.label,
-      cube: 'wood',
-      powerStoneRange: [95, 150],
-      guaranteedRarity: 'gold',
-    },
-  },
-  {
-    templateId: 'q_bursts_6',
-    title: FR.catalog.QUEST_POOL.q_bursts_6.title,
-    description: FR.catalog.QUEST_POOL.q_bursts_6.description,
-    metric: 'burstsTriggered',
-    target: 6,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_bursts_6.reward.label,
-      baits: { fire: 1 },
-      rune: 'rune_force',
-    },
-  },
-  {
-    templateId: 'q_win_3',
-    title: FR.catalog.QUEST_POOL.q_win_3.title,
-    description: FR.catalog.QUEST_POOL.q_win_3.description,
-    metric: 'expeditionsWon',
-    target: 3,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_win_3.reward.label,
-      cube: 'wood',
-      rune: 'rune_ampleur',
-    },
-  },
-
-  // === GIGA UPDATE : quêtes des nouveaux biomes (n'apparaissent qu'une fois la Toundra ouverte) ===
-  {
-    templateId: 'q_frontier_win_2',
-    title: FR.catalog.QUEST_POOL.q_frontier_win_2.title,
-    description: FR.catalog.QUEST_POOL.q_frontier_win_2.description,
-    metric: 'frontierWins',
-    target: 2,
-    requiresStageIndex: FRONTIER_STAGE_INDEX,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_frontier_win_2.reward.label,
-      baits: { water: 1 },
-      rune: 'rune_precision',
-    },
-  },
-  {
-    templateId: 'q_frontier_boss_3',
-    title: FR.catalog.QUEST_POOL.q_frontier_boss_3.title,
-    description: FR.catalog.QUEST_POOL.q_frontier_boss_3.description,
-    metric: 'frontierWins',
-    target: 3,
-    requiresStageIndex: FRONTIER_STAGE_INDEX + 1,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_frontier_boss_3.reward.label,
-      rune: 'rune_vigueur',
-      powerStoneRange: [700, 950],
-      guaranteedRarity: 'gold',
-    },
-  },
-  {
-    templateId: 'q_evolve_frontier',
-    title: FR.catalog.QUEST_POOL.q_evolve_frontier.title,
-    description: FR.catalog.QUEST_POOL.q_evolve_frontier.description,
-    metric: 'evolutionsDone',
-    target: 1,
-    requiresStageIndex: FRONTIER_STAGE_INDEX,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_evolve_frontier.reward.label,
-      baits: { electric: 1 },
-    },
-  },
-];
-
 // === V0.2 PERMANENT ACHIEVEMENTS (12) ===
 export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'ach_first_win',
+    theme: 'combat',
     title: FR.catalog.ACHIEVEMENTS.ach_first_win.title,
     description: FR.catalog.ACHIEVEMENTS.ach_first_win.description,
     metric: 'expeditionsWon',
@@ -2510,6 +2380,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_veteran_5',
+    theme: 'combat',
     title: FR.catalog.ACHIEVEMENTS.ach_veteran_5.title,
     description: FR.catalog.ACHIEVEMENTS.ach_veteran_5.description,
     metric: 'expeditionsWon',
@@ -2522,6 +2393,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_first_burst',
+    theme: 'combat',
     title: FR.catalog.ACHIEVEMENTS.ach_first_burst.title,
     description: FR.catalog.ACHIEVEMENTS.ach_first_burst.description,
     metric: 'burstsTriggered',
@@ -2533,6 +2405,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_burst_master',
+    theme: 'combat',
     title: FR.catalog.ACHIEVEMENTS.ach_burst_master.title,
     description: FR.catalog.ACHIEVEMENTS.ach_burst_master.description,
     metric: 'burstsTriggered',
@@ -2545,6 +2418,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_trios_5',
+    theme: 'combat',
     title: FR.catalog.ACHIEVEMENTS.ach_trios_5.title,
     description: FR.catalog.ACHIEVEMENTS.ach_trios_5.description,
     metric: 'triosTriggered',
@@ -2557,6 +2431,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_ult_3',
+    theme: 'combat',
     title: FR.catalog.ACHIEVEMENTS.ach_ult_3.title,
     description: FR.catalog.ACHIEVEMENTS.ach_ult_3.description,
     metric: 'ultimatesUsed',
@@ -2569,6 +2444,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_dodge_3',
+    theme: 'combat',
     title: FR.catalog.ACHIEVEMENTS.ach_dodge_3.title,
     description: FR.catalog.ACHIEVEMENTS.ach_dodge_3.description,
     metric: 'perfectDodges',
@@ -2581,6 +2457,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_evolve_1',
+    theme: 'collection',
     title: FR.catalog.ACHIEVEMENTS.ach_evolve_1.title,
     description: FR.catalog.ACHIEVEMENTS.ach_evolve_1.description,
     metric: 'evolutionsDone',
@@ -2593,6 +2470,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_dex_8',
+    theme: 'collection',
     title: FR.catalog.ACHIEVEMENTS.ach_dex_8.title,
     description: FR.catalog.ACHIEVEMENTS.ach_dex_8.description,
     metric: 'speciesDiscovered',
@@ -2605,6 +2483,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_stages_6',
+    theme: 'exploration',
     title: FR.catalog.ACHIEVEMENTS.ach_stages_6.title,
     description: FR.catalog.ACHIEVEMENTS.ach_stages_6.description,
     metric: 'stagesCompleted',
@@ -2617,6 +2496,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_stages_12',
+    theme: 'exploration',
     title: FR.catalog.ACHIEVEMENTS.ach_stages_12.title,
     description: FR.catalog.ACHIEVEMENTS.ach_stages_12.description,
     metric: 'stagesCompleted',
@@ -2632,6 +2512,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // === GIGA UPDATE : succès des nouveaux biomes ===
   {
     id: 'ach_tundra_clear',
+    theme: 'exploration',
     title: FR.catalog.ACHIEVEMENTS.ach_tundra_clear.title,
     description: FR.catalog.ACHIEVEMENTS.ach_tundra_clear.description,
     metric: 'tundraStages',
@@ -2644,6 +2525,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_storm_clear',
+    theme: 'exploration',
     title: FR.catalog.ACHIEVEMENTS.ach_storm_clear.title,
     description: FR.catalog.ACHIEVEMENTS.ach_storm_clear.description,
     metric: 'stormStages',
@@ -2657,6 +2539,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_stages_18',
+    theme: 'exploration',
     title: FR.catalog.ACHIEVEMENTS.ach_stages_18.title,
     description: FR.catalog.ACHIEVEMENTS.ach_stages_18.description,
     metric: 'stagesCompleted',
@@ -2670,6 +2553,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_dex_20',
+    theme: 'collection',
     title: FR.catalog.ACHIEVEMENTS.ach_dex_20.title,
     description: FR.catalog.ACHIEVEMENTS.ach_dex_20.description,
     metric: 'speciesDiscovered',
@@ -2681,6 +2565,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_dex_all',
+    theme: 'collection',
     title: FR.catalog.ACHIEVEMENTS.ach_dex_all.title,
     // cible calculée : ajouter ou retirer une lignée ne demande aucune retouche ici
     description: FR.catalog.ACHIEVEMENTS.ach_dex_all.description(Object.keys(SPECIES).length),
@@ -2695,6 +2580,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ach_evolve_5',
+    theme: 'collection',
     title: FR.catalog.ACHIEVEMENTS.ach_evolve_5.title,
     description: FR.catalog.ACHIEVEMENTS.ach_evolve_5.description,
     metric: 'evolutionsDone',
