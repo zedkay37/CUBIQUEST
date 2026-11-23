@@ -19,6 +19,7 @@ import { clearProjectilesAndTelegraphs, spawnParticleBurst, spawnSteamCube } fro
 import type { VoxelEngine } from '../VoxelEngine';
 import { resetLessonState } from './lessons';
 import { setGrade } from './postfx';
+import { buildLibrary, buildSignpost, pickWanderTarget, registerHubPlace } from './hub';
 
 export function clearGroup(self: VoxelEngine, group: THREE.Group): void {
   while (group.children.length > 0) {
@@ -92,6 +93,24 @@ export function loadCampScene(
   const workbench = buildWorkbenchProp();
   workbench.group.position.set(0, 0, -1.2);
   self.worldGroup.add(workbench.group);
+
+  // A3.1 : les quatre lieux cliquables du camp
+  self.hubPlaces = [];
+  self.hubHover = null;
+  const signpost = buildSignpost();
+  signpost.position.set(-5.2, 0, 2.2);
+  signpost.rotation.y = 0.5;
+  self.worldGroup.add(signpost);
+  const library = buildLibrary();
+  library.position.set(5.6, 0, 1.2);
+  library.rotation.y = -0.6;
+  self.worldGroup.add(library);
+  self.worldGroup.updateMatrixWorld(true);
+  registerHubPlace(self, 'map', signpost, 0.4);
+  registerHubPlace(self, 'atelier', workbench.group, 0.3);
+  const tent = landmark.getObjectByName('tent');
+  if (tent) registerHubPlace(self, 'team', tent, 0.3);
+  registerHubPlace(self, 'carnet', library, 0.3);
   self.workbenchLiquidMesh = workbench.liquidMesh;
   self.workbenchFireMesh = workbench.fireMesh;
 
@@ -217,10 +236,12 @@ export function updateCamp(self: VoxelEngine, dt: number): void {
         }
         animateRigPose(self, w.rig, w.walkPhase, false, squash, self.elapsedTotal);
         if (w.waitTimer <= 0 && w.emoteT <= 0) {
+          // A3.1 : une fois sur deux, le compagnon va voir un lieu du camp
+          const place = pickWanderTarget(self);
           const ang = Math.random() * Math.PI * 2;
           const r = 2.8 + Math.random() * 4.6;
-          w.targetX = Math.cos(ang) * r;
-          w.targetZ = Math.sin(ang) * r + 1.2;
+          w.targetX = place ? place.x : Math.cos(ang) * r;
+          w.targetZ = place ? place.z : Math.sin(ang) * r + 1.2;
           w.waitTimer = 1.8 + Math.random() * 2.4;
         }
       }

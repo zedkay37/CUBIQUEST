@@ -625,3 +625,18 @@ test('Étoiles (S06): le résultat compte les K.O. et les attaques subies ; rela
     h.engine.dispose();
   });
 });
+
+test('Hub (A3.1): quatre lieux cliquables au camp, aucun pendant un combat', () => {
+  withSeededRandom(2, () => {
+    const h = makeHarness();
+    h.engine.loadCampScene(h.squad(STAGE_BY_ID['meadow-1']));
+    assert.deepEqual(h.engine.hubPlaces.map((p) => p.id).sort(), ['atelier', 'carnet', 'map', 'team']);
+    h.engine.setHubHover('atelier');
+    assert.equal(h.engine.hubHover, 'atelier');
+    h.engine.setHubHover(null);
+    // en combat : le hub ne répond plus
+    h.start('meadow-1');
+    assert.equal(h.engine.pickHubPlace(0, 0), null);
+    h.engine.dispose();
+  });
+});

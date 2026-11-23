@@ -90,6 +90,7 @@ export function buildCampLandmark(): THREE.Group {
 
   // Explorer tent beside the waystone
   const tent = new THREE.Group();
+  tent.name = 'tent'; // A3.1 : lieu cliquable « équipe »
   tent.position.set(-4.2, 0, 1.4);
   tent.rotation.y = 0.35;
   tent.add(makeBox(0.22, 1.8, 0.22, woodMat, -1.2, 0.9, 1.1));

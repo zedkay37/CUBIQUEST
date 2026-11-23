@@ -68,6 +68,11 @@ export const FR = {
       rock: 'Dégâts sur tous, et bouclier de 35 % des PV pour chaque allié.',
       psychic: 'Dégâts sur tous, et les trois sorts sont prêts.',
     },
+    /** Hub cliquable du camp (A3.1). */
+    hub: {
+      lieux: { map: 'Panneau de l’île : expéditions', atelier: 'Atelier : Cubes Scellés', team: 'Tente : équipe', carnet: 'Bibliothèque : Carnet' },
+      aide: 'Clique sur un lieu du camp',
+    },
     /** L'Atelier et le Cube Scellé (spec Atelier, A2). */
     atelier: {
       bouton: 'Atelier',

@@ -165,8 +165,9 @@ export function CampHud({
         </div>
       </div>
 
-      {/* Bottom Collapsible Unified Control Dock (Zero Center Viewport Occlusion) */}
-      <div className="flex flex-col items-center pointer-events-auto">
+      {/* Dock du bas. A3.1 : sur bureau, les lieux du camp sont les menus ; le dock reste pour le clavier
+          (il réapparaît dès qu'un de ses boutons a le focus) et pour le téléphone. */}
+      <div className="flex flex-col items-center pointer-events-auto sm:pointer-events-none sm:opacity-0 sm:focus-within:pointer-events-auto sm:focus-within:opacity-100 transition-opacity">
         <button
           type="button"
           onClick={onToggleCollapse}

@@ -20,6 +20,7 @@ import type { CastContext } from './engine/cubes';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
 import { qualityLabel, setQuality, setupPostFx, type PostFx, type QualitySetting } from './engine/postfx';
 import type { LessonId } from './engine/lessons';
+import { getHubAnchors, pickHubPlace, setHubHover, type HubPlace, type HubPlaceId } from './engine/hub';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
 import { getDebugStats, type EngineDebugStats } from './engine/debug';
 import { emitHudSnapshot } from './engine/hud';
@@ -156,6 +157,9 @@ export class VoxelEngine {
   dodgesUsed = 0;
   /** Compagnons tombés pendant ce combat (étoile « Aucun K.O. »). */
   allyKos = 0;
+  /** Hub cliquable du camp (A3.1). */
+  hubPlaces: HubPlace[] = [];
+  hubHover: HubPlaceId | null = null;
   /** Pipeline d'effets (G1.2), null en headless et en rendu logiciel. */
   postfx: PostFx | null = null;
   /** Leçons (S07.2) : actives seulement si l'interface les a fournies (jamais dans les outils). */
@@ -555,6 +559,19 @@ export class VoxelEngine {
       ],
       elapsed: this.expeditionElapsed,
     };
+  }
+
+  /** Hub cliquable (A3.1) : lieu sous le pointeur, surbrillance, positions à l'écran. */
+  public pickHubPlace(ndcX: number, ndcY: number): HubPlaceId | null {
+    return pickHubPlace(this, ndcX, ndcY);
+  }
+
+  public setHubHover(id: HubPlaceId | null): void {
+    setHubHover(this, id);
+  }
+
+  public getHubAnchors(): { id: HubPlaceId; x: number; y: number }[] {
+    return getHubAnchors(this);
   }
 
   /** Niveau de qualité graphique (G1.2). */

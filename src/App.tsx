@@ -3,6 +3,7 @@ import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { CampHud, type CampDrawerTab } from './components/CampHud';
 import { CodexDrawer } from './components/CodexDrawer';
 import { AtelierDrawer } from './components/AtelierDrawer';
+import { HubOverlay } from './components/HubOverlay';
 import { SummonReveal, type SummonRevealProps } from './components/SummonReveal';
 import { Modal } from './components/ui';
 import { ExpeditionDrawer } from './components/ExpeditionDrawer';
@@ -121,6 +122,7 @@ export default function App() {
   const canvasMountRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<VoxelEngine | null>(null);
   const getDebugStats = useCallback(() => engineRef.current?.getDebugStats() ?? null, []);
+  const getEngine = useCallback(() => engineRef.current, []);
 
   const [save, setSave] = useState<SaveState>(() => {
     const loaded = loadSaveState();
@@ -685,6 +687,27 @@ export default function App() {
       {/* Base Camp HUD & Drawers */}
       {screenState === 'playing' && playMode === 'camp' && save.starterChosen && (
         <>
+          {/* A3.1 : les lieux du camp sont les menus */}
+          <HubOverlay
+            getEngine={getEngine}
+            enabled={!activeDrawer && !reveal && !arrival && !save.kitchenConversion}
+            isOpen={(id) => (id === 'map' ? true : unlockedFeatures(save).has(id === 'carnet' ? 'codex' : id))}
+            badges={{
+              atelier: save.sealedCubes.length || false,
+              carnet: claimableCount || false,
+              team: !save.allUnlocked && unlockedFeatures(save).has('team') && !save.unlocksSeen.includes('team'),
+            }}
+            onOpen={(id) => {
+              soundFx.playUiClick();
+              const tab = ({ map: 'expeditions', atelier: 'atelier', team: 'team', carnet: 'codex' } as const)[id];
+              if (!save.unlocksSeen.includes(tab)) {
+                const next = markUnlockSeen(saveRef.current, tab);
+                saveRef.current = next;
+                setSave(next);
+              }
+              setActiveDrawer(tab);
+            }}
+          />
           <CampHud
             save={save}
             activeDrawer={activeDrawer}

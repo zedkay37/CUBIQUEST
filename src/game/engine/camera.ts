@@ -10,6 +10,7 @@ const CAMERA_FRAME_REACH = 11;
 import { _vecA, _vecB, _vecC, EVO_X, EVO_Z } from './constants';
 import type { VoxelEngine } from '../VoxelEngine';
 import { resizePostFx } from './postfx';
+import { hubCameraNudge } from './hub';
 
 /**
  * Champ de vision vertical : 42° en paysage (inchangé). En portrait, on l'ouvre progressivement
@@ -47,6 +48,7 @@ export function updateCamera(self: VoxelEngine, dt: number): void {
       // Scenic Base Camp diorama showing island shoreline, waystone, cauldron & roaming squad
       _vecA.set(0.6, 11.4, 20.5);
       _vecB.set(0.4, 1.4, -1.2);
+      hubCameraNudge(self, _vecA, _vecB);
     }
   } else if (self.bossIntroTimer > 0 && self.bossIntroActor) {
     // Entrée de boss : la caméra plonge sur lui
