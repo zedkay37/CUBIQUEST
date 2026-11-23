@@ -1853,7 +1853,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'feuilloc',
     dropIngredients: ['ruby_berry', 'sun_pollen', 'pebble_gray'],
     stonePowerRange: [25, 55],
-    xpReward: 95,
+    xpReward: 270,
     waves: [
       {
         enemies: [
@@ -1886,7 +1886,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'sparkube',
     dropIngredients: ['sun_pollen', 'ruby_berry', 'amber_honey'],
     stonePowerRange: [45, 85],
-    xpReward: 140,
+    xpReward: 430,
     waves: [
       {
         enemies: [
@@ -1920,7 +1920,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'bourgeoliath',
     dropIngredients: ['sun_pollen', 'amber_honey', 'ruby_berry', 'crimson_root'],
     stonePowerRange: [70, 115],
-    xpReward: 210,
+    xpReward: 560,
     waves: [
       {
         enemies: [
@@ -1956,7 +1956,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'corallix',
     dropIngredients: ['azure_drop', 'frost_crystal', 'pebble_gray'],
     stonePowerRange: [95, 145],
-    xpReward: 270,
+    xpReward: 760,
     waves: [
       {
         enemies: [
@@ -1990,7 +1990,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'raicube',
     dropIngredients: ['azure_drop', 'frost_crystal', 'sun_pollen', 'amber_honey'],
     stonePowerRange: [120, 180],
-    xpReward: 340,
+    xpReward: 940,
     waves: [
       {
         enemies: [
@@ -2024,7 +2024,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'abyssocube',
     dropIngredients: ['azure_drop', 'frost_crystal', 'amber_honey'],
     stonePowerRange: [150, 220],
-    xpReward: 420,
+    xpReward: 1180,
     waves: [
       {
         enemies: [
@@ -2060,7 +2060,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'granitox',
     dropIngredients: ['ruby_berry', 'crimson_root', 'pebble_gray'],
     stonePowerRange: [185, 260],
-    xpReward: 510,
+    xpReward: 1550,
     waves: [
       {
         enemies: [
@@ -2094,7 +2094,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'ignisaur',
     dropIngredients: ['crimson_root', 'ruby_berry', 'pebble_gray', 'mystic_shard'],
     stonePowerRange: [220, 310],
-    xpReward: 620,
+    xpReward: 1950,
     waves: [
       {
         enemies: [
@@ -2128,7 +2128,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'magmadrake',
     dropIngredients: ['crimson_root', 'pebble_gray', 'amber_honey', 'mystic_shard'],
     stonePowerRange: [260, 360],
-    xpReward: 760,
+    xpReward: 2550,
     waves: [
       {
         enemies: [
@@ -2164,7 +2164,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'lunabloc',
     dropIngredients: ['frost_crystal', 'amber_honey', 'mystic_shard'],
     stonePowerRange: [310, 420],
-    xpReward: 920,
+    xpReward: 3400,
     waves: [
       {
         enemies: [
@@ -2198,7 +2198,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'ignisaur',
     dropIngredients: ['crimson_root', 'frost_crystal', 'amber_honey', 'mystic_shard'],
     stonePowerRange: [360, 490],
-    xpReward: 1120,
+    xpReward: 4800,
     waves: [
       {
         enemies: [
@@ -2232,7 +2232,7 @@ const RAW_STAGES: StageDef[] = [
     bossSpeciesId: 'aetherion',
     dropIngredients: ['mystic_shard', 'frost_crystal', 'amber_honey', 'crimson_root'],
     stonePowerRange: [440, 620],
-    xpReward: 1500,
+    xpReward: 5800,
     waves: [
       {
         enemies: [
@@ -2269,7 +2269,7 @@ const RAW_STAGES: StageDef[] = [
     bossKit: 'frost',
     dropIngredients: ['snow_lichen', 'frost_crystal', 'pebble_gray'],
     stonePowerRange: [520, 700],
-    xpReward: 1750,
+    xpReward: 6200,
     waves: [
       {
         enemies: [
@@ -2304,7 +2304,7 @@ const RAW_STAGES: StageDef[] = [
     bossKit: 'frost',
     dropIngredients: ['snow_lichen', 'aurora_petal', 'pebble_gray'],
     stonePowerRange: [580, 780],
-    xpReward: 2000,
+    xpReward: 6500,
     waves: [
       {
         enemies: [
@@ -2339,7 +2339,7 @@ const RAW_STAGES: StageDef[] = [
     bossKit: 'frost',
     dropIngredients: ['aurora_petal', 'snow_lichen', 'frost_crystal', 'mystic_shard'],
     stonePowerRange: [650, 880],
-    xpReward: 2400,
+    xpReward: 6700,
     waves: [
       {
         enemies: [
@@ -2376,7 +2376,7 @@ const RAW_STAGES: StageDef[] = [
     bossKit: 'storm',
     dropIngredients: ['storm_pepper', 'cloud_fluff', 'sun_pollen'],
     stonePowerRange: [720, 960],
-    xpReward: 2800,
+    xpReward: 6900,
     waves: [
       {
         enemies: [
@@ -2411,7 +2411,7 @@ const RAW_STAGES: StageDef[] = [
     bossKit: 'storm',
     dropIngredients: ['cloud_fluff', 'storm_pepper', 'aurora_petal'],
     stonePowerRange: [800, 1060],
-    xpReward: 3250,
+    xpReward: 7100,
     waves: [
       {
         enemies: [
@@ -2446,7 +2446,7 @@ const RAW_STAGES: StageDef[] = [
     bossKit: 'storm',
     dropIngredients: ['storm_pepper', 'cloud_fluff', 'aurora_petal', 'mystic_shard'],
     stonePowerRange: [900, 1200],
-    xpReward: 3900,
+    xpReward: 7300,
     waves: [
       {
         enemies: [
@@ -2483,7 +2483,7 @@ const RAW_STAGES: StageDef[] = [
     bossKit: 'amber',
     dropIngredients: ['mesa_fig', 'pebble_gray', 'storm_pepper'],
     stonePowerRange: [1000, 1340],
-    xpReward: 4600,
+    xpReward: 7500,
     waves: [
       {
         enemies: [
@@ -2518,7 +2518,7 @@ const RAW_STAGES: StageDef[] = [
     bossKit: 'amber',
     dropIngredients: ['mesa_fig', 'amber_resin', 'cloud_fluff'],
     stonePowerRange: [1120, 1500],
-    xpReward: 5400,
+    xpReward: 7700,
     waves: [
       {
         enemies: [
@@ -2553,7 +2553,7 @@ const RAW_STAGES: StageDef[] = [
     bossKit: 'amber',
     dropIngredients: ['amber_resin', 'mesa_fig', 'mystic_shard', 'aurora_petal'],
     stonePowerRange: [1250, 1680],
-    xpReward: 6300,
+    xpReward: 7900,
     waves: [
       {
         enemies: [
@@ -2681,27 +2681,27 @@ export const BURSTS: Record<ElementType, BurstDef> = {
  * le joueur actif 15 à 40 fois sur 100 ; durées : 80 % de la durée médiane du profil actif.
  */
 export const STAGE_CHALLENGES: Record<string, StageChallenge> = {
-  'meadow-1': { kind: 'duration', maxSec: 25 },
-  'meadow-2': { kind: 'perfectDodges', n: 1 },
-  'meadow-3': { kind: 'noTelegraphHit' },
-  'shore-1': { kind: 'duration', maxSec: 16 },
-  'shore-2': { kind: 'perfectDodges', n: 3 },
-  'shore-3': { kind: 'noTelegraphHit' },
-  'volcano-1': { kind: 'perfectDodges', n: 2 },
-  'volcano-2': { kind: 'duration', maxSec: 37 },
-  'volcano-3': { kind: 'noUltimate' },
-  'sanctuary-1': { kind: 'duration', maxSec: 41 },
-  'sanctuary-2': { kind: 'noTelegraphHit' },
-  'sanctuary-3': { kind: 'perfectDodges', n: 4 },
-  'tundra-1': { kind: 'perfectDodges', n: 4 },
-  'tundra-2': { kind: 'duration', maxSec: 41 },
-  'tundra-3': { kind: 'noTelegraphHit' },
-  'stormpeak-1': { kind: 'perfectDodges', n: 3 },
-  'stormpeak-2': { kind: 'duration', maxSec: 38 },
-  'stormpeak-3': { kind: 'noUltimate' },
-  'canyon-1': { kind: 'duration', maxSec: 38 },
-  'canyon-2': { kind: 'perfectDodges', n: 5 },
-  'canyon-3': { kind: 'all', of: [{ kind: 'noTelegraphHit' }, { kind: 'noUltimate' }] },
+  'meadow-1': { kind: 'duration', maxSec: 28 },
+  'meadow-2': { kind: 'perfectDodges', n: 4 },
+  'meadow-3': { kind: 'perfectDodges', n: 4 },
+  'shore-1': { kind: 'duration', maxSec: 19 },
+  'shore-2': { kind: 'duration', maxSec: 21.5 },
+  'shore-3': { kind: 'perfectDodges', n: 4 },
+  'volcano-1': { kind: 'perfectDodges', n: 7 },
+  'volcano-2': { kind: 'perfectDodges', n: 5 },
+  'volcano-3': { kind: 'duration', maxSec: 49 },
+  'sanctuary-1': { kind: 'perfectDodges', n: 6 },
+  'sanctuary-2': { kind: 'duration', maxSec: 29 },
+  'sanctuary-3': { kind: 'perfectDodges', n: 8 },
+  'tundra-1': { kind: 'perfectDodges', n: 6 },
+  'tundra-2': { kind: 'perfectDodges', n: 5 },
+  'tundra-3': { kind: 'perfectDodges', n: 8 },
+  'stormpeak-1': { kind: 'perfectDodges', n: 4 },
+  'stormpeak-2': { kind: 'perfectDodges', n: 4 },
+  'stormpeak-3': { kind: 'perfectDodges', n: 7 },
+  'canyon-1': { kind: 'perfectDodges', n: 5 },
+  'canyon-2': { kind: 'perfectDodges', n: 6 },
+  'canyon-3': { kind: 'duration', maxSec: 70 },
 };
 
 export const QUEST_POOL: QuestTemplate[] = [

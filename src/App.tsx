@@ -366,6 +366,7 @@ export default function App() {
       setPlayMode('expedition');
       setScreenState('playing');
       document.body.dataset.state = 'playing';
+      engineRef.current?.markRetryClick();
       engineRef.current?.setHazardHintCounts(saveRef.current.hazardHintsSeen);
       engineRef.current?.startExpedition(
         stage,
@@ -859,6 +860,10 @@ export default function App() {
           }}
           onRetry={() => handleLaunchStage(activeStage)}
           onReturnCamp={handleReturnCamp}
+          onOpenMap={() => {
+            handleReturnCamp();
+            setActiveDrawer('expeditions');
+          }}
         />
       )}
     </main>

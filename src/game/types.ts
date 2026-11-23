@@ -338,6 +338,8 @@ export interface SaveState {
   hazardHintsSeen: Record<string, number>;
   /** Étoiles acquises par niveau (S06). */
   stageStars: Record<string, StageStars>;
+  /** Paliers d'étoiles dont la récompense a été donnée (12, 24, 36, 48, 63). */
+  starTiersClaimed: number[];
 }
 
 export interface ExpeditionUnitHud {
@@ -376,6 +378,8 @@ export interface ExpeditionHudSnapshot {
   lastBurstColor: string | null;
   /** Ce que ferait le sort de chaque compagnon maintenant (cartes du HUD). */
   skillPreviews: ('trio' | 'burst' | 'ripening' | 'cube' | 'far')[];
+  /** Défi du niveau et son état pendant le combat (S06.1) : acquis, perdu ou en cours. */
+  challenge: { text: string; state: 'pending' | 'done' | 'lost' } | null;
   /** Élément du meneur (premier compagnon vivant) : couleur et effet du Déchaînement. */
   leaderElement: ElementType | null;
   controlMode: ControlMode;
@@ -419,6 +423,9 @@ export interface StageStars {
   challenge: boolean;
 }
 
+/** Les huit conseils de défaite (S06.2), du plus utile au plus général. */
+export type DefeatAdvice = 'noDodge' | 'underLevel' | 'weakElement' | 'earlyKo' | 'noBurst' | 'manyWeak' | 'noUltimate' | 'longFight';
+
 export interface ExpeditionOutcome {
   victory: boolean;
   stageId: string;
@@ -448,6 +455,15 @@ export interface ExpeditionOutcome {
   /** Étoiles gagnées dans ce combat, et celles déjà acquises avant lui. */
   stars: StageStars;
   previousStars: StageStars;
+  /** Conseil de l'écran de défaite (choisi par règle, voir defeatAdvice), null après une victoire. */
+  advice: DefeatAdvice | null;
+  /** Première victoire sur ce niveau (XP × 2,5) ; XP reçue par chaque créature restée au camp (0 si aucune). */
+  firstClear: boolean;
+  benchXp: number;
+  /** Paliers d'étoiles franchis par ce combat, avec leur récompense (S06.4). */
+  starTiers: { at: number; rune: RuneKind | null }[];
+  /** XP de chaque membre de l'escouade après le combat (barres animées de l'écran de fin). */
+  squadXp: { speciesId: string; level: number; xp: number; xpMax: number; gained: number }[];
   /** Compagnons tombés, attaques annoncées subies (pour les étoiles et le conseil de défaite). */
   koCount: number;
   hazardHits: number;

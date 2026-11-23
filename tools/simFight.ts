@@ -37,6 +37,10 @@ export type SimProfile = 'auto' | 'active' | 'expert' | 'kite';
 export interface FightOptions {
   profile?: SimProfile;
   cubes?: boolean;
+  /** Escouade à faire combattre (outil journey) ; par défaut celle de previewConfigs.ts. */
+  creatures?: ReturnType<typeof createOwnedCreature>[];
+  /** Galets du sac (pour lire ceux qu'équipent les `creatures`). */
+  stones?: import('../src/game/types').PowerStone[];
 }
 
 export const STEP = 1 / 60;
@@ -62,6 +66,9 @@ interface Outcome {
   ultimatesUsed: number;
   perfectDodges: number;
   triosTriggered: number;
+  koCount?: number;
+  hazardHits?: number;
+  weakBursts?: number;
 }
 
 export interface FightResult {
@@ -208,11 +215,11 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
       },
       { headless: true, cubes: opts.cubes ?? true },
     );
-    const creatures = config.squad.map((id, i) =>
+    const creatures = opts.creatures ?? config.squad.map((id, i) =>
       createOwnedCreature(id, config.level, config.bonus, `sim_${i}`),
     );
     engine.setScreenState('playing');
-    engine.startExpedition(stage, creatures, [], profile === 'auto' ? 'auto' : profile === 'kite' ? 'manual' : 'semi');
+    engine.startExpedition(stage, creatures, opts.stones ?? [], profile === 'auto' ? 'auto' : profile === 'kite' ? 'manual' : 'semi');
     const kite = { fleeFor: 0 };
 
     let t = 0;

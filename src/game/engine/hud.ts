@@ -1,7 +1,8 @@
 /**
  * Pont vers l'interface React : instantané de combat envoyé au HUD (10 Hz au plus).
  */
-import { BIOMES, MOVES } from '../catalog';
+import { BIOMES, MOVES, STAGE_CHALLENGES } from '../catalog';
+import { challengeLiveState, challengeText } from '../rules';
 import type { ExpeditionHudSnapshot, StatusKind } from '../types';
 import type { VoxelEngine } from '../VoxelEngine';
 import { getSkillPreview } from './cubes';
@@ -27,6 +28,17 @@ export function emitHudSnapshot(self: VoxelEngine): void {
     lastBurstLabel: self.lastBurstLabel,
     lastBurstColor: self.lastBurstColor,
     skillPreviews: [0, 1, 2].map((slot) => getSkillPreview(self, slot)),
+    challenge: STAGE_CHALLENGES[self.activeStage.id]
+      ? {
+          text: challengeText(STAGE_CHALLENGES[self.activeStage.id]),
+          state: challengeLiveState(STAGE_CHALLENGES[self.activeStage.id], {
+            elapsed: self.expeditionElapsed,
+            perfectDodges: self.perfectDodges,
+            hazardHits: self.hazardHitsTaken,
+            ultimatesUsed: self.ultimatesUsed,
+          }),
+        }
+      : null,
     leaderElement: self.allies.find((a) => !a.fainted)?.rig.species.element ?? null,
     controlMode: self.controlMode,
     enemiesRemaining: livingEnemies,

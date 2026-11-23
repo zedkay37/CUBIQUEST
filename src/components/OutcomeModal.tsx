@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { INGREDIENTS, RUNES, POT_TIER_META } from '../game/catalog';
-import { STAGE_CHALLENGES } from '../game/catalog';
+import { SPECIES, STAGE_CHALLENGES } from '../game/catalog';
+import { XP_KIT } from '../game/balance';
 import { challengeText } from '../game/rules';
 import type { ExpeditionOutcome } from '../game/types';
 import { StoneIcon } from './Icons';
 import { FR } from '../i18n/fr';
-import { BlockButton, CountUp } from './ui';
+import { AnimatedBar, BlockButton, CountUp } from './ui';
 import { LevelUpBurst, StarRain, UnlockReveal, VoxelConfetti } from './ui/moments';
 
 interface OutcomeModalProps {
@@ -15,6 +16,8 @@ interface OutcomeModalProps {
   onNextStage: () => void;
   onRetry: () => void;
   onReturnCamp: () => void;
+  /** « Suivant » quand le niveau suivant n'est pas ouvert : la carte des expéditions. */
+  onOpenMap?: () => void;
 }
 
 
@@ -33,6 +36,7 @@ export function OutcomeModal({
   onNextStage,
   onRetry,
   onReturnCamp,
+  onOpenMap,
 }: OutcomeModalProps) {
   const mins = Math.floor(outcome.clearTimeSec / 60);
   const secs = Math.floor(outcome.clearTimeSec % 60);
@@ -114,6 +118,14 @@ export function OutcomeModal({
                   ? FR.ui.outcomeModal.siPresDuButGardezLEsquive
                   : FR.ui.outcomeModal.renforcezVosPierresDePouvoirOu}
               </p>
+              {outcome.advice && (
+                <p className="mt-2 voxel-panel px-3 py-2 text-sm text-[#FAF7F0]" style={{ borderLeftColor: '#38BDF8', borderLeftWidth: 5 }}>
+                  {FR.rules.conseils[outcome.advice]}
+                </p>
+              )}
+              <p className="mt-2 text-xs text-[#B8C2D1]">
+                {FR.ui.outcomeModal.etatDuDefi(challengeText(STAGE_CHALLENGES[outcome.stageId]), outcome.previousStars.challenge ? FR.ui.outcomeModal.defiDejaAcquis : FR.ui.outcomeModal.defiAReussir)}
+              </p>
               <p className="mt-1 text-xs text-[#94A3B8]">{FR.ui.moments.calme}</p>
             </div>
           )}
@@ -183,6 +195,36 @@ export function OutcomeModal({
                 placeName={(outcome.unlockedBiomeName ?? outcome.unlockedNextStageName) as string}
                 isBiome={Boolean(outcome.unlockedBiomeName)}
               />
+            </motion.div>
+          )}
+
+          {/* Bonus d'XP : première victoire, créatures restées au camp */}
+          {outcome.victory && (outcome.firstClear || outcome.benchXp > 0) && (
+            <motion.div variants={itemVariants} className="mt-2 flex flex-wrap justify-center gap-2 text-xs font-semibold">
+              {outcome.firstClear && <span className="voxel-panel px-2 py-0.5 text-[#F4B942]">{FR.ui.outcomeModal.premiereVictoire(String(XP_KIT.firstClearXpMult).replace('.', ','))}</span>}
+              {outcome.benchXp > 0 && <span className="voxel-panel px-2 py-0.5 text-[#2FB97A]">{FR.ui.outcomeModal.xpCamp(Math.round(XP_KIT.benchXpShare * 100))}</span>}
+            </motion.div>
+          )}
+
+          {/* Palier d'étoiles franchi : sa récompense */}
+          {outcome.starTiers.map((t) => (
+            <motion.p key={t.at} variants={itemVariants} className="mt-2 voxel-panel px-3 py-1.5 text-center text-sm font-bold text-[#F4B942]">
+              {t.rune ? FR.ui.outcomeModal.palierRune(t.at, FR.catalog.RUNES[t.rune]?.name ?? '') : FR.ui.outcomeModal.palierFinal(t.at)}
+            </motion.p>
+          ))}
+
+          {/* XP de chaque compagnon : barres animées */}
+          {outcome.victory && outcome.squadXp.length > 0 && (
+            <motion.div variants={itemVariants} className="mt-3 grid gap-1.5">
+              {outcome.squadXp.map((c, i) => (
+                <div key={`${c.speciesId}-${i}`} className="flex items-center gap-2 text-xs">
+                  <span className="w-24 truncate text-[#B8C2D1]">{SPECIES[c.speciesId]?.name}</span>
+                  <div className="flex-1">
+                    <AnimatedBar value={c.xp} max={c.xpMax} color="#F4B942" height={8} label={FR.ui.components.xp} levelUps={outcome.levelUps.filter((l) => l.speciesId === c.speciesId).length} />
+                  </div>
+                  <span className="font-mono-num text-[#2FB97A]">+{c.gained}</span>
+                </div>
+              ))}
             </motion.div>
           )}
 
@@ -273,15 +315,21 @@ export function OutcomeModal({
           {/* Actions : « Suivant » (ou « Réessayer ») mis en avant */}
           <motion.div variants={itemVariants} className="mt-5 flex flex-wrap-reverse gap-2.5 justify-end">
             <BlockButton variant="secondary" onClick={onReturnCamp} silent>
-              {FR.ui.outcomeModal.retourAuCamp}
+              {FR.ui.outcomeModal.camp}
             </BlockButton>
-            {outcome.victory && hasNextStage ? (
-              <BlockButton variant="primary" size="lg" data-start="true" onClick={onNextStage} silent>
-                {FR.ui.outcomeModal.niveauSuivant}
-              </BlockButton>
+            {outcome.victory ? (
+              <>
+                <BlockButton variant="secondary" onClick={onRetry} silent>
+                  {FR.ui.outcomeModal.rejouer}
+                </BlockButton>
+                {/* « Suivant » : le niveau suivant s'il est ouvert, sinon la carte */}
+                <BlockButton variant="primary" size="lg" data-start="true" onClick={hasNextStage ? onNextStage : onOpenMap ?? onReturnCamp} silent>
+                  {FR.ui.outcomeModal.suivant}
+                </BlockButton>
+              </>
             ) : (
               <BlockButton variant="primary" size="lg" data-start="true" onClick={onRetry} silent>
-                {outcome.victory ? FR.ui.outcomeModal.rejouerLeNiveau : FR.ui.outcomeModal.reessayer}
+                {FR.ui.outcomeModal.reessayer}
               </BlockButton>
             )}
           </motion.div>

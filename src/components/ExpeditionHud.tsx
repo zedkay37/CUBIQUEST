@@ -157,10 +157,21 @@ export function ExpeditionHud({
           )}
 
           {/* Compteur discret des Éclats et des Trios, et nom du dernier Éclat */}
-          <div className="flex items-center gap-2.5 px-3 py-1 rounded-lg bg-[#141A26]/80 border border-[#39445A] w-fit">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 max-w-[min(440px,72vw)] px-3 py-1 rounded-lg bg-[#141A26]/80 border border-[#39445A] w-fit">
             <span className="font-mono-num text-[11px] font-bold text-[#B8C2D1]">
               {FR.ui.expeditionHud.eclatsTrios(hud.burstsTriggered, hud.triosTriggered)}
             </span>
+            {hud.challenge && (
+              <span
+                className={`text-[11px] font-semibold ${
+                  hud.challenge.state === 'done' ? 'text-[#2FB97A]' : hud.challenge.state === 'lost' ? 'text-[#94A3B8] line-through' : 'text-[#FAF7F0]'
+                }`}
+                aria-label={FR.ui.expeditionHud.defiEtat(hud.challenge.text, FR.ui.expeditionHud.etatsDefi[hud.challenge.state])}
+              >
+                {hud.challenge.state === 'done' ? '✓ ' : '☆ '}
+                {hud.challenge.text}
+              </span>
+            )}
             {hud.lastBurstLabel && (
               <span
                 className="font-display font-bold text-xs tracking-wide uppercase"

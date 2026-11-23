@@ -1,7 +1,23 @@
 import React, { useState } from 'react';
 import { Lock, Play, X } from 'lucide-react';
 import { BIOME_ORDER, BIOMES, ELEMENT_META, INGREDIENTS, SPECIES, STAGES } from '../game/catalog';
-import { computeSquadPower, isBiomeUnlocked } from '../game/rules';
+import { challengeText, computeSquadPower, isBiomeUnlocked, nextStarTier, totalStars } from '../game/rules';
+import { STAGE_CHALLENGES } from '../game/catalog';
+import type { StageStars } from '../game/types';
+
+/** Les trois étoiles d'un niveau, pleines si acquises (victoire, aucun K.O., défi). */
+function StageStarsRow({ stars }: { stars: StageStars | undefined }) {
+  const owned = [stars?.win, stars?.noKo, stars?.challenge];
+  return (
+    <span className="mt-0.5 flex gap-0.5 text-sm leading-none" aria-label={FR.ui.expeditionDrawer.etoilesNiveau(owned.filter(Boolean).length)}>
+      {owned.map((o, i) => (
+        <span key={i} className={o ? 'text-[#F4B942]' : 'text-[#475569]'} aria-hidden="true">
+          {o ? '★' : '☆'}
+        </span>
+      ))}
+    </span>
+  );
+}
 import type { BiomeId, SaveState, StageDef } from '../game/types';
 import { ElementIcon, VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
@@ -59,6 +75,20 @@ export function ExpeditionDrawer({
                 {squadPower.toLocaleString('fr-FR')}
               </strong>{' '}
               · {save.completedStageIds.length}/{STAGES.length}{FR.ui.expeditionDrawer.niveauxVaincus}
+              {' · '}
+              <strong className="font-mono-num text-[#F4B942]">{FR.ui.expeditionDrawer.etoilesTotal(totalStars(save), STAGES.length * 3)}</strong>
+              {' · '}
+              {(() => {
+                // prochain palier d'étoiles, ou le titre une fois les 63 étoiles réunies (cadre doré)
+                const next = nextStarTier(totalStars(save));
+                return next ? (
+                  FR.ui.expeditionDrawer.prochainPalier(next.at, next.rune ? FR.catalog.RUNES[next.rune].name : FR.ui.expeditionDrawer.palierTitre)
+                ) : (
+                  <span className="rounded px-1.5 py-0.5 font-bold text-[#F4B942]" style={{ boxShadow: 'inset 0 0 0 2px #F4B942' }}>
+                    {FR.ui.expeditionDrawer.titreGardien}
+                  </span>
+                );
+              })()}
             </p>
           </div>
           <button
@@ -118,6 +148,7 @@ export function ExpeditionDrawer({
                     {!unlocked && <Lock className="w-3 h-3" />}
                   </span>
                   <span className="whitespace-nowrap">{b.name}</span>
+                  <span className="font-mono-num text-[10px] opacity-90">{FR.ui.expeditionDrawer.etoilesBiome(totalStars(save, bId))}</span>
                 </button>
               );
             })}
@@ -163,6 +194,8 @@ export function ExpeditionDrawer({
                       <p className="font-display font-bold text-sm sm:text-base text-[#FAF7F0] truncate">
                         {stage.name}
                       </p>
+                      {/* les trois étoiles du niveau : victoire, aucun K.O., défi */}
+                      <StageStarsRow stars={save.stageStars[stage.id]} />
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -203,6 +236,14 @@ export function ExpeditionDrawer({
                     <span className="font-mono-num text-[#2FB97A]">+{activeStage.xpReward}</span>
                   </p>
                 </div>
+              </div>
+              {/* Défi du niveau (troisième étoile), visible avant le combat */}
+              <div className="voxel-panel px-3 py-2 text-xs" style={{ borderLeftColor: '#F4B942', borderLeftWidth: 5 }}>
+                <p className="font-bold uppercase tracking-wider text-[#F4B942]">{FR.ui.expeditionDrawer.defiDuNiveau}</p>
+                <p className="mt-0.5 text-[#FAF7F0]">
+                  {save.stageStars[activeStage.id]?.challenge ? '★ ' : '☆ '}
+                  {challengeText(STAGE_CHALLENGES[activeStage.id])}
+                </p>
               </div>
 
               <div className="border-t border-[#283247] pt-3">

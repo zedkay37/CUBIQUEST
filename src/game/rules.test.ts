@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { FR } from '../i18n/fr';
 import assert from 'node:assert/strict';
 import {
   applyExpeditionRewards,
@@ -18,6 +19,9 @@ import {
   computeStatusDuration,
   computeUltimateCharge,
   challengeLiveState,
+  defeatAdvice,
+  nextStarTier,
+  pendingStarTiers,
   challengeMet,
   computeStageStars,
   mergeStars,
@@ -732,16 +736,17 @@ test('Équilibrage: chaque niveau a une entrée STAGE_TUNING, aux multiplicateur
   }
   // Contenu des 12 premiers niveaux : puissance conseillée, XP, Galets, boss, niveaux et IA des vagues.
   // S03 ne règle que les multiplicateurs de STAGE_TUNING ; ce contenu bouge en S05 (mettre à jour ici).
+  // S06.3 : l'XP sort de la signature (table de la fiche, test « Expérience »).
   const signature = STAGES.slice(0, FRONTIER_STAGE_INDEX)
     .map(
       (s) =>
-        `${s.id}:${s.recommendedPower}:${s.xpReward}:${s.stonePowerRange.join('-')}:${s.bossSpeciesId}:` +
+        `${s.id}:${s.recommendedPower}:${s.stonePowerRange.join('-')}:${s.bossSpeciesId}:` +
         s.waves.map((w) => w.enemies.map((e) => `${e.level}${e.ai.slice(0, 4)}${e.isBoss ? '!' : ''}`).join('+')).join('/'),
     )
     .join('|');
   assert.equal(
     signature,
-    'meadow-1:700:95:25-55:feuilloc:2chas+2char/3chas+3kite+3chas/3chas+5boss!|meadow-2:1050:140:45-85:sparkube:5char+5chas+5kite/6kite+6chas+6char/6char+8boss!|meadow-3:1450:210:70-115:bourgeoliath:8chas+8kite+8char/9chas+9kite+9chas/9chas+11boss!|shore-1:1850:270:95-145:corallix:10char+10chas+10kite/11chas+11char+11kite/11chas+13boss!|shore-2:2250:340:120-180:raicube:13kite+13chas+13char/14char+14kite+14chas/14kite+16boss!|shore-3:2700:420:150-220:abyssocube:15chas+15kite+15char/16chas+16kite+16chas/16chas+18boss!|volcano-1:3200:510:185-260:granitox:17kite+17chas+17char/18kite+18chas+18char/18chas+20boss!|volcano-2:3750:620:220-310:ignisaur:20kite+20char+20chas/21kite+21chas+21kite/21kite+23boss!|volcano-3:4400:760:260-360:magmadrake:22chas+22kite+22char/23chas+23kite+23kite/23chas+25boss!|sanctuary-1:5100:920:310-420:lunabloc:25kite+25chas+25char/26kite+26chas+26kite/26kite+28boss!|sanctuary-2:5900:1120:360-490:ignisaur:28chas+28kite+28char/29chas+29kite+29kite/29char+31boss!|sanctuary-3:6800:1500:440-620:aetherion:31chas+31kite+31char/32chas+32chas+32kite/32kite+35boss!',
+    'meadow-1:700:25-55:feuilloc:2chas+2char/3chas+3kite+3chas/3chas+5boss!|meadow-2:1050:45-85:sparkube:5char+5chas+5kite/6kite+6chas+6char/6char+8boss!|meadow-3:1450:70-115:bourgeoliath:8chas+8kite+8char/9chas+9kite+9chas/9chas+11boss!|shore-1:1850:95-145:corallix:10char+10chas+10kite/11chas+11char+11kite/11chas+13boss!|shore-2:2250:120-180:raicube:13kite+13chas+13char/14char+14kite+14chas/14kite+16boss!|shore-3:2700:150-220:abyssocube:15chas+15kite+15char/16chas+16kite+16chas/16chas+18boss!|volcano-1:3200:185-260:granitox:17kite+17chas+17char/18kite+18chas+18char/18chas+20boss!|volcano-2:3750:220-310:ignisaur:20kite+20char+20chas/21kite+21chas+21kite/21kite+23boss!|volcano-3:4400:260-360:magmadrake:22chas+22kite+22char/23chas+23kite+23kite/23chas+25boss!|sanctuary-1:5100:310-420:lunabloc:25kite+25chas+25char/26kite+26chas+26kite/26kite+28boss!|sanctuary-2:5900:360-490:ignisaur:28chas+28kite+28char/29chas+29kite+29kite/29char+31boss!|sanctuary-3:6800:440-620:aetherion:31chas+31kite+31char/32chas+32chas+32kite/32kite+35boss!',
   );
 
 });
@@ -805,7 +810,7 @@ test('Étoiles: victoire, aucun K.O., défi ; elles restent acquises ; défis sa
   assert.equal(challengeLiveState({ kind: 'duration', maxSec: 9 }, live), 'lost');
   assert.equal(challengeLiveState({ kind: 'noTelegraphHit' }, live), 'pending');
   // étoiles : K.O. et défaite
-  assert.deepEqual(computeStageStars({ ...s, koCount: 1 }, { id: 'meadow-2' }), { win: true, noKo: false, challenge: true });
+  assert.deepEqual(computeStageStars({ ...s, koCount: 1, perfectDodges: 9 }, { id: 'meadow-2' }), { win: true, noKo: false, challenge: true });
   // une étoile acquise le reste
   assert.deepEqual(mergeStars({ win: true, noKo: true, challenge: false }, { win: true, noKo: false, challenge: true }), { win: true, noKo: true, challenge: true });
   // aucun défi ne dépend des Éclats ou des Trios (retour du propriétaire)
@@ -822,4 +827,67 @@ test('Étoiles: victoire, aucun K.O., défi ; elles restent acquises ; défis sa
   assert.deepEqual(lost.nextSave.stageStars[stage.id], { win: true, noKo: true, challenge: true });
   assert.equal(totalStars(lost.nextSave), 3);
   assert.equal(totalStars(lost.nextSave, 'shore'), 0);
+});
+
+test('Expérience (S06.3): table des niveaux, première victoire x 2,5, 60 % au camp', () => {
+  assert.deepEqual(
+    STAGES.map((s) => s.xpReward),
+    [270, 430, 560, 760, 940, 1180, 1550, 1950, 2550, 3400, 4800, 5800, 6200, 6500, 6700, 6900, 7100, 7300, 7500, 7700, 7900],
+  );
+  const save = createInitialSaveState('pyrocube', true);
+  const stage = STAGES[0];
+  const bench = save.roster.find((c) => !save.squadIds.includes(c.uid))!;
+  const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 };
+  const first = applyExpeditionRewards(save, stage, true, stats, () => 0.5);
+  assert.equal(first.outcome.firstClear, true);
+  assert.equal(first.outcome.xpPerUnit, Math.round(stage.xpReward * 2.5));
+  assert.equal(first.outcome.benchXp, Math.round(first.outcome.xpPerUnit * 0.6));
+  const benchAfter = first.nextSave.roster.find((c) => c.uid === bench.uid)!;
+  assert.ok(benchAfter.level > bench.level || benchAfter.xp > bench.xp, 'la créature au camp gagne de l’XP');
+  const again = applyExpeditionRewards(first.nextSave, stage, true, stats, () => 0.5);
+  assert.equal(again.outcome.firstClear, false);
+  assert.equal(again.outcome.xpPerUnit, stage.xpReward);
+  // une défaite ne compte jamais comme première victoire
+  assert.equal(applyExpeditionRewards(save, stage, false, { ...stats, wavesCleared: 1 }, () => 0.5).outcome.firstClear, false);
+});
+
+test('Paliers d’étoiles (S06.4): une Rune par palier, donnée une fois, rattrapée après migration', () => {
+  assert.deepEqual(pendingStarTiers(13, []).map((t) => t.at), [12]);
+  assert.deepEqual(pendingStarTiers(40, [12]).map((t) => t.at), [24, 36]);
+  assert.equal(nextStarTier(12)?.at, 24);
+  assert.equal(nextStarTier(63), null);
+  // sauvegarde avec 12 étoiles déjà réunies, palier jamais donné (cas d'une sauvegarde migrée)
+  let save = createInitialSaveState('pyrocube', true);
+  const four = STAGES.slice(0, 4);
+  save = { ...save, stageStars: Object.fromEntries(four.map((s) => [s.id, { win: true, noKo: true, challenge: true }])), completedStageIds: four.map((s) => s.id) };
+  const before = save.runeBag.rune_precision ?? 0;
+  const stats = { clearTimeSec: 99, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0, koCount: 1 };
+  const r = applyExpeditionRewards(save, STAGES[0], true, stats, () => 0.99);
+  assert.deepEqual(r.outcome.starTiers, [{ at: 12, rune: 'rune_precision' }]);
+  assert.equal(r.nextSave.runeBag.rune_precision, before + 1);
+  assert.deepEqual(r.nextSave.starTiersClaimed, [12]);
+  // jamais deux fois
+  const r2 = applyExpeditionRewards(r.nextSave, STAGES[0], true, stats, () => 0.99);
+  assert.deepEqual(r2.outcome.starTiers, []);
+  // la migration garde les paliers connus et ignore les autres
+  const m = migrateSaveState({ ...r.nextSave, starTiersClaimed: [12, 999] })!;
+  assert.deepEqual(m.starTiersClaimed, [12]);
+});
+
+test('Défaite (S06.2): un conseil parmi huit, le plus utile d’abord', () => {
+  const r = { koCount: 0, hazardHits: 0, perfectDodges: 1, burstsTriggered: 2, weakBursts: 0, ultimatesUsed: 1, clearTimeSec: 90, wavesCleared: 3 };
+  assert.equal(defeatAdvice({ ...r, hazardHits: 3, perfectDodges: 0 }, 10, 10, false), 'noDodge');
+  assert.equal(defeatAdvice(r, 5, 10, false), 'underLevel');
+  assert.equal(defeatAdvice(r, 10, 10, true), 'weakElement');
+  assert.equal(defeatAdvice({ ...r, koCount: 1, wavesCleared: 1 }, 10, 10, false), 'earlyKo');
+  assert.equal(defeatAdvice({ ...r, burstsTriggered: 0 }, 10, 10, false), 'noBurst');
+  assert.equal(defeatAdvice({ ...r, weakBursts: 4 }, 10, 10, false), 'manyWeak');
+  assert.equal(defeatAdvice({ ...r, ultimatesUsed: 0 }, 10, 10, false), 'noUltimate');
+  assert.equal(defeatAdvice(r, 10, 10, false), 'longFight');
+  // chaque conseil a son texte ; une victoire n'en donne aucun
+  for (const k of ['noDodge', 'underLevel', 'weakElement', 'earlyKo', 'noBurst', 'manyWeak', 'noUltimate', 'longFight'] as const) assert.ok(FR.rules.conseils[k]);
+  const save = createInitialSaveState('pyrocube', true);
+  const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 };
+  assert.equal(applyExpeditionRewards(save, STAGES[0], true, stats, () => 0.5).outcome.advice, null);
+  assert.ok(applyExpeditionRewards(save, STAGES[0], false, stats, () => 0.5).outcome.advice);
 });

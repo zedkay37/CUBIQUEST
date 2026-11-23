@@ -143,6 +143,30 @@ export const ULTIMATE_CHARGE = {
  * Parfaite : une attaque annoncée qui aurait touché un allié est annulée par l'invulnérabilité de l'esquive,
  * et l'appui date de `perfectWindow` au plus. Elle se décide à l'impact, une seule fois par appui.
  */
+/**
+ * Expérience (S06.3). Les XP de base des niveaux sont dans `catalog.ts` (table de la fiche S06.3).
+ * - première victoire sur un niveau : XP × firstClearXpMult ;
+ * - créatures restées au camp : benchXpShare de l'XP de l'escouade.
+ */
+export const XP_KIT = {
+  /** Multiplie l'XP de base de tous les niveaux : réglé avec `npm run journey` (retour du propriétaire : ~3 parties par niveau). */
+  xpScale: 1,
+  firstClearXpMult: 2.5,
+  benchXpShare: 0.6,
+};
+
+/**
+ * Paliers d'étoiles (S06.4) : chaque récompense est donnée une seule fois.
+ * À 63 (toutes les étoiles) : un titre et un cadre doré, sans objet.
+ */
+export const STAR_TIERS: { at: number; rune: 'rune_precision' | 'rune_vigueur' | 'rune_partage' | 'rune_cadence' | null }[] = [
+  { at: 12, rune: 'rune_precision' },
+  { at: 24, rune: 'rune_vigueur' },
+  { at: 36, rune: 'rune_partage' },
+  { at: 48, rune: 'rune_cadence' },
+  { at: 63, rune: null },
+];
+
 export const DODGE_KIT = {
   cooldown: 4,
   invuln: 0.5,

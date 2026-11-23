@@ -221,6 +221,7 @@ export interface ExpeditionResult {
   /** Compagnons tombés pendant le combat ; attaques annoncées subies (par allié touché). */
   koCount: number;
   hazardHits: number;
+  weakBursts: number;
 }
 
 /** Premières fois montrées au joueur (bulle d'une ligne). */

@@ -304,6 +304,7 @@ function buildExpeditionResult(self: VoxelEngine): ExpeditionResult {
     triosTriggered: self.triosTriggered,
     koCount: self.allyKos,
     hazardHits: self.hazardHitsTaken,
+    weakBursts: self.weakBurstsTriggered,
   };
 }
 

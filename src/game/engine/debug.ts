@@ -16,8 +16,10 @@ export interface EngineDebugStats {
   textures: number;
   /** Particules actives (pool de taille fixe). */
   particles: number;
-  /** créatures présents : promeneurs au camp, alliés et ennemis en expédition. */
+  /** Créatures présentes : promeneurs au camp, alliés et ennemis en expédition. */
   entities: number;
+  /** Délai entre le dernier clic « Réessayer » / « Rejouer » / « Suivant » et la première image du combat (ms, -1 : jamais mesuré). */
+  retryDelayMs: number;
 }
 
 export function getDebugStats(self: VoxelEngine): EngineDebugStats {
@@ -42,5 +44,6 @@ export function getDebugStats(self: VoxelEngine): EngineDebugStats {
     textures: info?.memory.textures ?? 0,
     particles,
     entities,
+    retryDelayMs: self.lastRetryDelayMs,
   };
 }

@@ -16,7 +16,7 @@ import {
   STAGES,
   STATUS_META,
 } from './catalog';
-import { CUBE_KIT } from './balance';
+import { CUBE_KIT, STAR_TIERS, XP_KIT } from './balance';
 import type {
   AchievementDef,
   ActiveQuest,
@@ -43,6 +43,7 @@ import type {
   StoneSlotType,
   StageChallenge,
   StageStars,
+  DefeatAdvice,
 } from './types';
 import { FR } from '../i18n/fr';
 import { LEGACY_ACHIEVEMENT_IDS, LEGACY_QUEST_IDS, LEGACY_RECIPE_IDS, LEGACY_RUNE_IDS, LEGACY_STAT_FIELDS } from './legacyIds';
@@ -852,26 +853,31 @@ export function applyExpeditionRewards(
     triosTriggered?: number;
     koCount?: number;
     hazardHits?: number;
+    weakBursts?: number;
   },
   rng: RngFn = Math.random,
 ): { nextSave: SaveState; outcome: ExpeditionOutcome } {
   const biome = BIOMES[stage.biomeId];
+  // Première victoire sur ce niveau : bonus d'XP (S06.3)
+  const firstClear = victory && !save.completedStageIds.includes(stage.id);
   const xpPerUnit = victory
-    ? stage.xpReward
-    : Math.max(15, Math.round(stage.xpReward * 0.25 * (stats.wavesCleared / stage.waves.length)));
+    ? Math.round(stage.xpReward * XP_KIT.xpScale * (firstClear ? XP_KIT.firstClearXpMult : 1))
+    : Math.max(15, Math.round(stage.xpReward * XP_KIT.xpScale * 0.25 * (stats.wavesCleared / stage.waves.length)));
+  // Les créatures restées au camp gagnent une part de l'XP de l'escouade
+  const benchXp = Math.round(xpPerUnit * XP_KIT.benchXpShare);
 
   const leveledUpNames: string[] = [];
   const levelUps: ExpeditionOutcome['levelUps'] = [];
   const nextRoster = save.roster.map((c) => {
-    if (!save.squadIds.includes(c.uid)) return c;
+    const inSquad = save.squadIds.includes(c.uid);
     let level = c.level;
-    let xp = c.xp + xpPerUnit;
+    let xp = c.xp + (inSquad ? xpPerUnit : benchXp);
     const startLevel = level;
     while (xp >= xpForNextLevel(level) && level < 50) {
       xp -= xpForNextLevel(level);
       level += 1;
     }
-    if (level > startLevel) {
+    if (level > startLevel && inSquad) {
       leveledUpNames.push(FR.rules.niv(SPECIES[c.speciesId]?.name ?? FR.rules.creature, level));
       levelUps.push({ speciesId: c.speciesId, from: startLevel, to: level });
     }
@@ -970,6 +976,31 @@ export function applyExpeditionRewards(
   const previousStars = save.stageStars?.[stage.id] ?? NO_STARS;
   const stars = computeStageStars({ victory, clearTimeSec: stats.clearTimeSec, perfectDodges, hazardHits, ultimatesUsed, koCount }, stage);
   const stageStars = { ...(save.stageStars ?? {}), [stage.id]: mergeStars(previousStars, stars) };
+  // Paliers d'étoiles : une Rune chacun, donnée une fois (S06.4)
+  const claimedBefore = save.starTiersClaimed ?? [];
+  const starTiers = victory ? pendingStarTiers(totalStars({ stageStars }), claimedBefore) : [];
+  const starTiersClaimed = [...claimedBefore, ...starTiers.map((t) => t.at)];
+  for (const t of starTiers) if (t.rune) nextRuneBag[t.rune] = (nextRuneBag[t.rune] ?? 0) + 1;
+
+  // Conseil de défaite : niveau de l'escouade face aux ennemis, élément faible contre le boss
+  const squad = save.roster.filter((c) => save.squadIds.includes(c.uid));
+  const squadLevel = squad.length ? squad.reduce((n, c) => n + c.level, 0) / squad.length : 1;
+  const enemyLevel = Math.max(...stage.waves.flatMap((w) => w.enemies.map((e) => e.level)));
+  const bossElement = SPECIES[stage.bossSpeciesId]?.element;
+  const weakAgainstBoss =
+    Boolean(bossElement) &&
+    squad.filter((c) => SPECIES[c.speciesId] && getTypeEffectiveness(bossElement!, SPECIES[c.speciesId].element) > 1).length >= 2;
+  const advice = victory
+    ? null
+    : defeatAdvice(
+        { koCount, hazardHits, perfectDodges, burstsTriggered, weakBursts: Math.max(0, Math.round(stats.weakBursts ?? 0)), ultimatesUsed, clearTimeSec: stats.clearTimeSec, wavesCleared: stats.wavesCleared },
+        squadLevel,
+        enemyLevel,
+        weakAgainstBoss,
+      );
+  const squadXp = nextRoster
+    .filter((c) => save.squadIds.includes(c.uid))
+    .map((c) => ({ speciesId: c.speciesId, level: c.level, xp: c.xp, xpMax: xpForNextLevel(c.level), gained: xpPerUnit }));
 
   const baseNextSave: SaveState = {
     ...save,
@@ -984,6 +1015,7 @@ export function applyExpeditionRewards(
     discoveredSpeciesIds: nextDiscovered,
     expeditionsCompleted: save.expeditionsCompleted + (victory ? 1 : 0),
     stageStars,
+    starTiersClaimed,
   };
 
   const nextSave = recordPlayerProgress(baseNextSave, {
@@ -1027,6 +1059,11 @@ export function applyExpeditionRewards(
     previousStars,
     koCount,
     hazardHits,
+    advice,
+    squadXp,
+    firstClear,
+    starTiers: starTiers.map((t) => ({ at: t.at, rune: t.rune })),
+    benchXp: save.roster.some((c) => !save.squadIds.includes(c.uid)) ? benchXp : 0,
   };
 
   return { nextSave, outcome };
@@ -1091,7 +1128,7 @@ export function challengeText(ch: StageChallenge | undefined): string {
     case 'perfectDodges':
       return FR.rules.defi.esquives(ch.n);
     case 'duration':
-      return FR.rules.defi.chrono(ch.maxSec);
+      return FR.rules.defi.chrono(String(ch.maxSec).replace('.', ','));
     case 'noTelegraphHit':
       return FR.rules.defi.aucuneAttaque;
     case 'noUltimate':
@@ -1099,6 +1136,26 @@ export function challengeText(ch: StageChallenge | undefined): string {
     case 'all':
       return ch.of.map(challengeText).join(FR.rules.defi.et);
   }
+}
+
+/**
+ * Conseil de défaite (S06.2) : le premier qui s'applique, dans l'ordre de la table.
+ * Les conseils sur les Éclats ne sont que des conseils : aucune récompense n'en dépend.
+ */
+export function defeatAdvice(
+  r: { koCount: number; hazardHits: number; perfectDodges: number; burstsTriggered: number; weakBursts: number; ultimatesUsed: number; clearTimeSec: number; wavesCleared: number },
+  squadLevel: number,
+  enemyLevel: number,
+  weakAgainstBoss: boolean,
+): DefeatAdvice {
+  if (r.hazardHits >= 2 && r.perfectDodges === 0) return 'noDodge';
+  if (squadLevel < enemyLevel - 2) return 'underLevel';
+  if (weakAgainstBoss) return 'weakElement';
+  if (r.koCount > 0 && r.wavesCleared <= 1) return 'earlyKo';
+  if (r.burstsTriggered === 0) return 'noBurst';
+  if (r.weakBursts >= 3 && r.weakBursts > r.burstsTriggered) return 'manyWeak';
+  if (r.ultimatesUsed === 0) return 'noUltimate';
+  return 'longFight';
 }
 
 /** Étoiles gagnées par un combat (S06.1) : victoire, sans K.O., défi du niveau. */
@@ -1116,6 +1173,16 @@ export function mergeStars(a: StageStars | undefined, b: StageStars): StageStars
 }
 
 export const starCount = (s: StageStars | undefined): number => (s ? Number(s.win) + Number(s.noKo) + Number(s.challenge) : 0);
+
+/** Paliers atteints mais pas encore récompensés (une sauvegarde migrée les reçoit à la victoire suivante). */
+export function pendingStarTiers(total: number, claimed: number[]): typeof STAR_TIERS {
+  return STAR_TIERS.filter((t) => t.at <= total && !claimed.includes(t.at));
+}
+
+/** Prochain palier à atteindre (null quand tout est acquis). */
+export function nextStarTier(total: number): (typeof STAR_TIERS)[number] | null {
+  return STAR_TIERS.find((t) => t.at > total) ?? null;
+}
 
 /** Total d'étoiles d'une sauvegarde, éventuellement limité à un biome. */
 export function totalStars(save: Pick<SaveState, 'stageStars'>, biomeId?: BiomeId): number {
@@ -1242,6 +1309,7 @@ export function createInitialSaveState(
     firstTimesSeen: [],
     hazardHintsSeen: {},
     stageStars: {},
+    starTiersClaimed: [],
   };
 }
 
@@ -1778,6 +1846,9 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     firstTimesSeen: uniqueKnown(obj.firstTimesSeen, (id) => (FIRST_TIME_KINDS as readonly string[]).includes(id)),
     hazardHintsSeen: normalizeHintCounts(obj.hazardHintsSeen),
     stageStars: normalizeStageStars(obj.stageStars, completedStageIds),
+    starTiersClaimed: Array.isArray(obj.starTiersClaimed)
+      ? STAR_TIERS.map((t) => t.at).filter((at) => (obj.starTiersClaimed as unknown[]).includes(at))
+      : [],
   };
 }
 export function exportSaveToJson(save: SaveState): string {

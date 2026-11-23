@@ -155,6 +155,9 @@ export class VoxelEngine {
   dodgesUsed = 0;
   /** Compagnons tombés pendant ce combat (étoile « Aucun K.O. »). */
   allyKos = 0;
+  /** Mesure du délai « Réessayer » -> première image du combat (overlay ?debug=1). */
+  retryClickAt = 0;
+  lastRetryDelayMs = -1;
   hazardsAvoided = 0;
   hazardHitsTaken = 0;
   /** Facteur du ralenti en cours (0,35 pour un Trio, 0,5 pour une esquive parfaite). */
@@ -464,6 +467,11 @@ export class VoxelEngine {
     this.bannerText = text;
     this.bannerTimer = seconds;
     this.callbacks.onHazardHint?.(key);
+  }
+
+  /** L'interface signale un clic qui relance un combat : la première image suivante mesure le délai. */
+  public markRetryClick(): void {
+    this.retryClickAt = performance.now();
   }
 
   /** Délai avant le prochain impact ennemi annoncé qui toucherait un allié là où il est, ou null. */

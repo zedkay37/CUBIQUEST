@@ -43,6 +43,7 @@ export default function DebugOverlay({ getStats }: DebugOverlayProps) {
     ['Textures', String(view.textures)],
     ['Particules', String(view.particles)],
     ['Entités', String(view.entities)],
+    ['Relance', view.retryDelayMs < 0 ? '—' : `${Math.round(view.retryDelayMs)} ms`],
   ];
 
   // Styles en ligne : aucune classe ajoutée à la feuille de style du jeu pour un outil de développement.

@@ -185,6 +185,11 @@ const demoOutcome = (victory: boolean): ExpeditionOutcome => ({
   previousStars: { win: victory, noKo: false, challenge: false },
   koCount: victory ? 0 : 2,
   hazardHits: 1,
+  advice: victory ? null : 'noDodge',
+  firstClear: victory,
+  starTiers: victory ? [{ at: 12, rune: 'rune_precision' }] : [],
+  benchXp: victory ? 162 : 0,
+  squadXp: victory ? [{ speciesId: 'pyrocube', level: 6, xp: 120, xpMax: 300, gained: 180 }] : [],
 });
 
 const MOMENT_DEMOS: MomentDemo[] = [

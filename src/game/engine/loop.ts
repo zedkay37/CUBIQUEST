@@ -62,6 +62,10 @@ export function tick(self: VoxelEngine): void {
   // mesures lues par l'overlay `?debug=1`
   self.frameCount += 1;
   self.lastFrameMs = performance.now() - now;
+  if (self.retryClickAt > 0 && self.playMode === 'expedition') {
+    self.lastRetryDelayMs = performance.now() - self.retryClickAt;
+    self.retryClickAt = 0;
+  }
   scheduleNextFrame(self);
 }
 

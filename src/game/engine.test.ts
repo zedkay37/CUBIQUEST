@@ -24,6 +24,7 @@ const STEP = 1 / 60;
 interface Harness {
   engine: VoxelEngine;
   results: { victory: boolean }[];
+  outcomes: { koCount: number; hazardHits: number }[];
   squad: (stage: StageDef) => OwnedCreature[];
   start: (stageId: string) => StageDef;
   run: (seconds: number, until?: () => boolean) => number;
@@ -31,9 +32,10 @@ interface Harness {
 
 function makeHarness(): Harness {
   const results: { victory: boolean }[] = [];
+  const outcomes: { koCount: number; hazardHits: number }[] = [];
   const engine = new VoxelEngine(
     null,
-    { onHudUpdate: () => {}, onExpeditionComplete: (r) => results.push({ victory: r.victory }) },
+    { onHudUpdate: () => {}, onExpeditionComplete: (r) => { results.push({ victory: r.victory }); outcomes.push(r); } },
     { headless: true },
   );
   engine.setScreenState('playing');
@@ -44,6 +46,7 @@ function makeHarness(): Harness {
   return {
     engine,
     results,
+    outcomes,
     squad,
     start: (stageId) => {
       const stage = STAGE_BY_ID[stageId];
@@ -601,6 +604,24 @@ test('Boss: mini-boss (une puis deux attaques), modules Carapace et Satellites, 
     const hp = boss.hp;
     applyDamageToActor(h.engine, boss, 100, h.engine.allies[0], false, false, '#fff');
     assert.equal(hp - boss.hp, 50);
+    h.engine.dispose();
+  });
+});
+
+test('Étoiles (S06): le résultat compte les K.O. et les attaques subies ; relancer remet tout à zéro', () => {
+  withSeededRandom(5, () => {
+    const h = makeHarness();
+    h.start('stormpeak-1');
+    h.run(240, () => h.results.length > 0);
+    const r = h.outcomes[0];
+    assert.equal(r.koCount, h.engine.allyKos);
+    assert.equal(r.hazardHits, h.engine.hazardHitsTaken);
+    assert.ok(r.koCount >= 0 && r.hazardHits >= 0);
+    // relancer : compteurs remis à zéro (état transitoire)
+    h.engine.allyKos = 4;
+    h.engine.markRetryClick();
+    h.start('meadow-1');
+    assert.equal(h.engine.allyKos, 0);
     h.engine.dispose();
   });
 });
