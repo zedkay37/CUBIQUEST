@@ -35,8 +35,9 @@ export function nextAutoLevel(level: QualityLevel, lowFpsFor: number): QualityLe
 
 /** Étalonnage léger par biome : saturation et teinte multipliée (1 = neutre). */
 export const BIOME_GRADE: Record<BiomeId | 'camp', { saturation: number; tint: [number, number, number] }> = {
-  camp: { saturation: 1.06, tint: [1.02, 1.0, 0.97] },
-  meadow: { saturation: 1.08, tint: [1.0, 1.02, 0.96] },
+  // sprint Art : Prairie et camp un peu plus chauds et saturés, avec le nouveau décor
+  camp: { saturation: 1.1, tint: [1.04, 1.01, 0.95] },
+  meadow: { saturation: 1.1, tint: [1.03, 1.02, 0.94] },
   shore: { saturation: 1.05, tint: [0.97, 1.0, 1.04] },
   volcano: { saturation: 1.1, tint: [1.05, 0.98, 0.93] },
   sanctuary: { saturation: 1.04, tint: [0.99, 0.98, 1.05] },

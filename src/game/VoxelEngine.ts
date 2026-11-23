@@ -19,6 +19,7 @@ import { getNextHazardImpact, keepOutOfHazards } from './engine/fx';
 import type { CastContext } from './engine/cubes';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
 import { qualityLabel, setQuality, setupPostFx, type PostFx, type QualitySetting } from './engine/postfx';
+import { setupArtLight } from './engine/artLight';
 import type { LessonId } from './engine/lessons';
 import { getHubAnchors, pickHubPlace, setHubHover, type HubPlace, type HubPlaceId } from './engine/hub';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
@@ -172,6 +173,8 @@ export class VoxelEngine {
   manualCasts = 0;
   /** Sprint Art : zoom bref de la caméra sur le Déchaînement. */
   ultZoomTimer = 0;
+  /** Sprint Art : lumière de la Prairie (null en headless). */
+  artLight: { dome: THREE.Mesh; top: THREE.Color; bottom: THREE.Color; rays: THREE.Group; rayMat: THREE.MeshBasicMaterial } | null = null;
   lessonTriggerAge = 0;
   /** Mesure du délai « Réessayer » -> première image du combat (overlay ?debug=1). */
   retryClickAt = 0;
@@ -301,6 +304,8 @@ export class VoxelEngine {
     this.keyLight.shadow.bias = -0.0005;
     this.keyLight.shadow.normalBias = 0.02;
     this.scene.add(this.keyLight);
+    // sprint Art : ciel en dégradé, soleil qui suit l'heure, ombres plus fines (navigateur seulement)
+    setupArtLight(this);
 
     const rimLight = new THREE.DirectionalLight('#93C5FD', 0.32);
     rimLight.position.set(-14, 12, -16);
