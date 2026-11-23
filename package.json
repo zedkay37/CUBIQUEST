@@ -20,6 +20,9 @@
     "census": "tsx tools/census.ts",
     "texts": "tsx tools/texts.ts",
     "vox:exemple": "tsx tools/voxExemple.ts",
+    "vox:build": "tsx tools/vox-studio/vox-build.ts",
+    "vox:check": "tsx tools/vox-studio/vox-check.ts",
+    "vox:planche": "tsx tools/vox-studio/vox-planche.ts",
     "lexique": "tsx tools/lexique.ts",
     "check": "tsc --noEmit && tsx --test \"src/game/*.test.ts\" && tsx tools/golden.ts && vite build"
   },

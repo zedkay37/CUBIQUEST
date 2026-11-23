@@ -20,6 +20,7 @@ const EXCEPTIONS: Record<string, string> = {
   'src/components/GalleryPage.tsx': 'outil de développement (?gallery=1), jamais vu par le joueur',
   'src/components/ArtGallery.tsx': 'outil de développement (?gallery=art), jamais montré aux joueurs',
   'src/components/StylesGallery.tsx': 'outil de développement (?gallery=styles, sprint STYLES), jamais vu par les joueurs',
+  'src/components/PlancheGallery.tsx': 'outil de développement (?gallery=planche, sprint BESTIAIRE), jamais vu par les joueurs',
   'src/components/styles/magmaStyles.ts': 'outil de développement (?gallery=styles, sprint STYLES), jamais vu par les joueurs',
   'src/components/styles/magmaStyles2.ts': 'outil de développement (?gallery=styles, sprint STYLES2), jamais vu par les joueurs',
   'src/components/styles/allStyles.ts': 'outil de développement (?gallery=styles, sprint STYLES2), jamais vu par les joueurs',

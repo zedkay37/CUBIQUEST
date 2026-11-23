@@ -3,7 +3,7 @@
 # Construit le site dans un dossier temporaire, le sert localement sous /CUBIQUEST/ et photographie chaque
 # Ã©cran avec Edge sans interface, en bureau (1280 x 720) et en mobile (360 x 640). Chaque capture part d'un
 # profil vide : aucune sauvegarde du joueur n'est lue ni modifiÃ©e.
-param([string]$Out = 'docs/captures/ui/avant', [int]$Port = 4176, [string]$Only = '', [switch]$Gpu, [string]$Formats = 'bureau,mobile')
+param([string]$Out = 'docs/captures/ui/avant', [int]$Port = 4176, [string]$Only = '', [switch]$Gpu, [string]$Formats = 'bureau,mobile', [string]$Extra = '')
 $ErrorActionPreference = 'Stop'
 $root = (Get-Location).Path
 $tmp = Join-Path $env:TEMP ("cubiquest-captures-" + [guid]::NewGuid().ToString('N'))
@@ -171,6 +171,8 @@ $sizes = @{ 'bureau' = '1280,720'; 'mobile' = '360,640'; 'telephone' = '390,844'
 if ($Formats) { $keep = $Formats -split ','; foreach ($k in @($sizes.Keys)) { if (-not ($keep -contains $k)) { $sizes.Remove($k) } } }
 New-Item -ItemType Directory -Force (Join-Path $root $Out) | Out-Null
 try {
+# écrans supplémentaires (vox:planche) : « nom|adresse;nom|adresse »
+if ($Extra) { foreach ($pair in ($Extra -split ';')) { $kv = $pair -split '\|', 2; if ($kv.Count -eq 2) { $screens[$kv[0]] = $kv[1] } } }
   foreach ($name in $screens.Keys) {
     if ($Only -and -not (($Only -split ",") -contains $name)) { continue }
     foreach ($size in $sizes.Keys) {

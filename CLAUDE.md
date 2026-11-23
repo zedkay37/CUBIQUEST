@@ -32,6 +32,9 @@ Le plan se lit dans le dépôt ; une session se lance avec un prompt court (mod�
 | `npm run journey` | Parcours complet sur le vrai moteur depuis une sauvegarde neuve (profil actif ; `--profile`, `--seed`, `--xp-scale`, `--out`). Parties par niveau, première évolution. Reproductible. |
 | `npm run journal -- fichier.json` | Résume un journal de test exporté depuis les options du jeu (victoires, relances, gestes, niveaux qui bloquent, leçons ratées). |
 | `npm run texts` | Liste les textes visibles restés en dur dans l'interface |
+| `npm run vox:build` | BESTIAIRE : régénère `src/assets/vox/<id>.vox` depuis `tools/vox-studio/species/<id>.ts` (déterministe) ; `-- --references` vérifie que le portage TypeScript de voxlib redonne les .vox de référence octet pour octet |
+| `npm run vox:check [fichiers]` | BESTIAIRE : relit chaque .vox (lecteur indépendant) : version, bornes, z = 0, symétrie, yeux, pas de lueur sur une patte, dimensions |
+| `npm run vox:planche [ids] [--lot nom=a,b] [--fichier ref:espece]` | BESTIAIRE : planches rendues par le jeu (`?gallery=planche`) dans `docs/captures/bestiaire/` |
 | `npm run vox:exemple` | Génère le modèle MagicaVoxel d'essai `tools/fixtures/exemple-essai.vox` (ART 3, voir `docs/guide-vox.md`) |
 | `npm run lexique` | Compte, fichier par fichier, les termes venus d'autres jeux (liste : `tools/lexiqueCore.ts`). Doit rester à zéro ; le test `lexique.test.ts` le vérifie. |
 | `npm run census -- <niveau>` | Compte les maillages d'une scène sans navigateur (nombres reproductibles, pour comparer avant / après) |

@@ -20,6 +20,9 @@ const isRevealGallery = galleryParam === 'reveal';
 const isArtGallery = galleryParam === 'art';
 // `?gallery=styles` : Magmadrake en six styles (sprint STYLES, exploration)
 const isStylesGallery = galleryParam === 'styles';
+// `?gallery=planche` : planche d'une créature ou d'un lot rendue par le jeu (sprint BESTIAIRE, outil)
+const isPlancheGallery = galleryParam === 'planche';
+const PlancheGallery = lazy(() => import('./components/PlancheGallery.tsx').then((module) => ({default: module.PlancheGallery})));
 const StylesGallery = lazy(() => import('./components/StylesGallery.tsx').then((module) => ({default: module.StylesGallery})));
 const ArtGallery = lazy(() => import('./components/ArtGallery.tsx').then((module) => ({default: module.ArtGallery})));
 const RevealGallery = lazy(() => import('./components/RevealGallery.tsx').then((module) => ({default: module.RevealGallery})));
@@ -67,7 +70,11 @@ const voxReady = Promise.all(
 );
 
 voxReady.then(() => createRoot(document.getElementById('root')!).render(
-  isStylesGallery ? (
+  isPlancheGallery ? (
+    <Suspense fallback={null}>
+      <PlancheGallery />
+    </Suspense>
+  ) : isStylesGallery ? (
     <Suspense fallback={null}>
       <StylesGallery />
     </Suspense>
