@@ -138,7 +138,12 @@ export default function App() {
   const controlModeRef = useRef<ControlMode>('semi');
   controlModeRef.current = controlMode;
   const [muted, setMuted] = useState(false);
-  const [settings, setSettings] = useState<GameSettings>(() => loadSettings());
+  // ?quality=low|medium|high|auto : impose la qualité graphique (outil de mesure, G1.4)
+  const [settings, setSettings] = useState<GameSettings>(() => {
+    const s = loadSettings();
+    const q = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('quality');
+    return q && (QUALITY_ORDER as string[]).includes(q) ? { ...s, quality: q as GameSettings['quality'] } : s;
+  });
 
   const [activeStage, setActiveStage] = useState<StageDef | null>(null);
   const [hudSnapshot, setHudSnapshot] = useState<ExpeditionHudSnapshot | null>(null);

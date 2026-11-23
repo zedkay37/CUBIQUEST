@@ -62,6 +62,9 @@ $screens = [ordered]@{
   'combat-toundra' = '?stage=tundra-2'
   'combat-cime'    = '?stage=stormpeak-2'
   'combat-canyon'  = '?stage=canyon-2'
+  'mesure-high' = '?stage=volcano-2&debug=1&quality=high'
+  'mesure-medium' = '?stage=volcano-2&debug=1&quality=medium'
+  'mesure-low' = '?stage=volcano-2&debug=1&quality=low'
 }
 $sizes = @{ 'bureau' = '1280,720'; 'mobile' = '360,640' }
 New-Item -ItemType Directory -Force (Join-Path $root $Out) | Out-Null

@@ -40,6 +40,7 @@ URL utiles en développement (aucune ne touche à la sauvegarde) :
 - `?stage=<id>` : lance un niveau avec son escouade de référence. Options : `&squad=a,b,c&lvl=N&bonus=N`.
 - `?gallery=1` : galerie de revue (toutes les créatures en 3D + aperçu des biomes).
 - `?autostart=1&hour=0.8` : camp à une heure donnée (0 aube · 0.3 jour · 0.66 crépuscule · 0.8 nuit).
+- `?bench=1` : mesure de 30 s d'un combat à graine fixe (images/s moyennes et 5 % les plus lentes, appels de dessin, triangles). `&quality=low|medium|high` impose la qualité.
 - `?debug=1` : overlay de diagnostic (FPS, temps d'image, draw calls, triangles, géométries, textures, particules, entités). Se combine avec les autres. Détail des lignes dans `src/game/engine/debug.ts`.
 
 ## Architecture
@@ -59,6 +60,7 @@ src/game/engine/           Logique du moteur, un module par responsabilité (car
 src/game/voxelModels.ts    Point d'entrée des modèles (réexporte src/game/models/).
 src/game/models/           Modèles voxel procéduraux (carte ci-dessous).
 src/game/styleGuide.ts     Plages chiffrées de STYLE.md, vérifiées par style.test.ts.
+src/game/portraitStudio.ts  Portraits 3D des créatures (rendu hors écran, cache) utilisés par toutes les icônes.
 src/game/galleryRenderer.ts Vignettes de la galerie `?gallery=1` (outil de développement).
 src/game/*.test.ts         rules, save, engine (moteur headless), style, lineage-* et biome-* (un fichier par ajout de contenu).
 src/components/            Interface React (HUD, tiroirs du camp, modales). L'état de jeu vit dans App.tsx.
@@ -104,6 +106,7 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | `actors.ts` | État commun des acteurs, pose animée des modèles, recherche de cible, disparition. |
 | `fx.ts` | Particules, projectiles, ondes de choc, télégraphes au sol, confettis. |
 | `hud.ts` | Instantané de combat envoyé à l'interface. |
+| `postfx.ts` | Pipeline d'effets (G1) : GTAO, contour, halo, étalonnage par biome ; niveaux Bas/Moyen/Haut/Automatique. Jamais en headless. |
 | `debug.ts` | Mesures de l'overlay `?debug=1`. |
 
 ### Carte des modèles (`src/game/models/`)

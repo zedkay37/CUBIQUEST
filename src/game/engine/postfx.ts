@@ -88,6 +88,8 @@ export function setupPostFx(self: VoxelEngine, width: number, height: number): v
     self.postfx = null;
     return;
   }
+  // les compteurs de ?debug=1 additionnent toutes les passes d'une image (remis à zéro dans renderFrame)
+  renderer.info.autoReset = false;
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(self.scene, self.camera));
   const gtao = new GTAOPass(self.scene, self.camera, width, height);
@@ -166,6 +168,7 @@ export function renderFrame(self: VoxelEngine, dt: number): void {
   const renderer = self.renderer;
   if (!renderer) return;
   const fx = self.postfx;
+  if (fx) renderer.info.reset();
   if (!fx || fx.level === 'low') {
     renderer.render(self.scene, self.camera);
   } else {
