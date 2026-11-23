@@ -55,3 +55,21 @@ test('Vox (ART3) : un fichier invalide est refusé proprement', () => {
   assert.throws(() => parseVox(new ArrayBuffer(4)));
   assert.throws(() => parseVox(toArrayBuffer(new TextEncoder().encode('PAS UN FICHIER VOX....'))));
 });
+
+test('Vox (BESTIAIRE) : un quadrupède a 4 pattes séparées, rangées pour un trot en diagonale ; un bipède en garde 2', () => {
+  const file = readFileSync('tools/vox-studio/references/calcinarque-legendaire.vox');
+  const def = voxToSculptDef(parseVox(toArrayBuffer(new Uint8Array(file))));
+  assert.deepEqual(def.legs, ['legLF', 'legRF', 'legRH', 'legLH']);
+  const z = (g: string) => def.voxels!.filter((v) => v.group === g).map((v) => v.z);
+  // les pattes avant sont devant (+Z) les pattes arrière, de chaque côté
+  assert.ok(Math.min(...z('legLF')) > Math.max(...z('legLH')));
+  assert.ok(Math.min(...z('legRF')) > Math.max(...z('legRH')));
+  // rangs pairs (même pas) : avant gauche + arrière droite = diagonale
+  assert.deepEqual([def.legs![0], def.legs![2]], ['legLF', 'legRH']);
+  assert.deepEqual(voxToSculptDef(buildExampleVox()).legs, ['legL', 'legR']);
+});
+
+test('Vox (BESTIAIRE) : les créatures du code gardent leurs 2 pattes (aucun changement hors .vox)', async () => {
+  const { SCULPT_DEFS } = await import('./models/sculptDefs');
+  for (const [id, d] of Object.entries(SCULPT_DEFS)) assert.deepEqual(d.legs, ['legL', 'legR'], id);
+});

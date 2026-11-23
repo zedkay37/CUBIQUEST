@@ -146,11 +146,30 @@ export function voxToSculptDef(model: VoxModel): SculptDef {
       ...(inRange(p.i, VOX_ROLES.glow) ? { glow: true } : {}),
     };
   });
+  // BESTIAIRE : un quadrupède a ses pattes avant et arrière dans le même groupe (250–252 ou 253–255). Elles sont
+  // séparées là où un vide coupe le groupe d'avant en arrière, pour que chaque patte pivote sur sa propre épaule.
+  let split = false;
+  for (const side of ['legL', 'legR']) {
+    const zs = [...new Set(voxels.filter((v) => v.group === side).map((v) => v.z))].sort((a, b) => a - b);
+    let cut: number | null = null;
+    let widest = 1;
+    for (let k = 1; k < zs.length; k++)
+      if (zs[k] - zs[k - 1] > widest) {
+        widest = zs[k] - zs[k - 1];
+        cut = (zs[k] + zs[k - 1]) / 2;
+      }
+    if (cut === null) continue;
+    split = true;
+    for (const v of voxels) if (v.group === side) v.group = side + (v.z > cut ? 'F' : 'H');
+  }
   const groups = new Set(voxels.map((v) => v.group));
+  // ordre des pattes : le moteur fait avancer les pattes de rang pair ensemble, et les impaires à l'opposé
+  // (engine/actors.ts) ; avant gauche + arrière droite, puis avant droite + arrière gauche = trot en diagonale
+  const legs = split ? ['legLF', 'legRF', 'legRH', 'legLH', 'legL', 'legR'] : ['legL', 'legR'];
   return {
     shapes: [],
     voxels,
-    legs: ['legL', 'legR'].filter((g) => groups.has(g)),
+    legs: legs.filter((g) => groups.has(g)),
     eyes: ['eyeL', 'eyeR'].filter((g) => groups.has(g)),
   };
 }
