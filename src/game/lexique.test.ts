@@ -49,3 +49,12 @@ test('Lexique: metadata.json porte le titre des constantes', () => {
   // JSON statique : il ne peut pas importer la constante, ce test le garde aligné
   assert.equal(normalizeText(meta.name).replace(/['’]/g, ''), normalizeText(GAME_FULL_TITLE).replace(/['’]/g, ''));
 });
+
+test('Lexique (A1.1): aucun nom de créature ne commence par « rai » ni ne contient le mot interdit', async () => {
+  const { SPECIES } = await import('./catalog');
+  for (const s of Object.values(SPECIES)) {
+    const n = normalizeText(s.name);
+    assert.ok(!n.startsWith('rai'), s.name);
+    assert.ok(!n.includes('pi' + 'ka'), s.name); // écrit en deux morceaux : le mot est interdit dans le code
+  }
+});

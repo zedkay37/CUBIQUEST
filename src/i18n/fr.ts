@@ -652,7 +652,7 @@ export const FR = {
     SPECIES: {
       pyrocube: {
         name: 'Pyrocube',
-        dexNote: 'Sa queue cubique crépite plus fort lorsqu’une bonne marmite mijote au camp.',
+        dexNote: 'Un cube de braise têtu : il souffle sur ses propres étincelles pour les faire durer jusqu’au soir.',
       },
       flambrix: {
         name: 'Flambrix',
@@ -660,7 +660,7 @@ export const FR = {
       },
       ignisaur: {
         name: 'Ignisaur',
-        dexNote: 'Souverain ailé des cimes ardentes, son souffle embrase des clairières entières.',
+        dexNote: 'Ses plaques de lave se soulèvent comme des volets quand il s’échauffe ; on sent la chaleur à vingt pas.',
       },
       braizard: {
         name: 'Braizard',
@@ -672,7 +672,7 @@ export const FR = {
       },
       aquabloc: {
         name: 'Aquabloc',
-        dexNote: 'Sa carapace géométrique glisse sur les vagues comme un ricochet parfait.',
+        dexNote: 'Ce bloc d’eau tiède garde la forme d’un cube même au fond des courants les plus vifs.',
       },
       corallix: {
         name: 'Corallix',
@@ -680,7 +680,7 @@ export const FR = {
       },
       abyssocube: {
         name: 'Abyssocube',
-        dexNote: 'Deux canons d’acier cubiques jaillissent de sa carapace pour déclencher Hydro-Rafale.',
+        dexNote: 'Ses parois translucides compriment la marée : quand il se relâche, la vague part d’un seul bloc.',
       },
       crabloc: {
         name: 'Crabloc',
@@ -692,35 +692,35 @@ export const FR = {
       },
       bourgeon: {
         name: 'Bourgéon',
-        dexNote: 'Le bulbe cubique sur son dos capte la lumière du soleil pour fortifier ses alliés.',
+        dexNote: 'Une pousse obstinée qui grandit d’une feuille chaque fois qu’un allié se relève à côté de lui.',
       },
       feuilloc: {
         name: 'Feuilloc',
-        dexNote: 'Un bourgeon rose éclos sur son dos libère une odeur apaisante avant l’assaut.',
+        dexNote: 'Ses feuilles carrées se replient en bouclier, puis se rouvrent d’un coup pour fouetter l’adversaire.',
       },
       bourgeoliath: {
         name: 'Bourgéoliath',
-        dexNote: 'Gardien ancestral de la Prairie Émeraude, sa fleur monumentale déclenche des tempêtes.',
+        dexNote: 'Gardien ancestral de la Prairie Émeraude : ses racines tiennent la colline entière en place.',
       },
       mycelin: {
         name: 'Mycélin',
-        dexNote: 'Il s’installe à l’ombre des marmites tièdes et saupoudre le camp de spores qui sentent la noisette.',
+        dexNote: 'Il s’installe à l’ombre des tentes tièdes et saupoudre le camp de spores qui sentent la noisette.',
       },
       amanitox: {
         name: 'Amanitox',
         dexNote: 'Vénérable champignon des sous-bois : là où son chapeau fait de l’ombre, une clairière entière repousse.',
       },
       voltik: {
-        name: 'Voltik',
-        dexNote: 'Ses joues carmin stockent des étincelles qu’il libère en rebondissant joyeusement.',
+        name: 'Ampoulin',
+        dexNote: 'Une petite pile sur pattes : il se recharge en dormant contre les rochers chauffés par l’orage.',
       },
       sparkube: {
-        name: 'Sparkube',
-        dexNote: 'Il plante sa queue en éclair dans le sol pour canaliser la foudre sur ses cibles.',
+        name: 'Bobinard',
+        dexNote: 'Le câble cuivré qu’il traîne derrière lui bourdonne quand sa batterie déborde.',
       },
       raicube: {
-        name: 'Raicube',
-        dexNote: `L’oiseau-éclair de ${WORLD_NAME} : un battement d’ailes suffit à charger l’air d’éclairs.`,
+        name: 'Voltacier',
+        dexNote: `Ses ailettes de bobine tournent comme une dynamo : tout ${WORLD_NAME} s’éclaire quand il décolle.`,
       },
       cailloc: {
         name: 'Cailloc',

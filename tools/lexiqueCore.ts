@@ -17,6 +17,8 @@ export const FORBIDDEN_TERMS: readonly string[] = [
   'overload', 'crystallize', 'swirl', 'combo',
   // S05 : l'élément s'appelle « Foudre » à l'écran (identifiant interne `electric`)
   'électrik',
+  // A1.1 (spec Atelier) : rien qui rappelle une créature-éclair d'une autre licence
+  'joues', 'pika',
 ];
 
 /**

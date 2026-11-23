@@ -263,8 +263,66 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
       bodyPivot.add(makeBox(0.3, 0.1, 0.1, accentMat, 0.02, 1.2, -0.04));
       bodyPivot.add(makeBox(0.1, 0.2, 0.1, accentMat, -0.12, 1.06, -0.3));
     }
+  } else if (arch === 'cell' && species.evolvesTo) {
+    // A1.1 : créature-pile (Ampoulin, Bobinard). Même nombre d'objets que le bipède (18 blocs, 1 groupe) :
+    // la simulation tire autant de nombres aléatoires (identifiants three.js), le golden reste identique.
+    bodyPivot.add(makeBox(0.82, 0.98, 0.82, primaryMat, 0, 0.68, 0)); // carapace de pile
+    bodyPivot.add(makeBox(0.88, 0.16, 0.88, secondaryMat, 0, 0.5, 0)); // bague de cuivre
+    bodyPivot.add(makeBox(0.36, 0.16, 0.36, secondaryMat, 0, 1.24, 0)); // borne
+    bodyPivot.add(makeBox(0.16, 0.12, 0.16, accentMat, 0, 1.37, 0)); // plot qui luit
+    bodyPivot.add(makeBox(0.12, 0.34, 0.5, secondaryMat, -0.47, 0.82, -0.04)); // plaques latérales
+    bodyPivot.add(makeBox(0.12, 0.34, 0.5, secondaryMat, 0.47, 0.82, -0.04));
+    bodyPivot.add(makeBox(0.42, 0.08, 0.06, accentMat, 0, 0.66, 0.42, false)); // jauge de charge
+    bodyPivot.add(makeBox(0.3, 0.08, 0.06, accentMat, 0, 0.56, 0.42, false));
+    const cable = new THREE.Group(); // câble et fiche
+    cable.position.set(0, 0.36, -0.42);
+    cable.add(makeBox(0.12, 0.12, 0.44, secondaryMat, 0, 0, -0.2));
+    cable.add(makeBox(0.22, 0.2, 0.16, accentMat, 0, 0.04, -0.46));
+    bodyPivot.add(cable);
+    extras.push(cable);
+    // yeux en visière
+    bodyPivot.add(makeBox(0.2, 0.12, 0.08, eyeMat, -0.18, 0.92, 0.42, false));
+    bodyPivot.add(makeBox(0.2, 0.12, 0.08, eyeMat, 0.18, 0.92, 0.42, false));
+    bodyPivot.add(makeBox(0.06, 0.05, 0.09, eyeHighlightMat, -0.13, 0.94, 0.43, false));
+    bodyPivot.add(makeBox(0.06, 0.05, 0.09, eyeHighlightMat, 0.23, 0.94, 0.43, false));
+    const legL = makeBox(0.26, 0.24, 0.3, secondaryMat, -0.24, 0.12, 0.04);
+    const legR = makeBox(0.26, 0.24, 0.3, secondaryMat, 0.24, 0.12, 0.04);
+    const armL = makeBox(0.16, 0.28, 0.2, primaryMat, -0.52, 0.5, 0.14);
+    const armR = makeBox(0.16, 0.28, 0.2, primaryMat, 0.52, 0.5, 0.14);
+    bodyPivot.add(legL, legR, armL, armR);
+    legs.push(legL, legR);
+  } else if (arch === 'cell') {
+    // A1.1 : forme finale (Voltacier), pile volante à ailettes de bobine. Même nombre d'objets que l'ancien
+    // modèle ailé (17 blocs, 2 groupes) : golden identique.
+    bodyPivot.add(makeBox(0.86, 1.0, 0.86, primaryMat, 0, 0.74, 0));
+    bodyPivot.add(makeBox(0.92, 0.16, 0.92, secondaryMat, 0, 0.56, 0));
+    bodyPivot.add(makeBox(0.4, 0.18, 0.4, secondaryMat, 0, 1.33, 0));
+    bodyPivot.add(makeBox(0.18, 0.14, 0.18, accentMat, 0, 1.48, 0));
+    bodyPivot.add(makeBox(0.08, 0.36, 0.08, accentMat, 0, 1.72, 0)); // antenne-paratonnerre
+    const finL = new THREE.Group();
+    finL.position.set(-0.46, 0.9, -0.1);
+    finL.add(makeBox(0.1, 0.5, 0.5, secondaryMat, -0.08, 0.06, 0));
+    finL.add(makeBox(0.08, 0.3, 0.3, accentMat, -0.16, 0.06, 0));
+    const finR = new THREE.Group();
+    finR.position.set(0.46, 0.9, -0.1);
+    finR.add(makeBox(0.1, 0.5, 0.5, secondaryMat, 0.08, 0.06, 0));
+    finR.add(makeBox(0.08, 0.3, 0.3, accentMat, 0.16, 0.06, 0));
+    bodyPivot.add(finL, finR);
+    extras.push(finL, finR);
+    const cable = makeBox(0.14, 0.14, 0.5, secondaryMat, 0, 0.42, -0.66);
+    const plug = makeBox(0.26, 0.24, 0.2, accentMat, 0, 0.46, -0.96);
+    bodyPivot.add(cable, plug);
+    extras.push(plug);
+    bodyPivot.add(makeBox(0.22, 0.13, 0.08, eyeMat, -0.19, 0.98, 0.45, false));
+    bodyPivot.add(makeBox(0.22, 0.13, 0.08, eyeMat, 0.19, 0.98, 0.45, false));
+    bodyPivot.add(makeBox(0.06, 0.05, 0.09, eyeHighlightMat, -0.14, 1.0, 0.46, false));
+    bodyPivot.add(makeBox(0.06, 0.05, 0.09, eyeHighlightMat, 0.24, 1.0, 0.46, false));
+    const legL = makeBox(0.28, 0.28, 0.3, secondaryMat, -0.26, 0.14, 0.06);
+    const legR = makeBox(0.28, 0.28, 0.3, secondaryMat, 0.26, 0.14, 0.06);
+    bodyPivot.add(legL, legR);
+    legs.push(legL, legR);
   } else if (arch === 'winged') {
-    // Majestic winged dragon / thunderbird creature (Ignisaur / Raicube)
+    // Dragon ailé (Ignisaur)
     bodyPivot.add(makeBox(0.88, 0.94, 0.88, primaryMat, 0, 0.72, 0));
     bodyPivot.add(makeBox(0.64, 0.56, 0.16, bellyMat, 0, 0.58, 0.42));
     // Crown horns / crest
@@ -567,7 +625,7 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
     bodyPivot.add(makeBox(0.12, 0.1, 0.08, accentMat, -0.38, 1.08, 0.49, false));
     bodyPivot.add(makeBox(0.12, 0.1, 0.08, accentMat, 0.38, 1.08, 0.49, false));
   } else {
-    // Cute energetic biped (Pyrocube / Voltik / Sparkube)
+    // Bipède énergique (Pyrocube)
     bodyPivot.add(makeBox(0.88, 0.92, 0.82, primaryMat, 0, 0.68, 0));
     bodyPivot.add(makeBox(0.64, 0.5, 0.14, bellyMat, 0, 0.54, 0.4));
     // Tall ears

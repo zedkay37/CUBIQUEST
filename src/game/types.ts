@@ -3,6 +3,8 @@ export type ElementType = 'fire' | 'water' | 'grass' | 'electric' | 'rock' | 'ps
 export type CreatureRole = 'melee' | 'ranged' | 'tank';
 
 export type CreatureArchetype =
+  /** A1.1 : créature-pile (lignée Foudre de départ). */
+  | 'cell'
   | 'quadruped'
   | 'fungal'
   | 'biped'

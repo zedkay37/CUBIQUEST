@@ -23,7 +23,7 @@ Un modèle est un assemblage de boîtes (`makeBox`) posé sur le sol (y = 0), re
   - `primary` : masse du corps (mat) ;
   - `secondary` : pièces rapportées — carapace, oreilles, armure, segments (plus lisse) ;
   - `belly` : plaque claire du ventre ou du poitrail, toujours visible de face ;
-  - `accent` : l'organe signature, légèrement lumineux — flamme, bulbe, corne, cristal, joues ;
+  - `accent` : l'organe signature, légèrement lumineux — flamme, bulbe, corne, cristal, borne de pile ;
   - `eye` : deux yeux rectangulaires sombres avec un reflet blanc carré en haut à droite.
 - **Visage** : deux yeux écartés sur la face avant, pas de bouche. C'est ce qui rend toutes les créatures sympathiques, boss compris.
 - **Parties animées** : `legs` (balancement à la marche) et `extras` (ailes, queue, cubes en orbite, bois, segments, filaments).
@@ -65,7 +65,7 @@ Couleur d'interface de chaque élément (`ELEMENT_META`) et teintes de corps obs
 | Feu | `#E85D3F` | rouges orangés `#EF6442` -> `#DC4329` | jaune flamme `#FFDC4A` |
 | Eau | `#2F8CE8` | bleus `#4DA6E8` -> `#2661A8` ; glace très pâle `#DCEFFA` | cyan clair `#8CE0FF`, `#67E8F9` |
 | Plante | `#35A85C` | verts `#55B87B` -> `#39916E` | vert tendre puis rose fleur `#F06584` |
-| Foudre | `#E5B324` | jaunes dorés `#F5C936` -> `#EFA92C` | rouge joue `#E8523F`, puis bleu électrique `#38BDF8` |
+| Foudre | `#E5B324` | lignée de départ (A1.1) : acier `#2F6F8F` -> `#24425C`, cuivre `#C47A3A` ; autres lignées : jaunes dorés | accent jaune `#FFE14D` ou cyan `#7DF9FF` (pas de taches rouges sur le visage) |
 | Roche | `#A98359` | gris-bruns `#9E8C7A` -> `#4B3E3B` ; gris-bleu glacé `#9FB6C9` | ambre `#E0B86A` -> lave `#FF6B2B` ; glace `#7DD3FC` |
 | Psy | `#9B5CE5` | violets `#A87CE8` -> `#8A5AD6` ; lavande pâle `#E9E4FB` | turquoise `#5EEAD4`, or `#F4C95D` |
 
@@ -125,7 +125,7 @@ Lecture : le total PV + ATQ est d'environ 250–290 au stade de base, 390–485 
 
 ### 3.1 Structure
 
-- 6 biomes, **3 niveaux chacun**, joués dans l'ordre ; finir un niveau ouvre le suivant.
+- 6 biomes, **3 niveaux chacun**, parcourus dans l’ordre ; finir un niveau ouvre le suivant.
 - Chaque niveau a **3 vagues** : deux vagues de 3 ennemis, puis une vague avec 1 ennemi d'escorte et le boss.
 - IA disponibles : `chaser` (poursuite au contact), `kiter` (garde ses distances et tire), `charger` (télégraphe en ligne puis ruée), `boss`.
 - Les niveaux d'ennemis montent d'environ +3 par niveau de jeu ; le boss a 2 à 3 niveaux de plus que son escorte.

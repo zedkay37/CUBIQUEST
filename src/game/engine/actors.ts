@@ -165,6 +165,11 @@ export function animateRigPose(
       case 'floating':
         extra.rotation.y = elapsed * 2.2;
         break;
+      case 'cell':
+        // pile : les ailettes de bobine tournent (forme finale), le câble se balance
+        if (idx < 2 && rig.extras.length > 1) extra.rotation.x = elapsed * 6 * (idx === 0 ? 1 : -1);
+        else extra.rotation.y = Math.sin(elapsed * 4 + seed) * 0.3;
+        break;
       case 'winged':
         if (idx < 2) {
           const dir = idx === 0 ? 1 : -1;
