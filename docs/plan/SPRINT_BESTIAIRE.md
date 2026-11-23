@@ -98,13 +98,14 @@ Ces règles viennent de ce qui a marché (et raté) le 23/11. Elles priment sur 
 - Chaque lignée a un **plan de corps** distinct : quadrupède bas, bipède, serpentin, trapu à carapace, flotteur, etc. Deux lignées d'un même élément ne partagent jamais le même plan de corps.
 - Profil : une ligne de dos qui raconte quelque chose (épaules hautes = prédateur, dos voûté = colosse, ligne basse = rôdeur). La tête est **séparée du corps** par un vide ou un cou visible.
 - Face : jamais une boîte. Épaules plus larges que la taille, poitrail en V, membres écartés, tête plus étroite que les épaules.
+- **Vue du dessus (ajout du 23/11, porte A)** : la caméra de combat est haute, on voit surtout le dos et le dessus de la tête. Chaque créature doit se lire VUE DU DESSUS : une forme de dos qui raconte la lignée, une tête qui dépasse nettement devant le corps, et une lueur visible d'en haut (pas seulement sur les flancs ou sous la gueule). Les planches ont une vue de dessus (en haut à droite) : la regarder à chaque itération.
 
 ### 4.2 Gradation par stade (décision à confirmer par le joueur en porte 0)
 Tout rendre intimidant tue l'attachement des premières formes. Proposition :
 
 | Stade | Hauteur (Z) | Tête / hauteur | Ton | Lueur en surface |
 |---|---|---|---|---|
-| 1 (base) | 14–18 | 30–35 % | attachant mais pas bébé : yeux 2×2 sans reflet géant, déjà la signature de lignée en petit | 2–4 % |
+| 1 (base) | 14–18 | 30–35 % | attachant mais pas bébé : yeux 2×2 sans reflet géant, déjà la signature de lignée en petit ; **yeux visibles en 3/4 depuis la caméra du jeu** (vérifier sur le recadrage « taille réelle en combat » de la planche ; ajout du 23/11) | 2–4 % |
 | 2 (évolué) | 18–24 | 25–30 % | affirmé, posture de chasse | 4–6 % |
 | Final / légendaire | 24–30 | 20–25 % | intimidant, niveau Calcinarque légendaire | 5–9 % |
 | Ennemis communs | selon rôle | libre | lisibles comme hostiles | 2–5 % |
@@ -122,7 +123,7 @@ Une lignée = une signature qui **grandit** avec l'évolution. Exemple Calcinarq
 - Yeux : 2×2, **enfoncés sous une arcade** qui les surplombe d'un voxel. Pas de reflet 249 sauf au stade 1 si le joueur le veut.
 - Pattes : indices 250–255, épaisses, coudes ou genoux qui sortent du corps. **Jamais de lueur sur une patte** (elle ne suivrait pas l'animation).
 - Queues, ailes, crêtes : statiques. Donc **pas de grandes ailes déployées** : ailes repliées et plaquées au corps, ou réduites à des ailerons, crêtes ou nageoires. (Leçon d'Ailebraise : des ailes figées font une cape.)
-- Lueurs 240–247 : des **lignes** (fissures, veines, gueule, bouts de cornes), pas des taches. Un cœur plus chaud (jaune) au milieu des lignes principales.
+- Lueurs 240–247 : des **lignes** (fissures, veines, gueule, bouts de cornes), pas des taches. Un cœur plus chaud (jaune) au milieu des lignes principales. **Plafond** : 9 % de la surface, 10 % pour une créature qui sert de boss (vérifié par `vox:check`, validé le 23/11).
 
 ### 4.5 Couleurs
 - Par créature : 3 ou 4 couleurs de corps (base sombre, moyenne, croûte du dessus, corne/os), plus la lueur d'élément.

@@ -9,7 +9,11 @@
  * 12 à 20, longueur Y ≤ 34, hauteur Z de 14 à 30.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { STAGES } from '../../src/game/catalog';
+
+/** Espèces qui servent de boss dans un niveau (plafond de lueur de 10 %). */
+const BOSSES = new Set(STAGES.map((st) => st.bossSpeciesId));
 
 interface Parsed {
   version: number;
@@ -51,7 +55,10 @@ const swapLeg = (i: number) => (i >= 250 && i <= 252 ? i + 3 : i >= 253 && i <= 
 const isLeg = (i: number) => i >= 250 && i <= 255;
 const isGlow = (i: number) => i >= 240 && i <= 247;
 
-export function checkVox(buf: Buffer): string[] {
+/** Plafond de lueur en surface (validé le 23/11/2026) : 9 %, 10 % pour une créature qui sert de boss. */
+export const GLOW_CAP = { normal: 0.09, boss: 0.1 };
+
+export function checkVox(buf: Buffer, opts: { boss?: boolean } = {}): string[] {
   const errors: string[] = [];
   const v = read(buf);
   if (v.version !== 150) errors.push(`version ${v.version} (150 attendue)`);
@@ -92,6 +99,17 @@ export function checkVox(buf: Buffer): string[] {
       }
   }
   if (glowOnLeg) errors.push(`${glowOnLeg} voxel(s) de lueur collés à une patte`);
+  // part de lueur parmi les voxels de surface (au moins une face à l'air libre)
+  let surf = 0;
+  let glowSurf = 0;
+  for (const [x, y, z, i] of v.voxels) {
+    const out = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => !at.has(`${x + dx},${y + dy},${z + dz}`));
+    if (!out) continue;
+    surf++;
+    if (isGlow(i)) glowSurf++;
+  }
+  const cap = opts.boss ? GLOW_CAP.boss : GLOW_CAP.normal;
+  if (surf && glowSurf / surf > cap) errors.push(`lueur en surface ${((100 * glowSurf) / surf).toFixed(1)} % (plafond ${cap * 100} %${opts.boss ? ', boss' : ''})`);
   return errors;
 }
 
@@ -103,7 +121,8 @@ if (process.argv[1]?.endsWith('vox-check.ts')) {
   for (const f of files) {
     let errors: string[];
     try {
-      errors = checkVox(readFileSync(f));
+      const id = basename(f).replace(/.vox$/, '');
+      errors = checkVox(readFileSync(f), { boss: BOSSES.has(id) });
     } catch (e) {
       errors = [(e as Error).message];
     }

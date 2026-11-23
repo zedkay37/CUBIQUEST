@@ -47,3 +47,18 @@ test('vox:build (BESTIAIRE) : les .vox du dépôt sont ceux que donnent les scri
     assert.deepEqual(checkVox(Buffer.from(disk)), [], s.ID);
   }
 });
+
+test('vox:check (BESTIAIRE) : plafond de lueur en surface, 9 % (10 % pour un boss)', () => {
+  const ref = readFileSync(REF); // 5,6 % de lueur : passe
+  assert.deepEqual(checkVox(ref), []);
+  // on passe un voxel de corps sur dix en lueur (241) : bien au-dessus du plafond
+  const hot = Buffer.from(ref);
+  const xyzi = hot.indexOf('XYZI');
+  const count = hot.readInt32LE(xyzi + 12);
+  for (let k = 0; k < count; k += 7) {
+    const p = xyzi + 16 + k * 4 + 3;
+    if (hot[p] >= 1 && hot[p] <= 3) hot[p] = 241;
+  }
+  assert.ok(checkVox(hot).some((e) => e.includes('lueur en surface')));
+  assert.ok(checkVox(hot, { boss: true }).some((e) => e.includes('boss')));
+});

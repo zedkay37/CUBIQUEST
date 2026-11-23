@@ -206,11 +206,11 @@ export function PlancheGallery() {
     scene.add(rig.root);
     const box = modelBox(rig.root);
     const big = 560;
-    const small = 300;
+    const small = 230;
     const combatW = 300;
     const combatH = 220;
     const zoom = 2;
-    const W = big + small * 2 + 20;
+    const W = Math.max(big + small * 3 + 20, 20 + combatW * zoom * 2 + 20);
     const H = big + combatH * zoom + 20;
     renderer.setSize(W, H);
     renderer.setClearColor(BG);
@@ -233,6 +233,8 @@ export function PlancheGallery() {
     rig.legs.forEach((leg, idx) => (leg.rotation.x = 0.45 * (idx % 2 === 0 ? 1 : -1)));
     draw(big + 10 + small, small, small, small - 20, orthoFor(modelBox(rig.root), new THREE.Vector3(...VIEWS[2].dir), small / (small - 20)));
     rig.legs.forEach((leg) => (leg.rotation.x = 0));
+    // BESTIAIRE (bible §4.1) : vue de dessus, comme la voit surtout la caméra de combat (dos, tête qui dépasse, lueur)
+    draw(big + 10 + small * 2, 0, small, small - 20, orthoFor(box, new THREE.Vector3(0.001, 1, 0.12), small / (small - 20)));
 
     // taille réelle en combat : caméra du jeu sur une image de 1280 × 720, recadrée autour de la créature
     // texture en virgule flottante : le mappage des tons du jeu s'applique ensuite, au dessin du recadrage
@@ -301,7 +303,7 @@ export function PlancheGallery() {
       </p>
       <p className="text-xs text-[#C8C4D2]">
         Rendu du vrai jeu (constructeur et matières du jeu, lumière des portraits). {info}
-        {!LOT.length && ' — vues : 3/4 avant (grande), face, profil, 3/4 arrière ; en bas : taille réelle en combat (recadrage d’une image 1280 × 720, ×2) et silhouette ; à droite : marche au pas le plus grand.'}
+        {!LOT.length && ' — vues : 3/4 avant (grande), face, profil, 3/4 arrière ; à droite : face, profil, dessus, puis 3/4 arrière et marche au pas le plus grand ; en bas : taille réelle en combat (recadrage d’une image 1280 × 720, ×2) et silhouette.'}
       </p>
       <div ref={host} className="mt-2" />
     </div>

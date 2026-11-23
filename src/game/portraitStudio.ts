@@ -106,14 +106,19 @@ function shoot(s: Studio, speciesId: string): string | null {
 
 function pump(): void {
   scheduled = false;
-  const id = queue.shift();
-  if (!id) return;
-  if (studio === undefined) studio = createStudio();
-  if (studio && !cache.has(id)) {
-    const url = shoot(studio, id);
-    if (url) cache.set(id, url);
-  }
-  listeners.get(id)?.forEach((fn) => fn());
+  // BESTIAIRE : plusieurs portraits par image tant qu'il reste du temps (12 ms), au moins un. Avant, un seul par image :
+  // au début d'un combat, l'icône dessinée d'attente (l'ancien modèle) pouvait rester visible plusieurs secondes.
+  const start = typeof performance !== 'undefined' ? performance.now() : 0;
+  do {
+    const id = queue.shift();
+    if (!id) return;
+    if (studio === undefined) studio = createStudio();
+    if (studio && !cache.has(id)) {
+      const url = shoot(studio, id);
+      if (url) cache.set(id, url);
+    }
+    listeners.get(id)?.forEach((fn) => fn());
+  } while (queue.length && typeof performance !== 'undefined' && performance.now() - start < 12);
   if (queue.length) schedule();
 }
 
