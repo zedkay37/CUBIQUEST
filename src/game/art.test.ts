@@ -52,3 +52,15 @@ test('Art : les trois lignées du trio Braise sont refaites, évolutions compris
     }
   }
 });
+
+test('ART2 (couleurs) : tons nets, tête distincte, détails sombres, bruit de surface ±4 % au plus', async () => {
+  const { art2Palette, contrast, ART2_AO_STRENGTH } = await import('./models/artPalette');
+  // trois voisins au plus assombrissent un coin : ±4 % de luminosité au maximum
+  assert.ok(ART2_AO_STRENGTH * 3 <= 0.04);
+  for (const id of Object.keys(SCULPT_DEFS)) {
+    const t = art2Palette(SPECIES[id].palette);
+    for (const [part, c] of [['tête', t.head], ['détails', t.secondary], ['ventre', t.belly], ['accent', t.accent]] as const) {
+      assert.ok(contrast(c, t.primary) >= 0.15, `${id} : ${part} ${Math.round(contrast(c, t.primary) * 100)} %`);
+    }
+  }
+});

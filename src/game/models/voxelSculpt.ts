@@ -149,7 +149,10 @@ export function exposedVoxels(voxels: Voxel[], moving: Set<string>): Voxel[] {
 }
 
 /** Palette d'une espèce, plus le blanc des reflets et un brun sombre. */
-export type SculptPalette = Record<ColorKey, string>;
+export type SculptPalette = Record<ColorKey, string> & {
+  /** ART2 : ton de la tête (le corps « primary » de la tête prend ce ton, plus clair que le corps). */
+  head?: string;
+};
 
 export interface SculptRigParts {
   bodyPivot: THREE.Group;
@@ -160,7 +163,7 @@ export interface SculptRigParts {
 }
 
 /** Maillage : une géométrie par pièce (faces visibles seulement, ombre par sommet), deux matériaux (mat et lumineux). */
-export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: number, glowIntensity: number): SculptRigParts {
+export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: number, glowIntensity: number, aoStrength = 0.16, smoothNormals = false): SculptRigParts {
   const voxels = voxelize(def, res);
   const legs = new Set(def.legs ?? []);
   const extrasDef = new Map((def.extras ?? []).map((e) => [e.group, e.pivot]));
@@ -174,6 +177,7 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
   };
   const colors: Partial<Record<ColorKey, THREE.Color>> = {};
   const col = (k: ColorKey) => (colors[k] ??= new THREE.Color().setStyle(palette[k]));
+  let headColor: THREE.Color | undefined;
 
   const base = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.68, metalness: 0.04 });
   const glow = new THREE.MeshStandardMaterial({
@@ -213,7 +217,8 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
       const idx: number[] = [];
       for (const v of list) {
         if ((v.color === 'accent') !== glowing) continue;
-        const c = col(v.color);
+        // ART2 : la tête a son propre ton, plus clair que le corps
+        const c = v.group === 'head' && v.color === 'primary' && palette.head ? (headColor ??= new THREE.Color().setStyle(palette.head)) : col(v.color);
         for (const [dx, dy, dz] of DIRS) {
           if (occ(v, v.x + dx, v.y + dy, v.z + dz)) continue;
           // les quatre coins de la face, avec l'ombre douce de chaque coin
@@ -246,9 +251,27 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
             const s1 = occ(v, n1[0], n1[1], n1[2]);
             const s2 = occ(v, n2[0], n2[1], n2[2]);
             const ao = s1 && s2 ? 3 : s1 + s2 + occ(v, n3[0], n3[1], n3[2]);
-            const shade = 1 - ao * 0.16;
+            const shade = 1 - ao * aoStrength;
             pos.push(corner[0] * s - pivot[0], corner[1] * s - pivot[1], corner[2] * s - pivot[2]);
-            nor.push(dx, dy, dz);
+            if (smoothNormals) {
+              // ART2 : normale lissée (direction des cases vides autour du coin), à moitié mêlée à celle de la face :
+              // les marches d'une forme arrondie ne font plus des rayures de lumière, les grandes faces restent nettes
+              let nx = 0;
+              let ny = 0;
+              let nz = 0;
+              for (const ox of [-1, 0]) for (const oy of [-1, 0]) for (const oz of [-1, 0]) {
+                if (occ(v, corner[0] + ox, corner[1] + oy, corner[2] + oz)) continue;
+                nx += ox + 0.5;
+                ny += oy + 0.5;
+                nz += oz + 0.5;
+              }
+              const len = Math.hypot(nx, ny, nz) || 1;
+              const mx = dx + nx / len;
+              const my = dy + ny / len;
+              const mz = dz + nz / len;
+              const l2 = Math.hypot(mx, my, mz) || 1;
+              nor.push(mx / l2, my / l2, mz / l2);
+            } else nor.push(dx, dy, dz);
             clr.push(c.r * shade, c.g * shade, c.b * shade);
           }
           // ordre des triangles selon l'orientation de la face

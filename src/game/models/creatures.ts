@@ -7,6 +7,8 @@ import type { CreatureArchetype, SpeciesDef } from '../types';
 import { getContactShadowTexture, getToyBumpTexture, makeBox } from './shared';
 import { buildSculptRig, withIsolatedRandom, type SculptPalette } from './voxelSculpt';
 import { SCULPT_DEFS } from './sculptDefs';
+import { SCULPT_DEFS_ART1 } from './sculptDefsArt1';
+import { ART2_AO_STRENGTH, art2Palette } from './artPalette';
 
 export interface VoxelCreatureRig {
   /** Yeux (modèles sculptés) : clignement et regard. */
@@ -714,9 +716,11 @@ export function buildLegacyCreature(species: SpeciesDef, scaleOverride?: number,
 }
 
 /** Créature sculptée (sprint Art) : volumes → blocs, faces visibles seulement, ombre douce par sommet. */
-function buildSculptCreature(species: SpeciesDef, scaleOverride?: number, variant?: boolean): VoxelCreatureRig {
-  const p = species.palette;
+/** Créature sculptée : version ART 2 (par défaut) ou version figée du sprint ART (comparaison `?gallery=art`). */
+export function buildSculptCreature(species: SpeciesDef, scaleOverride?: number, variant?: boolean, mode: 'art2' | 'art1' = 'art2'): VoxelCreatureRig {
   const shift = (hex: string) => (variant ? '#' + new THREE.Color(hex).offsetHSL(150 / 360, 0, 0).getHexString() : hex);
+  // ART 2 : deux à trois tons nets (corps et tête plus claire, accent, détails sombres), bruit de surface ±4 %
+  const p = mode === 'art2' ? art2Palette(species.palette) : { ...species.palette, head: undefined };
   const palette: SculptPalette = {
     primary: shift(p.primary),
     secondary: shift(p.secondary),
@@ -725,9 +729,11 @@ function buildSculptCreature(species: SpeciesDef, scaleOverride?: number, varian
     eye: p.eye,
     white: '#FFFFFF',
     dark: '#1B1D24',
+    head: p.head ? shift(p.head) : undefined,
   };
   const glow = species.element === 'fire' || species.element === 'electric' ? 0.45 : 0.25;
-  const parts = buildSculptRig(SCULPT_DEFS[species.id], palette, sculptRes, glow);
+  const defs = mode === 'art2' ? SCULPT_DEFS : SCULPT_DEFS_ART1;
+  const parts = buildSculptRig(defs[species.id], palette, sculptRes, glow, mode === 'art2' ? ART2_AO_STRENGTH : 0.16); // normales lissées essayées puis écartées (taches sur les faces planes)
   const root = new THREE.Group();
   root.add(parts.bodyPivot);
   const shadowMat = new THREE.MeshBasicMaterial({ map: getContactShadowTexture(), transparent: true, depthWrite: false, opacity: 0.65 });
