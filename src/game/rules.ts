@@ -7,6 +7,7 @@ import {
   ELEMENT_META,
   MOVES,
   STARTER_TRIOS,
+  SUMMON_RARITY,
   STARTER_TRIO_IDS,
   STARTER_JOINER,
   UNLOCKS,
@@ -1141,6 +1142,22 @@ function normalizeLessons(raw: unknown, completedStageIds: string[]): string[] {
 export function unlockedFeatures(save: Pick<SaveState, 'completedStageIds'> & { allUnlocked?: boolean }): Set<UnlockFeature> {
   if (save.allUnlocked) return new Set(UNLOCK_FEATURES);
   return new Set(UNLOCKS.filter((u) => save.completedStageIds.includes(u.afterStageId)).flatMap((u) => u.features));
+}
+
+/**
+ * A4.1 : un cube Bois donne d'abord une lignée commune PAS ENCORE RECRUTÉE, tant qu'il en reste.
+ * Renvoie la lignée choisie (l'Appât oriente le choix avec ses 60 % habituels), ou null quand les six communes
+ * sont déjà recrutées (le cube revient alors aux chances normales). Pure, tirage par `rng`.
+ */
+export function woodPriorityLineage(owned: Set<string>, bait: ElementType | null, rng: RngFn = Math.random): string | null {
+  const missing = Object.keys(SUMMON_RARITY).filter((id) => SUMMON_RARITY[id] === 'common' && !owned.has(id));
+  if (!missing.length) return null;
+  const pickFrom = (list: string[]) => list[Math.min(list.length - 1, Math.floor(rng() * list.length))];
+  if (bait) {
+    const baited = missing.filter((id) => SPECIES[id]?.element === bait);
+    if (baited.length && rng() < SUMMON.baitChance) return pickFrom(baited);
+  }
+  return pickFrom(missing);
 }
 
 /** Le mode Auto est-il ouvert ? Après la victoire sur le premier boss (S07.2). */

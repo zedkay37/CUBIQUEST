@@ -65,7 +65,7 @@ test('Cube Scellé: doublons -> Lien, variante au 5ᵉ, puis jauge +25 % ; aucun
   let save = createInitialSaveState('braise', true); // Pyrocube déjà recruté
   const rosterSize = save.roster.length;
   for (let i = 1; i <= 6; i++) {
-    save = withCube(save, 'wood');
+    save = withCube(save, 'stone'); // A4.1 : le Bois donnerait d'abord une commune manquante
     const r = openSealedCube(save, save.sealedCubes[0].id, null, seq(0.1, 0))!; // commune, première lignée : Pyrocube
     assert.equal(r.result.speciesId, 'pyrocube');
     assert.equal(r.result.duplicate, true);
@@ -127,4 +127,26 @@ test('Équipe (A2): une lignée n’apparaît qu’une fois dans l’escouade', 
   let one: SaveState = { ...base, squadIds: [pyro] };
   one = toggleSquadMember(one, pyro);
   assert.deepEqual(one.squadIds, [pyro]);
+});
+
+test('A4.1: le Bois donne d’abord une commune pas encore recrutée, puis revient aux chances normales', async () => {
+  const { woodPriorityLineage } = await import('./rules');
+  const braise = new Set(['pyrocube', 'voltik', 'cailloc']);
+  // il manque Aquabloc, Bourgéon, Psycube : le Bois n'en donne pas d'autre
+  for (const x of [0, 0.4, 0.99]) assert.ok(['aquabloc', 'bourgeon', 'psycube'].includes(woodPriorityLineage(braise, null, seq(x))!));
+  // l'Appât oriente parmi les manquantes (Eau -> Aquabloc à 60 %)
+  assert.equal(woodPriorityLineage(braise, 'water', seq(0.1, 0)), 'aquabloc');
+  // toutes recrutées : plus de priorité
+  assert.equal(woodPriorityLineage(new Set(Object.keys(SUMMON_RARITY).filter((id) => SUMMON_RARITY[id] === 'common')), null, seq(0.1)), null);
+  // à l'ouverture : même un tirage « rare » donne une commune manquante, toujours nouvelle
+  let save = withCube(createInitialSaveState('braise', true), 'wood');
+  const r = openSealedCube(save, save.sealedCubes[0].id, null, seq(0.5, 0.99))!;
+  assert.equal(r.result.tier, 'common');
+  assert.equal(r.result.isNew, true);
+  // les autres matières ne changent pas
+  save = withCube(createInitialSaveState('braise', true), 'stone');
+  assert.equal(openSealedCube(save, save.sealedCubes[0].id, null, seq(0.95, 0))!.result.tier, 'rare');
+  // jauge pleine : la rare garantie passe avant
+  save = { ...withCube(createInitialSaveState('braise', true), 'wood'), awakenGauge: 1 };
+  assert.equal(openSealedCube(save, save.sealedCubes[0].id, null, seq(0.1, 0.1))!.result.tier, 'rare');
 });

@@ -8,7 +8,7 @@
  */
 import { SUMMON, type CubeMaterial } from './balance';
 import { SPECIES, SUMMON_RARITY, type SummonRarity } from './catalog';
-import { createOwnedCreature } from './rules';
+import { createOwnedCreature, woodPriorityLineage } from './rules';
 import type { ElementType, OwnedCreature, SaveState } from './types';
 
 export type RngFn = () => number;
@@ -91,9 +91,15 @@ export function openSealedCube(
   const awakenable = [...owned].filter((id) => SPECIES[id]?.evolvesTo);
   if (tier === 'awakened' && !awakenable.length) tier = 'rare';
 
+  // 1 bis. A4.1 : le Bois donne d'abord une commune pas encore recrutée (la jauge pleine garde la priorité)
+  const woodFirst = !cube.guaranteedSpeciesId && cube.material === 'wood' && !pityUsed ? woodPriorityLineage(owned, useBait, rng) : null;
+  if (woodFirst) tier = 'common';
+
   // 2. espèce
   let speciesId: string;
-  if (cube.guaranteedSpeciesId) {
+  if (woodFirst) {
+    speciesId = woodFirst;
+  } else if (cube.guaranteedSpeciesId) {
     speciesId = cube.guaranteedSpeciesId;
     tier = SUMMON_RARITY[lineageOf(speciesId)] ?? 'common';
   } else if (tier === 'awakened') {
