@@ -62,3 +62,11 @@ test('vox:check (BESTIAIRE) : plafond de lueur en surface, 9 % (10 % pour un bos
   assert.ok(checkVox(hot).some((e) => e.includes('lueur en surface')));
   assert.ok(checkVox(hot, { boss: true }).some((e) => e.includes('boss')));
 });
+
+test('Cendrox (BESTIAIRE) : la forme du Calcinarque légendaire validé est inchangée (seules les couleurs bougent)', async () => {
+  const { build: cendrox } = await import('../../tools/vox-studio/species/cendrox');
+  const a = build();
+  const b = cendrox();
+  assert.deepEqual([b.w, b.l, b.h], [a.w, a.l, a.h]);
+  for (let i = 0; i < a.v.length; i++) assert.equal(b.v[i] > 0, a.v[i] > 0, `voxel ${i}`);
+});

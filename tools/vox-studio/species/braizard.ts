@@ -5,7 +5,7 @@
  * Cibles (fiche §4.2) : hauteur 14–18, tête 30–35 %, lueur en surface 2–4 %.
  */
 import { EYE, Model } from '../voxlib';
-import { BODY, BONE, FEU, finish, shade } from './_commun';
+import { BODY, BONE, FEU, finish, shade, topLava } from './_commun';
 
 export const ID = 'braizard';
 export const PALETTE = FEU;
@@ -53,5 +53,7 @@ export function build(): Model {
   m.crack([[0.5, 12, 12.1], [0.5, 14, 12.0]], 242, 0.85, [241]); // cœur chaud
 
   const legs = m.mask((x, y, z) => z < 5.0 && Math.abs(x - cx) > 1.6 && y > 5);
-  return finish(m, legs);
+  const out = finish(m, legs);
+  topLava(out, 0.06, 8); // lave visible d'en haut (correction du 23/11)
+  return out;
 }

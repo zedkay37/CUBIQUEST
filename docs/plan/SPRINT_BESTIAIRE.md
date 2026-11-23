@@ -129,6 +129,8 @@ Une lignée = une signature qui **grandit** avec l'évolution. Exemple Calcinarq
 - Par créature : 3 ou 4 couleurs de corps (base sombre, moyenne, croûte du dessus, corne/os), plus la lueur d'élément.
 - Par élément, une **langue de matière** commune (exemple feu : basalte brun-noir + lave orange-jaune, jamais rose ni saumon). Propose celle de chaque élément du jeu dans `BESTIAIRE.md` (matière, 3 couleurs de corps, 3 couleurs de lueur, en hexadécimal) **avant** de sculpter le lot. Le joueur valide.
 - Les éléments doivent se distinguer d'un coup d'œil, de jour comme de nuit.
+- **Contraste avec le sol (ajout du 23/11, après le lot 2)** : le corps d'une créature doit contraster avec le sol de son biome (exemple : le basalte brun du feu se fondait dans le sol brun du volcan ; le feu est passé au basalte charbon, avec plus de lave visible d'en haut). Chaque lot se teste en combat **sur le sol de son biome ET sur un sol clair** (Rive Azur), captures à l'appui.
+- **Pas de rangée continue de piques ou de lave du cou à la queue** sur une créature dressée (ça rappelle un monstre de cinéma connu) : des groupes séparés, une ligne en pointillé.
 
 ### 4.6 Interdits (plagiat et clichés)
 - Aucune ressemblance avec une créature d'un autre jeu (Pokémon, Digimon, Monster Hunter, Palworld, Warcraft, Elden Ring, Spyro…). En cas de doute : changer le plan de corps.

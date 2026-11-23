@@ -84,3 +84,36 @@ Il est nettement différent de l'autre lignée de feu, Braizard → Cendrox, qui
 - Version en ligne : `…/CUBIQUEST/next/` (lien complet dans ma réponse). Le trio de départ « Braise » commence avec Pyrocube.
 - Un combat direct sans toucher à ta sauvegarde : `…/next/?stage=volcano-2&squad=pyrocube,flambrix,ignisaur`.
 - Une planche : `…/next/?gallery=planche&species=ignisaur`.
+
+---
+
+# Corrections après validation (lot 2b) — tag `bestiaire-lot2b`
+
+1. **Contraste du feu** (Pyrocube, Flambrix, Ignisaur, Braizard, Cendrox).
+   - Le corps passe en **basalte charbon** : presque noir, avec le dessus un peu plus clair pour garder le relief.
+   - Il y a **plus de lave visible d'en haut** : des chevrons sur le dos, les épaules et le dessus de la tête, avec une ligne médiane en pointillé.
+   - Parts de lave en surface :
+
+     | Créature | Avant | Maintenant |
+     |---|---|---|
+     | Pyrocube | 3,7 % | 6,6 % |
+     | Flambrix | 4,1 % | 7,5 % |
+     | Ignisaur (boss, plafond 10 %) | 5,2 % | 9,0 % |
+     | Braizard | 2,6 % | 6,0 % |
+     | Cendrox | 5,6 % | 8,6 % |
+
+   - Les stades 1 dépassent maintenant la fourchette de 2–4 % de la bible, comme tu l'as demandé ; ils restent sous le plafond de 9 %.
+   - **La forme de Cendrox est inchangée** : un test vérifie qu'elle occupe exactement les mêmes blocs que le Calcinarque légendaire validé.
+   - **Vérifié en combat** au volcan (Cratère Ardent) et à Rive Azur (sol clair) : les créatures ressortent nettement dans les deux cas. Voir `docs/captures/bestiaire/lot2b/jeu/volcan-a`, `volcan-b`, `rive-a`, `rive-b`.
+2. **Ignisaur**.
+   - **Posture de chasse** : tronc presque à l'horizontale, tête basse en avant, queue tendue en contrepoids à hauteur de hanche.
+   - Les piques forment des **groupes séparés** : trois sur chaque épaule, deux sur le haut du dos, rien derrière.
+   - Pas de ligne médiane de lave : le dos porte des taches en chevrons, et rien de continu.
+   - **Avant-bras** plus gros, tendus en avant, avec des veines de lave.
+   - Il passe de 28 à 24 blocs de haut et de 29 à 33 de long : il est plus long que haut, comme un prédateur.
+   - Planche : `docs/captures/bestiaire/lot2b/planche-ignisaur-grand.png`.
+3. **Bible** : deux règles ajoutées.
+   - Le corps doit contraster avec le sol de son biome ; chaque lot se teste sur le sol de son biome ET sur un sol clair.
+   - Jamais de rangée continue de piques ou de lave du cou à la queue sur une créature dressée.
+
+**À juger** : sur Ignisaur, les taches de lave en chevrons donnent un motif tacheté. Il est lisible, mais à voir si tu l'aimes.
