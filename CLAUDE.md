@@ -41,6 +41,7 @@ URL utiles en développement (aucune ne touche à la sauvegarde) :
 - `?gallery=1` : galerie de revue (toutes les créatures en 3D + aperçu des biomes).
 - `?autostart=1&hour=0.8` : camp à une heure donnée (0 aube · 0.3 jour · 0.66 crépuscule · 0.8 nuit).
 - `?bench=1` : mesure de 30 s d'un combat à graine fixe (images/s moyennes et 5 % les plus lentes, appels de dessin, triangles). `&quality=low|medium|high` impose la qualité.
+- `?gallery=art` : créatures refaites, ancien et nouveau modèle côte à côte (bouton « Silhouettes »).
 - `?debug=1` : overlay de diagnostic (FPS, temps d'image, draw calls, triangles, géométries, textures, particules, entités). Se combine avec les autres. Détail des lignes dans `src/game/engine/debug.ts`.
 
 ## Architecture
@@ -106,6 +107,7 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | `actors.ts` | État commun des acteurs, pose animée des modèles, recherche de cible, disparition. |
 | `fx.ts` | Particules, projectiles, ondes de choc, télégraphes au sol, confettis. |
 | `hud.ts` | Instantané de combat envoyé à l'interface. |
+| `artLight.ts` | Sprint Art : ciel en dégradé, soleil qui suit l'heure, ombres plus fines, rayons (Prairie et camp). |
 | `hub.ts` | Hub cliquable du camp (A3) : lieux, survol, positions à l'écran, promeneurs. Seulement au camp. |
 | `postfx.ts` | Pipeline d'effets (G1) : GTAO, contour, halo, étalonnage par biome ; niveaux Bas/Moyen/Haut/Automatique. Jamais en headless. |
 | `debug.ts` | Mesures de l'overlay `?debug=1`. |
@@ -115,6 +117,9 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | Module | Rôle |
 | --- | --- |
 | `shared.ts` | Textures générées une fois, brique `makeBox`. |
+| `voxelSculpt.ts` | Sprint Art : constructeur « volumes → blocs » (`voxelize` pur et testé, maillage des faces visibles, ombre douce par sommet). |
+| `sculptDefs.ts` | Sprint Art : créatures refaites (lignées Pyrocube, Ampoulin, Cailloc). Règles de style dans `art.test.ts`. |
+| `meadowDecor.ts` | Sprint Art : décor vivant de la Prairie (relief, végétation, mare, papillons, lucioles). |
 | `creatures.ts` | Créatures par silhouette (`archetype`), barre de vie. |
 | `campProps.ts` | Atelier (modèle provisoire, `buildWorkbenchProp`) et totem du camp. |
 | `biomes.ts` | Sol, décor instancié et éléments propres à chaque biome. |
@@ -184,6 +189,7 @@ npm run sim -- --scale 1/0.7/1                 # multiplie les réglages de tous
 - **Cubes** : la règle (`resolveCubeHit`, `pickSkillTarget`) est pure dans `rules.ts` ; ses réglages dans `CUBE_KIT`, `ULTIMATE_CHARGE`, `ULTIMATE_KIT` (`balance.ts`) et `BURSTS` (`catalog.ts`). Sur un ennemi, le cube remplace les statuts (un seul, de la durée du cube) ; les altérations infligées aux alliés restent des statuts. Tout nouvel état transitoire de combat (`pendingUltHits`, `slowMoTimer`, verrous) se remet à zéro dans `startExpedition` et `loadCampScene`.
 - **Étoiles** (S06) : victoire, aucun K.O., défi (`STAGE_CHALLENGES`, catalog.ts). Aucun défi ni aucune récompense ne dépend des Éclats ou des Trios (retour du propriétaire : les cubes pourraient être retirés). Les étoiles ne se perdent jamais (`mergeStars`) ; paliers `STAR_TIERS` rattrapés à la victoire suivante (`starTiersClaimed`). XP : table de catalog.ts × `XP_KIT.xpScale`, réglée avec `npm run journey`.
 - **Début de partie** (S07) : trios `STARTER_TRIOS`, ouvertures `UNLOCKS` (`unlockedFeatures`, une sauvegarde d'avant S07 a `allUnlocked`), leçons `engine/lessons.ts` (actives seulement après `setLessonsDone` : les outils ne les voient jamais, le golden reste identique). Journal de test : `src/game/journal.ts` (localStorage, 500 lignes, jamais envoyé). Profil `idle` de `npm run sim` = débutant qui n'appuie sur rien ; `--starter` / `--trio` pour mesurer avec les trios de départ.
+- **Sprint Art : navigateur seulement.** `main.tsx` active `setSculptModels(true)` et `setArtDecor(true)`. Les outils et le moteur headless gardent les anciens modèles et l'ancien décor, et les effets aléatoires ajoutés (éclats de blocs, K.O.) ne partent que si `!self.headless` : le golden reste identique. Un nouveau modèle ou décor « art » doit suivre la même règle, sinon il change le nombre d'objets three.js créés pendant un combat simulé.
 - `catalog.ts` importe `balance.ts` : `balance.ts` ne doit rien importer du catalogue. `i18n/fr.ts` n'importe rien.
 - Deux fichiers de verrouillage coexistent : `package-lock.json` (npm, à jour, utilisé par la CI) et `bun.lock` (hérité, pas régénéré faute de `bun` sur la machine de développement).
 - Sous Windows / Git Bash : ne jamais passer du code contenant des backticks à `node -e "..."` (le shell les exécute). Écrire un fichier de script à la place.
