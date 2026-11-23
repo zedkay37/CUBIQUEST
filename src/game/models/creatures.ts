@@ -9,6 +9,7 @@ import { buildSculptRig, withIsolatedRandom, type SculptPalette } from './voxelS
 import { SCULPT_DEFS } from './sculptDefs';
 import { SCULPT_DEFS_ART1 } from './sculptDefsArt1';
 import { SCULPT_DEFS_ART2 } from './sculptDefsArt2';
+import { getVoxDef } from './voxFile';
 import { ART2_AO_STRENGTH, art2Palette } from './artPalette';
 
 export interface VoxelCreatureRig {
@@ -74,8 +75,10 @@ export function setSculptDetail(level: 'low' | 'high'): void {
   sculptRes = level === 'low' ? 9 : 14;
 }
 export function usesSculpt(speciesId: string): boolean {
-  return sculptOn && Boolean(SCULPT_DEFS[speciesId]);
+  return sculptOn && Boolean(SCULPT_DEFS[speciesId] || getVoxDef(speciesId));
 }
+/** ART3 : un modèle `.vox` est dessiné à cette échelle (même taille de bloc que les créatures du code). */
+const VOX_RES = 14;
 
 export function buildVoxelCreature(speciesId: string, scaleOverride?: number, variant?: boolean): VoxelCreatureRig {
   const species = SPECIES[speciesId] ?? SPECIES.pyrocube;
@@ -738,7 +741,9 @@ export function buildSculptCreature(species: SpeciesDef, scaleOverride?: number,
   };
   const glow = species.element === 'fire' || species.element === 'electric' ? 0.45 : 0.25;
   const defs = mode === 'art3' ? SCULPT_DEFS : mode === 'art2' ? SCULPT_DEFS_ART2 : SCULPT_DEFS_ART1;
-  const parts = buildSculptRig(defs[species.id], palette, sculptRes, glow, mode === 'art2' ? ART2_AO_STRENGTH : 0.16, false, mode === 'art3'); // normales lissées essayées puis écartées (taches sur les faces planes)
+  // ART3 : un modèle `.vox` facultatif remplace le modèle du code (même lumière, animations et lueurs)
+  const vox = mode === 'art3' ? getVoxDef(species.id) : undefined;
+  const parts = buildSculptRig(vox ?? defs[species.id], palette, vox ? VOX_RES : sculptRes, glow, mode === 'art2' ? ART2_AO_STRENGTH : 0.16, false, mode === 'art3'); // normales lissées essayées puis écartées (taches sur les faces planes)
   const root = new THREE.Group();
   root.add(parts.bodyPivot);
   // ART3 : ombre au sol nette (bord franc), pour que la créature ne flotte pas

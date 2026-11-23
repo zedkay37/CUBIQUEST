@@ -40,6 +40,8 @@ export interface SculptDef {
   extras?: { group: string; pivot: Vec3 }[];
   /** Groupes des yeux (clignement, regard). */
   eyes?: string[];
+  /** ART3 : blocs déjà posés (modèle `.vox`, voir voxFile.ts) ; remplacent les volumes. */
+  voxels?: Voxel[];
 }
 
 export interface Voxel {
@@ -49,6 +51,8 @@ export interface Voxel {
   color: ColorKey;
   group: string;
   glow?: boolean;
+  /** ART3 (`.vox`) : couleur propre du bloc, à la place de celle de la palette. */
+  rgb?: string;
 }
 
 const inside = (s: SculptShape, p: Vec3, mirrorSide: 1 | -1): boolean => {
@@ -207,7 +211,7 @@ function patchArt3Material(mat: THREE.MeshStandardMaterial, accent: boolean): vo
 }
 
 export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: number, glowIntensity: number, aoStrength = 0.16, smoothNormals = false, art3 = false): SculptRigParts {
-  const voxels = voxelize(def, res);
+  const voxels = def.voxels ?? voxelize(def, res);
   const legs = new Set(def.legs ?? []);
   const extrasDef = new Map((def.extras ?? []).map((e) => [e.group, e.pivot]));
   const eyes = new Set(def.eyes ?? []);
@@ -221,6 +225,7 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
   const colors: Partial<Record<ColorKey, THREE.Color>> = {};
   const col = (k: ColorKey) => (colors[k] ??= new THREE.Color().setStyle(palette[k]));
   let headColor: THREE.Color | undefined;
+  const rgbCache: Record<string, THREE.Color> = {};
 
   const base = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.68, metalness: 0.04 });
   const glow = new THREE.MeshStandardMaterial({
@@ -271,7 +276,11 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
       for (const v of list) {
         if ((v.color === 'accent') !== glowing) continue;
         // ART2 : la tête a son propre ton, plus clair que le corps
-        const c = v.group === 'head' && v.color === 'primary' && palette.head ? (headColor ??= new THREE.Color().setStyle(palette.head)) : col(v.color);
+        const c = v.rgb
+          ? (rgbCache[v.rgb] ??= new THREE.Color().setStyle(v.rgb))
+          : v.group === 'head' && v.color === 'primary' && palette.head
+            ? (headColor ??= new THREE.Color().setStyle(palette.head))
+            : col(v.color);
         for (const [dx, dy, dz] of DIRS) {
           if (occ(v, v.x + dx, v.y + dy, v.z + dz)) continue;
           // les quatre coins de la face, avec l'ombre douce de chaque coin

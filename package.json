@@ -19,6 +19,7 @@
     "golden": "tsx tools/golden.ts",
     "census": "tsx tools/census.ts",
     "texts": "tsx tools/texts.ts",
+    "vox:exemple": "tsx tools/voxExemple.ts",
     "lexique": "tsx tools/lexique.ts",
     "check": "tsc --noEmit && tsx --test \"src/game/*.test.ts\" && tsx tools/golden.ts && vite build"
   },

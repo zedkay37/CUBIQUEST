@@ -73,6 +73,7 @@ $screens = [ordered]@{
   'art-granitox' = '?gallery=art&species=granitox'
   'art-magmadrake' = '?gallery=art&species=magmadrake'
   'art-silhouettes' = '?gallery=art&species=pyrocube&silhouette=1'
+  'art-vox'        = '?gallery=art&species=voltik&vox=exemple'
   'mesure-prairie-low' = '?stage=meadow-2&debug=1&quality=low'
   'mesure-prairie-medium' = '?stage=meadow-2&debug=1&quality=medium'
   'mesure-prairie-high' = '?stage=meadow-2&debug=1&quality=high'

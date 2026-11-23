@@ -6,6 +6,7 @@ import {setSculptDetail, setSculptModels} from './game/models/creatures';
 import {setArtDecor, setDecorDetail} from './game/models/meadowDecor';
 import {loadSettings} from './game/settings';
 import {setCreatureRim} from './game/models/voxelSculpt';
+import {parseVox, registerVoxModel} from './game/models/voxFile';
 
 // `?gallery=1` : galerie de revue des créatures et des biomes (outil de développement, le jeu n'est pas lancé).
 // Chargée à la demande : son code n'est pas téléchargé par les joueurs.
@@ -49,7 +50,20 @@ setArtDecor(true);
   }
 }
 
-createRoot(document.getElementById('root')!).render(
+// ART3 : modèles .vox facultatifs (src/assets/vox/<espèce>.vox, voir docs/guide-vox.md). Sans fichier, rien ne change.
+const VOX_FILES = import.meta.glob('./assets/vox/*.vox', {query: '?url', import: 'default', eager: true}) as Record<string, string>;
+const voxReady = Promise.all(
+  Object.entries(VOX_FILES).map(async ([path, url]) => {
+    const id = path.split('/').pop()!.replace(/\.vox$/, '');
+    try {
+      registerVoxModel(id, parseVox(await (await fetch(url)).arrayBuffer()));
+    } catch (err) {
+      console.warn('vox ignoré :', id, err);
+    }
+  }),
+);
+
+voxReady.then(() => createRoot(document.getElementById('root')!).render(
   isArtGallery ? (
     <Suspense fallback={null}>
       <ArtGallery />
@@ -69,4 +83,4 @@ createRoot(document.getElementById('root')!).render(
   ) : (
     <App />
   ),
-);
+));
