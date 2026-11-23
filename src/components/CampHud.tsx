@@ -17,6 +17,7 @@ import { computeSquadPower } from '../game/rules';
 import type { SaveState } from '../game/types';
 import { VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
+import { NewBadge } from './ui';
 
 export type CampDrawerTab = 'expeditions' | 'cooking' | 'team' | 'quests' | 'codex' | null;
 
@@ -32,6 +33,10 @@ interface CampHudProps {
   onToggleCollapse: () => void;
   onToggleMute: () => void;
   onReturnTitle: () => void;
+  /** Ouvertures (S07.3) : boutons visibles, et celles dont la pastille « Nouveau » n'a pas été vue. */
+  unlocked?: Set<string>;
+  unseen?: string[];
+  onSeenUnlock?: (feature: string) => void;
 }
 
 export function CampHud({
@@ -46,7 +51,18 @@ export function CampHud({
   onToggleCollapse,
   onToggleMute,
   onReturnTitle,
+  unlocked,
+  unseen = [],
+  onSeenUnlock,
 }: CampHudProps) {
+  const isOpen = (tab: string) => !unlocked || unlocked.has(tab);
+  const isNew = (tab: string) => isOpen(tab) && unseen.includes(tab);
+  const selectDrawer = (tab: Exclude<CampDrawerTab, null>) => {
+    if (isNew(tab)) onSeenUnlock?.(tab);
+    onSelectDrawer(tab);
+  };
+  // une phrase pour la dernière ouverture pas encore vue
+  const newest = (['team', 'codex', 'cooking', 'quests'] as const).find((t) => isNew(t));
   const squadPower = computeSquadPower(save);
   const squad = save.squadIds
     .map((uid) => save.roster.find((c) => c.uid === uid))
@@ -154,6 +170,11 @@ export function CampHud({
           )}
         </button>
 
+        {!dockCollapsed && newest && (
+          <p className="voxel-panel px-3 py-1.5 text-xs font-semibold text-[#F4B942]" role="status">
+            {FR.ui.campHud.nouveautes[newest]}
+          </p>
+        )}
         {!dockCollapsed && (
           <div className="voxel-panel rounded-2xl p-2 flex flex-wrap items-center justify-center gap-2 max-w-[min(860px,95vw)]">
             <button
@@ -171,8 +192,9 @@ export function CampHud({
 
             <button
               type="button"
-              onClick={() => onSelectDrawer('cooking')}
-              className={`voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+              onClick={() => selectDrawer('cooking')}
+              title={isNew('cooking') ? FR.ui.campHud.nouveautes.cooking : undefined}
+              className={`${isOpen('cooking') ? '' : 'hidden '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'cooking'
                   ? 'block-btn-gold'
                   : 'block-btn-secondary'
@@ -180,6 +202,7 @@ export function CampHud({
             >
               <Flame className="w-4 h-4 text-[#F4B942]" />
               <span>{FR.ui.campHud.marmite}</span>
+              {isNew('cooking') && <NewBadge />}
               {potNotice && (
                 <span className="font-mono-num text-[11px] text-[#2FB97A] font-bold">
                   · {potNotice}
@@ -189,8 +212,9 @@ export function CampHud({
 
             <button
               type="button"
-              onClick={() => onSelectDrawer('team')}
-              className={`voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+              onClick={() => selectDrawer('team')}
+              title={isNew('team') ? FR.ui.campHud.nouveautes.team : undefined}
+              className={`${isOpen('team') ? '' : 'hidden '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'team'
                   ? 'block-btn-gold'
                   : 'block-btn-secondary'
@@ -198,12 +222,14 @@ export function CampHud({
             >
               <Users className="w-4 h-4 text-[#38BDF8]" />
               <span>{FR.ui.campHud.equipePierres}</span>
+              {isNew('team') && <NewBadge />}
             </button>
 
             <button
               type="button"
-              onClick={() => onSelectDrawer('quests')}
-              className={`voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+              onClick={() => selectDrawer('quests')}
+              title={isNew('quests') ? FR.ui.campHud.nouveautes.quests : undefined}
+              className={`${isOpen('quests') ? '' : 'hidden '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'quests'
                   ? 'block-btn-gold'
                   : 'block-btn-secondary'
@@ -211,6 +237,7 @@ export function CampHud({
             >
               <Trophy className="w-4 h-4 text-[#F4B942]" />
               <span>{FR.ui.campHud.quetes}</span>
+              {isNew('quests') && <NewBadge />}
               {claimableCount > 0 && (
                 <span className="ui-new-badge font-mono-num text-[11px] font-bold rounded-[4px] bg-[#F4B942] text-[#1A0E08] px-1.5" aria-label={FR.ui.components.nouveau}>
                   {claimableCount}
@@ -220,8 +247,9 @@ export function CampHud({
 
             <button
               type="button"
-              onClick={() => onSelectDrawer('codex')}
-              className={`voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+              onClick={() => selectDrawer('codex')}
+              title={isNew('codex') ? FR.ui.campHud.nouveautes.codex : undefined}
+              className={`${isOpen('codex') ? '' : 'hidden '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'codex'
                   ? 'block-btn-gold'
                   : 'block-btn-secondary'
@@ -229,6 +257,7 @@ export function CampHud({
             >
               <BookOpen className="w-4 h-4 text-[#C084FC]" />
               <span>{import.meta.env.VITE_AI_CODEX === '1' ? FR.ui.campHud.codexWeb : FR.ui.campHud.codex}</span>
+              {isNew('codex') && <NewBadge />}
             </button>
           </div>
         )}

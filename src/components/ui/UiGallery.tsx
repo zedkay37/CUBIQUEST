@@ -187,6 +187,8 @@ const demoOutcome = (victory: boolean): ExpeditionOutcome => ({
   hazardHits: 1,
   advice: victory ? null : 'noDodge',
   firstClear: victory,
+  newFeatures: [],
+  joinedSpeciesId: null,
   starTiers: victory ? [{ at: 12, rune: 'rune_precision' }] : [],
   benchXp: victory ? 162 : 0,
   squadXp: victory ? [{ speciesId: 'pyrocube', level: 6, xp: 120, xpMax: 300, gained: 180 }] : [],

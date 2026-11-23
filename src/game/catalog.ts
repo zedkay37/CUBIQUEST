@@ -1400,6 +1400,23 @@ export const STARTER_TRIOS = {
   maree: ['aquabloc', 'bourgeon', 'psycube'],
 } as const;
 export type StarterTrioId = keyof typeof STARTER_TRIOS;
+
+/**
+ * Ouvertures du premier quart d'heure (S07.3), lues par `unlockedFeatures` (rules.ts).
+ * `quests` (qui porte les options et le journal de test) s'ouvre avec le camp : décision prise seul,
+ * pour que les testeurs puissent exporter leur journal même bloqués au niveau 2.
+ */
+export type UnlockFeature = 'camp' | 'quests' | 'team' | 'auto' | 'codex' | 'cooking' | 'stones';
+export const UNLOCKS: { afterStageId: string; features: UnlockFeature[]; companion?: boolean }[] = [
+  { afterStageId: 'meadow-1', features: ['camp', 'quests'] },
+  { afterStageId: 'meadow-2', features: [] }, // la première évolution (niveau 8) occupe ce moment
+  { afterStageId: 'meadow-3', features: ['team', 'auto'], companion: true },
+  { afterStageId: 'shore-1', features: ['codex', 'cooking'] },
+  { afterStageId: 'shore-3', features: ['stones'] },
+];
+export const UNLOCK_FEATURES: UnlockFeature[] = ['camp', 'quests', 'team', 'auto', 'codex', 'cooking', 'stones'];
+/** Le compagnon qui rejoint le camp après le premier boss, selon le trio de départ. */
+export const STARTER_JOINER: Record<StarterTrioId, string> = { braise: 'bourgeon', maree: 'voltik' };
 export const STARTER_TRIO_IDS = Object.keys(STARTER_TRIOS) as StarterTrioId[];
 
 export const INGREDIENTS: Record<string, IngredientDef> = {

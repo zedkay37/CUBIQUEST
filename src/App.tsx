@@ -30,6 +30,8 @@ import {
   markHazardHintSeen,
   markLessonDone,
   isAutoUnlocked,
+  markUnlockSeen,
+  unlockedFeatures,
   buildPreviewSave,
   claimAchievementReward,
   claimQuestReward,
@@ -160,6 +162,8 @@ export default function App() {
     return () => window.clearTimeout(id);
   }, [firstTimeTip]);
   const previewRef = useRef(false); // true : expédition d'aperçu, rien n'est sauvegardé
+  const pendingArrivalRef = useRef<string | null>(null);
+  const launchStageRef = useRef<((stage: StageDef) => void) | null>(null);
   const previewCreaturesRef = useRef<OwnedCreature[]>([]);
   saveRef.current = save;
   activeStageRef.current = activeStage;
@@ -200,6 +204,8 @@ export default function App() {
       if (!previewRef.current) {
         saveRef.current = nextSave;
         setSave(nextSave);
+        // S07.3 : le compagnon qui rejoint le camp arrive quand on y revient (scène de 4 s)
+        if (finalOutcome.joinedSpeciesId) pendingArrivalRef.current = finalOutcome.joinedSpeciesId;
         // Journal de test : une ligne par combat, écrite en fin de combat seulement
         const squadNow = getSquadCreatures(saveRef.current);
         saveJournal(
@@ -378,12 +384,11 @@ export default function App() {
     (speciesId: string) => {
       soundFx.playEvolution();
       const fresh = createInitialSaveState(speciesId, true);
+      saveRef.current = fresh;
       setSave(fresh);
-      engineRef.current?.loadCampScene(
-        getSquadCreatures(fresh),
-        fresh.pot.recipeId,
-        fresh.pot.status,
-      );
+      // S07.3 : une nouvelle partie va droit au niveau 1, sans passer par le camp
+      if (launchStageRef.current) launchStageRef.current(STAGES[0]);
+      else engineRef.current?.loadCampScene(getSquadCreatures(fresh), fresh.pot.recipeId, fresh.pot.status);
     },
     [getSquadCreatures],
   );
@@ -414,6 +419,7 @@ export default function App() {
     },
     [controlMode, getSquadCreatures],
   );
+  launchStageRef.current = handleLaunchStage;
 
   const handleReturnCamp = useCallback(() => {
     soundFx.playUiClick();
@@ -430,6 +436,10 @@ export default function App() {
       saveRef.current.pot.recipeId,
       saveRef.current.pot.status,
     );
+    if (pendingArrivalRef.current) {
+      setArrival({ speciesId: pendingArrivalRef.current, isNew: true });
+      pendingArrivalRef.current = null;
+    }
   }, [getSquadCreatures]);
 
   const handleToggleControlMode = useCallback(() => {
@@ -753,6 +763,13 @@ export default function App() {
             onSelectDrawer={(tab) => {
               soundFx.playUiClick();
               setActiveDrawer((cur) => (cur === tab ? null : tab));
+            }}
+            unlocked={unlockedFeatures(save)}
+            unseen={[...unlockedFeatures(save)].filter((f) => !save.allUnlocked && !save.unlocksSeen.includes(f))}
+            onSeenUnlock={(f) => {
+              const next = markUnlockSeen(saveRef.current, f);
+              saveRef.current = next;
+              setSave(next);
             }}
             onToggleCollapse={() => {
               soundFx.playUiClick();

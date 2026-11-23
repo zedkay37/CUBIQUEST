@@ -342,6 +342,12 @@ export interface SaveState {
   starTiersClaimed: number[];
   /** Leçons réussies ou dont le geste a été fait en avance (S07.2). */
   lessonsDone: string[];
+  /** Trio choisi au départ (null : sauvegarde d'avant S07). */
+  starterTrio: 'braise' | 'maree' | null;
+  /** Sauvegarde d'avant S07 : tout est déjà ouvert. */
+  allUnlocked: boolean;
+  /** Ouvertures dont la pastille « Nouveau » a été vue. */
+  unlocksSeen: string[];
 }
 
 export interface ExpeditionUnitHud {
@@ -464,6 +470,9 @@ export interface ExpeditionOutcome {
   /** Première victoire sur ce niveau (XP × 2,5) ; XP reçue par chaque créature restée au camp (0 si aucune). */
   firstClear: boolean;
   benchXp: number;
+  /** Ce que cette victoire ouvre (S07.3) et le compagnon qui rejoint le camp, s'il y en a un. */
+  newFeatures: string[];
+  joinedSpeciesId: string | null;
   /** Paliers d'étoiles franchis par ce combat, avec leur récompense (S06.4). */
   starTiers: { at: number; rune: RuneKind | null }[];
   /** XP de chaque membre de l'escouade après le combat (barres animées de l'écran de fin). */

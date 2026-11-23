@@ -69,6 +69,13 @@ export const FR = {
       psychic: 'Dégâts sur tous, et les trois sorts sont prêts.',
     },
     campHud: {
+      /** Phrases des ouvertures (S07.3). */
+      nouveautes: {
+        quests: 'Nouveau : les quêtes et les options (journal de test) sont ouvertes.',
+        team: 'Nouveau : l’écran d’équipe s’ouvre, ton nouveau compagnon t’y attend.',
+        codex: 'Nouveau : le Codex recense les créatures rencontrées.',
+        cooking: 'Nouveau : la marmite cuisine des plats pour l’escouade.',
+      },
       platPret: 'Plat prêt !',
       cuisson: (a: string | number) => `Cuisson (${a})`,
       leCamp: 'Le Camp',

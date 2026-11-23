@@ -11,7 +11,11 @@ import {
   QUEST_POOL,
   STARTER_TRIOS,
   STARTER_TRIO_IDS,
+  STARTER_JOINER,
+  UNLOCKS,
+  UNLOCK_FEATURES,
   type StarterTrioId,
+  type UnlockFeature,
   STAGE_CHALLENGES,
   RECIPE_BY_ID,
   RECIPES,
@@ -888,6 +892,20 @@ export function applyExpeditionRewards(
     return { ...c, level, xp };
   });
 
+  // S07.3 : première victoire sur le premier boss -> un compagnon rejoint le camp (niveau moyen de l'escouade − 2)
+  let joinedSpeciesId: string | null = null;
+  const unlockRow = UNLOCKS.find((u) => u.afterStageId === stage.id);
+  if (firstClear && unlockRow?.companion && !save.allUnlocked && save.starterTrio) {
+    const joiner = STARTER_JOINER[save.starterTrio];
+    if (!nextRoster.some((c) => c.speciesId === joiner)) {
+      const squadNow = nextRoster.filter((c) => save.squadIds.includes(c.uid));
+      const avg = squadNow.reduce((n, c) => n + c.level, 0) / Math.max(1, squadNow.length);
+      nextRoster.push(createOwnedCreature(joiner, Math.max(1, Math.round(avg) - 2), 0, `joined_${stage.id}`));
+      joinedSpeciesId = joiner;
+    }
+  }
+  const newFeatures = firstClear && !save.allUnlocked ? [...(unlockRow?.features ?? [])] : [];
+
   // Drops
   const droppedIngredientsMap: Record<string, number> = {};
   const dropCount = victory ? 5 : Math.max(1, stats.wavesCleared);
@@ -965,9 +983,9 @@ export function applyExpeditionRewards(
   }
 
   // Discover boss species on sight
-  const nextDiscovered = save.discoveredSpeciesIds.includes(stage.bossSpeciesId)
-    ? save.discoveredSpeciesIds
-    : [...save.discoveredSpeciesIds, stage.bossSpeciesId];
+  const nextDiscovered = [stage.bossSpeciesId, joinedSpeciesId]
+    .filter((id): id is string => Boolean(id))
+    .reduce((list, id) => (list.includes(id) ? list : [...list, id]), save.discoveredSpeciesIds);
 
   const burstsTriggered = Math.max(0, Math.round(stats.burstsTriggered ?? 0));
   const ultimatesUsed = Math.max(0, Math.round(stats.ultimatesUsed ?? 0));
@@ -1066,6 +1084,8 @@ export function applyExpeditionRewards(
     advice,
     squadXp,
     firstClear,
+    newFeatures,
+    joinedSpeciesId,
     starTiers: starTiers.map((t) => ({ at: t.at, rune: t.rune })),
     benchXp: save.roster.some((c) => !save.squadIds.includes(c.uid)) ? benchXp : 0,
   };
@@ -1207,9 +1227,20 @@ function normalizeLessons(raw: unknown, completedStageIds: string[]): string[] {
   return Array.isArray(raw) ? LESSON_IDS_SAVE.filter((id) => (raw as unknown[]).includes(id)) : [];
 }
 
+/** Ce qui est ouvert (S07.3) : selon les niveaux gagnés ; une sauvegarde d'avant S07 a tout ouvert. */
+export function unlockedFeatures(save: Pick<SaveState, 'completedStageIds'> & { allUnlocked?: boolean }): Set<UnlockFeature> {
+  if (save.allUnlocked) return new Set(UNLOCK_FEATURES);
+  return new Set(UNLOCKS.filter((u) => save.completedStageIds.includes(u.afterStageId)).flatMap((u) => u.features));
+}
+
 /** Le mode Auto est-il ouvert ? Après la victoire sur le premier boss (S07.2). */
-export function isAutoUnlocked(save: Pick<SaveState, 'completedStageIds'>): boolean {
-  return save.completedStageIds.includes('meadow-3');
+export function isAutoUnlocked(save: Pick<SaveState, 'completedStageIds'> & { allUnlocked?: boolean }): boolean {
+  return unlockedFeatures(save).has('auto');
+}
+
+/** Marque la pastille « Nouveau » d'une ouverture comme vue. */
+export function markUnlockSeen(save: SaveState, feature: string): SaveState {
+  return save.unlocksSeen.includes(feature) ? save : { ...save, unlocksSeen: [...save.unlocksSeen, feature] };
 }
 
 /** Marque une leçon faite (idempotent). */
@@ -1331,6 +1362,9 @@ export function createInitialSaveState(
     stageStars: {},
     starTiersClaimed: [],
     lessonsDone: [],
+    starterTrio: trioId,
+    allUnlocked: false,
+    unlocksSeen: [],
   };
 }
 
@@ -1868,6 +1902,10 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     hazardHintsSeen: normalizeHintCounts(obj.hazardHintsSeen),
     stageStars: normalizeStageStars(obj.stageStars, completedStageIds),
     lessonsDone: normalizeLessons(obj.lessonsDone, completedStageIds),
+    starterTrio: obj.starterTrio === 'braise' || obj.starterTrio === 'maree' ? obj.starterTrio : null,
+    // une sauvegarde d'avant S07 (v1 à v7) a déjà tout ouvert
+    allUnlocked: typeof obj.allUnlocked === 'boolean' ? obj.allUnlocked : (obj.version as number) < 8,
+    unlocksSeen: Array.isArray(obj.unlocksSeen) ? UNLOCK_FEATURES.filter((f) => (obj.unlocksSeen as unknown[]).includes(f)) : [],
     starTiersClaimed: Array.isArray(obj.starTiersClaimed)
       ? STAR_TIERS.map((t) => t.at).filter((at) => (obj.starTiersClaimed as unknown[]).includes(at))
       : [],

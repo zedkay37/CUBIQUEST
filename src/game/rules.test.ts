@@ -20,6 +20,8 @@ import {
   computeUltimateCharge,
   challengeLiveState,
   isAutoUnlocked,
+  markUnlockSeen,
+  unlockedFeatures,
   markLessonDone,
   defeatAdvice,
   nextStarTier,
@@ -927,4 +929,34 @@ test('Leçons (S07.2): sauvegarde v8, Auto ouvert après le premier boss', () =>
   assert.deepEqual(older.lessonsDone, ['cast', 'burst', 'dodge', 'trio', 'ultimate']);
   const young = migrateSaveState({ ...save, lessonsDone: ['dodge', 'xx'] })!;
   assert.deepEqual(young.lessonsDone, ['dodge']);
+});
+
+test('Ouvertures (S07.3): table UNLOCKS, compagnon après le premier boss, ancienne sauvegarde déjà ouverte', () => {
+  let save = createInitialSaveState('braise', true);
+  assert.deepEqual([...unlockedFeatures(save)], []);
+  const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 };
+  const r1 = applyExpeditionRewards(save, STAGES[0], true, stats, () => 0.5);
+  assert.deepEqual(r1.outcome.newFeatures, ['camp', 'quests']);
+  save = r1.nextSave;
+  assert.ok(unlockedFeatures(save).has('camp'));
+  save = applyExpeditionRewards(save, STAGES[1], true, stats, () => 0.5).nextSave;
+  const r3 = applyExpeditionRewards(save, STAGES[2], true, stats, () => 0.5);
+  // Bourgéon rejoint le trio Braise, au niveau moyen de l'escouade − 2, en réserve
+  assert.equal(r3.outcome.joinedSpeciesId, 'bourgeon');
+  const joined = r3.nextSave.roster.find((c) => c.speciesId === 'bourgeon')!;
+  const squad = r3.nextSave.roster.filter((c) => r3.nextSave.squadIds.includes(c.uid));
+  assert.equal(joined.level, Math.max(1, Math.round(squad.reduce((n, c) => n + c.level, 0) / 3) - 2));
+  assert.ok(!r3.nextSave.squadIds.includes(joined.uid));
+  assert.ok(isAutoUnlocked(r3.nextSave) && unlockedFeatures(r3.nextSave).has('team'));
+  // rejouer le boss ne fait pas venir un second compagnon
+  assert.equal(applyExpeditionRewards(r3.nextSave, STAGES[2], true, stats, () => 0.5).outcome.joinedSpeciesId, null);
+  // trio Marée : Voltik
+  let m = createInitialSaveState('maree', true);
+  m = { ...m, completedStageIds: ['meadow-1', 'meadow-2'] };
+  assert.equal(applyExpeditionRewards(m, STAGES[2], true, stats, () => 0.5).outcome.joinedSpeciesId, 'voltik');
+  // une sauvegarde d'avant S07 a tout ouvert, et ne reçoit pas de compagnon
+  const old = migrateSaveState({ ...createInitialSaveState('braise', true), version: 7, allUnlocked: undefined, starterTrio: undefined })!;
+  assert.equal(old.allUnlocked, true);
+  assert.equal(unlockedFeatures(old).size, 7);
+  assert.equal(markUnlockSeen(markUnlockSeen(save, 'team'), 'team').unlocksSeen.filter((f) => f === 'team').length, 1);
 });

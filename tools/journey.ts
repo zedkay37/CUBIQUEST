@@ -56,6 +56,8 @@ export interface JourneyStage {
   clearedAtMin: number | null;
   /** Niveaux de l'escouade à la première victoire. */
   squadLevels: number[];
+  /** Nouveautés à la première victoire (S07.3) : mécanique, compagnon, évolution, biome, rune, palier d'étoiles. */
+  novelties: string[];
 }
 
 export interface JourneyResult {
@@ -64,11 +66,13 @@ export interface JourneyResult {
   totalMin: number;
   firstEvolutionMin: number | null;
   finished: boolean;
+  /** Séries de plus de 4 niveaux gagnés d'affilée sans nouveauté (premier et dernier niveau). */
+  dryRuns: string[];
 }
 
-export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 250): JourneyResult {
-  let save = createInitialSaveState('pyrocube', true);
-  const stages: JourneyStage[] = STAGES.map((s) => ({ id: s.id, name: s.name, games: 0, wins: 0, clearedAtMin: null, squadLevels: [] }));
+export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 250, trio = 'braise'): JourneyResult {
+  let save = createInitialSaveState(trio, true);
+  const stages: JourneyStage[] = STAGES.map((s) => ({ id: s.id, name: s.name, games: 0, wins: 0, clearedAtMin: null, squadLevels: [], novelties: [] }));
   let elapsed = 0;
   let firstEvolutionMin: number | null = null;
   let lossStreak = 0;
@@ -86,7 +90,7 @@ export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 
     elapsed += f.duration + CAMP_OVERHEAD_SEC;
     const o = f.outcome;
     const victory = f.victory;
-    save = applyExpeditionRewards(save, stage, victory, {
+    const res = applyExpeditionRewards(save, stage, victory, {
       clearTimeSec: f.duration,
       wavesCleared: o?.wavesCleared ?? 0,
       damageDealt: o?.damageDealt ?? 0,
@@ -97,8 +101,18 @@ export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 
       triosTriggered: o?.triosTriggered,
       koCount: o?.koCount,
       hazardHits: o?.hazardHits,
-    }, rewardRng).nextSave;
+    }, rewardRng);
+    save = res.nextSave;
     const row = stages[idx];
+    const firstWin = victory && row.clearedAtMin === null;
+    if (firstWin) {
+      const out = res.outcome;
+      row.novelties.push(...out.newFeatures.map((f) => `ouvre ${f}`));
+      if (out.joinedSpeciesId) row.novelties.push(`compagnon ${out.joinedSpeciesId}`);
+      if (out.unlockedBiomeName) row.novelties.push('biome');
+      for (const t of out.starTiers) row.novelties.push(t.rune ? `palier ${t.at} (${t.rune})` : `palier ${t.at}`);
+      if (out.droppedRune) row.novelties.push('rune');
+    }
     row.games += 1;
     if (victory) {
       row.wins += 1;
@@ -113,11 +127,22 @@ export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 
     for (const c of save.roster) {
       if (canEvolve(c)) {
         save = evolveCreature(save, c.uid);
+        if (firstWin) row.novelties.push('évolution');
         if (firstEvolutionMin === null) firstEvolutionMin = +(elapsed / 60).toFixed(1);
       }
     }
   }
-  return { stages, totalGames: games, totalMin: +(elapsed / 60).toFixed(1), firstEvolutionMin, finished: save.completedStageIds.length === STAGES.length };
+  // séries de plus de 4 niveaux sans nouveauté (la rune tombée au hasard ne compte pas comme une nouveauté prévue)
+  const dryRuns: string[] = [];
+  let run: string[] = [];
+  for (const s of stages.filter((x) => x.clearedAtMin !== null)) {
+    if (s.novelties.some((n) => n !== 'rune')) {
+      if (run.length > 4) dryRuns.push(`${run[0]} → ${run[run.length - 1]}`);
+      run = [];
+    } else run.push(s.id);
+  }
+  if (run.length > 4) dryRuns.push(`${run[0]} → ${run[run.length - 1]}`);
+  return { stages, totalGames: games, totalMin: +(elapsed / 60).toFixed(1), firstEvolutionMin, finished: save.completedStageIds.length === STAGES.length, dryRuns };
 }
 
 function toMarkdown(r: JourneyResult, profile: string, seed: number): string {
@@ -128,9 +153,11 @@ function toMarkdown(r: JourneyResult, profile: string, seed: number): string {
     '',
     `Parties : ${r.totalGames} · temps de jeu : ${r.totalMin} min · première évolution : ${r.firstEvolutionMin ?? '—'} min · moyenne ${avg.toFixed(2)} parties par niveau · maximum ${Math.max(0, ...r.stages.map((s) => s.games))}${r.finished ? '' : ' · PARCOURS INACHEVÉ'}`,
     '',
-    '| Niveau | Parties | Victoires | Terminé à (min) | Niveaux de l’escouade |',
-    '| --- | --- | --- | --- | --- |',
-    ...r.stages.map((s) => `| ${s.id} | ${s.games} | ${s.wins} | ${s.clearedAtMin ?? '—'} | ${s.squadLevels.join(' / ')} |`),
+    `Séries de plus de 4 niveaux sans nouveauté : ${r.dryRuns.length ? r.dryRuns.join(', ') : 'aucune'}`,
+    '',
+    '| Niveau | Parties | Victoires | Terminé à (min) | Niveaux de l’escouade | Nouveautés |',
+    '| --- | --- | --- | --- | --- | --- |',
+    ...r.stages.map((s) => `| ${s.id} | ${s.games} | ${s.wins} | ${s.clearedAtMin ?? '—'} | ${s.squadLevels.join(' / ')} | ${s.novelties.join(', ') || '—'} |`),
   ];
   return lines.join('\n') + '\n';
 }
@@ -138,7 +165,7 @@ function toMarkdown(r: JourneyResult, profile: string, seed: number): string {
 if (/tools[\\/]journey\.ts$/.test(process.argv[1] ?? '')) {
   const profile = arg('profile', 'active') as SimProfile;
   const seed = Number(arg('seed', '1'));
-  const r = runJourney(profile, seed, Number(arg('max-games', '250')));
+  const r = runJourney(profile, seed, Number(arg('max-games', '250')), arg('trio', 'braise'));
   const md = toMarkdown(r, profile, seed);
   const out = arg('out', '');
   if (out) fs.writeFileSync(out, md);
