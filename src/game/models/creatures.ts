@@ -51,7 +51,7 @@ export function getRigTopY(species: SpeciesDef): number {
 /**
  * Builds a charismatic 6-12 part composite voxel creature anchored at bottom-center (y = 0)
  */
-export function buildVoxelCreature(speciesId: string, scaleOverride?: number): VoxelCreatureRig {
+export function buildVoxelCreature(speciesId: string, scaleOverride?: number, variant?: boolean): VoxelCreatureRig {
   const species = SPECIES[speciesId] ?? SPECIES.pyrocube;
   const bump = getToyBumpTexture();
 
@@ -96,6 +96,16 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
     emissive: new THREE.Color('#FFFFFF'),
     emissiveIntensity: 0.25,
   });
+
+  // A3.3 : variante de couleur (écran d'équipe seulement). Rotation de teinte EN PLACE sur les couleurs
+  // existantes : aucun objet three.js ni tirage aléatoire en plus (golden inchangé).
+  if (variant) {
+    const shift = 150 / 360;
+    primaryMat.color.offsetHSL(shift, 0, 0);
+    secondaryMat.color.offsetHSL(shift, 0, 0);
+    accentMat.color.offsetHSL(shift, 0, 0);
+    accentMat.emissive.offsetHSL(shift, 0, 0);
+  }
 
   const flashMaterials = [primaryMat, secondaryMat, bellyMat, accentMat];
   const baseEmissives = flashMaterials.map((m) => m.emissive.clone());

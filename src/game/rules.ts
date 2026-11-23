@@ -398,6 +398,37 @@ export function toggleSquadMember(save: SaveState, uid: string): SaveState {
   return { ...save, squadIds: [...save.squadIds, uid] };
 }
 
+/**
+ * A3.3 : échange un membre de l'escouade contre une créature de la réserve, à la même place
+ * (le meneur remplacé laisse sa place de meneur). Refusé (sauvegarde inchangée) si `outUid` n'est pas
+ * dans l'escouade, si `inUid` y est déjà ou n'existe pas, ou si sa lignée y figure déjà chez un autre membre.
+ */
+export function swapSquadMember(save: SaveState, outUid: string, inUid: string): SaveState {
+  const idx = save.squadIds.indexOf(outUid);
+  if (idx < 0 || save.squadIds.includes(inUid)) return save;
+  const incoming = save.roster.find((c) => c.uid === inUid);
+  if (!incoming) return save;
+  const line = lineageOf(incoming.speciesId);
+  const taken = save.squadIds.some((id) => {
+    if (id === outUid) return false;
+    const c = save.roster.find((x) => x.uid === id);
+    return c && lineageOf(c.speciesId) === line;
+  });
+  if (taken) return save;
+  const squadIds = [...save.squadIds];
+  squadIds[idx] = inUid;
+  return { ...save, squadIds };
+}
+
+/** A3.3 : active ou coupe la variante de couleur d'une lignée ; sans effet si elle n'est pas débloquée. */
+export function toggleVariant(save: SaveState, lineage: string): SaveState {
+  if (!save.variantsUnlocked.includes(lineage)) return save;
+  const variantsOn = save.variantsOn.includes(lineage)
+    ? save.variantsOn.filter((l) => l !== lineage)
+    : [...save.variantsOn, lineage];
+  return { ...save, variantsOn };
+}
+
 export function computeSquadPower(save: SaveState): number {
   let total = 0;
   for (const uid of save.squadIds) {

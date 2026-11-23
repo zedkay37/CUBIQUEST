@@ -36,6 +36,8 @@ import {
   lineageOf,
   openSealedCube,
   toggleSquadMember,
+  swapSquadMember,
+  toggleVariant,
   unlockedFeatures,
   buildPreviewSave,
   claimAchievementReward,
@@ -573,6 +575,24 @@ export default function App() {
     });
   };
 
+  // A3.3 : escouade pleine, un clic dans la réserve échange avec la créature choisie du trio (règle pure)
+  const handleSwapSquadMember = (outUid: string, inUid: string) => {
+    soundFx.playUiClick();
+    setSave((prev) => {
+      const nextSave = swapSquadMember(prev, outUid, inUid);
+      if (nextSave === prev) return prev;
+      if (playMode === 'camp') {
+        engineRef.current?.loadCampScene(getSquadCreatures(nextSave));
+      }
+      return nextSave;
+    });
+  };
+
+  const handleToggleVariant = (lineage: string) => {
+    soundFx.playUiClick();
+    setSave((prev) => toggleVariant(prev, lineage));
+  };
+
   const handleEquipStone = (creatureUid: string, slotIdx: number, stoneId: string) => {
     soundFx.playUiClick();
     setSave((prev) => equipPowerStone(prev, creatureUid, slotIdx, stoneId));
@@ -766,6 +786,8 @@ export default function App() {
             <TeamDrawer
               save={save}
               onToggleSquadMember={handleToggleSquadMember}
+              onSwapSquadMember={handleSwapSquadMember}
+              onToggleVariant={handleToggleVariant}
               onEquipStone={handleEquipStone}
               onUnequipStone={handleUnequipStone}
               onEquipRune={handleEquipRune}
