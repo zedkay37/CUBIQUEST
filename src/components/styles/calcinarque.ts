@@ -69,21 +69,21 @@ const SHAPES: Shape[] = [
   // ---- cou, projeté vers l'avant et vers le bas
   wedge([1.2, 1.65], [0.95, 0.98], [1.88, 1.6], [0.4, 0.32], 'primary'),
   // ---- tête : petite, basse ; crâne, museau en coin, mâchoire lourde un peu ouverte sur une gueule de lave
-  box([0, 1.42, 1.86], [0.3, 0.2, 0.26], 'primary'),
-  wedge([1.95, 2.5], [1.22, 1.24], [1.52, 1.36], [0.27, 0.17], 'primary'),
-  box([0, 1.56, 2.0], [0.26, 0.05, 0.1], 'secondary'), // arcade sourcilière, qui écrase le regard
-  box([0, 1.0, 2.1], [0.28, 0.11, 0.36], 'secondary'), // mâchoire inférieure
-  box([0, 1.15, 2.12], [0.21, 0.05, 0.3], 'accent', { glow: true }), // gueule de lave
+  box([0, 1.42, 1.86], [0.3, 0.2, 0.26], 'primary', { group: 'head' }),
+  wedge([1.95, 2.5], [1.22, 1.24], [1.52, 1.36], [0.27, 0.17], 'primary', { group: 'head' }),
+  box([0, 1.56, 2.0], [0.26, 0.05, 0.1], 'secondary', { group: 'head' }), // arcade sourcilière, qui écrase le regard
+  box([0, 1.0, 2.1], [0.28, 0.11, 0.36], 'secondary', { group: 'head' }), // mâchoire inférieure
+  box([0, 1.15, 2.12], [0.21, 0.05, 0.3], 'accent', { group: 'head', glow: true }), // gueule de lave
   // crocs d'obsidienne : vers le bas depuis le museau, vers le haut depuis la mâchoire
-  spike([0.16, 1.24, 2.38], [0.17, 1.02, 2.42], 0.07, 'belly', { mirror: true }),
-  spike([0.08, 1.24, 2.2], [0.08, 1.06, 2.22], 0.055, 'belly', { mirror: true }),
-  spike([0.21, 1.08, 2.36], [0.22, 1.27, 2.4], 0.06, 'belly', { mirror: true }),
+  spike([0.16, 1.24, 2.38], [0.17, 1.02, 2.42], 0.07, 'belly', { group: 'head', mirror: true }),
+  spike([0.08, 1.24, 2.2], [0.08, 1.06, 2.22], 0.055, 'belly', { group: 'head', mirror: true }),
+  spike([0.21, 1.08, 2.36], [0.22, 1.27, 2.4], 0.06, 'belly', { group: 'head', mirror: true }),
   // yeux fendus, lumineux, sans reflet blanc
   box([0.2, 1.44, 2.13], [0.1, 0.055, 0.04], 'eye', { group: 'eye*', mirror: true, glow: true }),
   // cornes d'obsidienne pointées vers l'avant comme des lances ; la droite est ébréchée (plus courte, émoussée)
-  spike([0.23, 1.58, 1.78], [0.36, 1.8, 2.78], 0.12, 'belly'),
-  spike([-0.23, 1.58, 1.78], [-0.33, 1.74, 2.42], 0.12, 'belly'),
-  box([-0.33, 1.74, 2.4], [0.06, 0.05, 0.05], 'belly'),
+  spike([0.23, 1.58, 1.78], [0.36, 1.8, 2.78], 0.12, 'belly', { group: 'head' }),
+  spike([-0.23, 1.58, 1.78], [-0.33, 1.74, 2.42], 0.12, 'belly', { group: 'head' }),
+  box([-0.33, 1.74, 2.4], [0.06, 0.05, 0.05], 'belly', { group: 'head' }),
 
   // ---- crête de cristaux de magma, décroissante vers la queue (légèrement penchée vers l'arrière)
   spike([0, 2.12, 0.82], [0, 3.25, 0.58], 0.21, 'accent', { glow: true }),
