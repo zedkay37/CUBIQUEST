@@ -17,6 +17,8 @@
  *               esquive comme `active`, et le meneur s'éloigne dès qu'un ennemi s'approche à moins de
  *               KITE_FLEE_DIST, puis revient au contact quand plus personne n'est à portée d'attaque.
  *               Il appuie sur les touches de déplacement comme un joueur (ZQSD).
+ *  - `idle`   : mode « Semi » (celui par défaut) sans jamais appuyer sur rien : le débutant qui regarde
+ *               (retour du propriétaire, S07). Ni sort, ni Déchaînement, ni Esquive.
  *
  * `cubes: false` coupe les cubes d’élément par une option du moteur réservée aux outils
  * (le jeu normal ne la passe jamais).
@@ -32,7 +34,7 @@ const { VoxelEngine } = await import('../src/game/VoxelEngine');
 
 export { STAGES, SPECIES, getReferenceConfig };
 export type StageDef = (typeof STAGES)[number];
-export type SimProfile = 'auto' | 'active' | 'expert' | 'kite';
+export type SimProfile = 'auto' | 'active' | 'expert' | 'kite' | 'idle';
 
 export interface FightOptions {
   profile?: SimProfile;
@@ -240,7 +242,7 @@ export function runFight(stage: StageDef, seed: number, opts: FightOptions = {})
         for (let slot = 0; slot < 3; slot++) engine.triggerAllySkill(slot);
         engine.triggerUltimate();
       }
-      if (profile !== 'auto') {
+      if (profile !== 'auto' && profile !== 'idle') {
         // Le joueur lit l'annonce qui le menace et appuie un peu avant l'impact
         const dp = DODGE_PROFILE[profile];
         const now = engine.expeditionElapsed;

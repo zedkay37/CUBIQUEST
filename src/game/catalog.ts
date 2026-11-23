@@ -1391,6 +1391,17 @@ export const SPECIES: Record<string, SpeciesDef> = {
 
 export const STARTER_IDS = ['pyrocube', 'aquabloc', 'bourgeon'] as const;
 
+/**
+ * Trios de départ (S07.1) : le joueur choisit un trio, pas un compagnon. Trois éléments, donc trois Éclats
+ * différents dès le premier combat. Ordre : le premier est le meneur.
+ */
+export const STARTER_TRIOS = {
+  braise: ['pyrocube', 'voltik', 'cailloc'],
+  maree: ['aquabloc', 'bourgeon', 'psycube'],
+} as const;
+export type StarterTrioId = keyof typeof STARTER_TRIOS;
+export const STARTER_TRIO_IDS = Object.keys(STARTER_TRIOS) as StarterTrioId[];
+
 export const INGREDIENTS: Record<string, IngredientDef> = {
   ruby_berry: {
     id: 'ruby_berry',

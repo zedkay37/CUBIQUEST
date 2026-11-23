@@ -160,6 +160,8 @@ function parseArgs(argv: string[]): {
   scale: string | null;
   profile: SimProfile;
   cubes: boolean;
+  starter: string | null;
+  trio: string | null;
 } {
   const get = (name: string): string | null => {
     const i = argv.indexOf(`--${name}`);
@@ -174,9 +176,31 @@ function parseArgs(argv: string[]): {
     brief: argv.includes('--brief'),
     set: get('set'),
     scale: get('scale'),
-    profile: (['active', 'expert', 'kite'] as const).find((p) => p === get('profile')) ?? 'auto',
+    profile: (['active', 'expert', 'kite', 'idle'] as const).find((p) => p === get('profile')) ?? 'auto',
+    // --starter : escouade d'une partie neuve (createInitialSaveState), sans Galet
+    starter: get('starter') ?? (argv.includes('--starter') ? 'pyrocube' : null),
+    // --trio braise|maree : escouade de référence du niveau (niveau, Galets), espèces du trio de départ (S07.1)
+    trio: get('trio'),
     cubes: get('cubes') !== '0',
   };
+}
+
+const { createInitialSaveState } = await import('../src/game/rules');
+/** Escouade d'une partie neuve (option --starter[=espèce]) : niveaux de départ, aucun Galet. */
+function starterSquad(starter: string | null) {
+  if (!starter) return undefined;
+  const save = createInitialSaveState(starter, true);
+  return save.squadIds.map((uid) => save.roster.find((c) => c.uid === uid)!);
+}
+
+const { STARTER_TRIOS } = await import('../src/game/catalog');
+const { evolvedFormAtLevel } = await import('../src/game/previewConfigs');
+const { createOwnedCreature } = await import('../src/game/rules');
+function trioSquad(trio: string | null, stage: (typeof STAGES)[number]) {
+  const ids = trio ? (STARTER_TRIOS as Record<string, readonly string[]>)[trio] : null;
+  if (!ids) return undefined;
+  const c = getReferenceConfig(stage);
+  return ids.map((id, i) => createOwnedCreature(evolvedFormAtLevel(id, c.level), c.level, c.bonus, `trio_${i}`));
 }
 
 function briefLine(s: StageSummary): string {
@@ -237,7 +261,7 @@ for (const stage of selected) {
   const fights: FightResult[] = [];
   for (let run = 0; run < args.runs; run++) {
     fights.push(
-      runFight(stage, fightSeed(args.seed, stage, run), { profile: args.profile, cubes: args.cubes }),
+      runFight(stage, fightSeed(args.seed, stage, run), { profile: args.profile, cubes: args.cubes, creatures: starterSquad(args.starter) ?? trioSquad(args.trio, stage) }),
     );
   }
   summaries.push(summarize(stage, fights));

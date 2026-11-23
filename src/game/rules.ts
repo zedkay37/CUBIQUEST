@@ -9,6 +9,9 @@ import {
   MOVES,
   POT_TIER_META,
   QUEST_POOL,
+  STARTER_TRIOS,
+  STARTER_TRIO_IDS,
+  type StarterTrioId,
   STAGE_CHALLENGES,
   RECIPE_BY_ID,
   RECIPES,
@@ -1214,24 +1217,15 @@ function normalizeStageStars(raw: unknown, completedStageIds: string[]): Record<
  * Build deterministic starting SaveState for instant playability
  */
 export function createInitialSaveState(
-  starterSpeciesId: string = 'pyrocube',
+  starterId: string = 'braise',
   starterChosen = false,
 ): SaveState {
-  const starter = createOwnedCreature(starterSpeciesId, 4, 15, 'starter_1');
-  const companionA = createOwnedCreature(
-    starterSpeciesId === 'bourgeon' ? 'aquabloc' : 'bourgeon',
-    3,
-    0,
-    'starter_2',
-  );
-  const companionB = createOwnedCreature(
-    starterSpeciesId === 'pyrocube' ? 'voltik' : 'pyrocube',
-    3,
-    0,
-    'starter_3',
-  );
-  // Also give a 4th bench creature so roster swapping works right away
-  const benchTank = createOwnedCreature('cailloc', 3, 0, 'starter_4');
+  // S07.1 : un trio de départ (id de trio, ou une espèce de ce trio), trois compagnons au niveau 4, aucun en réserve
+  const trioId: StarterTrioId =
+    (STARTER_TRIO_IDS as string[]).includes(starterId)
+      ? (starterId as StarterTrioId)
+      : STARTER_TRIO_IDS.find((t) => (STARTER_TRIOS[t] as readonly string[]).includes(starterId)) ?? 'braise';
+  const [starter, companionA, companionB] = STARTER_TRIOS[trioId].map((id, i) => createOwnedCreature(id, 4, 0, `starter_${i + 1}`));
 
   const startingStones: PowerStone[] = [
     {
@@ -1272,7 +1266,7 @@ export function createInitialSaveState(
     version: SAVE_VERSION,
     starterChosen,
     squadIds: [starter.uid, companionA.uid, companionB.uid],
-    roster: [starter, companionA, companionB, benchTank],
+    roster: [starter, companionA, companionB],
     ingredients: {
       ruby_berry: 6,
       crimson_root: 2,
@@ -1304,7 +1298,7 @@ export function createInitialSaveState(
     highestStageIndex: 0,
     completedStageIds: [],
     discoveredSpeciesIds: Array.from(
-      new Set([starter.speciesId, companionA.speciesId, companionB.speciesId, benchTank.speciesId]),
+      new Set([starter.speciesId, companionA.speciesId, companionB.speciesId]),
     ),
     discoveredRecipeIds: [],
     expeditionsCompleted: 0,

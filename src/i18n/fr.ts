@@ -311,6 +311,18 @@ export const FR = {
       confirmerLaRemiseAZero: 'Confirmer la remise à zéro',
     },
     starterModal: {
+      choisisTonTrio: 'Choisis ton trio',
+      troisElements: 'Trois compagnons, trois éléments : chacun fait éclater les cubes à sa façon.',
+      nomsTrios: { braise: 'Trio Braise', maree: 'Trio Marée' },
+      /** Une ligne par Éclat (carte du trio de départ). */
+      eclatCourt: {
+        deflagration: 'explosion qui brûle autour',
+        arc: 'éclair qui rebondit et étourdit',
+        rempart: 'bouclier pour toute l’escouade',
+        deferlante: 'gros coup qui repousse',
+        seve: 'soigne toute l’escouade',
+        echo: 'recopie le cube sur les voisins',
+      },
       choisissezVotrePremiereCreature: `Choisissez votre premier ${CREATURE_NOUN.singular}`,
       deuxEclaireursVousRejoindrontAussitotPour: 'Deux éclaireurs vous rejoindront aussitôt pour former votre escouade de 3 au Camp.',
       tank: 'Tank',

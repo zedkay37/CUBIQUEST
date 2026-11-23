@@ -245,7 +245,7 @@ test('Aperçu: l\'écran de fin parle de l\'escouade de l\'aperçu, pas de celle
   const wrong = applyExpeditionRewards(save, stage, true, stats, () => 0.4).outcome.leveledUpNames;
   assert.ok(wrong.some((label) => label.startsWith('Pyrocube')));
   // la sauvegarde réelle n'est pas touchée par l'aperçu
-  assert.equal(save.roster.length, 4);
+  assert.equal(save.roster.length, 3); // S07.1 : plus de quatrième compagnon en réserve
   assert.equal(save.roster[0].level, 4);
   assert.equal(nextSave.roster.length, 3);
 });

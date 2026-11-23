@@ -59,6 +59,8 @@ import {
   SPECIES,
   STAGES,
   STAGE_CHALLENGES,
+  STARTER_TRIOS,
+  STARTER_TRIO_IDS,
 } from './catalog';
 import { buildPreviewQuery, evolvedFormAtLevel, getReferenceConfig, listReferenceConfigs } from './previewConfigs';
 import { normalizeSettings } from './settings';
@@ -834,7 +836,9 @@ test('Expérience (S06.3): table des niveaux, première victoire x 2,5, 60 % au 
     STAGES.map((s) => s.xpReward),
     [270, 430, 560, 760, 940, 1180, 1550, 1950, 2550, 3400, 4800, 5800, 6200, 6500, 6700, 6900, 7100, 7300, 7500, 7700, 7900],
   );
-  const save = createInitialSaveState('pyrocube', true);
+  const base = createInitialSaveState('pyrocube', true);
+  // une créature en réserve (le trio de départ n'en a plus depuis S07.1)
+  const save = { ...base, roster: [...base.roster, createOwnedCreature('psycube', 3, 0, 'reserve_1')] };
   const stage = STAGES[0];
   const bench = save.roster.find((c) => !save.squadIds.includes(c.uid))!;
   const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 };
@@ -890,4 +894,20 @@ test('Défaite (S06.2): un conseil parmi huit, le plus utile d’abord', () => {
   const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 };
   assert.equal(applyExpeditionRewards(save, STAGES[0], true, stats, () => 0.5).outcome.advice, null);
   assert.ok(applyExpeditionRewards(save, STAGES[0], false, stats, () => 0.5).outcome.advice);
+});
+
+test('Trio de départ (S07.1): deux trios, trois compagnons niveau 4, aucun en réserve', () => {
+  assert.deepEqual(STARTER_TRIO_IDS, ['braise', 'maree']);
+  for (const trio of STARTER_TRIO_IDS) {
+    const save = createInitialSaveState(trio, true);
+    assert.deepEqual(save.roster.map((c) => c.speciesId), [...STARTER_TRIOS[trio]]);
+    assert.ok(save.roster.every((c) => c.level === 4));
+    assert.equal(save.squadIds.length, 3);
+    // trois éléments différents : trois Éclats différents dès le premier combat
+    assert.equal(new Set(save.roster.map((c) => SPECIES[c.speciesId].element)).size, 3);
+  }
+  assert.deepEqual(STARTER_TRIOS.braise, ['pyrocube', 'voltik', 'cailloc']);
+  assert.deepEqual(STARTER_TRIOS.maree, ['aquabloc', 'bourgeon', 'psycube']);
+  // une espèce d'un trio choisit ce trio (anciens appels)
+  assert.equal(createInitialSaveState('bourgeon', true).roster[0].speciesId, 'aquabloc');
 });

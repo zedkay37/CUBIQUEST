@@ -54,11 +54,14 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   // --- Douze premiers niveaux (S03 : a minima). Avant : formule d'origine, soit 1 / 1 / 1. ---
   // Mesures : 40 combats x graines 1, 2, 3, en Auto. « boss » = durée moyenne du combat de boss.
   // meadow-1 : avant 21 % (le boss tuait l'escouade de niveau 4 en ~5 s) -> 96 %, boss ~13 s
-  'meadow-1': { enemyHpMult: 0.787, enemyAtkMult: 0.087, bossHpMult: 16.2 },
+  // S07 (retour du propriétaire) : un débutant qui n'appuie sur rien (profil idle, trio de départ niveau 4, sans Galet)
+  // gagne à 100 % sur 3 graines et les deux trios (0 % avant) ; attaque 0,087 -> 0,06, PV du boss 16,2 -> 10.
+  'meadow-1': { enemyHpMult: 0.787, enemyAtkMult: 0.06, bossHpMult: 10 },
   // avant 100 %, boss 2 s -> 77 %, boss ~13 s (seuil raide : bossHpMult 10.5 => 58 %)
   'meadow-2': { enemyHpMult: 1.129, enemyAtkMult: 0.062, bossHpMult: 19.8 },
   // avant 85 %, boss 3 s -> 88 %, boss ~14 s, attaque annoncée dans les 3 phases
-  'meadow-3': { enemyHpMult: 0.628, enemyAtkMult: 0.077, bossHpMult: 25 },
+  // S07.1 : équité des deux trios de départ (Auto, 3 graines) : Braise 15 % / Marée 97 % -> 99 % / 100 % ; PV du boss 25 -> 20
+  'meadow-3': { enemyHpMult: 0.628, enemyAtkMult: 0.077, bossHpMult: 20 },
   // avant 100 %, boss 2 s -> 88 %, boss ~11 s
   'shore-1': { enemyHpMult: 1, enemyAtkMult: 0.224, bossHpMult: 10 },
   // avant 98 %, boss 3 s -> 82 %, boss ~12 s

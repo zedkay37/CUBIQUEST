@@ -378,3 +378,17 @@ textarea:focus-visible {
     min-width: 44px;
   }
 }
+
+/* Trio de départ (S07.1) : chaque compagnon sautille à son tour */
+@keyframes starter-hop {
+  0%, 70%, 100% { transform: translateY(0); }
+  80% { transform: translateY(-8px); }
+  90% { transform: translateY(0); }
+}
+.starter-hop {
+  display: inline-block;
+  animation: starter-hop 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .starter-hop { animation: none; }
+}
