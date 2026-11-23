@@ -69,6 +69,8 @@ export const FR = {
       psychic: 'Dégâts sur tous, et les trois sorts sont prêts.',
     },
     campHud: {
+      /** Bouton unique du camp tant que l'équipe n'est pas ouverte (S07.3). */
+      partir: 'Partir',
       /** Phrases des ouvertures (S07.3). */
       nouveautes: {
         quests: 'Nouveau : les quêtes et les options (journal de test) sont ouvertes.',
