@@ -34,6 +34,8 @@ http.createServer((req, res) => {
 }).listen(Number(process.argv[3]));
 "@
 Set-Content -Encoding utf8 "$tmp\serve.mjs" $server
+# BESTIAIRE : refuser de photographier si le port est déjà pris (un serveur resté ouvert servirait un ancien site)
+if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) { throw "le port $Port est deja utilise (serveur de captures reste ouvert ?) : arreter ce processus avant de recommencer" }
 $proc = Start-Process -PassThru -WindowStyle Hidden -FilePath node -ArgumentList @("$tmp\serve.mjs", "$tmp\site", "$Port")
 Start-Sleep -Seconds 2
 $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
