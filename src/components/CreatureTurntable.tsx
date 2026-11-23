@@ -15,17 +15,14 @@ export function CreatureTurntable({
   speciesId,
   size = 160,
   variant,
-  legacy,
-  art1,
+  version = 'art3',
   silhouette,
 }: {
   speciesId: string;
   size?: number;
   variant?: boolean;
-  /** Sprint Art : l'ancien modèle « gros pavés » (comparaison). */
-  legacy?: boolean;
-  /** ART2 : la version figée du sprint ART (comparaison à trois colonnes). */
-  art1?: boolean;
+  /** `?gallery=art` : « avant » = ancien modèle en gros pavés ; art1 / art2 = versions figées ; art3 = le jeu. */
+  version?: 'avant' | 'art1' | 'art2' | 'art3';
   /** Sprint Art : ombre noire unie (comparaison des silhouettes). */
   silhouette?: boolean;
 }) {
@@ -60,11 +57,12 @@ export function CreatureTurntable({
     const rim = new THREE.DirectionalLight('#9CC8FF', 0.7);
     rim.position.set(-5, 4, -6);
     scene.add(key, rim, new THREE.HemisphereLight('#DDEBFF', '#5B4A3A', 0.55));
-    const rig = legacy
-      ? buildLegacyCreature(SPECIES[speciesId], 1, variant)
-      : art1
-        ? buildSculptCreature(SPECIES[speciesId], 1, variant, 'art1')
-        : buildVoxelCreature(speciesId, 1, variant);
+    const rig =
+      version === 'avant'
+        ? buildLegacyCreature(SPECIES[speciesId], 1, variant)
+        : version === 'art3'
+          ? buildVoxelCreature(speciesId, 1, variant)
+          : buildSculptCreature(SPECIES[speciesId], 1, variant, version);
     if (silhouette) {
       // comparaison des silhouettes : une seule matière noire
       const black = new THREE.MeshBasicMaterial({ color: '#000000' });
@@ -105,7 +103,7 @@ export function CreatureTurntable({
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [speciesId, size, reduced, variant, legacy, art1, silhouette]);
+  }, [speciesId, size, reduced, variant, version, silhouette]);
 
   if (reduced || failed.current) return <VoxelCreatureAvatar speciesId={speciesId} size={size} />;
   return <div ref={mount} style={{ width: size, height: size }} aria-hidden="true" />;
