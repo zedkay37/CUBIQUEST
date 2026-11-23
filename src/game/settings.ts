@@ -10,13 +10,17 @@ export interface GameSettings {
   quality: 'auto' | 'low' | 'medium' | 'high';
   /** Sprint Art : barre latérale du camp repliée en icônes. */
   navCollapsed: boolean;
+  /** ART2 : vent dans le décor (Normal, Doux, Coupé). */
+  wind: 'normal' | 'soft' | 'off';
 }
+
+export const WIND_ORDER: GameSettings['wind'][] = ['normal', 'soft', 'off'];
 
 export const QUALITY_ORDER: GameSettings['quality'][] = ['auto', 'high', 'medium', 'low'];
 
 export const SETTINGS_STORAGE_KEY = withSaveSlot('cubiquest_settings_v1');
 
-export const DEFAULT_SETTINGS: GameSettings = { screenShake: true, quality: 'auto', navCollapsed: false };
+export const DEFAULT_SETTINGS: GameSettings = { screenShake: true, quality: 'auto', navCollapsed: false, wind: 'normal' };
 
 /** Normalise n'importe quelle valeur lue en options valides (pure, testable). */
 export function normalizeSettings(raw: unknown): GameSettings {
@@ -26,6 +30,7 @@ export function normalizeSettings(raw: unknown): GameSettings {
     screenShake: typeof obj.screenShake === 'boolean' ? obj.screenShake : DEFAULT_SETTINGS.screenShake,
     quality: QUALITY_ORDER.includes(obj.quality as GameSettings['quality']) ? (obj.quality as GameSettings['quality']) : DEFAULT_SETTINGS.quality,
     navCollapsed: typeof obj.navCollapsed === 'boolean' ? obj.navCollapsed : DEFAULT_SETTINGS.navCollapsed,
+    wind: WIND_ORDER.includes(obj.wind as GameSettings['wind']) ? (obj.wind as GameSettings['wind']) : DEFAULT_SETTINGS.wind,
   };
 }
 

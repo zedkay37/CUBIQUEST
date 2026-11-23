@@ -12,6 +12,22 @@ import * as THREE from 'three';
 let artDecorOn = false;
 let decorDetail: 'low' | 'high' = 'high';
 let nightFactor = 0;
+/** ART2 : force du vent (Options « Vent : Normal / Doux / Coupé »). */
+let windLevel: 'normal' | 'soft' | 'off' = 'normal';
+const windUniform = { value: 1 };
+export function setWindLevel(level: 'normal' | 'soft' | 'off'): void {
+  windLevel = level;
+}
+/** Vent effectif : coupé en qualité Basse et si le système demande moins d'animations. */
+function windFactor(): number {
+  if (windLevel === 'off' || decorDetail === 'low') return 0;
+  try {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return 0;
+  } catch {
+    // rien
+  }
+  return windLevel === 'soft' ? 0.5 : 1;
+}
 
 export function setArtDecor(on: boolean): void {
   artDecorOn = on;
@@ -90,8 +106,9 @@ export function buildMeadowGroundTexture(): THREE.CanvasTexture {
 function addSway(mat: THREE.MeshStandardMaterial, time: { value: number }, strength: number): void {
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = time;
+    shader.uniforms.uWind = windUniform;
     shader.vertexShader =
-      'uniform float uTime;\n' +
+      'uniform float uTime;\nuniform float uWind;\n' +
       shader.vertexShader.replace(
         '#include <begin_vertex>',
         `#include <begin_vertex>
@@ -100,7 +117,7 @@ function addSway(mat: THREE.MeshStandardMaterial, time: { value: number }, stren
         #else
           vec3 ip = vec3(0.0);
         #endif
-        float bend = max(0.0, position.y + 0.5) * ${strength.toFixed(3)};
+        float bend = max(0.0, position.y + 0.5) * ${strength.toFixed(3)} * uWind;
         transformed.x += sin(uTime * 1.8 + ip.x * 0.6 + ip.z * 0.4) * bend;
         transformed.z += cos(uTime * 1.5 + ip.z * 0.5) * bend * 0.6;`,
       );
@@ -145,7 +162,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   // --- touffes d'herbe et fleurs (instanciées, ondulent au vent)
   const grassCount = low ? 0 : 480;
   const grassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
-  if (!low) addSway(grassMat, time, 0.35);
+  if (!low) addSway(grassMat, time, 0.16);
   const grass = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.4, 0.12), grassMat, grassCount);
   for (let i = 0; i < grassCount; i++) {
     // plus dense vers les bords : l'arène reste lisible
@@ -166,7 +183,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
 
   const flowerCount = low ? 0 : 110;
   const flowerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, emissive: new THREE.Color('#222222') });
-  if (!low) addSway(flowerMat, time, 0.25);
+  if (!low) addSway(flowerMat, time, 0.1);
   const flowers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), flowerMat, flowerCount);
   for (let i = 0; i < flowerCount; i++) {
     const a = rnd() * Math.PI * 2;
@@ -186,7 +203,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   // --- arbres de cinq formes (troncs + feuillages en plusieurs blocs), sur le relief
   const trunkMat = new THREE.MeshStandardMaterial({ color: '#7A4E2D', roughness: 0.9 });
   const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.75 });
-  if (!low) addSway(leafMat, time, 0.06);
+  // ART2 : le feuillage n'est plus déformé dans le shader ; il tourne comme un bloc rigide (voir l'animation)
   const SHAPES: [number, number, number, number, number, number][][] = [
     // [x, y, z, sx, sy, sz] des blocs de feuillage, au-dessus d'un tronc de hauteur 1,6
     [[0, 2.2, 0, 1.8, 1.2, 1.8], [0, 3.0, 0, 1.2, 0.8, 1.2]],
@@ -199,6 +216,9 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const leafTotal = Array.from({ length: treeCount }, (_, i) => SHAPES[i % SHAPES.length].length).reduce((a, b) => a + b, 0);
   const trunks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 1.6, 0.5), trunkMat, treeCount);
   const leaves = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), leafMat, leafTotal);
+  // pour la brise : chaque bloc de feuillage tourne autour de la base du feuillage de son arbre
+  const leafInfo: { tree: number; pivot: THREE.Vector3; off: THREE.Vector3; scale: THREE.Vector3; rotY: number }[] = [];
+  const treePhase: { phase: number; period: number }[] = [];
   let li = 0;
   for (let i = 0; i < treeCount; i++) {
     const a = (i / treeCount) * Math.PI * 2 + rnd() * 0.2;
@@ -213,11 +233,14 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
     dummy.updateMatrix();
     trunks.setMatrixAt(i, dummy.matrix);
     const tint = ['#4FA43C', '#3E8E34', '#62B84A', '#2F7A2E'][i % 4];
+    treePhase.push({ phase: rnd() * Math.PI * 2, period: 3 + rnd() * 2 });
+    const pivot = new THREE.Vector3(x, y0 + 1.6 * s, z);
     for (const [bx, by, bz, sx, sy, sz] of SHAPES[i % SHAPES.length]) {
       dummy.position.set(x + bx * s, y0 + by * s, z + bz * s);
       dummy.scale.set(sx * s, sy * s, sz * s);
       dummy.updateMatrix();
       leaves.setMatrixAt(li, dummy.matrix);
+      leafInfo.push({ tree: i, pivot, off: new THREE.Vector3(bx * s, (by - 1.6) * s, bz * s), scale: new THREE.Vector3(sx * s, sy * s, sz * s), rotY: dummy.rotation.y });
       color.set(tint).offsetHSL(0, 0, (by - 2.5) * 0.04);
       leaves.setColorAt(li, color);
       li += 1;
@@ -230,7 +253,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
 
   // --- buissons et rochers moussus
   const bushCount = low ? 6 : 26;
-  const bushes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), leafMat, bushCount * 2);
+  const bushes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), leafMat, bushCount * 2); // statiques
   for (let i = 0; i < bushCount; i++) {
     const a = rnd() * Math.PI * 2;
     const r = flat - 1 + rnd() * 6;
@@ -324,8 +347,36 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const bugColors = ['#FFD93D', '#FF8FB1', '#9AD8FF', '#FFFFFF'];
   for (let i = 0; i < bugCount; i++) bugs.setColorAt(i, color.set(bugColors[i % bugColors.length]));
 
+  const _q = new THREE.Quaternion();
+  const _qy = new THREE.Quaternion();
+  const _axis = new THREE.Vector3();
+  const _p = new THREE.Vector3();
+  const _up = new THREE.Vector3(0, 1, 0);
+  let leavesStill = false;
   return (elapsed: number) => {
     time.value = elapsed;
+    const wind = windFactor();
+    windUniform.value = wind;
+    // ART2 : brise dans les arbres : le tronc ne bouge pas, le feuillage tourne d'un bloc (2° au plus),
+    // lentement (cycle de 3 à 5 s), avec un décalage par arbre. Aucune déformation.
+    if (wind > 0 || !leavesStill) {
+      for (let k = 0; k < leafInfo.length; k++) {
+        const L = leafInfo[k];
+        const tp = treePhase[L.tree];
+        const ang = wind * ((2 * Math.PI) / 180) * Math.sin((elapsed / tp.period) * Math.PI * 2 + tp.phase);
+        _axis.set(Math.cos(tp.phase), 0, Math.sin(tp.phase));
+        _q.setFromAxisAngle(_axis, ang);
+        _p.copy(L.off).applyQuaternion(_q).add(L.pivot);
+        _qy.setFromAxisAngle(_up, L.rotY);
+        dummy.position.copy(_p);
+        dummy.quaternion.copy(_q).multiply(_qy);
+        dummy.scale.copy(L.scale);
+        dummy.updateMatrix();
+        leaves.setMatrixAt(k, dummy.matrix);
+      }
+      leaves.instanceMatrix.needsUpdate = true;
+      leavesStill = wind === 0;
+    }
     const night = nightFactor;
     bugs.visible = night < 0.5;
     fireflyMat.opacity = Math.min(1, night * 1.4);

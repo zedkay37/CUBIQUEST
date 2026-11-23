@@ -80,6 +80,8 @@ export const FR = {
       deplier: 'Déplier la barre',
       sonActif: 'Son : activé',
       sonCoupe: 'Son : coupé',
+      vent: (a: string | number) => `Vent : ${a}`,
+      vents: { normal: 'Normal', soft: 'Doux', off: 'Coupé' },
     },
     /** Hub cliquable du camp (A3.1). */
     hub: {

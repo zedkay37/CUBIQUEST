@@ -32,6 +32,8 @@ interface CampHudProps {
   onNavHover?: (place: HubPlaceId | null) => void;
   navCollapsed?: boolean;
   onToggleNav?: () => void;
+  wind?: 'normal' | 'soft' | 'off';
+  onCycleWind?: () => void;
 }
 
 export function CampHud({
@@ -55,6 +57,8 @@ export function CampHud({
   onNavHover,
   navCollapsed = false,
   onToggleNav,
+  wind,
+  onCycleWind,
 }: CampHudProps) {
   const isOpen = (tab: string) => !unlocked || unlocked.has(tab);
   const cubeCount = save.sealedCubes?.length ?? 0;
@@ -117,6 +121,8 @@ export function CampHud({
         onToggleShake={onToggleShake}
         onCycleQuality={onCycleQuality}
         onReturnTitle={onReturnTitle}
+        wind={wind}
+        onCycleWind={onCycleWind}
       />
     </div>
   );

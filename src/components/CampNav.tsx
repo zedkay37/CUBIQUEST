@@ -36,6 +36,9 @@ interface CampNavProps {
   onToggleShake: () => void;
   onCycleQuality?: () => void;
   onReturnTitle: () => void;
+  /** ART2 : vent dans le décor. */
+  wind?: 'normal' | 'soft' | 'off';
+  onCycleWind?: () => void;
 }
 
 /**
@@ -122,6 +125,11 @@ export function CampNav(props: CampNavProps) {
             {props.quality && props.onCycleQuality && (
               <button type="button" onClick={props.onCycleQuality} className="voxel-btn block-btn-secondary min-h-[44px] rounded-lg border-2 px-3 text-left text-sm font-semibold">
                 {FR.ui.campHud.qualiteCourt(FR.ui.campHud.qualites[props.quality])}
+              </button>
+            )}
+            {props.wind && props.onCycleWind && (
+              <button type="button" onClick={props.onCycleWind} className="voxel-btn block-btn-secondary min-h-[44px] rounded-lg border-2 px-3 text-left text-sm font-semibold">
+                {FR.ui.nav.vent(FR.ui.nav.vents[props.wind])}
               </button>
             )}
             <button type="button" onClick={props.onToggleShake} aria-pressed={props.screenShake} className="voxel-btn block-btn-secondary flex min-h-[44px] items-center gap-2 rounded-lg border-2 px-3 text-left text-sm font-semibold">

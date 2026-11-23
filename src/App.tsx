@@ -69,7 +69,8 @@ import type {
   StageDef,
 } from './game/types';
 import { getReferenceConfig } from './game/previewConfigs';
-import { loadSettings, persistSettings, QUALITY_ORDER, type GameSettings } from './game/settings';
+import { loadSettings, persistSettings, QUALITY_ORDER, WIND_ORDER, type GameSettings } from './game/settings';
+import { setWindLevel } from './game/models/meadowDecor';
 import { VoxelEngine } from './game/VoxelEngine';
 
 // `?debug=1` : overlay de diagnostic (FPS, draw calls...). Le composant n'est téléchargé que dans ce cas.
@@ -379,6 +380,7 @@ export default function App() {
     persistSettings(settings);
     engineRef.current?.setShakeEnabled(settings.screenShake);
     engineRef.current?.setQuality(settings.quality);
+    setWindLevel(settings.wind);
   }, [settings]);
 
   const handleCycleQuality = useCallback(() => {
@@ -747,6 +749,8 @@ export default function App() {
               engineRef.current?.setHubHover(place);
             }}
             navCollapsed={settings.navCollapsed}
+            wind={settings.wind}
+            onCycleWind={() => setSettings((prev) => ({ ...prev, wind: WIND_ORDER[(WIND_ORDER.indexOf(prev.wind) + 1) % WIND_ORDER.length] }))}
             onToggleNav={() => setSettings((prev) => ({ ...prev, navCollapsed: !prev.navCollapsed }))}
             onSelectDrawer={(tab) => {
               soundFx.playUiClick();

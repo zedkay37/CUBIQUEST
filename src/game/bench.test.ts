@@ -25,3 +25,11 @@ test('Qualité (G1.2): l’Automatique descend d’un cran après 3 s sous 45 im
   assert.equal(normalizeSettings({ quality: 'medium' }).quality, 'medium');
   assert.equal(normalizeSettings({ quality: 'ultra' }).quality, 'auto');
 });
+
+test('Vent (ART2) : réglage Normal / Doux / Coupé, normalisé', async () => {
+  const { normalizeSettings, WIND_ORDER } = await import('./settings');
+  assert.deepEqual(WIND_ORDER, ['normal', 'soft', 'off']);
+  assert.equal(normalizeSettings({}).wind, 'normal');
+  assert.equal(normalizeSettings({ wind: 'soft' }).wind, 'soft');
+  assert.equal(normalizeSettings({ wind: 'tempête' }).wind, 'normal');
+});
