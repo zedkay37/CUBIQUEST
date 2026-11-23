@@ -158,22 +158,42 @@ export function PlancheGallery() {
       const all = boxes.reduce((acc, b) => acc.union(b), new THREE.Box3());
       const W = 1260;
       const rowH = Math.round((W * (all.max.y - all.min.y)) / (all.max.x - all.min.x) + 40);
-      renderer.setSize(W, rowH * 2);
-      const cam = orthoFor(all, new THREE.Vector3(0, 0, 1), W / rowH);
-      for (const [row, sil] of [
-        [1, false],
-        [0, true],
-      ] as const) {
-        renderer.setViewport(0, row * rowH, W, rowH);
-        renderer.setScissor(0, row * rowH, W, rowH);
-        renderer.setClearColor(sil ? '#F2F0EA' : BG);
-        renderer.clear();
-        scene.overrideMaterial = sil ? black : null;
-        rigs.forEach((r) => r.root.children.forEach((c) => (c.visible = !(c as THREE.Mesh).isMesh || !((c as THREE.Mesh).geometry instanceof THREE.CircleGeometry) || !sil)));
-        renderer.render(scene, cam);
-      }
-      setInfo(`${LOT.length} créatures, à l'échelle du jeu (profil puis silhouette)`);
-      return () => renderer.dispose();
+      // silhouettes à la densité réelle du combat : caméra du jeu, 1280 × 720 → environ 42 pixels par unité au centre
+      const PX_PER_UNIT = 720 / (2 * Math.hypot(15.1, 16.5) * Math.tan((21 * Math.PI) / 180));
+      const silW = Math.round((all.max.x - all.min.x) * 1.08 * PX_PER_UNIT);
+      const silH = Math.round((all.max.y - all.min.y) * 1.08 * PX_PER_UNIT);
+      const zoom = Math.max(1, Math.min(3, Math.floor(W / silW)));
+      renderer.setSize(W, rowH + silH * zoom + 20);
+      // ligne du haut : profil en couleur
+      renderer.setViewport(0, silH * zoom + 20, W, rowH);
+      renderer.setScissor(0, silH * zoom + 20, W, rowH);
+      renderer.setClearColor(BG);
+      renderer.clear();
+      renderer.render(scene, orthoFor(all, new THREE.Vector3(0, 0, 1), W / rowH));
+      // ligne du bas : silhouettes dessinées à leur taille réelle en pixels, puis agrandies sans lissage
+      const rt = new THREE.WebGLRenderTarget(silW, silH, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+      scene.overrideMaterial = black;
+      rigs.forEach((r) =>
+        r.root.children.forEach((c) => {
+          if ((c as THREE.Mesh).geometry instanceof THREE.CircleGeometry) c.visible = false;
+        }),
+      );
+      renderer.setRenderTarget(rt);
+      renderer.setClearColor('#F2F0EA');
+      renderer.clear();
+      renderer.render(scene, orthoFor(all, new THREE.Vector3(0, 0, 1), silW / silH));
+      renderer.setRenderTarget(null);
+      scene.overrideMaterial = null;
+      const quadScene = new THREE.Scene();
+      quadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: rt.texture, toneMapped: false })));
+      renderer.setViewport(10, 10, silW * zoom, silH * zoom);
+      renderer.setScissor(10, 10, silW * zoom, silH * zoom);
+      renderer.render(quadScene, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
+      setInfo(`${LOT.length} créatures, à l'échelle du jeu : profil en couleur, puis silhouettes à leur taille réelle en combat (${Math.round(PX_PER_UNIT)} px par unité, agrandies ×${zoom})`);
+      return () => {
+        rt.dispose();
+        renderer.dispose();
+      };
     }
 
     // ---- planche d'une créature
@@ -204,6 +224,10 @@ export function PlancheGallery() {
     draw(big + 10, 0, small, small - 20, orthoFor(box, new THREE.Vector3(...VIEWS[1].dir), small / (small - 20)));
     draw(big + 10 + small, 0, small, small - 20, orthoFor(box, new THREE.Vector3(...VIEWS[2].dir), small / (small - 20)));
     draw(big + 10, small, small, small - 20, orthoFor(box, new THREE.Vector3(...VIEWS[3].dir), small / (small - 20)));
+    // marche, au pas le plus grand (même pose que engine/actors.ts : rotation.x = ±0,45 selon l'ordre des pattes)
+    rig.legs.forEach((leg, idx) => (leg.rotation.x = 0.45 * (idx % 2 === 0 ? 1 : -1)));
+    draw(big + 10 + small, small, small, small - 20, orthoFor(modelBox(rig.root), new THREE.Vector3(...VIEWS[2].dir), small / (small - 20)));
+    rig.legs.forEach((leg) => (leg.rotation.x = 0));
 
     // taille réelle en combat : caméra du jeu sur une image de 1280 × 720, recadrée autour de la créature
     // texture en virgule flottante : le mappage des tons du jeu s'applique ensuite, au dessin du recadrage
@@ -272,7 +296,7 @@ export function PlancheGallery() {
       </p>
       <p className="text-xs text-[#C8C4D2]">
         Rendu du vrai jeu (constructeur et matières du jeu, lumière des portraits). {info}
-        {!LOT.length && ' — vues : 3/4 avant (grande), face, profil, 3/4 arrière ; en bas : taille réelle en combat (recadrage d’une image 1280 × 720, ×2) et silhouette.'}
+        {!LOT.length && ' — vues : 3/4 avant (grande), face, profil, 3/4 arrière ; en bas : taille réelle en combat (recadrage d’une image 1280 × 720, ×2) et silhouette ; à droite : marche au pas le plus grand.'}
       </p>
       <div ref={host} className="mt-2" />
     </div>
