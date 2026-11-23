@@ -53,7 +53,8 @@ export function CreatureTurntable({ speciesId, size = 160 }: { speciesId: string
     camera.lookAt(center);
     let raf = 0;
     const start = performance.now();
-    const tick = (now: number) => {
+    const tick = () => {
+      const now = performance.now();
       rig.root.rotation.y = ((now - start) / 1000) * 0.9;
       renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);

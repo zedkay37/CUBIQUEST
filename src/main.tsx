@@ -9,6 +9,9 @@ const galleryParam = new URLSearchParams(window.location.search).get('gallery');
 const isGallery = galleryParam === '1';
 // `?gallery=ui` : composants de l'interface et moments forts (outil de développement)
 const isUiGallery = galleryParam === 'ui';
+// `?gallery=reveal` : révélations du Cube Scellé, une par rareté (outil de développement)
+const isRevealGallery = galleryParam === 'reveal';
+const RevealGallery = lazy(() => import('./components/RevealGallery.tsx').then((module) => ({default: module.RevealGallery})));
 const UiGallery = lazy(() => import('./components/ui/UiGallery.tsx').then((module) => ({default: module.UiGallery})));
 const GalleryPage = lazy(() =>
   import('./components/GalleryPage.tsx').then((module) => ({default: module.GalleryPage})),
@@ -27,7 +30,11 @@ if (new URLSearchParams(window.location.search).get('bench') === '1') {
 }
 
 createRoot(document.getElementById('root')!).render(
-  isUiGallery ? (
+  isRevealGallery ? (
+    <Suspense fallback={null}>
+      <RevealGallery />
+    </Suspense>
+  ) : isUiGallery ? (
     <Suspense fallback={null}>
       <UiGallery />
     </Suspense>

@@ -28,6 +28,8 @@ export interface SummonRevealProps {
   variantUnlocked: boolean;
   /** Toute première ouverture : on ne peut pas accélérer. */
   firstTime?: boolean;
+  /** Outil de captures (`?gallery=reveal&auto=1`) : les trois coups sont donnés tout seuls. */
+  autoTap?: boolean;
   onDone: () => void;
 }
 
@@ -217,8 +219,10 @@ function FullReveal(props: SummonRevealProps) {
       }
     };
 
-    const tick = (now: number) => {
-      let dt = Math.min(0.05, (now - last) / 1000);
+    const tick = () => {
+      const now = performance.now();
+      // horloge de requestAnimationFrame : jamais de pas négatif (bases de temps différentes selon les navigateurs)
+      let dt = Math.max(0, Math.min(0.05, (now - last) / 1000));
       last = now;
       if (fastRef.current && !firstTime) dt *= 3;
       // léger ralenti pour une rare (et plus) pendant l'éclatement
@@ -231,6 +235,10 @@ function FullReveal(props: SummonRevealProps) {
         camera.lookAt(0, 0.7, 0);
         if (t > 0.9) go('tap');
       } else if (local === 'tap') {
+        if (props.autoTap && t > 0.35) {
+          t = 0;
+          tapRef.current();
+        }
         shake = Math.max(0, shake - dt);
         cube.root.position.x = Math.sin(now * 0.08) * shake * 0.2;
       } else if (local === 'burst') {

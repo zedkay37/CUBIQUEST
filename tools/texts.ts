@@ -19,6 +19,7 @@ import { parse } from '@babel/parser';
 const EXCEPTIONS: Record<string, string> = {
   'src/components/CodexDrawer.tsx': 'Codex : consigne permanente « ne pas modifier le Codex »',
   'src/components/GalleryPage.tsx': 'outil de développement (?gallery=1), jamais vu par le joueur',
+  'src/components/RevealGallery.tsx': 'outil de développement (?gallery=reveal), jamais montré aux joueurs',
   'src/components/BenchOverlay.tsx': 'outil de développement (?bench=1), jamais montré aux joueurs',
   'src/components/DebugOverlay.tsx': 'outil de développement (?debug=1), jamais vu par le joueur',
   'src/components/ui/UiGallery.tsx': 'outil de développement (?gallery=ui), jamais vu par le joueur',

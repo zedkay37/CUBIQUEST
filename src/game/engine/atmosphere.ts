@@ -183,7 +183,7 @@ export function updateDayNight(self: VoxelEngine, dt: number): void {
   const night = THREE.MathUtils.clamp((0.42 - self.scene.environmentIntensity) / 0.37, 0, 1);
   if (self.workbenchLight) {
     const flicker = 0.92 + Math.sin(self.elapsedTotal * 11) * 0.05 + Math.sin(self.elapsedTotal * 17.3) * 0.03;
-    self.workbenchLight.intensity = night * 60 * flicker;
+    self.workbenchLight.intensity = night * 32 * flicker; // A2.3 : le moule éclaire, sans éblouir
   }
   if (self.campStars) {
     (self.campStars.material as THREE.MeshBasicMaterial).opacity = night * night * 0.95;

@@ -162,7 +162,7 @@ export function setWorkbenchVisual(self: VoxelEngine): void {
   const mat = self.workbenchLiquidMesh.material as THREE.MeshStandardMaterial;
   mat.color.set('#BDE8FF');
   mat.emissive.set('#7CC8FF');
-  mat.emissiveIntensity = 0.9;
+  mat.emissiveIntensity = 0.5;
 }
 
 export function updateCamp(self: VoxelEngine, dt: number): void {

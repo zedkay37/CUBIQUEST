@@ -24,13 +24,13 @@ export function buildWorkbenchProp(): {
   const glowMat = new THREE.MeshStandardMaterial({
     color: '#BDE8FF',
     emissive: new THREE.Color('#7CC8FF'),
-    emissiveIntensity: 0.9,
+    emissiveIntensity: 0.5,
     roughness: 0.2,
   });
   const coreMat = new THREE.MeshStandardMaterial({
     color: '#F4B942',
     emissive: new THREE.Color('#F4B942'),
-    emissiveIntensity: 1.1,
+    emissiveIntensity: 0.7,
     roughness: 0.3,
   });
   // piétement et plateau de l'établi

@@ -339,7 +339,7 @@ export default function App() {
 
     // ?ui=... : écran ouvert d'office, pour les captures (rien n'est enregistré)
     const ui = getUiParam();
-    if (ui === 'expeditions' || ui === 'team' || ui === 'quests' || ui === 'codex') {
+    if (ui === 'expeditions' || ui === 'atelier' || ui === 'team' || ui === 'quests' || ui === 'codex') {
       setActiveDrawer(ui);
     } else if (ui === 'starter') {
       setScreenState('playing');
