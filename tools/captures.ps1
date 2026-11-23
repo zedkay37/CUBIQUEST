@@ -3,7 +3,7 @@
 # Construit le site dans un dossier temporaire, le sert localement sous /CUBIQUEST/ et photographie chaque
 # Ã©cran avec Edge sans interface, en bureau (1280 x 720) et en mobile (360 x 640). Chaque capture part d'un
 # profil vide : aucune sauvegarde du joueur n'est lue ni modifiÃ©e.
-param([string]$Out = 'docs/captures/ui/avant', [int]$Port = 4176, [string]$Only = '')
+param([string]$Out = 'docs/captures/ui/avant', [int]$Port = 4176, [string]$Only = '', [switch]$Gpu)
 $ErrorActionPreference = 'Stop'
 $root = (Get-Location).Path
 $tmp = Join-Path $env:TEMP ("cubiquest-captures-" + [guid]::NewGuid().ToString('N'))
@@ -71,7 +71,7 @@ try {
     foreach ($size in $sizes.Keys) {
       $file = Join-Path $root "$Out\$name-$size.png"
       $profile = Join-Path $tmp ("edge-" + [guid]::NewGuid().ToString('N'))
-      Start-Process -Wait -WindowStyle Hidden -FilePath $edge -ArgumentList @('--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', "--user-data-dir=$profile", '--hide-scrollbars', "--window-size=$($sizes[$size])", '--virtual-time-budget=9000', "--screenshot=$file", ($(if ($size -eq 'mobile') { "http://localhost:$Port/CUBIQUEST/__frame?w=360&h=640&src=" + [uri]::EscapeDataString("/CUBIQUEST/$($screens[$name])") } else { "http://localhost:$Port/CUBIQUEST/$($screens[$name])" })))
+      Start-Process -Wait -WindowStyle Hidden -FilePath $edge -ArgumentList @('--headless=new', $(if ($Gpu) { '--use-angle=d3d11' } else { '--use-angle=swiftshader' }), $(if ($Gpu) { '--enable-gpu' } else { '--enable-unsafe-swiftshader' }), "--user-data-dir=$profile", '--hide-scrollbars', "--window-size=$($sizes[$size])", '--virtual-time-budget=9000', "--screenshot=$file", ($(if ($size -eq 'mobile') { "http://localhost:$Port/CUBIQUEST/__frame?w=360&h=640&src=" + [uri]::EscapeDataString("/CUBIQUEST/$($screens[$name])") } else { "http://localhost:$Port/CUBIQUEST/$($screens[$name])" })))
     }
   }
 } finally {

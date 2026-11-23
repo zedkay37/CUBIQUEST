@@ -15,6 +15,7 @@ import { clearGroup } from './camp';
 import { BOSS_INTRO_SEC } from './constants';
 import { updateEnemies } from './enemies';
 import { resetLessonState, updateLessons } from './lessons';
+import { setGrade } from './postfx';
 import { clearEvoRing } from './evolution';
 import {
   clearProjectilesAndTelegraphs,
@@ -53,6 +54,7 @@ export function startExpedition(
   self.playMode = 'expedition';
   self.controlMode = controlMode;
   self.activeStage = stage;
+  setGrade(self, stage.biomeId);
   self.waveIndex = 0;
   self.expeditionElapsed = 0;
   self.damageDealt = 0;

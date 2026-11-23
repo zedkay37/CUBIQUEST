@@ -64,7 +64,7 @@ import type {
   StageDef,
 } from './game/types';
 import { getReferenceConfig } from './game/previewConfigs';
-import { loadSettings, persistSettings, type GameSettings } from './game/settings';
+import { loadSettings, persistSettings, QUALITY_ORDER, type GameSettings } from './game/settings';
 import { VoxelEngine } from './game/VoxelEngine';
 
 // `?debug=1` : overlay de diagnostic (FPS, draw calls...). Le composant n'est téléchargé que dans ce cas.
@@ -346,7 +346,13 @@ export default function App() {
   useEffect(() => {
     persistSettings(settings);
     engineRef.current?.setShakeEnabled(settings.screenShake);
+    engineRef.current?.setQuality(settings.quality);
   }, [settings]);
+
+  const handleCycleQuality = useCallback(() => {
+    soundFx.playUiClick();
+    setSettings((prev) => ({ ...prev, quality: QUALITY_ORDER[(QUALITY_ORDER.indexOf(prev.quality) + 1) % QUALITY_ORDER.length] }));
+  }, []);
 
   const handleToggleShake = useCallback(() => {
     soundFx.playUiClick();
@@ -756,7 +762,7 @@ export default function App() {
       )}
       {isBench && (
         <Suspense fallback={null}>
-          <BenchOverlay getStats={getDebugStats} quality={() => 'aucun effet (avant G1.2)'} />
+          <BenchOverlay getStats={getDebugStats} quality={() => engineRef.current?.getQualityLabel() ?? '—'} />
         </Suspense>
       )}
 
@@ -785,6 +791,8 @@ export default function App() {
             muted={muted}
             screenShake={settings.screenShake}
             onToggleShake={handleToggleShake}
+            quality={settings.quality}
+            onCycleQuality={handleCycleQuality}
             onSelectDrawer={(tab) => {
               soundFx.playUiClick();
               setActiveDrawer((cur) => (tab ? nextDrawer(cur, tab) : null));

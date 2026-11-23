@@ -18,6 +18,7 @@ import { DODGE_KIT, TELEGRAPH_KIT } from './balance';
 import { getNextHazardImpact, keepOutOfHazards } from './engine/fx';
 import type { CastContext } from './engine/cubes';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
+import { qualityLabel, setQuality, setupPostFx, type PostFx, type QualitySetting } from './engine/postfx';
 import type { LessonId } from './engine/lessons';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
 import { getDebugStats, type EngineDebugStats } from './engine/debug';
@@ -156,6 +157,8 @@ export class VoxelEngine {
   dodgesUsed = 0;
   /** Compagnons tombés pendant ce combat (étoile « Aucun K.O. »). */
   allyKos = 0;
+  /** Pipeline d'effets (G1.2), null en headless et en rendu logiciel. */
+  postfx: PostFx | null = null;
   /** Leçons (S07.2) : actives seulement si l'interface les a fournies (jamais dans les outils). */
   lessonsOn = false;
   lessonsDone = new Set<string>();
@@ -270,6 +273,8 @@ export class VoxelEngine {
     this.camera = new THREE.PerspectiveCamera(fovForAspect(width / height), width / height, 0.5, 160);
     this.camera.position.set(11, 10.5, 20);
     this.camera.lookAt(0, 2.2, -1);
+    // G1.2 : pipeline d'effets (jamais en headless ni en rendu logiciel)
+    if (this.renderer) setupPostFx(this, width, height);
 
     // Warm/Cool 3-point outdoor studio lighting
     this.hemiLight = new THREE.HemisphereLight('#B4DFFF', '#7D6044', 0.52);
@@ -561,8 +566,18 @@ export class VoxelEngine {
     };
   }
 
+  /** Niveau de qualité graphique (G1.2). */
+  public setQuality(setting: QualitySetting): void {
+    setQuality(this, setting);
+  }
+
+  public getQualityLabel(): string {
+    return qualityLabel(this);
+  }
+
   public dispose(): void {
     this.disposed = true;
+    this.postfx?.composer.dispose();
     if (!this.headless) {
       cancelAnimationFrame(this.frameId);
       clearTimeout(this.frameId);

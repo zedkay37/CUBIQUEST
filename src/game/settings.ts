@@ -6,11 +6,15 @@ import { withSaveSlot } from './saveSlot';
  */
 export interface GameSettings {
   screenShake: boolean;
+  /** G1.2 : qualité graphique ; « auto » descend d'un cran sous 45 images/s tenues 3 s. */
+  quality: 'auto' | 'low' | 'medium' | 'high';
 }
+
+export const QUALITY_ORDER: GameSettings['quality'][] = ['auto', 'high', 'medium', 'low'];
 
 export const SETTINGS_STORAGE_KEY = withSaveSlot('cubiquest_settings_v1');
 
-export const DEFAULT_SETTINGS: GameSettings = { screenShake: true };
+export const DEFAULT_SETTINGS: GameSettings = { screenShake: true, quality: 'auto' };
 
 /** Normalise n'importe quelle valeur lue en options valides (pure, testable). */
 export function normalizeSettings(raw: unknown): GameSettings {
@@ -18,6 +22,7 @@ export function normalizeSettings(raw: unknown): GameSettings {
   const obj = raw as Partial<GameSettings>;
   return {
     screenShake: typeof obj.screenShake === 'boolean' ? obj.screenShake : DEFAULT_SETTINGS.screenShake,
+    quality: QUALITY_ORDER.includes(obj.quality as GameSettings['quality']) ? (obj.quality as GameSettings['quality']) : DEFAULT_SETTINGS.quality,
   };
 }
 

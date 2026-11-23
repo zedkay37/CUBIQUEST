@@ -658,6 +658,8 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
     legs.push(legL, legR);
   }
 
+  bakeBlockAo(bodyPivot);
+
   const finalScale = scaleOverride ?? species.scale;
   root.scale.setScalar(finalScale);
 
@@ -670,6 +672,43 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number): V
     baseEmissives,
     species,
   };
+}
+
+/**
+ * G1.2 : occlusion ambiante « par bloc », calculée une fois à la construction (aucun coût par image).
+ * Chaque sommet est assombri selon le nombre de blocs voisins qui le recouvrent presque, et un peu plus
+ * près du sol. Pas de tirage aléatoire ni d'objet three.js créé : la simulation (golden) n'est pas touchée.
+ */
+const AO_PER_NEIGHBOR = 0.13;
+const AO_MIN = 0.62;
+const _aoPoint = new THREE.Vector3();
+function bakeBlockAo(pivot: THREE.Object3D): void {
+  pivot.updateMatrixWorld(true);
+  const meshes: THREE.Mesh[] = [];
+  pivot.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).geometry instanceof THREE.BoxGeometry) meshes.push(o as THREE.Mesh);
+  });
+  const boxes = meshes.map((m) => {
+    m.geometry.computeBoundingBox();
+    return m.geometry.boundingBox!.clone().applyMatrix4(m.matrixWorld).expandByScalar(0.05);
+  });
+  meshes.forEach((mesh, i) => {
+    const pos = mesh.geometry.getAttribute('position');
+    const colors = new Float32Array(pos.count * 3);
+    for (let v = 0; v < pos.count; v++) {
+      _aoPoint.fromBufferAttribute(pos, v).applyMatrix4(mesh.matrixWorld);
+      let n = 0;
+      for (let j = 0; j < boxes.length; j++) if (j !== i && boxes[j].containsPoint(_aoPoint)) n++;
+      const ground = _aoPoint.y < 0.25 ? 0.9 : 1;
+      const shade = Math.max(AO_MIN, (1 - n * AO_PER_NEIGHBOR) * ground);
+      colors[v * 3] = shade;
+      colors[v * 3 + 1] = shade;
+      colors[v * 3 + 2] = shade;
+    }
+    mesh.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const mat = mesh.material as THREE.MeshStandardMaterial;
+    mat.vertexColors = true;
+  });
 }
 
 /**

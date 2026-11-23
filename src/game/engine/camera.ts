@@ -9,6 +9,7 @@ import { TELEGRAPH_KIT } from '../balance';
 const CAMERA_FRAME_REACH = 11;
 import { _vecA, _vecB, _vecC, EVO_X, EVO_Z } from './constants';
 import type { VoxelEngine } from '../VoxelEngine';
+import { resizePostFx } from './postfx';
 
 /**
  * Champ de vision vertical : 42° en paysage (inchangé). En portrait, on l'ouvre progressivement
@@ -27,6 +28,7 @@ export function handleResize(self: VoxelEngine): void {
   self.camera.fov = fovForAspect(w / h);
   self.camera.updateProjectionMatrix();
   self.renderer.setSize(w, h);
+  resizePostFx(self, w, h);
   self.renderer.render(self.scene, self.camera);
 }
 

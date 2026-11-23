@@ -4,6 +4,7 @@
  */
 import { updateStormAmbience, updateWeather } from './atmosphere';
 import { updateCamera } from './camera';
+import { renderFrame } from './postfx';
 import { updateCubeVisuals } from './cubeFx';
 import { updateCamp } from './camp';
 import { updateExpedition } from './expedition';
@@ -58,7 +59,7 @@ export function tick(self: VoxelEngine): void {
   const rawDt = Math.max(0.001, (now - self.lastTimeMs) / 1000);
   self.lastTimeMs = now;
   advance(self, Math.min(rawDt, 0.05));
-  self.renderer?.render(self.scene, self.camera);
+  renderFrame(self, rawDt);
   // mesures lues par l'overlay `?debug=1`
   self.frameCount += 1;
   self.lastFrameMs = performance.now() - now;

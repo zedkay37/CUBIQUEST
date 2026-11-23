@@ -29,6 +29,9 @@ interface CampHudProps {
   muted: boolean;
   screenShake: boolean;
   onToggleShake: () => void;
+  /** G1.2 : qualité graphique (cycle Auto → Haut → Moyen → Bas). */
+  quality?: 'auto' | 'low' | 'medium' | 'high';
+  onCycleQuality?: () => void;
   onSelectDrawer: (tab: CampDrawerTab) => void;
   onToggleCollapse: () => void;
   onToggleMute: () => void;
@@ -47,6 +50,8 @@ export function CampHud({
   muted,
   screenShake,
   onToggleShake,
+  quality,
+  onCycleQuality,
   onSelectDrawer,
   onToggleCollapse,
   onToggleMute,
@@ -105,6 +110,21 @@ export function CampHud({
         </div>
 
         <div className="flex items-center gap-2 pointer-events-auto">
+          {quality && onCycleQuality && (
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                onCycleQuality();
+              }}
+              className="voxel-btn cursor-pointer h-10 px-2.5 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[11px] font-bold text-[#FAF7F0] border-2 border-[#39445A]"
+              aria-label={FR.ui.campHud.qualiteAria(FR.ui.campHud.qualites[quality])}
+              title={FR.ui.campHud.qualiteAria(FR.ui.campHud.qualites[quality])}
+            >
+              {FR.ui.campHud.qualiteCourt(FR.ui.campHud.qualites[quality])}
+            </button>
+          )}
           <button
             type="button"
             tabIndex={-1}

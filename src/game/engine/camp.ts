@@ -18,6 +18,7 @@ import { clearEvoRing, updateEvolution } from './evolution';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst, spawnSteamCube } from './fx';
 import type { VoxelEngine } from '../VoxelEngine';
 import { resetLessonState } from './lessons';
+import { setGrade } from './postfx';
 
 export function clearGroup(self: VoxelEngine, group: THREE.Group): void {
   while (group.children.length > 0) {
@@ -60,6 +61,7 @@ export function loadCampScene(
   self.campWanderers = [];
   self.evo = null; // le rig d'évolution vient d'être libéré avec actorsGroup
   resetLessonState(self);
+  setGrade(self, 'camp');
   clearEvoRing(self);
   self.bossIntroTimer = 0;
   self.bossIntroActor = null;

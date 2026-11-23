@@ -71,6 +71,9 @@ export const FR = {
     campHud: {
       /** Bouton unique du camp tant que l'équipe n'est pas ouverte (S07.3). */
       partir: 'Partir',
+      qualites: { auto: 'Auto', high: 'Haut', medium: 'Moyen', low: 'Bas' },
+      qualiteCourt: (a: string | number) => `Graphismes : ${a}`,
+      qualiteAria: (a: string | number) => `Qualité graphique : ${a} (cliquer pour changer)`,
       /** Phrases des ouvertures (S07.3). */
       nouveautes: {
         quests: 'Nouveau : les quêtes et les options (journal de test) sont ouvertes.',
