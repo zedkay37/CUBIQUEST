@@ -129,6 +129,11 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const rnd = seeded(isCamp ? 7 : 3);
   const flat = isCamp ? 10 : 14.5;
   const time = { value: 0 };
+  /**
+   * ART2 : au camp, tout ce qui est haut (arbres, buissons, rochers) et les touffes passent du côté opposé à
+   * la caméra (z négatif) : le bas et les côtés de l'écran restent dégagés. En combat, rien ne change.
+   */
+  const backSector = (a: number) => (isCamp && Math.sin(a) > 0.15 ? -a : a);
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
 
@@ -142,7 +147,9 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
       if (r < flat + 0.5 || r > arenaRadius - 0.5) continue;
       const rise = Math.min(1, (r - flat) / 6);
       const h = Math.max(0, Math.round((hill(x, z) * 0.9 + 1.4) * rise * 2) / 2); // terrasses de 0,5
-      if (h > 0) cells.push({ x, z, h });
+      // ART2 : au camp, le premier plan (vers la caméra) reste bas et dégagé
+      const hh = isCamp && z > 6 ? Math.min(h, 0.5) : h;
+      if (hh > 0) cells.push({ x, z, h: hh });
     }
   const terrain = new THREE.InstancedMesh(new THREE.BoxGeometry(step, 1, step), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), cells.length);
   cells.forEach((c, i) => {
@@ -160,16 +167,23 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const heightAt = (x: number, z: number) => cells.find((c) => Math.abs(c.x - x) <= step / 2 && Math.abs(c.z - z) <= step / 2)?.h ?? 0;
 
   // --- touffes d'herbe et fleurs (instanciées, ondulent au vent)
-  const grassCount = low ? 0 : 480;
+  // ART2 : 40 % d'herbe en moins, en touffes (7 brins) plutôt que semée partout
+  const grassCount = low ? 0 : 287;
   const grassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
   if (!low) addSway(grassMat, time, 0.16);
   const grass = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.4, 0.12), grassMat, grassCount);
+  let tuftX = 0;
+  let tuftZ = 0;
   for (let i = 0; i < grassCount; i++) {
-    // plus dense vers les bords : l'arène reste lisible
-    const a = rnd() * Math.PI * 2;
-    const r = flat * 0.55 + Math.sqrt(rnd()) * (arenaRadius - 1 - flat * 0.55);
-    const x = Math.cos(a) * r;
-    const z = Math.sin(a) * r;
+    // une nouvelle touffe tous les 7 brins, plus dense vers les bords : l'arène reste lisible
+    if (i % 7 === 0) {
+      const a = backSector(rnd() * Math.PI * 2);
+      const r = flat * 0.55 + Math.sqrt(rnd()) * (arenaRadius - 1 - flat * 0.55);
+      tuftX = Math.cos(a) * r;
+      tuftZ = Math.sin(a) * r;
+    }
+    const x = tuftX + (rnd() - 0.5) * 0.9;
+    const z = tuftZ + (rnd() - 0.5) * 0.9;
     const s = 0.6 + rnd() * 0.9;
     dummy.position.set(x, heightAt(x, z) + 0.2 * s, z);
     dummy.scale.set(1, s, 1);
@@ -181,15 +195,21 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   }
   env.add(grass);
 
-  const flowerCount = low ? 0 : 110;
+  const flowerCount = low ? 0 : 66; // ART2 : 40 % de moins, par petits bouquets de trois
   const flowerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, emissive: new THREE.Color('#222222') });
   if (!low) addSway(flowerMat, time, 0.1);
   const flowers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), flowerMat, flowerCount);
+  let bunchX = 0;
+  let bunchZ = 0;
   for (let i = 0; i < flowerCount; i++) {
-    const a = rnd() * Math.PI * 2;
-    const r = flat - 1 + rnd() * (arenaRadius - flat);
-    const x = Math.cos(a) * r;
-    const z = Math.sin(a) * r;
+    if (i % 3 === 0) {
+      const a = backSector(rnd() * Math.PI * 2);
+      const r = flat - 1 + rnd() * (arenaRadius - flat);
+      bunchX = Math.cos(a) * r;
+      bunchZ = Math.sin(a) * r;
+    }
+    const x = bunchX + (rnd() - 0.5) * 0.6;
+    const z = bunchZ + (rnd() - 0.5) * 0.6;
     dummy.position.set(x, heightAt(x, z) + 0.14, z);
     dummy.scale.set(1, 1, 1);
     dummy.rotation.set(0, rnd(), 0);
@@ -221,7 +241,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const treePhase: { phase: number; period: number }[] = [];
   let li = 0;
   for (let i = 0; i < treeCount; i++) {
-    const a = (i / treeCount) * Math.PI * 2 + rnd() * 0.2;
+    const a = backSector((i / treeCount) * Math.PI * 2 + rnd() * 0.2);
     const r = flat + 3 + rnd() * (arenaRadius - flat - 4);
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
@@ -255,7 +275,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const bushCount = low ? 6 : 26;
   const bushes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), leafMat, bushCount * 2); // statiques
   for (let i = 0; i < bushCount; i++) {
-    const a = rnd() * Math.PI * 2;
+    const a = backSector(rnd() * Math.PI * 2);
     const r = flat - 1 + rnd() * 6;
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
@@ -276,7 +296,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const rockMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
   const rocks = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.7, 0.9), rockMat, rockCount * 2);
   for (let i = 0; i < rockCount; i++) {
-    const a = rnd() * Math.PI * 2;
+    const a = backSector(rnd() * Math.PI * 2);
     const r = flat - 1.5 + rnd() * (arenaRadius - flat);
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;

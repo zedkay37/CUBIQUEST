@@ -98,7 +98,7 @@ export function loadCampScene(
   self.hubPlaces = [];
   self.hubHover = null;
   const signpost = buildSignpost();
-  signpost.position.set(-5.2, 0, 2.2);
+  signpost.position.set(-3.4, 0, 3.0); // ART2 : visible aussi en 390 × 844
   signpost.rotation.y = 0.5;
   self.worldGroup.add(signpost);
   const library = buildLibrary();
