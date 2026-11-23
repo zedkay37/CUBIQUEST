@@ -103,3 +103,28 @@ test('Cube Scellé: inventaire de 50 au plus, identifiants uniques', () => {
   assert.equal(save.sealedCubes.length, 50);
   assert.equal(new Set(save.sealedCubes.map((c) => c.id)).size, 50);
 });
+
+test('Équipe (A2): une lignée n’apparaît qu’une fois dans l’escouade', async () => {
+  const { toggleSquadMember } = await import('./rules');
+  const base = createInitialSaveState('braise', true);
+  // une ancienne sauvegarde avec deux créatures de la lignée Pyrocube
+  const extra = createOwnedCreature('flambrix', 10, 0, 'dup');
+  let save: SaveState = { ...base, roster: [...base.roster, extra], squadIds: base.squadIds.slice(1) };
+  assert.equal(save.squadIds.length, 2);
+  // Flambrix est de la lignée Pyrocube : il peut entrer tant que Pyrocube n'y est pas
+  save = toggleSquadMember(save, 'dup');
+  assert.ok(save.squadIds.includes('dup'));
+  save = toggleSquadMember(save, 'dup');
+  const pyro = base.roster[0].uid;
+  save = toggleSquadMember(save, pyro);
+  assert.ok(save.squadIds.includes(pyro));
+  const after = toggleSquadMember(save, 'dup');
+  assert.equal(after, save); // refusé (escouade pleine)
+  const twoLeft = toggleSquadMember(save, base.roster[2].uid);
+  assert.equal(twoLeft.squadIds.length, 2);
+  assert.equal(toggleSquadMember(twoLeft, 'dup'), twoLeft); // refusé : la lignée Pyrocube y est déjà
+  // jamais moins d'un membre
+  let one: SaveState = { ...base, squadIds: [pyro] };
+  one = toggleSquadMember(one, pyro);
+  assert.deepEqual(one.squadIds, [pyro]);
+});

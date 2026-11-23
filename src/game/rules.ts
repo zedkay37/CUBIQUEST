@@ -380,6 +380,26 @@ export function computeCreatureStats(
   };
 }
 
+/**
+ * Ajoute ou retire une créature de l'escouade (1 à 3 membres). A2 : une lignée n'y figure qu'une fois
+ * (une ancienne sauvegarde peut posséder deux créatures de la même lignée ; une seule part au combat).
+ */
+export function toggleSquadMember(save: SaveState, uid: string): SaveState {
+  if (save.squadIds.includes(uid)) {
+    if (save.squadIds.length <= 1) return save;
+    return { ...save, squadIds: save.squadIds.filter((id) => id !== uid) };
+  }
+  const creature = save.roster.find((c) => c.uid === uid);
+  if (!creature || save.squadIds.length >= 3) return save;
+  const line = lineageOf(creature.speciesId);
+  const taken = save.squadIds.some((id) => {
+    const c = save.roster.find((x) => x.uid === id);
+    return c && lineageOf(c.speciesId) === line;
+  });
+  if (taken) return save;
+  return { ...save, squadIds: [...save.squadIds, uid] };
+}
+
 export function computeSquadPower(save: SaveState): number {
   let total = 0;
   for (const uid of save.squadIds) {

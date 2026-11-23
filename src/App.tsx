@@ -35,6 +35,7 @@ import {
   markUnlockSeen,
   lineageOf,
   openSealedCube,
+  toggleSquadMember,
   unlockedFeatures,
   buildPreviewSave,
   claimAchievementReward,
@@ -561,16 +562,9 @@ export default function App() {
   const handleToggleSquadMember = (uid: string) => {
     soundFx.playUiClick();
     setSave((prev) => {
-      const exists = prev.squadIds.includes(uid);
-      let nextSquad: string[];
-      if (exists) {
-        if (prev.squadIds.length <= 1) return prev; // Keep at least 1 active
-        nextSquad = prev.squadIds.filter((id) => id !== uid);
-      } else {
-        if (prev.squadIds.length >= 3) return prev;
-        nextSquad = [...prev.squadIds, uid];
-      }
-      const nextSave = { ...prev, squadIds: nextSquad };
+      // A2 : règle pure (1 à 3 membres, une lignée une seule fois)
+      const nextSave = toggleSquadMember(prev, uid);
+      if (nextSave === prev) return prev;
       if (playMode === 'camp') {
         engineRef.current?.loadCampScene(getSquadCreatures(nextSave));
       }
