@@ -74,6 +74,17 @@ $screens = [ordered]@{
   'art-magmadrake' = '?gallery=art&species=magmadrake'
   'art-silhouettes' = '?gallery=art&species=pyrocube&silhouette=1'
   'art-vox'        = '?gallery=art&species=voltik&vox=exemple'
+  'styles-vitrine' = '?gallery=styles'
+  'styles-jeu'     = '?gallery=styles&view=jeu'
+  'styles-jeu-nuit' = '?gallery=styles&view=jeu&nuit=1'
+  'styles-vitrine-nuit' = '?gallery=styles&nuit=1'
+  'styles-tons-aucun' = '?gallery=styles&view=jeu&compare=C&tone=aucun'
+  'styles-tons-neutre' = '?gallery=styles&view=jeu&compare=C&tone=neutre'
+  'styles-tons-actuel' = '?gallery=styles&view=jeu&compare=C'
+  'styles-saturation' = '?gallery=styles&view=jeu&compare=C&sat=1'
+  'styles-aa' = '?gallery=styles&view=jeu&compare=C&aa=2'
+  'styles-camera-proche' = '?gallery=styles&view=jeu&compare=C&cam=proche'
+  'styles-comparer-e' = '?gallery=styles&compare=E'
   'mesure-prairie-low' = '?stage=meadow-2&debug=1&quality=low'
   'mesure-prairie-medium' = '?stage=meadow-2&debug=1&quality=medium'
   'mesure-prairie-high' = '?stage=meadow-2&debug=1&quality=high'
@@ -89,7 +100,7 @@ $screens = [ordered]@{
   'mesure-medium' = '?stage=volcano-2&debug=1&quality=medium'
   'mesure-low' = '?stage=volcano-2&debug=1&quality=low'
 }
-$sizes = @{ 'bureau' = '1280,720'; 'mobile' = '360,640'; 'telephone' = '390,844' }
+$sizes = @{ 'bureau' = '1280,720'; 'mobile' = '360,640'; 'telephone' = '390,844'; 'grand' = '1280,1180' }
 if ($Formats) { $keep = $Formats -split ','; foreach ($k in @($sizes.Keys)) { if (-not ($keep -contains $k)) { $sizes.Remove($k) } } }
 New-Item -ItemType Directory -Force (Join-Path $root $Out) | Out-Null
 try {

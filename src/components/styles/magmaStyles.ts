@@ -348,7 +348,7 @@ let toonGradient: THREE.DataTexture | null = null;
 /** Trois niveaux d'ombre francs (ombre, demi-teinte, lumière). */
 function getToonGradient(): THREE.DataTexture {
   if (toonGradient) return toonGradient;
-  const data = new Uint8Array([70, 70, 70, 255, 160, 160, 160, 255, 255, 255, 255, 255]);
+  const data = new Uint8Array([110, 110, 110, 255, 190, 190, 190, 255, 255, 255, 255, 255]);
   toonGradient = new THREE.DataTexture(data, 3, 1, THREE.RGBAFormat);
   toonGradient.minFilter = THREE.NearestFilter;
   toonGradient.magFilter = THREE.NearestFilter;

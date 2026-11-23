@@ -19,6 +19,8 @@ import { parse } from '@babel/parser';
 const EXCEPTIONS: Record<string, string> = {
   'src/components/GalleryPage.tsx': 'outil de développement (?gallery=1), jamais vu par le joueur',
   'src/components/ArtGallery.tsx': 'outil de développement (?gallery=art), jamais montré aux joueurs',
+  'src/components/StylesGallery.tsx': 'outil de développement (?gallery=styles, sprint STYLES), jamais vu par les joueurs',
+  'src/components/styles/magmaStyles.ts': 'outil de développement (?gallery=styles, sprint STYLES), jamais vu par les joueurs',
   'src/components/RevealGallery.tsx': 'outil de développement (?gallery=reveal), jamais montré aux joueurs',
   'src/components/BenchOverlay.tsx': 'outil de développement (?bench=1), jamais montré aux joueurs',
   'src/components/DebugOverlay.tsx': 'outil de développement (?debug=1), jamais vu par le joueur',

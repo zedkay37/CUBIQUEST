@@ -48,6 +48,9 @@ export function ArtGallery() {
       <div className="mx-auto max-w-5xl">
         <p className="text-xs font-bold uppercase tracking-wider text-[#F4B942]">Outil de développement</p>
         <h1 className="font-display text-3xl font-bold">Créatures refaites : Avant ART, ART 1, ART 2, ART 3</h1>
+        <a className="mt-1 inline-block text-sm text-[#F4B942] underline" href="?gallery=styles">
+          Magmadrake en six styles (exploration) →
+        </a>
         <div className="mt-4 flex flex-wrap gap-2">
           {ids.map((id) => (
             <button

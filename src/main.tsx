@@ -18,6 +18,9 @@ const isUiGallery = galleryParam === 'ui';
 const isRevealGallery = galleryParam === 'reveal';
 // `?gallery=art` : créatures refaites, avant / après (sprint Art)
 const isArtGallery = galleryParam === 'art';
+// `?gallery=styles` : Magmadrake en six styles (sprint STYLES, exploration)
+const isStylesGallery = galleryParam === 'styles';
+const StylesGallery = lazy(() => import('./components/StylesGallery.tsx').then((module) => ({default: module.StylesGallery})));
 const ArtGallery = lazy(() => import('./components/ArtGallery.tsx').then((module) => ({default: module.ArtGallery})));
 const RevealGallery = lazy(() => import('./components/RevealGallery.tsx').then((module) => ({default: module.RevealGallery})));
 const UiGallery = lazy(() => import('./components/ui/UiGallery.tsx').then((module) => ({default: module.UiGallery})));
@@ -64,7 +67,11 @@ const voxReady = Promise.all(
 );
 
 voxReady.then(() => createRoot(document.getElementById('root')!).render(
-  isArtGallery ? (
+  isStylesGallery ? (
+    <Suspense fallback={null}>
+      <StylesGallery />
+    </Suspense>
+  ) : isArtGallery ? (
     <Suspense fallback={null}>
       <ArtGallery />
     </Suspense>
