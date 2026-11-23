@@ -133,7 +133,7 @@ export const ULTIMATE_CHARGE = {
   trio: CUBE_KIT.trioUltBonus,
   support: 3,
   /** S05 : 14 -> 12 (DODGE_KIT.perfectUlt). */
-  perfectDodge: 12,
+  perfectDodge: 8, // S06 : 12 -> 8 (DODGE_KIT.perfectUlt)
   /** Secondes sans aucune charge après un Déchaînement. */
   lockAfterUltimate: 2,
 };
@@ -146,10 +146,10 @@ export const ULTIMATE_CHARGE = {
 export const DODGE_KIT = {
   cooldown: 4,
   invuln: 0.5,
-  perfectWindow: 0.35,
+  perfectWindow: 0.25, // S06 (retour du propriétaire) : 0,35 -> 0,25
   /** Part de la recharge rendue après une esquive parfaite. */
-  perfectRefund: 0.5,
-  perfectUlt: 12,
+  perfectRefund: 0, // S06 : plus aucune recharge rendue (avant 0,5)
+  perfectUlt: 8, // S06 : 12 -> 8
   /** Ralenti d'une esquive parfaite. */
   perfectSlowMo: 0.2,
   perfectSlowMoScale: 0.5,
