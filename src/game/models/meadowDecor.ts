@@ -336,20 +336,21 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   // blocs pâles qui flottaient au-dessus des arbres (biomes.ts ne les crée plus pour la Prairie du sprint Art)
   const hillCount = 12;
   const hillMat = new THREE.MeshStandardMaterial({ color: '#A6C8B8', roughness: 1 });
-  const hills = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), hillMat, hillCount * 2);
+  const tiers = low ? 1 : 2; // qualité Basse : un seul étage (budget de triangles d'ART 2)
+  const hills = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), hillMat, hillCount * tiers);
   for (let i = 0; i < hillCount; i++) {
     const a = (i / hillCount) * Math.PI * 2 + 0.3;
     const d = arenaRadius + 30 + (i % 3) * 10;
     const w = 18 + (i % 4) * 5;
     const h = 1.8 + (i % 3) * 1.2; // basses : des collines au ras de l'horizon, pas des blocs qui flottent
-    for (let k = 0; k < 2; k++) {
+    for (let k = 0; k < tiers; k++) {
       dummy.position.set(Math.cos(a) * d, -2 + (k ? h + h * 0.25 : h / 2), Math.sin(a) * d);
       dummy.scale.set(k ? w * 0.5 : w, k ? h * 0.5 : h, k ? w * 0.4 : w * 0.7);
       dummy.rotation.set(0, -a, 0);
       dummy.updateMatrix();
-      hills.setMatrixAt(i * 2 + k, dummy.matrix);
+      hills.setMatrixAt(i * tiers + k, dummy.matrix);
       color.set('#A6C8B8').offsetHSL(0, 0, k ? 0.03 : 0);
-      hills.setColorAt(i * 2 + k, color);
+      hills.setColorAt(i * tiers + k, color);
     }
   }
   env.add(hills);
