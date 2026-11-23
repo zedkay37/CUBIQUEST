@@ -22,12 +22,12 @@ export const STYLE_LIST: { id: StyleId; name: string; note: string }[] = [
   { id: 'F', name: 'Toon', note: 'Comme C, trois niveaux d’ombre francs et contour noir épais.' },
 ];
 
-const SPECIES_ID = 'magmadrake';
+export const SPECIES_ID = 'magmadrake';
 const species = SPECIES[SPECIES_ID];
 /** Même échelle que le jeu (`buildSculptCreature` : échelle de l'espèce × 1,18). */
-const GAME_SCALE = species.scale * 1.18;
+export const GAME_SCALE = species.scale * 1.18;
 
-const PALETTE: SculptPalette = {
+export const PALETTE: SculptPalette = {
   primary: species.palette.primary,
   secondary: species.palette.secondary,
   belly: species.palette.belly,
@@ -36,15 +36,35 @@ const PALETTE: SculptPalette = {
   white: '#FFFFFF',
   dark: '#1B1D24',
 };
-const GLOW = 0.25 * 1.35; // lueur de la Roche dans ART 3
+export const GLOW = 0.25 * 1.35; // lueur de la Roche dans ART 3
 
 /** Une variante construite : l'objet à poser, et la façon de régler sa lueur de nuit. */
 export interface StyledModel {
   root: THREE.Group;
   setNight: (night: number) => void;
+  /** STYLES2 : réglage de la lumière de la scène le temps de dessiner cette case (puis remis par `after`). */
+  before?: (ctx: LightContext) => void;
+  after?: (ctx: LightContext) => void;
+  /** STYLES2 : passe d'image propre à la variante (pixels, crayon, aquarelle…) appliquée à toute la case. */
+  post?: PostPass;
 }
 
-function shadowDisc(): THREE.Mesh {
+export interface LightContext {
+  scene: THREE.Scene;
+  hemi: THREE.HemisphereLight;
+  key: THREE.DirectionalLight;
+  rim: THREE.DirectionalLight;
+}
+
+/** Une passe d'image : la case est d'abord dessinée dans une texture (à `scale` de sa taille), puis ce shader. */
+export interface PostPass {
+  fragment: string;
+  scale?: number;
+  /** Filtre « au plus proche » (pixels nets) au lieu du lissage. */
+  nearest?: boolean;
+}
+
+export function shadowDisc(): THREE.Mesh {
   const disc = new THREE.Mesh(
     new THREE.CircleGeometry(0.6, 20),
     new THREE.MeshBasicMaterial({ map: getCrispShadowTexture(), transparent: true, depthWrite: false, opacity: 0.8 }),
@@ -55,12 +75,12 @@ function shadowDisc(): THREE.Mesh {
 }
 
 /** Les matériaux lumineux suivent la nuit (même loi qu'ART 3 : jusqu'à 2,4 fois la nuit). */
-function glowController(mats: THREE.MeshStandardMaterial[]): (night: number) => void {
+export function glowController(mats: THREE.MeshStandardMaterial[]): (night: number) => void {
   const base = mats.map((m) => m.emissiveIntensity);
   return (night) => mats.forEach((m, i) => (m.emissiveIntensity = base[i] * (1 + 1.4 * night)));
 }
 
-function wrap(content: THREE.Object3D, glowMats: THREE.MeshStandardMaterial[]): StyledModel {
+export function wrap(content: THREE.Object3D, glowMats: THREE.MeshStandardMaterial[]): StyledModel {
   const root = new THREE.Group();
   content.scale.setScalar(GAME_SCALE);
   root.add(content);
@@ -120,8 +140,8 @@ function styleB(): StyledModel {
 // ---------------------------------------------------------------- C : voxel moyen cohérent
 
 /** 22 blocs de haut environ : une seule taille de bloc, et les blocs isolés (micro-détails) retirés. */
-const MID_RES = 12;
-function midVoxels(): Voxel[] {
+export const MID_RES = 12;
+export function midVoxels(): Voxel[] {
   const def = SCULPT_DEFS[SPECIES_ID];
   let vox = voxelize(def, MID_RES);
   const key = (x: number, y: number, z: number) => `${x},${y},${z}`;
@@ -148,11 +168,11 @@ function styleC(): StyledModel {
 
 // ---------------------------------------------------------------- D : voxel biseauté
 
-function colorOf(v: Voxel): string {
+export function colorOf(v: Voxel): string {
   return PALETTE[v.color as ColorKey] ?? PALETTE.primary;
 }
 
-function exposed(vox: Voxel[]): Voxel[] {
+export function exposed(vox: Voxel[]): Voxel[] {
   const key = (x: number, y: number, z: number) => `${x},${y},${z}`;
   const set = new Set(vox.map((v) => key(v.x, v.y, v.z)));
   return vox.filter((v) => [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => !set.has(key(v.x + dx, v.y + dy, v.z + dz))));
@@ -186,7 +206,7 @@ function styleD(): StyledModel {
 
 // ---------------------------------------------------------------- E et F : peau d'un seul tenant
 
-interface Skin {
+export interface Skin {
   /** Positions et couleurs par face (4 coins), normales calculées plus tard. */
   corners: number[][];
   colors: THREE.Color[];
@@ -194,7 +214,7 @@ interface Skin {
 }
 
 /** Toutes les faces visibles du modèle, d'un seul tenant (aucune face interne entre les pièces). */
-function buildSkin(vox: Voxel[], res: number): Skin {
+export function buildSkin(vox: Voxel[], res: number): Skin {
   const key = (x: number, y: number, z: number) => `${x},${y},${z}`;
   const set = new Set(vox.map((v) => key(v.x, v.y, v.z)));
   const skin: Skin = { corners: [], colors: [], glow: [] };
@@ -227,7 +247,7 @@ function buildSkin(vox: Voxel[], res: number): Skin {
 }
 
 /** Sommets partagés (même position) → numéro unique ; sert au lissage et aux normales moyennes. */
-function sharedIndex(corners: number[][]): { index: number[]; unique: number[][] } {
+export function sharedIndex(corners: number[][]): { index: number[]; unique: number[][] } {
   const map = new Map<string, number>();
   const unique: number[][] = [];
   const index = corners.map((p) => {
@@ -244,7 +264,7 @@ function sharedIndex(corners: number[][]): { index: number[]; unique: number[][]
 }
 
 /** Lissage de Taubin (rétrécit peu) : arrondit les marches sans fondre les volumes. */
-function smooth(unique: number[][], index: number[], passes: number): void {
+export function smooth(unique: number[][], index: number[], passes: number): void {
   const nb: Set<number>[] = unique.map(() => new Set());
   for (let f = 0; f < index.length; f += 4)
     for (let k = 0; k < 4; k++) {
@@ -267,7 +287,7 @@ function smooth(unique: number[][], index: number[], passes: number): void {
   }
 }
 
-function vertexNormals(unique: number[][], index: number[]): THREE.Vector3[] {
+export function vertexNormals(unique: number[][], index: number[]): THREE.Vector3[] {
   const normals = unique.map(() => new THREE.Vector3());
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
@@ -284,7 +304,7 @@ function vertexNormals(unique: number[][], index: number[]): THREE.Vector3[] {
   return normals.map((n) => n.normalize());
 }
 
-function skinGeometry(skin: Skin, positions: number[][], normals: THREE.Vector3[] | null, index: number[]): THREE.BufferGeometry {
+export function skinGeometry(skin: Skin, positions: number[][], normals: THREE.Vector3[] | null, index: number[]): THREE.BufferGeometry {
   const pos: number[] = [];
   const nor: number[] = [];
   const col: number[] = [];
@@ -312,7 +332,7 @@ function skinGeometry(skin: Skin, positions: number[][], normals: THREE.Vector3[
 }
 
 /** La lave luit dans sa propre couleur (attribut par sommet), comme les bobines d'ART 3. */
-function addSkinGlow(mat: THREE.MeshStandardMaterial | THREE.MeshToonMaterial, strength: { value: number }): void {
+export function addSkinGlow(mat: THREE.MeshStandardMaterial | THREE.MeshToonMaterial, strength: { value: number }): void {
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uSkinGlow = strength;
     shader.vertexShader = 'attribute float aGlow;\nvarying float vGlow;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vGlow = aGlow;');
@@ -322,7 +342,7 @@ function addSkinGlow(mat: THREE.MeshStandardMaterial | THREE.MeshToonMaterial, s
   };
 }
 
-function nightUniform(base: number): { uniform: { value: number }; set: (night: number) => void } {
+export function nightUniform(base: number): { uniform: { value: number }; set: (night: number) => void } {
   const uniform = { value: base };
   return { uniform, set: (night) => (uniform.value = base * (1 + 1.4 * night)) };
 }
@@ -346,7 +366,7 @@ function styleE(): StyledModel {
 
 let toonGradient: THREE.DataTexture | null = null;
 /** Trois niveaux d'ombre francs (ombre, demi-teinte, lumière). */
-function getToonGradient(): THREE.DataTexture {
+export function getToonGradient(): THREE.DataTexture {
   if (toonGradient) return toonGradient;
   const data = new Uint8Array([110, 110, 110, 255, 190, 190, 190, 255, 255, 255, 255, 255]);
   toonGradient = new THREE.DataTexture(data, 3, 1, THREE.RGBAFormat);
