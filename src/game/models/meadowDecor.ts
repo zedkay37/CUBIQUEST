@@ -42,6 +42,7 @@ export function setDecorDetail(level: 'low' | 'high'): void {
 /** 0 le jour, 1 la nuit (fourni par le cycle du camp) : papillons ou lucioles. */
 export function setDecorNight(n: number): void {
   nightFactor = n;
+  crystalNight.value = n; // ART3 : veines de cristal des falaises
 }
 
 function seeded(seed: number): () => number {
@@ -68,12 +69,14 @@ export function buildMeadowGroundTexture(): THREE.CanvasTexture {
   const rnd = seeded(11);
   ctx.fillStyle = '#5DB04A';
   ctx.fillRect(0, 0, size, size);
-  // touches d'herbe plus claires et plus sombres (pixels voxel)
-  for (let i = 0; i < 2600; i++) {
-    const shade = ['#6CC052', '#54A243', '#78C95C', '#4E983F'][Math.floor(rnd() * 4)];
-    ctx.fillStyle = shade;
-    const s = 4 + Math.floor(rnd() * 3) * 4;
-    ctx.fillRect(Math.floor(rnd() * size / 4) * 4, Math.floor(rnd() * size / 4) * 4, s, s);
+  // ART3 : grands aplats de deux verts voisins (plus de damier de petits carrés), bords en marches de 8 pixels
+  for (let i = 0; i < 9; i++) {
+    ctx.fillStyle = i % 2 ? '#66B851' : '#55A545';
+    const cx = rnd() * size;
+    const cy = rnd() * size;
+    const rad = 50 + rnd() * 60;
+    for (let y = -rad; y <= rad; y += 8)
+      for (let x = -rad; x <= rad; x += 8) if (x * x + y * y <= rad * rad) ctx.fillRect(Math.floor((cx + x) / 8) * 8, Math.floor((cy + y) / 8) * 8, 8, 8);
   }
   // chemins de terre
   ctx.strokeStyle = '#B08A5A';
@@ -100,6 +103,51 @@ export function buildMeadowGroundTexture(): THREE.CanvasTexture {
   tex.minFilter = THREE.NearestFilter;
   tex.userData.ownedByScene = true;
   return tex;
+}
+
+/** ART3 : lueur des veines de cristal (0 le jour, 1 la nuit), partagée par toutes les falaises. */
+const crystalNight = { value: 0 };
+
+/**
+ * ART3 : falaises en couches. Le dessus des colonnes garde sa couleur (vert) ; les flancs prennent des bandes de
+ * terre et de pierre selon la hauteur, sous une lèvre d'herbe ; quelques blocs de flanc sont des veines de cristal
+ * qui luisent doucement la nuit. Tout se passe dans le shader : aucun objet ni appel de dessin en plus.
+ */
+function addCliffBands(mat: THREE.MeshStandardMaterial): void {
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uCrystalNight = crystalNight;
+    shader.vertexShader =
+      'varying vec3 vCliffPos;\nvarying float vCliffUp;\nvarying float vCliffTop;\n' +
+      shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+  vec4 cliffW = modelMatrix * instanceMatrix * vec4(position, 1.0);
+  vCliffPos = cliffW.xyz;
+  vCliffUp = normal.y;
+  vCliffTop = (modelMatrix * instanceMatrix * vec4(0.0, 0.5, 0.0, 1.0)).y;`,
+      );
+    shader.fragmentShader =
+      'uniform float uCrystalNight;\nvarying vec3 vCliffPos;\nvarying float vCliffUp;\nvarying float vCliffTop;\n' +
+      shader.fragmentShader
+        .replace(
+          '#include <color_fragment>',
+          `#include <color_fragment>
+  float crystalF = 0.0;
+  if (vCliffUp < 0.5 && vCliffTop - vCliffPos.y > 0.18) {
+    float band = mod(floor(vCliffPos.y * 2.0), 3.0);
+    vec3 layer = band < 0.5 ? vec3(0.40, 0.29, 0.18) : band < 1.5 ? vec3(0.50, 0.48, 0.44) : vec3(0.32, 0.23, 0.15);
+    vec3 cell = floor(vCliffPos * vec3(1.0, 2.0, 1.0));
+    float h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+    if (h < 0.035) { layer = vec3(0.55, 0.86, 0.98); crystalF = 1.0; }
+    diffuseColor.rgb = layer;
+  }`,
+        )
+        .replace(
+          '#include <emissivemap_fragment>',
+          '#include <emissivemap_fragment>\n  totalEmissiveRadiance += vec3(0.45, 0.85, 1.0) * crystalF * (0.08 + 0.9 * uCrystalNight);',
+        );
+  };
+  mat.customProgramCacheKey = () => 'art3-cliff';
 }
 
 /** Ondulation au vent dans le shader (aucun calcul par image côté processeur). */
@@ -146,19 +194,23 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
       const r = Math.hypot(x, z);
       if (r < flat + 0.5 || r > arenaRadius - 0.5) continue;
       const rise = Math.min(1, (r - flat) / 6);
-      const h = Math.max(0, Math.round((hill(x, z) * 0.9 + 1.4) * rise * 2) / 2); // terrasses de 0,5
+      // ART3 : plateaux d'un bloc de haut (au lieu de marches de 0,5) : des terrasses nettes, moins de petites marches
+      const h = Math.max(0, Math.round((hill(x, z) * 0.9 + 1.4) * rise));
       // ART2 : au camp, le premier plan (vers la caméra) reste bas et dégagé
       const hh = isCamp && z > 6 ? Math.min(h, 0.5) : h;
       if (hh > 0) cells.push({ x, z, h: hh });
     }
-  const terrain = new THREE.InstancedMesh(new THREE.BoxGeometry(step, 1, step), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), cells.length);
+  const terrainMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+  addCliffBands(terrainMat);
+  const terrain = new THREE.InstancedMesh(new THREE.BoxGeometry(step, 1, step), terrainMat, cells.length);
   cells.forEach((c, i) => {
     dummy.position.set(c.x, c.h / 2, c.z);
     dummy.scale.set(1, c.h, 1);
     dummy.rotation.set(0, 0, 0);
     dummy.updateMatrix();
     terrain.setMatrixAt(i, dummy.matrix);
-    color.set(c.h >= 2 ? '#4E9A3F' : c.h >= 1 ? '#5FAE4B' : '#6CBB55');
+    // une couleur dominante : deux verts voisins qui alternent d'un plateau à l'autre
+    color.set(Math.round(c.h) % 2 ? '#5FAE4B' : '#55A545');
     terrain.setColorAt(i, color);
   });
   terrain.receiveShadow = true;
@@ -226,11 +278,12 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   // ART2 : le feuillage n'est plus déformé dans le shader ; il tourne comme un bloc rigide (voir l'animation)
   const SHAPES: [number, number, number, number, number, number][][] = [
     // [x, y, z, sx, sy, sz] des blocs de feuillage, au-dessus d'un tronc de hauteur 1,6
-    [[0, 2.2, 0, 1.8, 1.2, 1.8], [0, 3.0, 0, 1.2, 0.8, 1.2]],
-    [[0, 2.0, 0, 2.2, 0.8, 2.2], [0.5, 2.7, 0.3, 1.4, 0.8, 1.4], [-0.5, 2.6, -0.3, 1.2, 0.7, 1.2]],
-    [[0, 2.0, 0, 1.6, 0.6, 1.6], [0, 2.6, 0, 1.2, 0.6, 1.2], [0, 3.2, 0, 0.8, 0.6, 0.8], [0, 3.7, 0, 0.4, 0.4, 0.4]],
-    [[0.6, 2.1, 0, 1.2, 1.1, 1.2], [-0.6, 2.3, 0.2, 1.3, 1.2, 1.3], [0, 2.9, -0.1, 1.2, 0.9, 1.2]],
-    [[0, 2.4, 0, 2.6, 1.6, 2.6]],
+    // ART3 : deux ou trois volumes francs par arbre, cinq silhouettes différentes
+    [[0, 2.3, 0, 2.0, 1.4, 2.0], [0.3, 3.3, -0.2, 1.1, 0.7, 1.1]], // bloc et petit chapeau décalé
+    [[0, 2.0, 0, 2.6, 0.7, 2.6], [-0.4, 2.8, 0.2, 1.4, 1.0, 1.4]], // table large et tour basse
+    [[0, 2.1, 0, 1.8, 0.8, 1.8], [0, 2.9, 0, 1.2, 0.8, 1.2], [0, 3.6, 0, 0.6, 0.7, 0.6]], // pyramide en trois marches
+    [[0.55, 2.2, 0, 1.3, 1.3, 1.3], [-0.55, 2.5, 0.1, 1.2, 1.5, 1.2]], // deux colonnes jumelles
+    [[0, 2.7, 0, 1.3, 2.4, 1.3], [0, 4.0, 0, 0.7, 0.5, 0.7]], // fuseau haut
   ];
   const treeCount = low ? 10 : 22;
   const leafTotal = Array.from({ length: treeCount }, (_, i) => SHAPES[i % SHAPES.length].length).reduce((a, b) => a + b, 0);
@@ -252,7 +305,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
     dummy.rotation.set(0, rnd() * Math.PI, 0);
     dummy.updateMatrix();
     trunks.setMatrixAt(i, dummy.matrix);
-    const tint = ['#4FA43C', '#3E8E34', '#62B84A', '#2F7A2E'][i % 4];
+    const tint = ['#4A9E3B', '#3F8E35', '#56A944'][i % 3]; // ART3 : trois verts proches, une couleur dominante
     // phase et période tirées de l'indice, sans consommer le hasard du décor (sa disposition reste celle d'ART)
     treePhase.push({ phase: ((i * 2.399) % 1) * Math.PI * 2, period: 3 + ((i * 0.618) % 1) * 2 });
     const pivot = new THREE.Vector3(x, y0 + 1.6 * s, z);
@@ -262,7 +315,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
       dummy.updateMatrix();
       leaves.setMatrixAt(li, dummy.matrix);
       leafInfo.push({ tree: i, pivot, off: new THREE.Vector3(bx * s, (by - 1.6) * s, bz * s), scale: new THREE.Vector3(sx * s, sy * s, sz * s), rotY: dummy.rotation.y });
-      color.set(tint).offsetHSL(0, 0, (by - 2.5) * 0.04);
+      color.set(tint).offsetHSL(0, 0, (by - 2.5) * 0.03);
       leaves.setColorAt(li, color);
       li += 1;
     }
@@ -271,6 +324,52 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   leaves.castShadow = true;
   leaves.receiveShadow = true;
   env.add(trunks, leaves);
+
+  // --- ART3 : collines lointaines (silhouettes à deux étages), couleur proche de la brume : elles remplacent les gros
+  // blocs pâles qui flottaient au-dessus des arbres (biomes.ts ne les crée plus pour la Prairie du sprint Art)
+  const hillCount = 12;
+  const hillMat = new THREE.MeshStandardMaterial({ color: '#A6C8B8', roughness: 1 });
+  const hills = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), hillMat, hillCount * 2);
+  for (let i = 0; i < hillCount; i++) {
+    const a = (i / hillCount) * Math.PI * 2 + 0.3;
+    const d = arenaRadius + 30 + (i % 3) * 10;
+    const w = 18 + (i % 4) * 5;
+    const h = 1.8 + (i % 3) * 1.2; // basses : des collines au ras de l'horizon, pas des blocs qui flottent
+    for (let k = 0; k < 2; k++) {
+      dummy.position.set(Math.cos(a) * d, -2 + (k ? h + h * 0.25 : h / 2), Math.sin(a) * d);
+      dummy.scale.set(k ? w * 0.5 : w, k ? h * 0.5 : h, k ? w * 0.4 : w * 0.7);
+      dummy.rotation.set(0, -a, 0);
+      dummy.updateMatrix();
+      hills.setMatrixAt(i * 2 + k, dummy.matrix);
+      color.set('#A6C8B8').offsetHSL(0, 0, k ? 0.03 : 0);
+      hills.setColorAt(i * 2 + k, color);
+    }
+  }
+  env.add(hills);
+
+  // --- ART3 : signature de l'île, matières des Cubes Scellés : pierre taillée et bois brut (pas en qualité Basse)
+  if (!low) {
+    const craftCount = 8;
+    const crafts = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }), craftCount);
+    for (let i = 0; i < craftCount; i++) {
+      const a = backSector(rnd() * Math.PI * 2);
+      const r = flat + 1 + rnd() * 5;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      const wood = i % 2 === 1;
+      // pierre : bloc taillé presque cubique ; bois : bille couchée
+      dummy.scale.set(wood ? 1.6 : 0.8, wood ? 0.45 : 0.8, wood ? 0.45 : 0.8);
+      dummy.position.set(x, heightAt(x, z) + dummy.scale.y / 2, z);
+      dummy.rotation.set(0, rnd() * Math.PI, 0);
+      dummy.updateMatrix();
+      crafts.setMatrixAt(i, dummy.matrix);
+      color.set(wood ? '#8B5E34' : '#C9C2B2');
+      crafts.setColorAt(i, color);
+    }
+    crafts.castShadow = true;
+    crafts.receiveShadow = true;
+    env.add(crafts);
+  }
 
   // --- buissons et rochers moussus
   const bushCount = low ? 6 : 26;

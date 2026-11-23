@@ -522,7 +522,8 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
     isletInst.setMatrixAt(i, dummy.matrix);
   }
   isletInst.computeBoundingSphere();
-  env.add(isletInst);
+  // ART3 : la Prairie du sprint Art les remplace par des collines lointaines dans la brume (meadowDecor.ts)
+  if (!art) env.add(isletInst);
 
   // Perimeter voxel trees / crystals / volcanic spires via InstancedMesh (natural perimeter framing)
   const treeCount = art ? 0 : 28; // Prairie du sprint Art : arbres de meadowDecor.ts
