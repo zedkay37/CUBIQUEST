@@ -74,7 +74,7 @@ Compte les créatures et propose les **lots** (§6). Ne devine aucun nom ni aucu
 - Commandes à fournir :
   - `vox:build` : régénère tous les `.vox` dans `src/assets/vox/` (déterministe : même script = même fichier, octet pour octet).
   - `vox:check` : relit chaque `.vox` avec un lecteur indépendant et vérifie version 150, bornes, z min = 0, symétrie X (pattes gauche/droite échangées), présence des yeux (248), absence de lueur (240–247) sur les voxels de pattes, dimensions dans les limites du §4.4, indices 1–255 seulement. Échec = code de sortie non nul.
-  - `vox:planche` : une planche par créature (3/4 avant, face, profil, 3/4 arrière, taille combat ~64 px, silhouette) dans `docs/captures/bestiaire/`. **Rendu du vrai jeu** si le dépôt a déjà une capture automatisée (navigateur sans tête, comme pour `docs/captures/styles3/`), sinon le `render_rt` de `voxlib`. Indique toujours lequel a été utilisé.
+  - `vox:planche` : une planche par créature (3/4 avant, face, profil, 3/4 arrière, taille réelle en combat : recadrage de l'image du jeu en 1280 × 720, où une forme finale fait 130 à 140 px de haut, silhouette) dans `docs/captures/bestiaire/`. **Rendu du vrai jeu** si le dépôt a déjà une capture automatisée (navigateur sans tête, comme pour `docs/captures/styles3/`), sinon le `render_rt` de `voxlib`. Indique toujours lequel a été utilisé.
   - Une planche d'**alignement** : toutes les créatures d'un lot côte à côte, à l'échelle du jeu, de profil et en silhouette.
 
 ### 3.3 Questions techniques à trancher en lisant le code du chargeur (et en testant)
@@ -94,7 +94,7 @@ Compte les créatures et propose les **lots** (§6). Ne devine aucun nom ni aucu
 Ces règles viennent de ce qui a marché (et raté) le 23/11. Elles priment sur les « règles de style » de `docs/guide-vox.md`, qui visaient des créatures mignonnes. Les **contraintes techniques** du guide, elles, restent obligatoires.
 
 ### 4.1 La silhouette d'abord
-- Chaque créature doit se reconnaître **à sa seule silhouette, à 64 px de haut**. C'est le premier test, avant les couleurs.
+- Chaque créature doit se reconnaître **à sa seule silhouette, à sa taille réelle en combat (1280 × 720 : environ 130 à 140 px de haut pour une forme finale, 60 à 70 px pour une forme de base ; mesuré en phase 0, corrigé le 23/11)**. C'est le premier test, avant les couleurs.
 - Chaque lignée a un **plan de corps** distinct : quadrupède bas, bipède, serpentin, trapu à carapace, flotteur, etc. Deux lignées d'un même élément ne partagent jamais le même plan de corps.
 - Profil : une ligne de dos qui raconte quelque chose (épaules hautes = prédateur, dos voûté = colosse, ligne basse = rôdeur). La tête est **séparée du corps** par un vide ou un cou visible.
 - Face : jamais une boîte. Épaules plus larges que la taille, poitrail en V, membres écartés, tête plus étroite que les épaules.
@@ -141,7 +141,7 @@ Une lignée = une signature qui **grandit** avec l'évolution. Exemple Calcinarq
 2. Écrire le script : tronc → cou et tête → membres → queue et attributs → passes de couleur → lueurs → yeux → pattes → `crop`.
 3. `vox:build` puis `vox:check` : doit passer.
 4. `vox:planche` : regarder **soi-même** les 6 vues. Vérifier, dans l'ordre :
-   - la silhouette à 64 px se reconnaît et ne ressemble à aucune autre créature du lot ;
+   - la silhouette à sa taille réelle en combat (130 à 140 px pour une forme finale) se reconnaît et ne ressemble à aucune autre créature du lot ;
    - la tête se lit (gueule, yeux, arcade) de 3/4 et de face ;
    - de profil, pas d'ours assis ni de stégosaure ; de face, pas de boîte ;
    - la signature de lignée est visible ;

@@ -85,7 +85,9 @@ Il n'y a pas de lot « ennemis et boss » séparé : ce sont les mêmes modèles
 | Eau | roche de récif bleu-gris, nacre | `#1C2A36` `#2F4C5E` `#5E8597` (nacre `#E3DCCB`) | `#00C2A8` `#3DF2D0` `#B8FFF0` (turquoise des abysses) |
 | Plante | écorce, mousse, bois clair | `#24301E` `#3E5A2E` `#6E8F45` (bois `#C9B48A`) | `#5BE33B` `#A8F05A` `#EFFFB0` (spores) |
 | Électrique | ardoise, cuivre, quartz | `#1E2230` `#3A4157` `#B87333` (quartz `#E8E4D8`) | `#2D7BFF` `#6FC3FF` `#E6F7FF` (arc bleu-blanc) |
-| Roche | granit gris, ambre | `#26262A` `#4A4A50` `#7C7A76` (os `#CFC6B4`) | `#FF9F1C` `#FFC857` `#FFF1C1` (ambre ; magma pour la lignée Cailloc) |
+| Roche | granit gris, cristal froid | `#26262A` `#4A4A50` `#7C7A76` (os `#CFC6B4`) | `#9FB8D8` `#CFE0F2` `#F4F8FF` (cristal froid, blanc bleuté peu saturé ; validé le 23/11 à la place de l'ambre) |
 | Psychique | pierre de lune, obsidienne violette | `#1E1A2E` `#3B3357` `#6E6496` (nacre `#E6E0F5`) | `#7B2FFF` `#B07CFF` `#EBD9FF` |
 
-**Point de vigilance** : la lave du feu (orange-jaune) et l'ambre de la roche se ressemblent. Si tu veux deux éléments bien distincts, la roche peut perdre sa lueur (sauf la lignée Cailloc et son magma).
+**Décisions du joueur (23/11)** : gradation par stade de la fiche validée ; couleurs des éléments validées ; la roche passe d'une lueur ambre à une lueur froide. Entre jade et cristal froid, j'ai choisi le **cristal froid** (blanc bleuté peu saturé) : un jade (vert) serait trop proche du turquoise de l'eau et du vert-jaune de la plante. Magmadrake est de la **roche** dans le jeu (pas du feu) : son plan de corps (colosse voûté) est déjà distinct de Cendrox (quadrupède prédateur) ; ses veines de magma deviendront du cristal froid, à confirmer au lot roche.
+
+**Lignée « Calcinarque »** = Braizard → Cendrox (validé le 23/11). Braizard part du Coureur de Cendres, adouci pour un stade 1 ; Cendrox reprend le Calcinarque légendaire de référence.
