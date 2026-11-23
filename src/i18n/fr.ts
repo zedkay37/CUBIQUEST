@@ -201,8 +201,8 @@ export const FR = {
       esquiveDeLEscouade: 'Esquive de l\'escouade',
       esquive: 'Esquive',
       espace: 'ESPACE',
-      declencherLUltimeDEscouade: 'Déclencher l\'Ultime d\'escouade',
-      ultime: 'Ultime',
+      declencherLUltimeDEscouade: 'Déclencher le Déchaînement',
+      ultime: 'Déchaînement',
       toucheR: 'TOUCHE R',
     },
     icons: {
@@ -214,7 +214,7 @@ export const FR = {
     outcomeModal: {
       victoire: 'Victoire',
       t2Eclats: '2 Éclats',
-      ultimeOuEsquiveParfaite: 'Ultime ou esquive parfaite',
+      ultimeOuEsquiveParfaite: 'Déchaînement ou esquive parfaite',
       etoileSur3: (a: string | number, b: string | number) => `${a} étoile${b} sur 3`,
       expeditionReussie: 'Expédition réussie !',
       escouadeVaincue: 'Escouade vaincue',
@@ -252,6 +252,16 @@ export const FR = {
       etatDuDefi: (a: string | number, b: string | number) => `Défi : ${a} — ${b}`,
       defiDejaAcquis: 'déjà réussi',
       defiAReussir: 'à réussir',
+    },
+    /** Journal de test (S07.4). */
+    journal: {
+      titre: 'Journal de test',
+      explication:
+        'Une ligne par combat : niveau, escouade, mode, résultat, durée, gestes, leçons. Il reste sur cet appareil : rien n’est envoyé, sauf si tu envoies toi-même le fichier.',
+      lignes: (a: string | number) => `${a} combat(s) enregistré(s) (500 au plus).`,
+      exporter: 'Exporter mon journal',
+      effacer: 'Effacer',
+      confirmerEffacer: 'Confirmer l’effacement',
     },
     questsDrawer: {
       or: 'Or',
@@ -373,7 +383,7 @@ export const FR = {
       commencerLAventure: 'Commencer l’aventure',
       nouvelleIle: 'Nouvelle île',
       versionEnTest: (a: string | number) => `version en test · ${a}`,
-      t123SortsEspaceEsquive: '1 / 2 / 3 Sorts · Espace Esquive · R Ultime · ZQSD Déplacer · E Auto · P Pause',
+      t123SortsEspaceEsquive: '1 / 2 / 3 Sorts · Espace Esquive · R Déchaînement · ZQSD Déplacer · E Auto · P Pause',
     },
   },
   engine: {
@@ -1035,7 +1045,7 @@ export const FR = {
       },
       shocked: {
         label: 'Électrifié',
-        shortTag: 'ÉLEC',
+        shortTag: 'FOUDRE',
         description: 'Étourdit brièvement la cible.',
       },
       sunder: {
@@ -1181,7 +1191,7 @@ export const FR = {
       },
       ach_ult_3: {
         title: 'Déchaînement !',
-        description: 'Déclenchez 3 attaques Ultimes d’escouade.',
+        description: 'Déclenchez 3 Déchaînements.',
         reward: {
           label: 'Galet Or (+110–170)',
         },

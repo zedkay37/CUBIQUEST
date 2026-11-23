@@ -44,6 +44,7 @@ import {
   startCookingPot,
   unequipPowerStone,
 } from './game/rules';
+import { appendJournal, loadJournal, markRetry, saveJournal } from './game/journal';
 import type {
   CodexAnswer,
   ControlMode,
@@ -126,6 +127,8 @@ export default function App() {
   const [activeDrawer, setActiveDrawer] = useState<CampDrawerTab>(null);
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [controlMode, setControlMode] = useState<ControlMode>('semi');
+  const controlModeRef = useRef<ControlMode>('semi');
+  controlModeRef.current = controlMode;
   const [muted, setMuted] = useState(false);
   const [settings, setSettings] = useState<GameSettings>(() => loadSettings());
 
@@ -195,6 +198,29 @@ export default function App() {
       if (!previewRef.current) {
         saveRef.current = nextSave;
         setSave(nextSave);
+        // Journal de test : une ligne par combat, écrite en fin de combat seulement
+        const squadNow = getSquadCreatures(saveRef.current);
+        saveJournal(
+          appendJournal(loadJournal(), {
+            at: new Date().toISOString(),
+            stageId: stage.id,
+            squad: squadNow.map((c) => ({ speciesId: c.speciesId, level: c.level })),
+            mode: controlModeRef.current,
+            victory: result.victory,
+            durationSec: Math.round(result.clearTimeSec * 10) / 10,
+            bursts: result.burstsTriggered,
+            weakBursts: result.weakBursts,
+            trios: result.triosTriggered,
+            dodges: result.dodges,
+            perfectDodges: result.perfectDodges,
+            hazardHits: result.hazardHits,
+            ultimates: result.ultimatesUsed,
+            bossHpLeft: result.victory ? null : Math.round(result.bossHpPercentRemaining),
+            retried: null,
+            lessonsSeen: result.lessonsSeen ?? [],
+            lessonsPassed: result.lessonsPassed ?? [],
+          }),
+        );
       }
       return finalOutcome;
     };
@@ -367,6 +393,8 @@ export default function App() {
       setScreenState('playing');
       document.body.dataset.state = 'playing';
       engineRef.current?.markRetryClick();
+      // journal : après une défaite, relancer le même niveau ou non
+      saveJournal(markRetry(loadJournal(), stage.id));
       engineRef.current?.setHazardHintCounts(saveRef.current.hazardHintsSeen);
       engineRef.current?.startExpedition(
         stage,

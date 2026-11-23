@@ -305,6 +305,7 @@ function buildExpeditionResult(self: VoxelEngine): ExpeditionResult {
     koCount: self.allyKos,
     hazardHits: self.hazardHitsTaken,
     weakBursts: self.weakBurstsTriggered,
+    dodges: self.dodgesUsed,
   };
 }
 

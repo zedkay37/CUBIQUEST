@@ -135,7 +135,7 @@ function toMarkdown(r: JourneyResult, profile: string, seed: number): string {
   return lines.join('\n') + '\n';
 }
 
-if (process.argv[1]?.includes('journey')) {
+if (/tools[\\/]journey\.ts$/.test(process.argv[1] ?? '')) {
   const profile = arg('profile', 'active') as SimProfile;
   const seed = Number(arg('seed', '1'));
   const r = runJourney(profile, seed, Number(arg('max-games', '250')));

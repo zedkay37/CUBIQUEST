@@ -17,6 +17,7 @@ import {
   importSaveFromJson,
 } from '../game/rules';
 import type { QuestReward, SaveState } from '../game/types';
+import { JournalPanel } from './JournalPanel';
 import { FR, GAME_TITLE } from '../i18n/fr';
 
 type DrawerSection = 'missions' | 'achievements' | 'save';
@@ -502,6 +503,9 @@ export function QuestsDrawer({
                   </button>
                 </div>
               </div>
+
+              {/* Journal de test (S07.4) */}
+              <JournalPanel />
 
               {/* Two-Step Safe Reset */}
               <div className="rounded-xl bg-[#1F151A] border border-[#5B2A35] p-4 flex flex-wrap items-center justify-between gap-3">

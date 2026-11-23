@@ -222,6 +222,11 @@ export interface ExpeditionResult {
   koCount: number;
   hazardHits: number;
   weakBursts: number;
+  /** Appuis sur Esquive (journal de test). */
+  dodges: number;
+  /** Leçons montrées et réussies pendant ce combat (S07.2). */
+  lessonsSeen?: string[];
+  lessonsPassed?: string[];
 }
 
 /** Premières fois montrées au joueur (bulle d'une ligne). */
