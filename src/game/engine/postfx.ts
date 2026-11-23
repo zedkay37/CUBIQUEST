@@ -21,6 +21,7 @@ import type { VoxelEngine } from '../VoxelEngine';
 import type { BiomeId } from '../types';
 import { setSculptDetail } from '../models/creatures';
 import { setDecorDetail } from '../models/meadowDecor';
+import { setCreatureRim } from '../models/voxelSculpt';
 
 export type QualitySetting = 'auto' | 'low' | 'medium' | 'high';
 export type QualityLevel = 'low' | 'medium' | 'high';
@@ -140,6 +141,7 @@ export function applyQualityLevel(self: VoxelEngine, level: QualityLevel, detail
   }
   fx.gtao.enabled = level === 'high';
   fx.outline.enabled = level !== 'low';
+  setCreatureRim(level !== 'low'); // ART3 : contour lumineux coupé en Bas
   fx.bloom.enabled = level !== 'low';
   fx.grade.enabled = level !== 'low';
 }

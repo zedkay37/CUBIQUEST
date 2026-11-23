@@ -29,6 +29,8 @@ export interface SculptShape {
   mirror?: boolean;
   /** Retire les blocs au lieu d'en ajouter. */
   subtract?: boolean;
+  /** ART3 : partie liée à l'élément qui luit doucement dans sa propre couleur (bobines…). La forme ne change pas. */
+  glow?: boolean;
 }
 
 export interface SculptDef {
@@ -46,6 +48,7 @@ export interface Voxel {
   z: number;
   color: ColorKey;
   group: string;
+  glow?: boolean;
 }
 
 const inside = (s: SculptShape, p: Vec3, mirrorSide: 1 | -1): boolean => {
@@ -123,7 +126,7 @@ export function voxelize(def: SculptDef, res: number): Voxel[] {
         for (const s of def.shapes) {
           for (const side of s.mirror ? ([1, -1] as const) : ([1] as const)) {
             if (!inside(s, p, side)) continue;
-            cell = s.subtract ? null : { x, y, z, color: s.color, group: groupName(s, side) };
+            cell = s.subtract ? null : { x, y, z, color: s.color, group: groupName(s, side), ...(s.glow ? { glow: true } : {}) };
           }
         }
         if (cell) out.push(cell);
@@ -163,7 +166,47 @@ export interface SculptRigParts {
 }
 
 /** Maillage : une géométrie par pièce (faces visibles seulement, ombre par sommet), deux matériaux (mat et lumineux). */
-export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: number, glowIntensity: number, aoStrength = 0.16, smoothNormals = false): SculptRigParts {
+/**
+ * ART3 : lumière commune des créatures sculptées (lueurs d'élément plus fortes la nuit, contour lumineux discret).
+ * Uniformes partagés : changer la valeur agit sur toutes les créatures sans recompiler.
+ */
+export const CREATURE_LIGHT = { night: { value: 0 }, rim: { value: 0.2 } };
+export function setCreatureNight(night: number): void {
+  CREATURE_LIGHT.night.value = night;
+}
+/** Qualité Basse : le contour lumineux est coupé (les lueurs d'élément restent, elles ne coûtent rien de plus). */
+export function setCreatureRim(on: boolean): void {
+  CREATURE_LIGHT.rim.value = on ? 0.2 : 0;
+}
+
+/** ART3 : lueurs d'élément et contour lumineux, ajoutés au matériau standard (aucun objet, aucun appel de dessin). */
+function patchArt3Material(mat: THREE.MeshStandardMaterial, accent: boolean): void {
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uNight = CREATURE_LIGHT.night;
+    shader.uniforms.uRim = CREATURE_LIGHT.rim;
+    shader.vertexShader = 'attribute float aGlow;\nvarying float vGlow;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vGlow = aGlow;');
+    shader.fragmentShader =
+      'uniform float uNight;\nuniform float uRim;\nvarying float vGlow;\n' +
+      shader.fragmentShader
+        .replace(
+          '#include <emissivemap_fragment>',
+          '#include <emissivemap_fragment>\n' +
+            (accent
+              ? // parties d'accent (braise, lave, filament…) : la lueur existante, plus forte la nuit
+                '  totalEmissiveRadiance *= 1.0 + 1.4 * uNight;'
+              : // parties marquées « glow » (bobines…) : luisent dans leur propre couleur
+                '  totalEmissiveRadiance += vColor.rgb * vGlow * (0.2 + 0.6 * uNight);'),
+        )
+        .replace(
+          '#include <opaque_fragment>',
+          // contour lumineux : les faces vues en biais s'éclairent un peu, la créature se détache du fond
+          '  float rimF = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);\n  outgoingLight += vec3(1.0, 0.95, 0.86) * rimF * uRim;\n#include <opaque_fragment>',
+        );
+  };
+  mat.customProgramCacheKey = () => 'art3-creature-' + accent;
+}
+
+export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: number, glowIntensity: number, aoStrength = 0.16, smoothNormals = false, art3 = false): SculptRigParts {
   const voxels = voxelize(def, res);
   const legs = new Set(def.legs ?? []);
   const extrasDef = new Map((def.extras ?? []).map((e) => [e.group, e.pivot]));
@@ -187,6 +230,12 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
     emissive: new THREE.Color().setStyle(palette.accent),
     emissiveIntensity: glowIntensity,
   });
+  if (art3) {
+    // un peu plus de lueur que la version ART 1 (même couleur, même forme)
+    glow.emissiveIntensity = glowIntensity * 1.35;
+    patchArt3Material(base, false);
+    patchArt3Material(glow, true);
+  }
   const bodyPivot = new THREE.Group();
   const s = 1 / res;
   const groups = new Map<string, Voxel[]>();
@@ -210,7 +259,11 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
     const holder = new THREE.Group();
     holder.position.set(...pivot);
     bodyPivot.add(holder);
+    // ART3 : dégradé de volume, le bas de chaque pièce 10 % plus sombre que le haut (aucune couleur nouvelle)
+    const yLo = Math.min(...list.map((p) => p.y));
+    const yHi = Math.max(...list.map((p) => p.y)) + 1;
     for (const glowing of [false, true]) {
+      const glw: number[] = [];
       const pos: number[] = [];
       const nor: number[] = [];
       const clr: number[] = [];
@@ -272,7 +325,9 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
               const l2 = Math.hypot(mx, my, mz) || 1;
               nor.push(mx / l2, my / l2, mz / l2);
             } else nor.push(dx, dy, dz);
-            clr.push(c.r * shade, c.g * shade, c.b * shade);
+            const grad = art3 ? 0.9 + 0.1 * ((corner[1] - yLo) / Math.max(1, yHi - yLo)) : 1;
+            clr.push(c.r * shade * grad, c.g * shade * grad, c.b * shade * grad);
+            glw.push(v.glow ? 1 : 0);
           }
           // ordre des triangles selon l'orientation de la face
           const flip = sign > 0; // (u, w) direct : u × w = +axe
@@ -285,6 +340,7 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
       geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
       geo.setAttribute('color', new THREE.Float32BufferAttribute(clr, 3));
+      if (art3) geo.setAttribute('aGlow', new THREE.Float32BufferAttribute(glw, 1));
       geo.setIndex(idx);
       const mesh = new THREE.Mesh(geo, glowing ? glow : base);
       // ART2 : les parties lumineuses et les yeux ne projettent pas d'ombre (invisible à l'écran, une passe d'ombre de moins)

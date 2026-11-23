@@ -29,6 +29,26 @@ export function getContactShadowTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+let sharedCrispShadowTex: THREE.CanvasTexture | null = null;
+/** ART3 : ombre au sol à bord franc (plein jusqu'aux trois quarts, puis un fondu court). */
+export function getCrispShadowTexture(): THREE.CanvasTexture {
+  if (sharedCrispShadowTex) return sharedCrispShadowTex;
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, 'rgba(10, 14, 22, 0.62)');
+  grad.addColorStop(0.72, 'rgba(10, 14, 22, 0.5)');
+  grad.addColorStop(0.9, 'rgba(10, 14, 22, 0.12)');
+  grad.addColorStop(1, 'rgba(10, 14, 22, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  sharedCrispShadowTex = new THREE.CanvasTexture(canvas);
+  return sharedCrispShadowTex;
+}
+
 export function getToyBumpTexture(): THREE.CanvasTexture {
   if (sharedToyBumpTex) return sharedToyBumpTex;
   const size = 64;

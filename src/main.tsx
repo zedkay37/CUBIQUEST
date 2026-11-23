@@ -5,6 +5,7 @@ import './index.css';
 import {setSculptDetail, setSculptModels} from './game/models/creatures';
 import {setArtDecor, setDecorDetail} from './game/models/meadowDecor';
 import {loadSettings} from './game/settings';
+import {setCreatureRim} from './game/models/voxelSculpt';
 
 // `?gallery=1` : galerie de revue des créatures et des biomes (outil de développement, le jeu n'est pas lancé).
 // Chargée à la demande : son code n'est pas téléchargé par les joueurs.
@@ -44,6 +45,7 @@ setArtDecor(true);
   if (q === 'low') {
     setDecorDetail('low');
     setSculptDetail('low');
+    setCreatureRim(false); // ART3 : contour lumineux coupé en Bas
   }
 }
 

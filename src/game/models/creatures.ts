@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { SPECIES } from '../catalog';
 import type { CreatureArchetype, SpeciesDef } from '../types';
-import { getContactShadowTexture, getToyBumpTexture, makeBox } from './shared';
+import { getContactShadowTexture, getCrispShadowTexture, getToyBumpTexture, makeBox } from './shared';
 import { buildSculptRig, withIsolatedRandom, type SculptPalette } from './voxelSculpt';
 import { SCULPT_DEFS } from './sculptDefs';
 import { SCULPT_DEFS_ART1 } from './sculptDefsArt1';
@@ -738,11 +738,13 @@ export function buildSculptCreature(species: SpeciesDef, scaleOverride?: number,
   };
   const glow = species.element === 'fire' || species.element === 'electric' ? 0.45 : 0.25;
   const defs = mode === 'art3' ? SCULPT_DEFS : mode === 'art2' ? SCULPT_DEFS_ART2 : SCULPT_DEFS_ART1;
-  const parts = buildSculptRig(defs[species.id], palette, sculptRes, glow, mode === 'art2' ? ART2_AO_STRENGTH : 0.16); // normales lissées essayées puis écartées (taches sur les faces planes)
+  const parts = buildSculptRig(defs[species.id], palette, sculptRes, glow, mode === 'art2' ? ART2_AO_STRENGTH : 0.16, false, mode === 'art3'); // normales lissées essayées puis écartées (taches sur les faces planes)
   const root = new THREE.Group();
   root.add(parts.bodyPivot);
-  const shadowMat = new THREE.MeshBasicMaterial({ map: getContactShadowTexture(), transparent: true, depthWrite: false, opacity: 0.65 });
-  const shadowDisc = new THREE.Mesh(new THREE.CircleGeometry(0.72, 20), shadowMat);
+  // ART3 : ombre au sol nette (bord franc), pour que la créature ne flotte pas
+  const art3 = mode === 'art3';
+  const shadowMat = new THREE.MeshBasicMaterial({ map: art3 ? getCrispShadowTexture() : getContactShadowTexture(), transparent: true, depthWrite: false, opacity: art3 ? 0.8 : 0.65 });
+  const shadowDisc = new THREE.Mesh(new THREE.CircleGeometry(art3 ? 0.6 : 0.72, 20), shadowMat);
   shadowDisc.rotation.x = -Math.PI / 2;
   shadowDisc.position.y = 0.02;
   root.add(shadowDisc);

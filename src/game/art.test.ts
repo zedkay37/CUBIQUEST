@@ -108,3 +108,31 @@ test('ART3 : la copie figée d\'ART 2 garde ses règles (têtes 45-50 % pour les
     assert.ok(ratio >= 0.45 && ratio <= 0.5, `${id} (ART 2) : tête ${Math.round(ratio * 100)} %`);
   }
 });
+
+test('ART3 : ajouts seulement (dégradé de volume ≤ 10 %, bobines lumineuses), mêmes pièces qu\'ART 1', async () => {
+  const { buildSculptRig } = await import('./models/voxelSculpt');
+  const pal = { primary: '#D06030', secondary: '#B87333', belly: '#F2D8A0', accent: '#FFB030', eye: '#1B1D24', white: '#FFFFFF', dark: '#1B1D24' };
+  for (const id of Object.keys(SCULPT_DEFS)) {
+    const meshes = (art3: boolean) => {
+      const out: { color: ArrayLike<number>; glow?: ArrayLike<number> }[] = [];
+      buildSculptRig(SCULPT_DEFS[id], pal, 12, 0.4, 0.16, false, art3).bodyPivot.traverse((o) => {
+        const g = (o as { geometry?: { attributes: Record<string, { array: ArrayLike<number> }> } }).geometry;
+        if (g) out.push({ color: g.attributes.color.array, glow: g.attributes.aGlow?.array });
+      });
+      return out;
+    };
+    const a1 = meshes(false);
+    const a3 = meshes(true);
+    assert.equal(a3.length, a1.length, `${id} : même nombre de pièces`);
+    for (let m = 0; m < a1.length; m++) {
+      assert.equal(a3[m].color.length, a1[m].color.length);
+      for (let i = 0; i < a1[m].color.length; i++) {
+        if (a1[m].color[i] < 0.02) continue;
+        const r = a3[m].color[i] / a1[m].color[i];
+        assert.ok(r >= 0.899 && r <= 1.0001, `${id} : dégradé ${r}`);
+      }
+    }
+    const glowing = a3.some((m) => m.glow && Array.from(m.glow).some((x) => x > 0));
+    assert.equal(glowing, id === 'sparkube' || id === 'raicube', `${id} : bobines lumineuses`);
+  }
+});

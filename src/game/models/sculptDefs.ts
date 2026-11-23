@@ -118,9 +118,9 @@ const bobinard: SculptDef = {
   extras: [{ group: 'tail', pivot: [0, 0.4, -0.38] }],
   shapes: [
     B([0, 0.56, 0], [0.36, 0.38, 0.36], 'primary'),
-    // bobines de cuivre
-    B([0, 0.36, 0], [0.38, 0.06, 0.38], 'secondary'),
-    B([0, 0.56, 0], [0.38, 0.06, 0.38], 'secondary'),
+    // bobines de cuivre (ART3 : elles luisent)
+    { ...B([0, 0.36, 0], [0.38, 0.06, 0.38], 'secondary'), glow: true },
+    { ...B([0, 0.56, 0], [0.38, 0.06, 0.38], 'secondary'), glow: true },
     B([0, 0.7, 0.37], [0.2, 0.04, 0.03], 'accent'),
     B([0, 1.0, 0], [0.365, 0.26, 0.365], 'primary', 'head'),
     B([0, 1.22, 0], [0.17, 0.06, 0.17], 'secondary', 'crest'),
@@ -144,8 +144,9 @@ const voltacier: SculptDef = {
   ],
   shapes: [
     B([0, 0.6, 0], [0.38, 0.42, 0.38], 'primary'),
-    B([0, 0.4, 0], [0.4, 0.06, 0.4], 'secondary'),
-    B([0, 0.62, 0], [0.4, 0.06, 0.4], 'secondary'),
+    // bobines (ART3 : elles luisent)
+    { ...B([0, 0.4, 0], [0.4, 0.06, 0.4], 'secondary'), glow: true },
+    { ...B([0, 0.62, 0], [0.4, 0.06, 0.4], 'secondary'), glow: true },
     B([0, 0.78, 0.39], [0.22, 0.05, 0.03], 'accent'),
     B([0, 1.1, 0], [0.385, 0.26, 0.385], 'primary', 'head'),
     B([0, 1.32, 0], [0.18, 0.06, 0.18], 'secondary', 'crest'),
