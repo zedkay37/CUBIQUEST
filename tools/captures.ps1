@@ -53,6 +53,8 @@ $screens = [ordered]@{
   'defaite'        = '?stage=meadow-2&ui=defeat'
   'evolution'      = '?autostart=1&ui=evolution'
   'galerie-ui'     = '?gallery=ui'
+  'galerie'        = '?gallery=1'
+  'lignee-foudre'  = '?gallery=1&line=voltik'
 }
 $sizes = @{ 'bureau' = '1280,720'; 'mobile' = '360,640' }
 New-Item -ItemType Directory -Force (Join-Path $root $Out) | Out-Null

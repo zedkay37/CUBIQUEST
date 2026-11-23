@@ -7,6 +7,12 @@ import { ElementIcon } from './Icons';
 
 const ROLE_LABEL: Record<SpeciesDef['role'], string> = { melee: 'Mêlée', ranged: 'Distance', tank: 'Tank' };
 
+/** ?gallery=1&line=<id> : n'affiche que la lignée de cette espèce de base (captures). */
+const lineFilter = (chain: SpeciesDef[]): boolean => {
+  const line = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('line');
+  return !line || chain[0].id === line;
+};
+
 /** Lignées dans l'ordre du catalogue : [base, stade 2, stade 3]. */
 function buildLineages(): SpeciesDef[][] {
   const all = Object.values(SPECIES);
@@ -68,7 +74,7 @@ export function GalleryPage() {
       </header>
 
       <section className="max-w-6xl mx-auto space-y-4" aria-label="Créatures par lignée">
-        {lineages.map((chain) => (
+        {lineages.filter(lineFilter).map((chain) => (
           <div key={chain[0].id} className="voxel-panel rounded-2xl p-3 sm:p-4" data-lineage={chain[0].id}>
             <h2 className="font-display text-lg font-bold mb-3 flex items-center gap-2">
               <ElementIcon element={chain[0].element} size={18} />
