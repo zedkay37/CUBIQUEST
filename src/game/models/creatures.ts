@@ -5,8 +5,12 @@ import * as THREE from 'three';
 import { SPECIES } from '../catalog';
 import type { CreatureArchetype, SpeciesDef } from '../types';
 import { getContactShadowTexture, getToyBumpTexture, makeBox } from './shared';
+import { buildSculptRig, withIsolatedRandom, type SculptPalette } from './voxelSculpt';
+import { SCULPT_DEFS } from './sculptDefs';
 
 export interface VoxelCreatureRig {
+  /** Yeux (modèles sculptés) : clignement et regard. */
+  eyes?: THREE.Object3D[];
   root: THREE.Group;
   bodyPivot: THREE.Group;
   legs: THREE.Object3D[];
@@ -51,8 +55,33 @@ export function getRigTopY(species: SpeciesDef): number {
 /**
  * Builds a charismatic 6-12 part composite voxel creature anchored at bottom-center (y = 0)
  */
+/**
+ * Sprint Art : les modèles sculptés (voxelSculpt.ts) ne servent que dans le navigateur. Les outils et le moteur
+ * headless (simulation, golden) gardent les anciens modèles : aucun tirage aléatoire ni objet three.js de plus
+ * pendant un combat simulé. `main.tsx` les active au démarrage du jeu.
+ */
+let sculptOn = false;
+const SCULPT_SCALE = 1.18;
+let sculptRes = 14;
+export function setSculptModels(on: boolean): void {
+  sculptOn = on;
+}
+/** Qualité Bas : version simplifiée automatique (moins de blocs). */
+export function setSculptDetail(level: 'low' | 'high'): void {
+  sculptRes = level === 'low' ? 9 : 14;
+}
+export function usesSculpt(speciesId: string): boolean {
+  return sculptOn && Boolean(SCULPT_DEFS[speciesId]);
+}
+
 export function buildVoxelCreature(speciesId: string, scaleOverride?: number, variant?: boolean): VoxelCreatureRig {
   const species = SPECIES[speciesId] ?? SPECIES.pyrocube;
+  if (usesSculpt(species.id)) return withIsolatedRandom(() => buildSculptCreature(species, scaleOverride, variant));
+  return buildLegacyCreature(species, scaleOverride, variant);
+}
+
+/** Ancienne créature « gros pavés » (toujours utilisée par les outils et pour les espèces pas encore refaites). */
+export function buildLegacyCreature(species: SpeciesDef, scaleOverride?: number, variant?: boolean): VoxelCreatureRig {
   const bump = getToyBumpTexture();
 
   const root = new THREE.Group();
@@ -680,6 +709,42 @@ export function buildVoxelCreature(speciesId: string, scaleOverride?: number, va
     extras,
     flashMaterials,
     baseEmissives,
+    species,
+  };
+}
+
+/** Créature sculptée (sprint Art) : volumes → blocs, faces visibles seulement, ombre douce par sommet. */
+function buildSculptCreature(species: SpeciesDef, scaleOverride?: number, variant?: boolean): VoxelCreatureRig {
+  const p = species.palette;
+  const shift = (hex: string) => (variant ? '#' + new THREE.Color(hex).offsetHSL(150 / 360, 0, 0).getHexString() : hex);
+  const palette: SculptPalette = {
+    primary: shift(p.primary),
+    secondary: shift(p.secondary),
+    belly: p.belly,
+    accent: shift(p.accent),
+    eye: p.eye,
+    white: '#FFFFFF',
+    dark: '#1B1D24',
+  };
+  const glow = species.element === 'fire' || species.element === 'electric' ? 0.45 : 0.25;
+  const parts = buildSculptRig(SCULPT_DEFS[species.id], palette, sculptRes, glow);
+  const root = new THREE.Group();
+  root.add(parts.bodyPivot);
+  const shadowMat = new THREE.MeshBasicMaterial({ map: getContactShadowTexture(), transparent: true, depthWrite: false, opacity: 0.65 });
+  const shadowDisc = new THREE.Mesh(new THREE.CircleGeometry(0.72, 20), shadowMat);
+  shadowDisc.rotation.x = -Math.PI / 2;
+  shadowDisc.position.y = 0.02;
+  root.add(shadowDisc);
+  // les sculptures sont plus fines que les anciens pavés : un peu plus grandes pour garder la même présence
+  root.scale.setScalar((scaleOverride ?? species.scale) * SCULPT_SCALE);
+  return {
+    root,
+    bodyPivot: parts.bodyPivot,
+    legs: parts.legs,
+    extras: parts.extras,
+    eyes: parts.eyes,
+    flashMaterials: parts.materials,
+    baseEmissives: parts.materials.map((m) => m.emissive.clone()),
     species,
   };
 }

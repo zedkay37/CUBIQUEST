@@ -159,6 +159,20 @@ export function animateRigPose(
     leg.rotation.x = isMoving ? Math.sin(walkPhase) * 0.45 * sign : 0;
   });
 
+  // Sprint Art : yeux vivants (modèles sculptés) : clignement toutes les 3 à 6 s, regard qui se promène.
+  // Déterministe (aucun tirage) : la période dépend de la créature.
+  if (rig.eyes?.length) {
+    const period = 3 + (Math.abs(seed * 7.3) % 3);
+    const phase = (elapsed + seed * 3.1) % period;
+    const blink = phase < 0.12 ? 0.12 : 1;
+    const look = isMoving ? 0 : Math.sin(elapsed * 0.6 + seed) * 0.025;
+    for (const eye of rig.eyes) {
+      if (eye.userData.baseX === undefined) eye.userData.baseX = eye.position.x;
+      eye.scale.y = blink;
+      eye.position.x = eye.userData.baseX + look;
+    }
+  }
+
   // Wings / orbiting psychic cubes / tail wag / antlers / body segments / rain strands
   rig.extras.forEach((extra, idx) => {
     switch (arch) {

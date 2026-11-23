@@ -19,6 +19,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { VoxelEngine } from '../VoxelEngine';
 import type { BiomeId } from '../types';
+import { setSculptDetail } from '../models/creatures';
 
 export type QualitySetting = 'auto' | 'low' | 'medium' | 'high';
 export type QualityLevel = 'low' | 'medium' | 'high';
@@ -129,6 +130,8 @@ export function applyQualityLevel(self: VoxelEngine, level: QualityLevel): void 
   const fx = self.postfx;
   if (!fx) return;
   fx.level = level;
+  // sprint Art : en qualité Bas, les créatures sculptées sont construites en version simplifiée (combat suivant)
+  setSculptDetail(level === 'low' ? 'low' : 'high');
   fx.gtao.enabled = level === 'high';
   fx.outline.enabled = level !== 'low';
   fx.bloom.enabled = level !== 'low';
