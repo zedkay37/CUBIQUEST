@@ -430,7 +430,7 @@ float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 `;
 
 /** 16 couleurs (sRGB) : herbe, chemin, pierre, roche, lave, ciel, nuit. Converties en linéaire pour le shader. */
-const PIXEL_PALETTE = ['#7BC05A', '#5DA548', '#3E7A35', '#B58B5A', '#8A6640', '#9A968C', '#7A5B4D', '#4B3E3B', '#2C2524', '#FF6B2B', '#FFB347', '#FFCA3A', '#A7D8F7', '#F4F1E8', '#121014', '#1E2A4A'];
+const PIXEL_PALETTE = ['#7BC05A', '#5DA548', '#3E7A35', '#B58B5A', '#8A6640', '#9A968C', '#7A5B4D', '#4B3E3B', '#2C2524', '#FF6B2B', '#FFB347', '#FFCA3A', '#A7D8F7', '#F4F1E8', '#121014', '#3A3F4B'];
 const PIXEL_PALETTE_GLSL = PIXEL_PALETTE.map((h) => {
   const c = new THREE.Color(h); // linéaire (gestion des couleurs de three)
   return `vec3(${c.r.toFixed(4)}, ${c.g.toFixed(4)}, ${c.b.toFixed(4)})`;
@@ -531,10 +531,10 @@ function styleT(): StyledModel {
 vec3 post(vec2 uv) {
   vec2 px = 1.0 / uResolution;
   // les couleurs bavent : moyenne sur un voisinage déformé par un bruit
-  vec2 wob = (vec2(vnoise(uv * 18.0), vnoise(uv * 18.0 + 4.7)) - 0.5) * px * 9.0;
+  vec2 wob = (vec2(vnoise(uv * 18.0), vnoise(uv * 18.0 + 4.7)) - 0.5) * px * 5.0;
   vec3 acc = vec3(0.0);
   for (int i = -2; i <= 2; i++)
-    for (int j = -2; j <= 2; j++) acc += texture2D(tDiffuse, uv + wob + vec2(float(i), float(j)) * px * 1.6).rgb;
+    for (int j = -2; j <= 2; j++) acc += texture2D(tDiffuse, uv + wob + vec2(float(i), float(j)) * px * 0.9).rgb;
   vec3 c = acc / 25.0;
   // bords de lavis : le pigment s'accumule là où la couleur change
   vec3 gx = texture2D(tDiffuse, uv + wob + vec2(px.x * 3.0, 0.0)).rgb - texture2D(tDiffuse, uv + wob - vec2(px.x * 3.0, 0.0)).rgb;
@@ -544,7 +544,7 @@ vec3 post(vec2 uv) {
   // lavis clair, granulation du pigment et papier
   float gran = 0.9 + 0.1 * vnoise(uv * uResolution * 0.9);
   float paper = 0.9 + 0.1 * vnoise(uv * uResolution * 0.25 + 3.0);
-  c = mix(c, vec3(0.9, 0.88, 0.83), 0.18) * gran * paper;
+  c = mix(c, vec3(0.9, 0.88, 0.83), 0.08) * gran * paper;
   return c;
 }`,
     },
