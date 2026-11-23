@@ -283,6 +283,36 @@ class ToyboxAudio {
     this.playTone(n * 2, n * 2.02, 0.16, 'sine', 0.05, 0.04);
   }
 
+  /** Révélation d'un Cube Scellé (A2.4) : coup sur le cube (plus aigu à chaque coup). */
+  public playCrack(tap: number): void {
+    const f = [220, 277.18, 349.23][Math.max(0, Math.min(2, tap - 1))];
+    this.playTone(f, f * 0.6, 0.12, 'square', 0.09, 0);
+    this.playTone(f * 3, f * 2, 0.06, 'triangle', 0.05, 0.01);
+  }
+
+  /** Roulement de tambour (suspense, 1,2 s) : petits coups graves rapprochés. */
+  public playDrumroll(): void {
+    for (let i = 0; i < 16; i++) this.playTone(110 + (i % 2) * 8, 80, 0.06, 'triangle', 0.05 + i * 0.003, i * 0.075);
+  }
+
+  /** Tintement d'une rangée qui reprend sa couleur. */
+  public playChime(row: number): void {
+    const scale = [523.25, 587.33, 659.25, 783.99, 880, 987.77, 1046.5, 1174.66];
+    const n = scale[row % scale.length] * (row >= scale.length ? 2 : 1);
+    this.playTone(n, n, 0.12, 'sine', 0.06, 0);
+  }
+
+  /** Fin de la révélation : plus riche selon la rareté. */
+  public playRevealTier(tier: 'common' | 'uncommon' | 'rare' | 'awakened'): void {
+    const chords: Record<string, number[]> = {
+      common: [523.25, 659.25],
+      uncommon: [523.25, 659.25, 783.99],
+      rare: [523.25, 659.25, 783.99, 1046.5],
+      awakened: [523.25, 659.25, 783.99, 1046.5, 1318.5],
+    };
+    chords[tier].forEach((n, i) => this.playTone(n, n * 1.01, 0.5, 'triangle', 0.07, i * 0.06));
+  }
+
   /** Le même « tic » pour toutes les attaques annoncées, 0,35 s avant l'impact. */
   public playTelegraphTick(): void {
     this.playTone(1318.5, 1318.5, 0.05, 'square', 0.06, 0);

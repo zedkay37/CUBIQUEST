@@ -1404,15 +1404,16 @@ export type StarterTrioId = keyof typeof STARTER_TRIOS;
  * `quests` (qui porte les options et le journal de test) s'ouvre avec le camp : décision prise seul,
  * pour que les testeurs puissent exporter leur journal même bloqués au niveau 2.
  */
-export type UnlockFeature = 'camp' | 'quests' | 'team' | 'auto' | 'codex' | 'stones';
+export type UnlockFeature = 'camp' | 'quests' | 'team' | 'auto' | 'atelier' | 'codex' | 'stones';
 export const UNLOCKS: { afterStageId: string; features: UnlockFeature[]; companion?: boolean }[] = [
   { afterStageId: 'meadow-1', features: ['camp', 'quests'] },
   { afterStageId: 'meadow-2', features: [] }, // la première évolution (niveau 8) occupe ce moment
-  { afterStageId: 'meadow-3', features: ['team', 'auto'], companion: true },
+  // A2 : l'Atelier s'ouvre avec le premier cube (garanti), donné par le premier boss
+  { afterStageId: 'meadow-3', features: ['team', 'auto', 'atelier'], companion: true },
   { afterStageId: 'shore-1', features: ['codex'] },
   { afterStageId: 'shore-3', features: ['stones'] },
 ];
-export const UNLOCK_FEATURES: UnlockFeature[] = ['camp', 'quests', 'team', 'auto', 'codex', 'stones'];
+export const UNLOCK_FEATURES: UnlockFeature[] = ['camp', 'quests', 'team', 'auto', 'atelier', 'codex', 'stones'];
 /**
  * Raretés d'invocation (spec Atelier, A2.1), par lignée (forme de base). Seules les formes de base sortent
  * des cubes ; la « forme éveillée » (stade 2) ne sort que d'un cube Prisme, pour une lignée déjà recrutée.

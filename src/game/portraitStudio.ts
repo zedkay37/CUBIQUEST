@@ -10,6 +10,9 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { SPECIES } from './catalog';
 import { buildVoxelCreature } from './voxelModels';
+import { buildBaitModel, buildSealedCubeModel } from './models/sealedCube';
+import type { CubeMaterial } from './balance';
+import type { ElementType } from './types';
 
 export const PORTRAIT_SIZE = 256;
 
@@ -65,15 +68,28 @@ function disposeTree(obj: THREE.Object3D): void {
 
 /** Photographie une espèce (trois-quarts face, cadrage sur sa boîte englobante, sans ombre au sol). */
 function shoot(s: Studio, speciesId: string): string | null {
-  if (!SPECIES[speciesId]) return null;
-  const rig = buildVoxelCreature(speciesId, 1);
-  rig.root.children.forEach((c) => {
-    // le disque d'ombre de contact n'a rien à faire dans un portrait
-    if ((c as THREE.Mesh).geometry instanceof THREE.CircleGeometry) c.visible = false;
-  });
-  s.scene.add(rig.root);
-  rig.root.updateMatrixWorld(true);
-  const bounds = new THREE.Box3().setFromObject(rig.bodyPivot);
+  // objets (A2.3) : « cube:wood », « bait:fire »…
+  let root: THREE.Object3D;
+  let framed: THREE.Object3D;
+  if (speciesId.startsWith('cube:')) {
+    root = buildSealedCubeModel(speciesId.slice(5) as CubeMaterial).root;
+    framed = root;
+  } else if (speciesId.startsWith('bait:')) {
+    root = buildBaitModel(speciesId.slice(5) as ElementType);
+    framed = root;
+  } else {
+    if (!SPECIES[speciesId]) return null;
+    const rig = buildVoxelCreature(speciesId, 1);
+    rig.root.children.forEach((c) => {
+      // le disque d'ombre de contact n'a rien à faire dans un portrait
+      if ((c as THREE.Mesh).geometry instanceof THREE.CircleGeometry) c.visible = false;
+    });
+    root = rig.root;
+    framed = rig.bodyPivot;
+  }
+  s.scene.add(root);
+  root.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(framed);
   const size = bounds.getSize(new THREE.Vector3());
   const center = bounds.getCenter(new THREE.Vector3());
   const dist = (Math.max(size.x, size.y, size.z) / 2 / Math.tan((14 * Math.PI) / 180)) * 1.12;
@@ -82,8 +98,8 @@ function shoot(s: Studio, speciesId: string): string | null {
   s.camera.lookAt(center);
   s.renderer.render(s.scene, s.camera);
   const url = s.renderer.domElement.toDataURL('image/png');
-  s.scene.remove(rig.root);
-  disposeTree(rig.root);
+  s.scene.remove(root);
+  disposeTree(root);
   return url;
 }
 

@@ -128,6 +128,13 @@ export function usePortrait(speciesId: string): string | null {
   return url;
 }
 
+/** Portrait 3D d'un objet (A2.3) : « cube:wood », « bait:fire »… Un carré neutre en attendant. */
+export function ObjectPortrait({ objectKey, size = 48 }: { objectKey: string; size?: number }) {
+  const url = usePortrait(objectKey);
+  if (!url) return <span aria-hidden="true" style={{ display: 'inline-block', width: size, height: size, borderRadius: 6, background: '#2A3449' }} />;
+  return <img src={url} width={size} height={size} alt="" aria-hidden="true" draggable={false} style={{ width: size, height: size, objectFit: 'contain' }} />;
+}
+
 /**
  * Portrait d'une créature (G1.3) : la vraie créature en 3D, photographiée par PortraitStudio.
  * En attendant le portrait (ou sans WebGL), l'icône dessinée aux couleurs de l'espèce.

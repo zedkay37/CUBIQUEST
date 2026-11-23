@@ -2,6 +2,9 @@ import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { CampHud, type CampDrawerTab } from './components/CampHud';
 import { CodexDrawer } from './components/CodexDrawer';
+import { AtelierDrawer } from './components/AtelierDrawer';
+import { SummonReveal, type SummonRevealProps } from './components/SummonReveal';
+import { Modal } from './components/ui';
 import { ExpeditionDrawer } from './components/ExpeditionDrawer';
 import { EvolutionOverlay } from './components/EvolutionOverlay';
 import { ArrivalScene } from './components/ui/moments';
@@ -31,6 +34,7 @@ import {
   isAutoUnlocked,
   markUnlockSeen,
   lineageOf,
+  openSealedCube,
   unlockedFeatures,
   buildPreviewSave,
   claimAchievementReward,
@@ -48,6 +52,7 @@ import {
 import { appendJournal, loadJournal, markRetry, saveJournal } from './game/journal';
 import { escapeTarget, nextDrawer } from './game/uiNav';
 import type {
+  ElementType,
   CodexAnswer,
   ControlMode,
   ExpeditionHudSnapshot,
@@ -158,6 +163,27 @@ export default function App() {
   const securedOutcomeRef = useRef<ExpeditionOutcome | null>(null);
   const [victorySecured, setVictorySecured] = useState(false);
   /** Arrivée d'une créature (moment fort, sprint UI). */
+  // A2 : révélation d'un Cube Scellé en cours
+  const [reveal, setReveal] = useState<Omit<SummonRevealProps, 'onDone'> | null>(null);
+  const handleOpenCube = useCallback((cubeId: string, bait: ElementType | null) => {
+    const before = saveRef.current;
+    const cube = before.sealedCubes.find((c) => c.id === cubeId);
+    const opened = openSealedCube(before, cubeId, bait);
+    if (!opened || !cube) return;
+    saveRef.current = opened.nextSave;
+    setSave(opened.nextSave);
+    setActiveDrawer(null);
+    setReveal({
+      material: cube.material,
+      speciesId: opened.result.speciesId,
+      tier: opened.result.tier,
+      isNew: opened.result.isNew,
+      bondAfter: opened.result.bondAfter,
+      variantUnlocked: opened.result.variantUnlocked,
+      // toute première ouverture : pas d'accélération
+      firstTime: before.cubeCounter - before.sealedCubes.length === 0,
+    });
+  }, []);
   const [arrival, setArrival] = useState<{ speciesId: string; isNew: boolean } | null>(null);
   /** Bulle « première fois » affichée en combat (S04.3). */
   const [firstTimeTip, setFirstTimeTip] = useState<FirstTimeKind | null>(null);
@@ -716,6 +742,10 @@ export default function App() {
             />
           )}
 
+          {activeDrawer === 'atelier' && (
+            <AtelierDrawer save={save} onOpenCube={handleOpenCube} onClose={() => setActiveDrawer(null)} />
+          )}
+
           {activeDrawer === 'team' && (
             <TeamDrawer
               save={save}
@@ -756,6 +786,49 @@ export default function App() {
             )}
           </AnimatePresence>
         </>
+      )}
+
+      {/* Révélation d'un Cube Scellé (A2.4) */}
+      {reveal && (
+        <SummonReveal
+          {...reveal}
+          onDone={() => {
+            setReveal(null);
+            engineRef.current?.loadCampScene(getSquadCreatures(saveRef.current));
+          }}
+        />
+      )}
+
+      {/* Une seule fois après la migration : ce que la cuisine est devenue (A2.2) */}
+      {save.kitchenConversion && screenState === 'playing' && playMode === 'camp' && (
+        <Modal
+          open
+          title={FR.ui.atelier.conversionTitre}
+          onClose={() => {
+            const next = { ...saveRef.current, kitchenConversion: null };
+            saveRef.current = next;
+            setSave(next);
+          }}
+        >
+          <ul className="list-disc space-y-1 pl-5 text-sm text-[#CBD5E1]">
+            {FR.ui.atelier
+              .conversionLignes(save.kitchenConversion.baits, save.kitchenConversion.crystal, save.kitchenConversion.stone, save.kitchenConversion.bonds)
+              .map((l) => (
+                <li key={l}>{l}</li>
+              ))}
+          </ul>
+          <button
+            type="button"
+            className="voxel-btn block-btn-primary mt-4 rounded-xl border-2 px-5 py-2 font-display font-bold"
+            onClick={() => {
+              const next = { ...saveRef.current, kitchenConversion: null };
+              saveRef.current = next;
+              setSave(next);
+            }}
+          >
+            {FR.ui.atelier.compris}
+          </button>
+        </Modal>
       )}
 
       {/* Arrivée d'une créature : un clic ou une touche pour passer */}

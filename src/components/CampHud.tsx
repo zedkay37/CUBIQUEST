@@ -18,7 +18,7 @@ import { VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
 import { NewBadge } from './ui';
 
-export type CampDrawerTab = 'expeditions' | 'team' | 'quests' | 'codex' | null;
+export type CampDrawerTab = 'expeditions' | 'atelier' | 'team' | 'quests' | 'codex' | null;
 
 interface CampHudProps {
   save: SaveState;
@@ -60,13 +60,14 @@ export function CampHud({
   onSeenUnlock,
 }: CampHudProps) {
   const isOpen = (tab: string) => !unlocked || unlocked.has(tab);
+  const cubeCount = save.sealedCubes?.length ?? 0;
   const isNew = (tab: string) => isOpen(tab) && unseen.includes(tab);
   const selectDrawer = (tab: Exclude<CampDrawerTab, null>) => {
     if (isNew(tab)) onSeenUnlock?.(tab);
     onSelectDrawer(tab);
   };
   // une phrase pour la dernière ouverture pas encore vue
-  const newest = (['team', 'codex', 'quests'] as const).find((t) => isNew(t));
+  const newest = (['atelier', 'team', 'codex', 'quests'] as const).find((t) => isNew(t));
   const squadPower = computeSquadPower(save);
   const squad = save.squadIds
     .map((uid) => save.roster.find((c) => c.uid === uid))
@@ -200,6 +201,20 @@ export function CampHud({
             >
               <Compass className="w-4 h-4" />
               <span>{isOpen('team') ? FR.ui.campHud.expeditions : FR.ui.campHud.partir}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => selectDrawer('atelier')}
+              title={isNew('atelier') ? FR.ui.campHud.nouveautes.atelier : undefined}
+              className={`${isOpen('atelier') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+                activeDrawer === 'atelier' ? 'block-btn-gold' : 'block-btn-secondary'
+              }`}
+            >
+              <span aria-hidden="true" className="inline-block h-3.5 w-3.5 rounded-[3px] bg-[#F4B942]" />
+              <span>{FR.ui.atelier.bouton}</span>
+              {cubeCount > 0 && <span className="ui-new-badge font-mono-num text-[11px] font-bold rounded-[4px] bg-[#F4B942] text-[#1A0E08] px-1.5">{cubeCount}</span>}
+              {isNew('atelier') && <NewBadge />}
             </button>
 
             <button

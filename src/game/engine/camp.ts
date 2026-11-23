@@ -96,7 +96,7 @@ export function loadCampScene(
   self.workbenchFireMesh = workbench.fireMesh;
 
   // Lueur du feu : éteinte de jour, elle éclaire le cœur du camp la nuit
-  self.workbenchLight = new THREE.PointLight('#FFAE5A', 0, 19, 1.5);
+  self.workbenchLight = new THREE.PointLight('#9FD8FF', 0, 19, 1.5); // A2.3 : le moule de l'Atelier éclaire le camp la nuit
   self.workbenchLight.position.set(0, 2.1, -0.4);
   self.worldGroup.add(self.workbenchLight);
 
@@ -156,13 +156,13 @@ export function loadCampScene(
   self.renderer?.render(self.scene, self.camera);
 }
 
-/** Couleur de repos du liquide de l'atelier (l'ancienne couleur « au repos », inchangée). */
+/** Lueur du moule de l'Atelier (A2.3). */
 export function setWorkbenchVisual(self: VoxelEngine): void {
   if (!self.workbenchLiquidMesh) return;
   const mat = self.workbenchLiquidMesh.material as THREE.MeshStandardMaterial;
-  mat.color.set('#38BDF8');
-  mat.emissive.set('#0284C7');
-  mat.emissiveIntensity = 0.2;
+  mat.color.set('#BDE8FF');
+  mat.emissive.set('#7CC8FF');
+  mat.emissiveIntensity = 0.9;
 }
 
 export function updateCamp(self: VoxelEngine, dt: number): void {

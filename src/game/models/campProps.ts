@@ -15,79 +15,49 @@ export function buildWorkbenchProp(): {
   const group = new THREE.Group();
   const bump = getToyBumpTexture();
 
-  const ironMat = new THREE.MeshStandardMaterial({
-    color: '#343A46',
-    roughness: 0.42,
-    metalness: 0.65,
-    bumpMap: bump,
-    bumpScale: 0.015,
+  // A2.3 : l'Atelier, un établi de pierre avec un moule lumineux au centre, des outils et des cubes empilés.
+  const stoneMat = new THREE.MeshStandardMaterial({ color: '#8D867E', roughness: 0.88, metalness: 0.04, bumpMap: bump, bumpScale: 0.015 });
+  const topMat = new THREE.MeshStandardMaterial({ color: '#A39C93', roughness: 0.8, metalness: 0.04 });
+  const woodMat = new THREE.MeshStandardMaterial({ color: '#7C4D2B', roughness: 0.85, metalness: 0.02 });
+  const ironMat = new THREE.MeshStandardMaterial({ color: '#4A5263', roughness: 0.4, metalness: 0.7 });
+  const moldMat = new THREE.MeshStandardMaterial({ color: '#2A3449', roughness: 0.5, metalness: 0.3 });
+  const glowMat = new THREE.MeshStandardMaterial({
+    color: '#BDE8FF',
+    emissive: new THREE.Color('#7CC8FF'),
+    emissiveIntensity: 0.9,
+    roughness: 0.2,
   });
-  const rimMat = new THREE.MeshStandardMaterial({
-    color: '#525C6E',
-    roughness: 0.3,
-    metalness: 0.78,
-  });
-  const woodMat = new THREE.MeshStandardMaterial({
-    color: '#7C4D2B',
-    roughness: 0.85,
-    metalness: 0.02,
-  });
-  const stoneMat = new THREE.MeshStandardMaterial({
-    color: '#8D867E',
-    roughness: 0.88,
-    metalness: 0.04,
-  });
-  const fireMat = new THREE.MeshStandardMaterial({
-    color: '#FF7A28',
-    emissive: new THREE.Color('#FF5A1F'),
+  const coreMat = new THREE.MeshStandardMaterial({
+    color: '#F4B942',
+    emissive: new THREE.Color('#F4B942'),
     emissiveIntensity: 1.1,
-    roughness: 0.35,
+    roughness: 0.3,
   });
-  const liquidMat = new THREE.MeshStandardMaterial({
-    color: '#52B788',
-    emissive: new THREE.Color('#34D399'),
-    emissiveIntensity: 0.35,
-    roughness: 0.18,
-    metalness: 0.1,
-  });
-
-  // Ring of hearth stones grounded at y = 0
-  for (let i = 0; i < 8; i++) {
-    const ang = (i / 8) * Math.PI * 2;
-    const stone = makeBox(0.46, 0.28, 0.46, stoneMat, Math.cos(ang) * 1.15, 0.14, Math.sin(ang) * 1.15);
-    stone.rotation.y = ang;
-    group.add(stone);
-  }
-
-  // Crossed firewood logs
-  const log1 = makeBox(1.5, 0.2, 0.22, woodMat, 0, 0.12, 0);
-  log1.rotation.y = 0.5;
-  const log2 = makeBox(1.5, 0.2, 0.22, woodMat, 0, 0.14, 0);
-  log2.rotation.y = -0.6;
-  group.add(log1, log2);
-
-  // Fire core
-  const fireMesh = makeBox(0.7, 0.45, 0.7, fireMat, 0, 0.32, 0, false);
-  group.add(fireMesh);
-
-  // Bac et rebord biseauté (4 parties)
-  group.add(makeBox(1.56, 0.92, 1.56, ironMat, 0, 0.95, 0));
-  group.add(makeBox(1.78, 0.22, 1.78, rimMat, 0, 1.44, 0));
-  group.add(makeBox(0.24, 0.26, 0.44, rimMat, -0.92, 1.18, 0));
-  group.add(makeBox(0.24, 0.26, 0.44, rimMat, 0.92, 1.18, 0));
-
-  // Surface liquide dans le bac
-  const liquidMesh = makeBox(1.36, 0.16, 1.36, liquidMat, 0, 1.48, 0, false);
+  // piétement et plateau de l'établi
+  group.add(makeBox(0.5, 0.9, 0.5, stoneMat, -1.05, 0.45, -0.45));
+  group.add(makeBox(0.5, 0.9, 0.5, stoneMat, 1.05, 0.45, -0.45));
+  group.add(makeBox(0.5, 0.9, 0.5, stoneMat, -1.05, 0.45, 0.45));
+  group.add(makeBox(0.5, 0.9, 0.5, stoneMat, 1.05, 0.45, 0.45));
+  group.add(makeBox(2.9, 0.3, 1.6, topMat, 0, 1.05, 0));
+  // le moule : un cadre sombre et une surface qui luit (« liquidMesh », animée par le camp)
+  group.add(makeBox(1.0, 0.18, 1.0, moldMat, 0, 1.28, 0));
+  const liquidMesh = makeBox(0.78, 0.06, 0.78, glowMat, 0, 1.38, 0, false);
   group.add(liquidMesh);
-
-  // Wooden tripod legs
-  for (let i = 0; i < 3; i++) {
-    const ang = (i / 3) * Math.PI * 2 + 0.4;
-    const leg = makeBox(0.16, 2.7, 0.16, woodMat, Math.cos(ang) * 1.1, 1.25, Math.sin(ang) * 1.1);
-    leg.rotation.z = Math.cos(ang) * 0.28;
-    leg.rotation.x = -Math.sin(ang) * 0.28;
-    group.add(leg);
-  }
+  // un petit cube qui flotte au-dessus du moule (« fireMesh », il palpite)
+  const fireMesh = makeBox(0.34, 0.34, 0.34, coreMat, 0, 1.72, 0, false);
+  group.add(fireMesh);
+  // outils : maillet et ciseau
+  group.add(makeBox(0.12, 0.08, 0.7, woodMat, 0.95, 1.25, 0.3));
+  group.add(makeBox(0.3, 0.18, 0.2, ironMat, 0.95, 1.27, 0.68));
+  group.add(makeBox(0.08, 0.06, 0.5, ironMat, -0.9, 1.23, 0.45));
+  // cubes empilés autour (bois, pierre, cristal)
+  const crateWood = new THREE.MeshStandardMaterial({ color: '#A86F3A', roughness: 0.85 });
+  const crateStone = new THREE.MeshStandardMaterial({ color: '#9AA3B2', roughness: 0.9 });
+  const crateCrystal = new THREE.MeshStandardMaterial({ color: '#7FD3FF', roughness: 0.2, transparent: true, opacity: 0.85, emissive: new THREE.Color('#2E9BFF'), emissiveIntensity: 0.4 });
+  group.add(makeBox(0.5, 0.5, 0.5, crateWood, -1.9, 0.25, 0.3));
+  group.add(makeBox(0.5, 0.5, 0.5, crateStone, -1.85, 0.25, -0.35));
+  group.add(makeBox(0.42, 0.42, 0.42, crateWood, -1.88, 0.71, 0.0));
+  group.add(makeBox(0.44, 0.44, 0.44, crateCrystal, 1.9, 0.22, 0.2));
 
   return { group, liquidMesh, fireMesh };
 }

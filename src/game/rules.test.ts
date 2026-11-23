@@ -839,6 +839,6 @@ test('Ouvertures (S07.3): table UNLOCKS, compagnon après le premier boss, ancie
   // une sauvegarde d'avant S07 a tout ouvert, et ne reçoit pas de compagnon
   const old = migrateSaveState({ ...createInitialSaveState('braise', true), version: 7, allUnlocked: undefined, starterTrio: undefined })!;
   assert.equal(old.allUnlocked, true);
-  assert.equal(unlockedFeatures(old).size, 6); // A2.2 : plus d'onglet de cuisine
+  assert.equal(unlockedFeatures(old).size, 7); // A2.2 : plus d'onglet de cuisine ; A2.3 : l'Atelier
   assert.equal(markUnlockSeen(markUnlockSeen(save, 'team'), 'team').unlocksSeen.filter((f) => f === 'team').length, 1);
 });
