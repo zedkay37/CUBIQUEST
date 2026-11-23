@@ -187,7 +187,7 @@ export function CampHud({
               }`}
             >
               <Compass className="w-4 h-4" />
-              <span>{FR.ui.campHud.expeditions}</span>
+              <span>{isOpen('team') ? FR.ui.campHud.expeditions : FR.ui.campHud.partir}</span>
             </button>
 
             <button
