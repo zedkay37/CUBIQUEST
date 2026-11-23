@@ -12,7 +12,7 @@ const RES_LOW = 9;
 const span = (list: Voxel[], k: 'x' | 'y' | 'z') => Math.max(...list.map((v) => v[k])) - Math.min(...list.map((v) => v[k])) + 1;
 
 for (const [id, def] of Object.entries(SCULPT_DEFS)) {
-  test(`Art (${id}) : parties épaisses, tête 30-40 %, yeux 2×2 avec reflet, 3 à 5 couleurs, budget de blocs`, () => {
+  test(`Art (${id}) : parties épaisses, tête 45-50 % (base) ou 30-40 %, yeux 2×2 avec reflet, 3 à 5 couleurs, budget de blocs`, () => {
     assert.ok(SPECIES[id], id);
     const v = voxelize(def, RES_HIGH);
     const groups = [...new Set(v.map((x) => x.group))];
@@ -24,7 +24,10 @@ for (const [id, def] of Object.entries(SCULPT_DEFS)) {
     // tête (yeux compris, sans les ornements) entre 30 et 40 % de la hauteur
     const head = v.filter((x) => x.group === 'head' || x.group.startsWith('eye'));
     const ratio = span(head, 'y') / span(v, 'y');
-    assert.ok(ratio >= 0.3 && ratio <= 0.4, `${id} : tête ${Math.round(ratio * 100)} %`);
+    // ART2 : formes de base aux proportions mignonnes (45 à 50 %), formes évoluées 30 à 40 %
+    const base = !Object.values(SPECIES).some((sp) => sp.evolvesTo === id);
+    const [lo, hi] = base ? [0.45, 0.5] : [0.3, 0.4];
+    assert.ok(ratio >= lo && ratio <= hi, `${id} : tête ${Math.round(ratio * 100)} %`);
     // deux yeux d'au moins 2 × 2 blocs, chacun avec un reflet blanc
     for (const eye of ['eyeL', 'eyeR']) {
       const list = v.filter((x) => x.group === eye);
@@ -63,4 +66,32 @@ test('ART2 (couleurs) : tons nets, tête distincte, détails sombres, bruit de s
       assert.ok(contrast(c, t.primary) >= 0.15, `${id} : ${part} ${Math.round(contrast(c, t.primary) * 100)} %`);
     }
   }
+});
+
+/** Silhouette de face à 64 pixels de haut (ombre noire) : grille d'occupation x/y, centrée. */
+function silhouette64(id: string): Set<string> {
+  const v = voxelize(SCULPT_DEFS[id], RES_HIGH);
+  const minX = Math.min(...v.map((p) => p.x));
+  const maxX = Math.max(...v.map((p) => p.x));
+  const minY = Math.min(...v.map((p) => p.y));
+  const h = Math.max(...v.map((p) => p.y)) - minY + 1;
+  const k = 64 / h;
+  const cx = (minX + maxX + 1) / 2;
+  const out = new Set<string>();
+  for (const p of v) {
+    for (let a = 0; a < Math.ceil(k); a++)
+      for (let b = 0; b < Math.ceil(k); b++) out.add(`${Math.floor((p.x - cx) * k + a)},${Math.floor((p.y - minY) * k + b)}`);
+  }
+  return out;
+}
+
+test('ART2 : les 9 silhouettes noires sont toutes différentes à 64 pixels', () => {
+  const ids = Object.keys(SCULPT_DEFS);
+  const sil = ids.map((id) => silhouette64(id));
+  for (let i = 0; i < ids.length; i++)
+    for (let j = i + 1; j < ids.length; j++) {
+      const inter = [...sil[i]].filter((p) => sil[j].has(p)).length;
+      const iou = inter / (sil[i].size + sil[j].size - inter);
+      assert.ok(iou < 0.9, `${ids[i]} / ${ids[j]} : ${Math.round(iou * 100)} % de recouvrement`);
+    }
 });

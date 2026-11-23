@@ -20,22 +20,29 @@ const LEGS = { legs: ['legL', 'legR'], eyes: ['eyeL', 'eyeR'] };
 
 // ---------------------------------------------------------------- lignée Pyrocube (Feu)
 
+/**
+ * ART2 (section 2) : proportions mignonnes (tête 45 à 50 % de la hauteur), grands yeux à reflet, volumes
+ * distincts (tête, corps, pattes, détail). Détail signature de Pyrocube : la BRAISE-CUBE lumineuse sur la tête.
+ */
 const pyrocube: SculptDef = {
   ...LEGS,
-  extras: [{ group: 'tail', pivot: [0, 0.38, -0.3] }],
+  extras: [{ group: 'tail', pivot: [0, 0.3, -0.24] }],
   shapes: [
-    B([0, 0.52, 0], [0.34, 0.32, 0.31], 'primary'),
-    B([0, 0.46, 0.2], [0.24, 0.22, 0.14], 'belly'),
-    C([0.34, 0.66, 0.06], [0.46, 0.46, 0.14], 0.09, 'primary', 'body', true),
-    B([0, 1.1, 0.04], [0.36, 0.25, 0.32], 'primary', 'head'),
-    B([0, 1.0, 0.33], [0.18, 0.1, 0.06], 'belly', 'head'),
-    K([0.22, 1.3, -0.02], [0.11, 0.26, 0.03], 'secondary', 'crest', true),
-    K([0.23, 1.46, -0.02], [0.07, 0.14, 0.02], 'accent', 'crest', true),
-    ...eyes(0.16, 1.14, 0.33),
-    C([0.17, 0.3, 0], [0.18, 0.1, 0.03], 0.11, 'secondary', 'leg*', true),
-    B([0.18, 0.05, 0.07], [0.11, 0.05, 0.13], 'secondary', 'leg*', true),
-    C([0, 0.38, -0.3], [0, 0.5, -0.5], 0.08, 'primary', 'tail'),
-    B([0, 0.58, -0.56], [0.1, 0.1, 0.1], 'accent', 'tail'),
+    B([0, 0.42, 0], [0.27, 0.24, 0.24], 'primary'),
+    B([0, 0.4, 0.21], [0.17, 0.16, 0.05], 'belly'),
+    B([0.33, 0.46, 0.06], [0.07, 0.12, 0.08], 'primary', 'body', true),
+    B([0, 1.02, 0.02], [0.36, 0.38, 0.32], 'primary', 'head'),
+    // coins de la tête adoucis
+    { kind: 'box', at: [0.36,0.99,0.34], size: [0.08,0.4,0.06], color: 'primary', group: 'head', subtract: true, mirror: true },
+    { kind: 'box', at: [0.36,1.34,0.02], size: [0.08,0.06,0.4], color: 'primary', group: 'head', subtract: true, mirror: true },
+    B([0, 0.82, 0.34], [0.17, 0.08, 0.04], 'belly', 'head'),
+    ...eyes(0.16, 1.04, 0.33, 0.095, 0.13),
+    // braise-cube (signature) et deux petites oreilles
+    B([0, 1.54, 0.02], [0.12, 0.12, 0.12], 'accent', 'crest'),
+    B([0.26, 1.38, -0.04], [0.07, 0.07, 0.07], 'secondary', 'crest', true),
+    B([0.16, 0.09, 0.03], [0.1, 0.09, 0.12], 'secondary', 'leg*', true),
+    C([0, 0.3, -0.24], [0, 0.4, -0.4], 0.07, 'primary', 'tail'),
+    B([0, 0.46, -0.46], [0.08, 0.08, 0.08], 'accent', 'tail'),
   ],
 };
 
@@ -94,22 +101,24 @@ const ignisaur: SculptDef = {
 
 // ---------------------------------------------------------------- lignée Ampoulin (Foudre)
 
+/** ART2 : Ampoulin, détail signature : l'AMPOULE lumineuse au sommet, sur sa douille de cuivre. */
 const ampoulin: SculptDef = {
   ...LEGS,
-  extras: [{ group: 'tail', pivot: [0, 0.36, -0.34] }],
+  extras: [{ group: 'tail', pivot: [0, 0.3, -0.26] }],
   shapes: [
-    B([0, 0.5, 0], [0.33, 0.32, 0.33], 'primary'),
-    B([0, 0.46, 0], [0.35, 0.07, 0.35], 'secondary'),
-    B([0, 0.62, 0.34], [0.18, 0.04, 0.03], 'accent'),
-    B([0, 0.9, 0], [0.335, 0.22, 0.335], 'primary', 'head'),
-    B([0, 1.09, 0], [0.15, 0.06, 0.15], 'secondary', 'crest'),
-    B([0, 1.2, 0], [0.08, 0.06, 0.08], 'accent', 'crest'),
-    ...eyes(0.14, 0.94, 0.33, 0.1, 0.075),
-    B([0.35, 0.62, 0], [0.06, 0.16, 0.22], 'secondary', 'body', true),
-    C([0.4, 0.52, 0.1], [0.46, 0.36, 0.14], 0.08, 'primary', 'body', true),
+    B([0, 0.4, 0], [0.27, 0.22, 0.25], 'primary'),
+    B([0, 0.38, 0], [0.285, 0.06, 0.265], 'secondary'),
+    B([0, 0.5, 0.26], [0.14, 0.04, 0.03], 'accent'),
+    B([0.32, 0.44, 0.04], [0.07, 0.12, 0.08], 'secondary', 'body', true),
+    B([0, 0.98, 0], [0.35, 0.39, 0.32], 'primary', 'head'),
+    { kind: 'box', at: [0.35,0.95,0.32], size: [0.07,0.4,0.06], color: 'primary', group: 'head', subtract: true, mirror: true },
+    ...eyes(0.15, 1.02, 0.32, 0.1, 0.12),
+    // douille et ampoule (signature)
+    B([0, 1.42, 0], [0.12, 0.06, 0.12], 'secondary', 'crest'),
+    B([0, 1.58, 0], [0.13, 0.12, 0.13], 'accent', 'crest'),
     B([0.16, 0.08, 0.03], [0.11, 0.08, 0.13], 'secondary', 'leg*', true),
-    C([0, 0.36, -0.34], [0, 0.3, -0.6], 0.07, 'secondary', 'tail'),
-    B([0, 0.3, -0.68], [0.1, 0.09, 0.08], 'accent', 'tail'),
+    C([0, 0.3, -0.26], [0, 0.26, -0.48], 0.07, 'secondary', 'tail'),
+    B([0, 0.26, -0.56], [0.09, 0.08, 0.07], 'accent', 'tail'),
   ],
 };
 
@@ -163,20 +172,25 @@ const voltacier: SculptDef = {
 
 // ---------------------------------------------------------------- lignée Cailloc (Roche)
 
+/** ART2 : Cailloc, détail signature : le CRISTAL d'ambre planté dans le crâne, et une fissure sombre. */
 const cailloc: SculptDef = {
   ...LEGS,
   shapes: [
-    E([0, 0.5, 0], [0.46, 0.38, 0.42], 'primary'),
-    E([0, 0.44, 0.24], [0.28, 0.24, 0.18], 'belly'),
-    // bosses de pierre sur le dos
-    E([0.18, 0.78, -0.18], [0.16, 0.14, 0.14], 'secondary', 'body', true),
-    E([0, 0.68, -0.34], [0.18, 0.16, 0.12], 'secondary'),
-    E([0, 1.02, 0.08], [0.38, 0.25, 0.34], 'primary', 'head'),
-    E([0.2, 1.22, -0.04], [0.12, 0.1, 0.1], 'secondary', 'crest', true),
-    K([0, 1.24, 0.06], [0.08, 0.2, 0.02], 'accent', 'crest'),
-    ...eyes(0.15, 1.04, 0.34),
-    C([0.38, 0.56, 0.08], [0.5, 0.36, 0.14], 0.11, 'primary', 'body', true),
-    B([0.2, 0.1, 0.04], [0.14, 0.1, 0.15], 'secondary', 'leg*', true),
+    B([0, 0.42, 0], [0.3, 0.24, 0.27], 'primary'),
+    B([0, 0.4, 0.23], [0.18, 0.15, 0.05], 'belly'),
+    // bosses de pierre sur les épaules
+    B([0.3, 0.58, -0.06], [0.1, 0.09, 0.12], 'secondary', 'body', true),
+    B([0.36, 0.42, 0.06], [0.08, 0.13, 0.09], 'primary', 'body', true),
+    B([0, 0.99, 0.03], [0.37, 0.35, 0.32], 'primary', 'head'),
+    { kind: 'box', at: [0.37,0.99,0.35], size: [0.08,0.4,0.06], color: 'primary', group: 'head', subtract: true, mirror: true },
+    // fissure sombre sur le front
+    B([-0.18, 1.24, 0.34], [0.04, 0.09, 0.03], 'secondary', 'head'),
+    B([-0.12, 1.16, 0.34], [0.04, 0.05, 0.03], 'secondary', 'head'),
+    ...eyes(0.16, 1.02, 0.34, 0.095, 0.12),
+    // cristal d'ambre (signature)
+    B([0.1, 1.46, 0], [0.08, 0.13, 0.08], 'accent', 'crest'),
+    B([-0.04, 1.42, 0.06], [0.06, 0.09, 0.06], 'accent', 'crest'),
+    B([0.18, 0.09, 0.04], [0.12, 0.09, 0.14], 'secondary', 'leg*', true),
   ],
 };
 
