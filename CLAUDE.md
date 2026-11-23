@@ -42,7 +42,7 @@ URL utiles en développement (aucune ne touche à la sauvegarde) :
 - `?gallery=1` : galerie de revue (toutes les créatures en 3D + aperçu des biomes).
 - `?autostart=1&hour=0.8` : camp à une heure donnée (0 aube · 0.3 jour · 0.66 crépuscule · 0.8 nuit).
 - `?bench=1` : mesure de 30 s d'un combat à graine fixe (images/s moyennes et 5 % les plus lentes, appels de dessin, triangles). `&quality=low|medium|high` impose la qualité.
-- `?gallery=styles` : Magmadrake en vingt styles A à T (sprints STYLES et STYLES2, exploration ; `src/components/styles/`), favoris et classement, `&compare=C,O`, `&focus=O` (plein écran). Planche des captures : `tools/planche.ps1`. Vues Vitrine / En jeu, interrupteurs de rendu propres à la page (`&view=jeu&tone=aucun|neutre&sat=1&aa=2&cam=proche&nuit=1&compare=C`). Ne touche pas au jeu.
+- `?gallery=styles` : Magmadrake et Calcinarque (légendaire d'essai, hors du jeu, sprint STYLES3) en vingt styles A à T (exploration ; `src/components/styles/`, créature courante dans `subject.ts`) ; `&creature=calcinarque`, `&angle=face|profil`, `&silhouette=1`, `&compare=magmadrake:C,calcinarque:O`, favoris et classement, `&compare=C,O`, `&focus=O` (plein écran). Planche des captures : `tools/planche.ps1`. Vues Vitrine / En jeu, interrupteurs de rendu propres à la page (`&view=jeu&tone=aucun|neutre&sat=1&aa=2&cam=proche&nuit=1&compare=C`). Ne touche pas au jeu.
 - `?gallery=art` : créatures refaites, ancien et nouveau modèle côte à côte (bouton « Silhouettes »).
 - `?debug=1` : overlay de diagnostic (FPS, temps d'image, draw calls, triangles, géométries, textures, particules, entités). Se combine avec les autres. Détail des lignes dans `src/game/engine/debug.ts`.
 
