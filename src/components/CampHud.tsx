@@ -194,7 +194,7 @@ export function CampHud({
               type="button"
               onClick={() => selectDrawer('cooking')}
               title={isNew('cooking') ? FR.ui.campHud.nouveautes.cooking : undefined}
-              className={`${isOpen('cooking') ? '' : 'hidden '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+              className={`${isOpen('cooking') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'cooking'
                   ? 'block-btn-gold'
                   : 'block-btn-secondary'
@@ -214,7 +214,7 @@ export function CampHud({
               type="button"
               onClick={() => selectDrawer('team')}
               title={isNew('team') ? FR.ui.campHud.nouveautes.team : undefined}
-              className={`${isOpen('team') ? '' : 'hidden '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+              className={`${isOpen('team') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'team'
                   ? 'block-btn-gold'
                   : 'block-btn-secondary'
@@ -229,7 +229,7 @@ export function CampHud({
               type="button"
               onClick={() => selectDrawer('quests')}
               title={isNew('quests') ? FR.ui.campHud.nouveautes.quests : undefined}
-              className={`${isOpen('quests') ? '' : 'hidden '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+              className={`${isOpen('quests') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'quests'
                   ? 'block-btn-gold'
                   : 'block-btn-secondary'
@@ -249,7 +249,7 @@ export function CampHud({
               type="button"
               onClick={() => selectDrawer('codex')}
               title={isNew('codex') ? FR.ui.campHud.nouveautes.codex : undefined}
-              className={`${isOpen('codex') ? '' : 'hidden '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
+              className={`${isOpen('codex') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeDrawer === 'codex'
                   ? 'block-btn-gold'
                   : 'block-btn-secondary'
