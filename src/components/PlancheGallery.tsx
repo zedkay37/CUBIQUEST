@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { SPECIES } from '../game/catalog';
-import { buildVoxelCreature } from '../game/models/creatures';
+import { buildVoxelCreature, setVoxMerge } from '../game/models/creatures';
 import { getVoxDef, parseVox, registerVoxModel } from '../game/models/voxFile';
 
 /**
@@ -19,6 +19,9 @@ import { getVoxDef, parseVox, registerVoxModel } from '../game/models/voxFile';
 const REFERENCES = import.meta.glob('../../tools/vox-studio/references/*.vox', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
 
 const params = new URLSearchParams(window.location.search);
+// &fusion=jamais|toujours|bas : force la fusion des faces des .vox (comparaison de l'image avec et sans)
+const FUSION = params.get('fusion');
+if (FUSION === 'jamais' || FUSION === 'toujours' || FUSION === 'bas') setVoxMerge(FUSION);
 const SPECIES_ID = SPECIES[params.get('species') ?? ''] ? params.get('species')! : 'magmadrake';
 const FICHIER = params.get('fichier');
 const LOT = (params.get('lot') ?? '')

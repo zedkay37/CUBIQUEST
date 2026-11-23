@@ -79,6 +79,21 @@ export function usesSculpt(speciesId: string): boolean {
 }
 /** ART3 : un modèle `.vox` est dessiné à cette échelle (même taille de bloc que les créatures du code). */
 const VOX_RES = 14;
+/**
+ * BESTIAIRE : fusion des faces planes de même couleur des modèles `.vox` (moins de triangles, même image).
+ * « toujours », « bas » (seulement en qualité Basse) ou « jamais ». Les modèles du code ne sont jamais fusionnés.
+ */
+// « bas » par défaut : en qualité haute, la fusion exacte change encore une poignée de pixels d'arête (46 sur 1,5 million,
+// mesuré le 23/11) ; elle ne sert donc qu'en qualité Basse, comme demandé par le joueur.
+let voxMerge: 'toujours' | 'bas' | 'jamais' = 'bas';
+/** En qualité Basse : 1 = fusion exacte (même image), 2 = fusion plus forte qui abandonne l'ombre des coins. */
+let voxFlatLow: 1 | 2 = 2;
+export function setVoxMergeLow(level: 1 | 2): void {
+  voxFlatLow = level;
+}
+export function setVoxMerge(mode: 'toujours' | 'bas' | 'jamais'): void {
+  voxMerge = mode;
+}
 
 export function buildVoxelCreature(speciesId: string, scaleOverride?: number, variant?: boolean): VoxelCreatureRig {
   const species = SPECIES[speciesId] ?? SPECIES.pyrocube;
@@ -743,7 +758,7 @@ export function buildSculptCreature(species: SpeciesDef, scaleOverride?: number,
   const defs = mode === 'art3' ? SCULPT_DEFS : mode === 'art2' ? SCULPT_DEFS_ART2 : SCULPT_DEFS_ART1;
   // ART3 : un modèle `.vox` facultatif remplace le modèle du code (même lumière, animations et lueurs)
   const vox = mode === 'art3' ? getVoxDef(species.id) : undefined;
-  const parts = buildSculptRig(vox ?? defs[species.id], palette, vox ? VOX_RES : sculptRes, glow, mode === 'art2' ? ART2_AO_STRENGTH : 0.16, false, mode === 'art3'); // normales lissées essayées puis écartées (taches sur les faces planes)
+  const parts = buildSculptRig(vox ?? defs[species.id], palette, vox ? VOX_RES : sculptRes, glow, mode === 'art2' ? ART2_AO_STRENGTH : 0.16, false, mode === 'art3', !vox || voxMerge === 'jamais' ? 0 : sculptRes < 14 ? (voxMerge === 'bas' || voxMerge === 'toujours' ? voxFlatLow : 1) : voxMerge === 'toujours' ? 1 : 0); // normales lissées essayées puis écartées (taches sur les faces planes)
   const root = new THREE.Group();
   root.add(parts.bodyPivot);
   // ART3 : ombre au sol nette (bord franc), pour que la créature ne flotte pas

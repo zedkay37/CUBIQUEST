@@ -210,7 +210,7 @@ function patchArt3Material(mat: THREE.MeshStandardMaterial, accent: boolean): vo
   mat.customProgramCacheKey = () => 'art3-creature-' + accent;
 }
 
-export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: number, glowIntensity: number, aoStrength = 0.16, smoothNormals = false, art3 = false): SculptRigParts {
+export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: number, glowIntensity: number, aoStrength = 0.16, smoothNormals = false, art3 = false, mergeFlat: 0 | 1 | 2 = 0): SculptRigParts {
   const voxels = def.voxels ?? voxelize(def, res);
   const legs = new Set(def.legs ?? []);
   const extrasDef = new Map((def.extras ?? []).map((e) => [e.group, e.pivot]));
@@ -273,6 +273,9 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
       const nor: number[] = [];
       const clr: number[] = [];
       const idx: number[] = [];
+      // BESTIAIRE : faces sans ombre de coin, rangées par plan et par couleur, fusionnées en rectangles après la boucle.
+      // L'image ne change pas : sur un rectangle fusionné, l'ombre est la même partout, et le dégradé est linéaire.
+      const flat = new Map<string, { axis: number; sign: number; plane: number; c: THREE.Color; shade: number; glow: boolean; d: Vec3; cells: Set<string> }>();
       for (const v of list) {
         if ((v.color === 'accent') !== glowing) continue;
         // ART2 : la tête a son propre ton, plus clair que le corps
@@ -288,6 +291,41 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
           const sign = dx + dy + dz;
           const u = (axis + 1) % 3;
           const w = (axis + 2) % 3;
+          if (mergeFlat && !smoothNormals) {
+            // une face dont les 4 coins ont la même ombre peut être fusionnée avec ses voisines de même couleur et
+            // de même ombre : sa couleur est alors constante (au dégradé linéaire près), l'image ne change pas
+            const o = [v.x, v.y, v.z];
+            o[axis] += sign;
+            const at = (du: number, dw: number) => {
+              const q = [...o];
+              q[u] += du;
+              q[w] += dw;
+              return occ(v, q[0], q[1], q[2]);
+            };
+            const aos = [
+              [-1, -1],
+              [1, -1],
+              [1, 1],
+              [-1, 1],
+            ].map(([su, sw]) => {
+              if (mergeFlat === 2) return 0; // qualité Basse : ombre des coins abandonnée sur les faces fusionnées
+              const s1 = at(su, 0);
+              const s2 = at(0, sw);
+              return s1 && s2 ? 3 : s1 + s2 + at(su, sw);
+            });
+            if (aos.every((a) => a === aos[0])) {
+              const shadeC = 1 - aos[0] * aoStrength;
+              const plane = [v.x, v.y, v.z][axis] + (sign > 0 ? 1 : 0);
+              const key = `${axis}|${sign}|${plane}|${c.getHexString()}|${v.glow ? 1 : 0}|${aos[0]}`;
+              let b = flat.get(key);
+              if (!b) {
+                b = { axis, sign, plane, c, shade: shadeC, glow: Boolean(v.glow), d: [dx, dy, dz], cells: new Set() };
+                flat.set(key, b);
+              }
+              b.cells.add(`${[v.x, v.y, v.z][u]},${[v.x, v.y, v.z][w]}`);
+              continue;
+            }
+          }
           const start = pos.length / 3;
           for (const [a, b] of [
             [0, 0],
@@ -341,6 +379,41 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
           // ordre des triangles selon l'orientation de la face
           const flip = sign > 0; // (u, w) direct : u × w = +axe
           if (flip) idx.push(start, start + 1, start + 2, start, start + 2, start + 3);
+          else idx.push(start, start + 2, start + 1, start, start + 3, start + 2);
+        }
+      }
+      // rectangles les plus grands possibles, d'abord le long de u, puis de w (balayage glouton classique)
+      for (const b of flat.values()) {
+        const u = (b.axis + 1) % 3;
+        const w = (b.axis + 2) % 3;
+        const cells = [...b.cells].map((k) => k.split(',').map(Number)).sort((p, q) => p[1] - q[1] || p[0] - q[0]);
+        const used = new Set<string>();
+        const has = (cu: number, cw: number) => b.cells.has(`${cu},${cw}`) && !used.has(`${cu},${cw}`);
+        for (const [cu, cw] of cells) {
+          if (used.has(`${cu},${cw}`)) continue;
+          let wu = 1;
+          while (has(cu + wu, cw)) wu++;
+          let hw = 1;
+          while ([...Array(wu).keys()].every((k) => has(cu + k, cw + hw))) hw++;
+          for (let i = 0; i < wu; i++) for (let j = 0; j < hw; j++) used.add(`${cu + i},${cw + j}`);
+          const start = pos.length / 3;
+          for (const [a, bb] of [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+          ]) {
+            const corner = [0, 0, 0];
+            corner[b.axis] = b.plane;
+            corner[u] = cu + a * wu;
+            corner[w] = cw + bb * hw;
+            pos.push(corner[0] * s - pivot[0], corner[1] * s - pivot[1], corner[2] * s - pivot[2]);
+            nor.push(b.d[0], b.d[1], b.d[2]);
+            const grad = art3 ? 0.9 + 0.1 * ((corner[1] - yLo) / Math.max(1, yHi - yLo)) : 1;
+            clr.push(b.c.r * b.shade * grad, b.c.g * b.shade * grad, b.c.b * b.shade * grad);
+            glw.push(b.glow ? 1 : 0);
+          }
+          if (b.sign > 0) idx.push(start, start + 1, start + 2, start, start + 2, start + 3);
           else idx.push(start, start + 2, start + 1, start, start + 3, start + 2);
         }
       }

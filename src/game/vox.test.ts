@@ -73,3 +73,33 @@ test('Vox (BESTIAIRE) : les créatures du code gardent leurs 2 pattes (aucun cha
   const { SCULPT_DEFS } = await import('./models/sculptDefs');
   for (const [id, d] of Object.entries(SCULPT_DEFS)) assert.deepEqual(d.legs, ['legL', 'legR'], id);
 });
+
+test('Vox (BESTIAIRE) : fusion des faces : moins de triangles, même surface, même boîte ; rien pour les modèles du code', async () => {
+  const file = readFileSync('tools/vox-studio/references/calcinarque-legendaire.vox');
+  const def = voxToSculptDef(parseVox(toArrayBuffer(new Uint8Array(file))));
+  const pal = { primary: '#888888', secondary: '#666666', belly: '#AAAAAA', accent: '#FFCC00', eye: '#111111', white: '#FFFFFF', dark: '#111111' };
+  const stats = (merge: 0 | 1 | 2) => {
+    const rig = buildSculptRig(def, pal, 14, 0.4, 0.16, false, true, merge);
+    let tris = 0;
+    let area = 0;
+    rig.bodyPivot.traverse((o) => {
+      const g = (o as { geometry?: { index: { count: number; array: ArrayLike<number> }; attributes: Record<string, { array: ArrayLike<number> }> } }).geometry;
+      if (!g) return;
+      tris += g.index.count / 3;
+      const p = g.attributes.position.array;
+      const ix = g.index.array;
+      for (let t = 0; t < ix.length; t += 3) {
+        const [a, b, c] = [ix[t] * 3, ix[t + 1] * 3, ix[t + 2] * 3];
+        const u = [p[b] - p[a], p[b + 1] - p[a + 1], p[b + 2] - p[a + 2]];
+        const v = [p[c] - p[a], p[c + 1] - p[a + 1], p[c + 2] - p[a + 2]];
+        area += Math.hypot(u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]) / 2;
+      }
+    });
+    return { tris, area };
+  };
+  const none = stats(0);
+  const exact = stats(1);
+  const strong = stats(2);
+  assert.ok(exact.tris < none.tris && strong.tris < exact.tris, `${none.tris} → ${exact.tris} → ${strong.tris}`);
+  assert.ok(Math.abs(exact.area - none.area) < 1e-6 && Math.abs(strong.area - none.area) < 1e-6, 'même surface');
+});
