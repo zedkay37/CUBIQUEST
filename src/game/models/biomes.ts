@@ -2,6 +2,7 @@
  * Environnement d'un biome : sol, décor instancié, éléments propres (canyon, toundra, orage) et leur animation.
  */
 import * as THREE from 'three';
+import { addMeadowArtDecor, buildMeadowGroundTexture, isArtDecorOn } from './meadowDecor';
 import type { BiomeDef, BiomeId } from '../types';
 import { getGroundCheckerTexture, makeBox } from './shared';
 
@@ -396,7 +397,9 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
   const decor = BIOME_DECOR[biome.id];
 
   // Extended natural terrain island slab (grounded, no floating rectangular walls!)
-  const groundTex = getGroundCheckerTexture(biome.groundHex, biome.groundAltHex);
+  // Sprint Art : la Prairie (camp compris) reçoit un décor vivant, dans le navigateur seulement
+  const art = isArtDecorOn() && biome.id === 'meadow';
+  const groundTex = art ? buildMeadowGroundTexture() : getGroundCheckerTexture(biome.groundHex, biome.groundAltHex);
   const groundMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     map: groundTex,
@@ -522,7 +525,7 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
   env.add(isletInst);
 
   // Perimeter voxel trees / crystals / volcanic spires via InstancedMesh (natural perimeter framing)
-  const treeCount = 28;
+  const treeCount = art ? 0 : 28; // Prairie du sprint Art : arbres de meadowDecor.ts
   const trunkGeo = new THREE.BoxGeometry(0.65, 1.8, 0.65);
   const crownGeo = new THREE.BoxGeometry(1.9, 1.6, 1.9);
   const trunkMat = new THREE.MeshStandardMaterial({
@@ -574,7 +577,7 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
   env.add(trunks, crowns);
 
   // Decorative ground rocks / flowers instanced around edges (never obstructing spawn center)
-  const rockCount = 26;
+  const rockCount = art ? 0 : 26;
   const rockGeo = new THREE.BoxGeometry(0.85, 0.55, 0.85);
   const rockMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -601,6 +604,7 @@ export function buildBiomeEnvironment(biome: BiomeDef, isCamp: boolean): BiomeEn
 
   // Décor signature des biomes de la Giga Update
   let animate: ((elapsed: number) => void) | undefined;
+  if (art) animate = addMeadowArtDecor(env, arenaRadius, isCamp);
   if (biome.id === 'tundra') animate = addTundraDecor(env, arenaRadius);
   else if (biome.id === 'stormpeak') animate = addStormDecor(env, arenaRadius);
   else if (biome.id === 'canyon') animate = addCanyonDecor(env, arenaRadius);

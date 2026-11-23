@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import {setSculptModels} from './game/models/creatures';
+import {setArtDecor} from './game/models/meadowDecor';
 
 // `?gallery=1` : galerie de revue des créatures et des biomes (outil de développement, le jeu n'est pas lancé).
 // Chargée à la demande : son code n'est pas téléchargé par les joueurs.
@@ -32,6 +33,7 @@ if (new URLSearchParams(window.location.search).get('bench') === '1') {
 
 // Sprint Art : modèles sculptés dans le navigateur (les outils headless gardent les anciens, golden inchangé)
 setSculptModels(true);
+setArtDecor(true);
 
 createRoot(document.getElementById('root')!).render(
   isRevealGallery ? (

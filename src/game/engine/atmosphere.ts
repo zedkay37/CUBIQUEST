@@ -2,6 +2,7 @@
  * Ambiance : météo du biome, éclairage, éclairs et flash d'orage, cycle jour/nuit du camp.
  */
 import * as THREE from 'three';
+import { setDecorNight } from '../models/meadowDecor';
 import { soundFx } from '../audio';
 import type { BiomeId } from '../types';
 import {
@@ -181,6 +182,7 @@ export function updateDayNight(self: VoxelEngine, dt: number): void {
 
   // 0 en plein jour, 1 en pleine nuit : pilote la lueur du feu et les étoiles
   const night = THREE.MathUtils.clamp((0.42 - self.scene.environmentIntensity) / 0.37, 0, 1);
+    setDecorNight(night); // sprint Art : lucioles la nuit, papillons le jour
   if (self.workbenchLight) {
     const flicker = 0.92 + Math.sin(self.elapsedTotal * 11) * 0.05 + Math.sin(self.elapsedTotal * 17.3) * 0.03;
     self.workbenchLight.intensity = night * 32 * flicker; // A2.3 : le moule éclaire, sans éblouir

@@ -16,6 +16,7 @@ import { BOSS_INTRO_SEC } from './constants';
 import { updateEnemies } from './enemies';
 import { resetLessonState, updateLessons } from './lessons';
 import { setGrade } from './postfx';
+import { setDecorNight } from '../models/meadowDecor';
 import { clearEvoRing } from './evolution';
 import {
   clearProjectilesAndTelegraphs,
@@ -55,6 +56,7 @@ export function startExpedition(
   self.controlMode = controlMode;
   self.activeStage = stage;
   setGrade(self, stage.biomeId);
+  setDecorNight(0); // les combats se jouent de jour
   self.waveIndex = 0;
   self.expeditionElapsed = 0;
   self.damageDealt = 0;
