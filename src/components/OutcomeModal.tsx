@@ -312,8 +312,8 @@ export function OutcomeModal({
 
           </motion.div>
 
-          {/* Actions : « Suivant » (ou « Réessayer ») mis en avant */}
-          <motion.div variants={itemVariants} className="mt-5 flex flex-wrap-reverse gap-2.5 justify-end">
+          {/* Actions : « Suivant » (ou « Réessayer ») mis en avant, toujours visibles (collées en bas quand l'écran défile) */}
+          <motion.div variants={itemVariants} className="sticky bottom-0 z-10 -mx-1 mt-5 flex flex-wrap-reverse justify-end gap-2.5 bg-[var(--ui-panel,#1B2130)] px-1 pt-2 pb-1">
             <BlockButton variant="secondary" onClick={onReturnCamp} silent>
               {FR.ui.outcomeModal.camp}
             </BlockButton>

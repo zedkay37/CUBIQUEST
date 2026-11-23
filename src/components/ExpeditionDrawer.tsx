@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Play, X } from 'lucide-react';
 import { BIOME_ORDER, BIOMES, ELEMENT_META, INGREDIENTS, SPECIES, STAGES } from '../game/catalog';
-import { challengeText, computeSquadPower, isBiomeUnlocked, nextStarTier, totalStars } from '../game/rules';
+import { challengeText, computeSquadPower, isBiomeUnlocked, nextStarTier, stageBaseXp, totalStars } from '../game/rules';
 import { STAGE_CHALLENGES } from '../game/catalog';
 import type { StageStars } from '../game/types';
 
@@ -233,7 +233,7 @@ export function ExpeditionDrawer({
                   </h3>
                   <p className="text-xs text-[#CBD5E1] mt-0.5">
                     {activeStage.waves.length}{FR.ui.expeditionDrawer.vaguesXpDeBase}{' '}
-                    <span className="font-mono-num text-[#2FB97A]">+{activeStage.xpReward}</span>
+                    <span className="font-mono-num text-[#2FB97A]">+{stageBaseXp(activeStage)}</span>
                   </p>
                 </div>
               </div>

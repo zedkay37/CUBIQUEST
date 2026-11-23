@@ -861,7 +861,7 @@ export function applyExpeditionRewards(
   // Première victoire sur ce niveau : bonus d'XP (S06.3)
   const firstClear = victory && !save.completedStageIds.includes(stage.id);
   const xpPerUnit = victory
-    ? Math.round(stage.xpReward * XP_KIT.xpScale * (firstClear ? XP_KIT.firstClearXpMult : 1))
+    ? Math.round(stageBaseXp(stage) * (firstClear ? XP_KIT.firstClearXpMult : 1))
     : Math.max(15, Math.round(stage.xpReward * XP_KIT.xpScale * 0.25 * (stats.wavesCleared / stage.waves.length)));
   // Les créatures restées au camp gagnent une part de l'XP de l'escouade
   const benchXp = Math.round(xpPerUnit * XP_KIT.benchXpShare);
@@ -1173,6 +1173,11 @@ export function mergeStars(a: StageStars | undefined, b: StageStars): StageStars
 }
 
 export const starCount = (s: StageStars | undefined): number => (s ? Number(s.win) + Number(s.noKo) + Number(s.challenge) : 0);
+
+/** XP de base d'une victoire sur ce niveau (hors première victoire), telle qu'affichée sur la carte. */
+export function stageBaseXp(stage: Pick<StageDef, 'xpReward'>): number {
+  return Math.round(stage.xpReward * XP_KIT.xpScale);
+}
 
 /** Paliers atteints mais pas encore récompensés (une sauvegarde migrée les reçoit à la victoire suivante). */
 export function pendingStarTiers(total: number, claimed: number[]): typeof STAR_TIERS {
