@@ -288,13 +288,13 @@ test('Chargement: une sauvegarde illisible est copiée avant que le jeu ne repar
   }
 });
 
-test('Sauvegarde: une sauvegarde v3 réaliste se charge en v7 sans perte, identifiants renommés', () => {
+test('Sauvegarde: une sauvegarde v3 réaliste se charge en v8 sans perte, identifiants renommés', () => {
   const v3 = clone(SAVE_V3_FIXTURE) as Record<string, any>;
   assert.equal(v3.version, 3);
   const m = migrateSaveState(clone(v3));
   assert.ok(m !== null);
   assert.equal(m.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 7);
+  assert.equal(SAVE_VERSION, 8);
 
   // escouade et créatures : rien ne bouge, sauf le nom du champ des runes équipées
   assert.deepEqual(m.squadIds, v3.squadIds);

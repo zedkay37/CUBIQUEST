@@ -92,8 +92,9 @@ export const LEGACY_SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v1');
 //            quêtes et succès renommés (legacyIds.ts) ; `firstTimesSeen` (bulles « première fois »).
 // v6 (S05) : `hazardHintsSeen` (consignes d'attaque déjà montrées).
 // v7 (S06) : `stageStars` (trois étoiles par niveau) ; les niveaux déjà terminés reçoivent l'étoile de victoire.
-// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 7.
-export const SAVE_VERSION = 7;
+// v8 (S07) : `lessonsDone` (leçons du début) ; une sauvegarde qui a déjà gagné la Prairie-2 a tout appris.
+// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 8.
+export const SAVE_VERSION = 8;
 
 export type RngFn = () => number;
 
@@ -1197,6 +1198,26 @@ export function totalStars(save: Pick<SaveState, 'stageStars'>, biomeId?: BiomeI
   return STAGES.filter((st) => !biomeId || st.biomeId === biomeId).reduce((n, st) => n + starCount(save.stageStars[st.id]), 0);
 }
 
+/** Identifiants des leçons (engine/lessons.ts), recopiés ici : rules.ts ne dépend pas du moteur. */
+export const LESSON_IDS_SAVE = ['cast', 'burst', 'dodge', 'trio', 'ultimate'] as const;
+
+function normalizeLessons(raw: unknown, completedStageIds: string[]): string[] {
+  // un joueur qui a déjà gagné la Prairie-2 n'a plus besoin des leçons
+  if (completedStageIds.includes('meadow-2')) return [...LESSON_IDS_SAVE];
+  return Array.isArray(raw) ? LESSON_IDS_SAVE.filter((id) => (raw as unknown[]).includes(id)) : [];
+}
+
+/** Le mode Auto est-il ouvert ? Après la victoire sur le premier boss (S07.2). */
+export function isAutoUnlocked(save: Pick<SaveState, 'completedStageIds'>): boolean {
+  return save.completedStageIds.includes('meadow-3');
+}
+
+/** Marque une leçon faite (idempotent). */
+export function markLessonDone(save: SaveState, id: string): SaveState {
+  if (save.lessonsDone.includes(id) || !(LESSON_IDS_SAVE as readonly string[]).includes(id)) return save;
+  return { ...save, lessonsDone: [...save.lessonsDone, id] };
+}
+
 function normalizeStageStars(raw: unknown, completedStageIds: string[]): Record<string, StageStars> {
   const out: Record<string, StageStars> = {};
   const src = raw && typeof raw === 'object' ? (raw as Record<string, Partial<StageStars>>) : {};
@@ -1309,6 +1330,7 @@ export function createInitialSaveState(
     hazardHintsSeen: {},
     stageStars: {},
     starTiersClaimed: [],
+    lessonsDone: [],
   };
 }
 
@@ -1725,7 +1747,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
   if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.pot !== 'object') return null;
   if (!obj.ingredients || typeof obj.ingredients !== 'object') return null;
-  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== 6 && obj.version !== SAVE_VERSION) return null;
+  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== 6 && obj.version !== 7 && obj.version !== SAVE_VERSION) return null;
 
   // Pierres de Pouvoir : valides, identifiants uniques
   const powerStones: PowerStone[] = [];
@@ -1845,6 +1867,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     firstTimesSeen: uniqueKnown(obj.firstTimesSeen, (id) => (FIRST_TIME_KINDS as readonly string[]).includes(id)),
     hazardHintsSeen: normalizeHintCounts(obj.hazardHintsSeen),
     stageStars: normalizeStageStars(obj.stageStars, completedStageIds),
+    lessonsDone: normalizeLessons(obj.lessonsDone, completedStageIds),
     starTiersClaimed: Array.isArray(obj.starTiersClaimed)
       ? STAR_TIERS.map((t) => t.at).filter((at) => (obj.starTiersClaimed as unknown[]).includes(at))
       : [],

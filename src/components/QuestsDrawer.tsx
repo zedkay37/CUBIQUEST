@@ -18,6 +18,7 @@ import {
 } from '../game/rules';
 import type { QuestReward, SaveState } from '../game/types';
 import { JournalPanel } from './JournalPanel';
+import { BlockButton } from './ui';
 import { FR, GAME_TITLE } from '../i18n/fr';
 
 type DrawerSection = 'missions' | 'achievements' | 'save';
@@ -29,6 +30,8 @@ interface QuestsDrawerProps {
   onClaimAchievement: (achId: string) => void;
   onImportSave: (nextSave: SaveState) => void;
   onResetSave: () => void;
+  /** Revoir les leçons du début (S07.2). */
+  onReplayLessons?: () => void;
   onClose: () => void;
 }
 
@@ -63,6 +66,7 @@ export function QuestsDrawer({
   onClaimAchievement,
   onImportSave,
   onResetSave,
+  onReplayLessons,
   onClose,
 }: QuestsDrawerProps) {
   const [section, setSection] = useState<DrawerSection>('missions');
@@ -502,6 +506,25 @@ export function QuestsDrawer({
                     {FR.ui.questsDrawer.validerImporter}
                   </button>
                 </div>
+              </div>
+
+              {/* Leçons du début (S07.2) : les revoir */}
+              <div className="voxel-panel p-4 flex flex-col gap-2">
+                <h3 className="font-display font-bold text-sm text-[#FAF7F0]">{FR.ui.journal.lecons}</h3>
+                <ul className="text-xs text-[#CBD5E1] list-disc pl-4">
+                  {(['cast', 'burst', 'dodge', 'trio', 'ultimate'] as const).map((id) => (
+                    <li key={id}>
+                      <strong className="text-[#FAF7F0]">{FR.rules.titresLecons[id]}</strong> — {FR.engine.lecons[id]}
+                    </li>
+                  ))}
+                </ul>
+                {onReplayLessons && (
+                  <div>
+                    <BlockButton variant="secondary" onClick={onReplayLessons}>
+                      {FR.ui.journal.revoirLecons}
+                    </BlockButton>
+                  </div>
+                )}
               </div>
 
               {/* Journal de test (S07.4) */}

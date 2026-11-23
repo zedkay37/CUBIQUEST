@@ -27,6 +27,7 @@ export function triggerAllySkill(self: VoxelEngine, slotIndex: number): boolean 
   }
   const unit = self.allies[slotIndex];
   if (!unit || unit.fainted || unit.skillCooldown > 0) return false;
+  self.manualCasts += 1;
   executeAllySkill(self, unit);
   emitHudSnapshot(self);
   return true;

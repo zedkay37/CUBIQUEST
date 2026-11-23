@@ -340,6 +340,8 @@ export interface SaveState {
   stageStars: Record<string, StageStars>;
   /** Paliers d'étoiles dont la récompense a été donnée (12, 24, 36, 48, 63). */
   starTiersClaimed: number[];
+  /** Leçons réussies ou dont le geste a été fait en avance (S07.2). */
+  lessonsDone: string[];
 }
 
 export interface ExpeditionUnitHud {
@@ -378,6 +380,8 @@ export interface ExpeditionHudSnapshot {
   lastBurstColor: string | null;
   /** Ce que ferait le sort de chaque compagnon maintenant (cartes du HUD). */
   skillPreviews: ('trio' | 'burst' | 'ripening' | 'cube' | 'far')[];
+  /** Leçon en cours (S07.2) : sa phrase et la touche qui s'allume. */
+  lesson: { id: string; text: string; key: string } | null;
   /** Défi du niveau et son état pendant le combat (S06.1) : acquis, perdu ou en cours. */
   challenge: { text: string; state: 'pending' | 'done' | 'lost' } | null;
   /** Élément du meneur (premier compagnon vivant) : couleur et effet du Déchaînement. */

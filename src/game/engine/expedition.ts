@@ -14,6 +14,7 @@ import { grantBossShield, updateBossIntro } from './boss';
 import { clearGroup } from './camp';
 import { BOSS_INTRO_SEC } from './constants';
 import { updateEnemies } from './enemies';
+import { resetLessonState, updateLessons } from './lessons';
 import { clearEvoRing } from './evolution';
 import {
   clearProjectilesAndTelegraphs,
@@ -76,6 +77,7 @@ export function startExpedition(
   self.resolvingHazard = false;
   self.dodgesUsed = 0;
   self.allyKos = 0;
+  resetLessonState(self);
   self.hazardsAvoided = 0;
   self.hazardHitsTaken = 0;
   self.lastBurstLabel = null;
@@ -285,6 +287,7 @@ export function updateExpedition(self: VoxelEngine, dt: number, simDt: number): 
   updateProjectiles(self, dt, simDt);
   updateTelegraphs(self, simDt);
   updateExpeditionProgress(self, dt, simDt);
+  updateLessons(self, simDt);
 }
 
 /** Bilan du combat. Une fois le combat terminé il ne bouge plus : la simulation est arrêtée. */
@@ -306,6 +309,8 @@ function buildExpeditionResult(self: VoxelEngine): ExpeditionResult {
     hazardHits: self.hazardHitsTaken,
     weakBursts: self.weakBurstsTriggered,
     dodges: self.dodgesUsed,
+    // leçons : seulement si l'interface les a activées (le golden ne les voit pas)
+    ...(self.lessonsOn ? { lessonsSeen: [...self.lessonsSeen], lessonsPassed: [...self.lessonsPassed] } : {}),
   };
 }
 

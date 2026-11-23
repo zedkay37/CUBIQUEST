@@ -28,6 +28,8 @@ import {
   applyExpeditionRewards,
   markFirstTimeSeen,
   markHazardHintSeen,
+  markLessonDone,
+  isAutoUnlocked,
   buildPreviewSave,
   claimAchievementReward,
   claimQuestReward,
@@ -245,6 +247,12 @@ export default function App() {
         setSave(next);
         setFirstTimeTip(kind);
       },
+      onLessonDone: (id) => {
+        if (previewRef.current) return;
+        const next = markLessonDone(saveRef.current, id);
+        saveRef.current = next;
+        setSave(next);
+      },
       onHazardHint: (key) => {
         if (previewRef.current) return;
         const next = markHazardHintSeen(saveRef.current, key);
@@ -396,6 +404,7 @@ export default function App() {
       // journal : après une défaite, relancer le même niveau ou non
       saveJournal(markRetry(loadJournal(), stage.id));
       engineRef.current?.setHazardHintCounts(saveRef.current.hazardHintsSeen);
+      engineRef.current?.setLessonsDone(saveRef.current.lessonsDone);
       engineRef.current?.startExpedition(
         stage,
         getSquadCreatures(saveRef.current),
@@ -426,7 +435,9 @@ export default function App() {
   const handleToggleControlMode = useCallback(() => {
     soundFx.playUiClick();
     setControlMode((prev) => {
-      const next: ControlMode = prev === 'semi' ? 'auto' : prev === 'auto' ? 'manual' : 'semi';
+      // S07.2 : l'Auto n'ouvre qu'après le premier boss (Prairie-3) ; avant, Semi <-> Manuel
+      const autoOk = isAutoUnlocked(saveRef.current);
+      const next: ControlMode = prev === 'semi' ? (autoOk ? 'auto' : 'manual') : prev === 'auto' ? 'manual' : 'semi';
       engineRef.current?.setControlMode(next);
       return next;
     });
@@ -809,6 +820,11 @@ export default function App() {
               onClaimAchievement={handleClaimAchievement}
               onImportSave={handleImportSave}
               onResetSave={handleNewAdventure}
+              onReplayLessons={() => {
+                const next = { ...saveRef.current, lessonsDone: [] };
+                saveRef.current = next;
+                setSave(next);
+              }}
               onClose={() => setActiveDrawer(null)}
             />
           )}
@@ -853,6 +869,7 @@ export default function App() {
           onDodge={() => engineRef.current?.triggerDodge()}
           onUltimate={() => engineRef.current?.triggerUltimate()}
           onToggleControlMode={handleToggleControlMode}
+          autoLocked={!previewRef.current && !isAutoUnlocked(save)}
           onToggleMute={handleToggleMute}
           onPause={() => setScreenState('paused')}
         />

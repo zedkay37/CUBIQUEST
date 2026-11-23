@@ -18,6 +18,7 @@ import { spawnElementBurst, spawnParticleBurst, spawnShockwaveRing } from './fx'
 import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
+import { LESSON_DODGE } from './lessons';
 import { FR } from '../../i18n/fr';
 
 export function applyDamageToActor(
@@ -45,6 +46,8 @@ export function applyDamageToActor(
   if (target.invulnTimer > 0) return;
 
   let dmg = rawDamage;
+  // Leçon d'esquive (S07.2) : une attaque annoncée ratée ne fait que 30 % cette fois-là
+  if (self.resolvingHazard && target.isAlly && self.lessonActive === 'dodge') dmg *= LESSON_DODGE.missedDamageMult;
 
   // Sunder (+25% damage taken)
   if (target.statuses.sunder && target.statuses.sunder.remaining > 0) {

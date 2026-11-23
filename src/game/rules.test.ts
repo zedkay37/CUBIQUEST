@@ -19,6 +19,8 @@ import {
   computeStatusDuration,
   computeUltimateCharge,
   challengeLiveState,
+  isAutoUnlocked,
+  markLessonDone,
   defeatAdvice,
   nextStarTier,
   pendingStarTiers,
@@ -649,7 +651,7 @@ function oldRuneId(kind: string): string {
 }
 
 test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intacte)', () => {
-  assert.equal(SAVE_VERSION, 7);
+  assert.equal(SAVE_VERSION, 8);
   const fresh = createInitialSaveState('aquabloc', true);
   // Sauvegarde v2 réaliste : pas de pierres/stats des confins, quête en cours, créature équipée
   const { frontierWins: _fw, frontierDishes: _fd, ...v2Stats } = fresh.stats;
@@ -910,4 +912,19 @@ test('Trio de départ (S07.1): deux trios, trois compagnons niveau 4, aucun en r
   assert.deepEqual(STARTER_TRIOS.maree, ['aquabloc', 'bourgeon', 'psycube']);
   // une espèce d'un trio choisit ce trio (anciens appels)
   assert.equal(createInitialSaveState('bourgeon', true).roster[0].speciesId, 'aquabloc');
+});
+
+test('Leçons (S07.2): sauvegarde v8, Auto ouvert après le premier boss', () => {
+  const save = createInitialSaveState('braise', true);
+  assert.deepEqual(save.lessonsDone, []);
+  assert.equal(isAutoUnlocked(save), false);
+  assert.equal(isAutoUnlocked({ completedStageIds: ['meadow-1', 'meadow-2', 'meadow-3'] }), true);
+  const once = markLessonDone(save, 'cast');
+  assert.deepEqual(markLessonDone(once, 'cast').lessonsDone, ['cast']);
+  assert.equal(markLessonDone(save, 'inconnue'), save);
+  // migration : une sauvegarde qui a gagné la Prairie-2 a tout appris ; sinon on garde les leçons connues
+  const older = migrateSaveState({ ...save, version: 7, lessonsDone: undefined, completedStageIds: ['meadow-1', 'meadow-2'] })!;
+  assert.deepEqual(older.lessonsDone, ['cast', 'burst', 'dodge', 'trio', 'ultimate']);
+  const young = migrateSaveState({ ...save, lessonsDone: ['dodge', 'xx'] })!;
+  assert.deepEqual(young.lessonsDone, ['dodge']);
 });

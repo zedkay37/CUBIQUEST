@@ -237,6 +237,8 @@ export interface EngineCallbacks {
   onFirstTime?: (kind: FirstTimeKind) => void;
   /** Une consigne d'attaque vient d'être montrée (pour la compter dans la sauvegarde). */
   onHazardHint?: (key: string) => void;
+  /** Une leçon vient d'être réussie, ou son geste fait en avance (S07.2). */
+  onLessonDone?: (id: string) => void;
   onHudUpdate: (snapshot: ExpeditionHudSnapshot) => void;
   /**
    * Victoire acquise : appelé UNE fois par combat, à l'instant où le dernier ennemi tombe, avec le bilan

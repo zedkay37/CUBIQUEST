@@ -18,6 +18,7 @@ import { DODGE_KIT, TELEGRAPH_KIT } from './balance';
 import { getNextHazardImpact, keepOutOfHazards } from './engine/fx';
 import type { CastContext } from './engine/cubes';
 import { emptyTelemetry, startExpedition } from './engine/expedition';
+import type { LessonId } from './engine/lessons';
 import { clearProjectilesAndTelegraphs, spawnParticleBurst } from './engine/fx';
 import { getDebugStats, type EngineDebugStats } from './engine/debug';
 import { emitHudSnapshot } from './engine/hud';
@@ -155,6 +156,15 @@ export class VoxelEngine {
   dodgesUsed = 0;
   /** Compagnons tombés pendant ce combat (étoile « Aucun K.O. »). */
   allyKos = 0;
+  /** Leçons (S07.2) : actives seulement si l'interface les a fournies (jamais dans les outils). */
+  lessonsOn = false;
+  lessonsDone = new Set<string>();
+  lessonActive: LessonId | null = null;
+  lessonsSeen: string[] = [];
+  lessonsPassed: string[] = [];
+  /** Sorts lancés à la main (touches 1, 2, 3) dans ce combat. */
+  manualCasts = 0;
+  lessonTriggerAge = 0;
   /** Mesure du délai « Réessayer » -> première image du combat (overlay ?debug=1). */
   retryClickAt = 0;
   lastRetryDelayMs = -1;
@@ -467,6 +477,12 @@ export class VoxelEngine {
     this.bannerText = text;
     this.bannerTimer = seconds;
     this.callbacks.onHazardHint?.(key);
+  }
+
+  /** Leçons déjà faites (sauvegarde) : active les leçons pour les prochains combats. */
+  public setLessonsDone(ids: string[]): void {
+    this.lessonsOn = true;
+    this.lessonsDone = new Set(ids);
   }
 
   /** L'interface signale un clic qui relance un combat : la première image suivante mesure le délai. */

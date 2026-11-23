@@ -3,6 +3,7 @@
  */
 import { BIOMES, MOVES, STAGE_CHALLENGES } from '../catalog';
 import { challengeLiveState, challengeText } from '../rules';
+import { LESSONS, lessonText } from './lessons';
 import type { ExpeditionHudSnapshot, StatusKind } from '../types';
 import type { VoxelEngine } from '../VoxelEngine';
 import { getSkillPreview } from './cubes';
@@ -28,6 +29,9 @@ export function emitHudSnapshot(self: VoxelEngine): void {
     lastBurstLabel: self.lastBurstLabel,
     lastBurstColor: self.lastBurstColor,
     skillPreviews: [0, 1, 2].map((slot) => getSkillPreview(self, slot)),
+    lesson: self.lessonActive
+      ? { id: self.lessonActive, text: lessonText(self.lessonActive), key: LESSONS.find((l) => l.id === self.lessonActive)!.key }
+      : null,
     challenge: STAGE_CHALLENGES[self.activeStage.id]
       ? {
           text: challengeText(STAGE_CHALLENGES[self.activeStage.id]),

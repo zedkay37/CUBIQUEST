@@ -15,6 +15,8 @@ interface ExpeditionHudProps {
   onToggleControlMode: () => void;
   onToggleMute: () => void;
   onPause: () => void;
+  /** Mode Auto pas encore ouvert (S07.2 : après le premier boss). */
+  autoLocked?: boolean;
 }
 
 const CONTROL_LABELS: Record<ControlMode, string> = {
@@ -29,6 +31,7 @@ export function ExpeditionHud({
   onCastSkill,
   onDodge,
   onUltimate,
+  autoLocked = false,
   onToggleControlMode,
   onToggleMute,
   onPause,
@@ -183,6 +186,16 @@ export function ExpeditionHud({
           </div>
         </div>
 
+        {/* Leçon en cours (S07.2) : une phrase, jamais deux, rien qui bloque */}
+        {hud.lesson && (
+          <div className="pointer-events-none absolute left-1/2 top-16 -translate-x-1/2 z-20" role="status" aria-live="polite">
+            <div className="voxel-panel ui-screen-enter px-4 py-2 text-center font-display text-base sm:text-lg font-bold text-[#FAF7F0]" style={{ borderColor: '#F4B942' }}>
+              <span className="mr-2 inline-block rounded bg-[#F4B942] px-2 py-0.5 font-mono-num text-sm text-[#141925]">{hud.lesson.key}</span>
+              {hud.lesson.text}
+            </div>
+          </div>
+        )}
+
         {/* Top-Right: Compact Utility Controls */}
         <div className="flex items-center gap-2 pointer-events-auto">
           <button
@@ -201,6 +214,9 @@ export function ExpeditionHud({
           >
             {CONTROL_LABELS[hud.controlMode]}
           </button>
+          {autoLocked && (
+            <span className="hidden sm:inline text-[10px] text-[#94A3B8] max-w-[110px] leading-tight">{FR.ui.expeditionHud.autoPlusTard}</span>
+          )}
 
           <button
             type="button"
@@ -390,7 +406,7 @@ export function ExpeditionHud({
                     e.currentTarget.blur();
                     onCastSkill(idx);
                   }}
-                  className={`voxel-btn relative overflow-hidden cursor-pointer rounded-lg px-2 py-1.5 border-2 text-left flex items-center justify-between gap-1.5 ${previewRing} ${
+                  className={`voxel-btn relative overflow-hidden cursor-pointer rounded-lg px-2 py-1.5 border-2 text-left flex items-center justify-between gap-1.5 ${previewRing} ${hud.lesson?.key === String(idx + 1) ? 'lesson-glow' : ''} ${
                     skillReady
                       ? 'border-[#141925] text-[#FAF7F0]'
                       : 'border-[#39445A] bg-[#161C28] text-[#94A3B8] cursor-not-allowed'
@@ -434,7 +450,7 @@ export function ExpeditionHud({
             e.currentTarget.blur();
             onDodge();
           }}
-          className={`voxel-btn relative overflow-hidden cursor-pointer h-14 flex-1 flex-row gap-2 sm:h-[106px] sm:flex-none sm:w-[98px] sm:flex-col sm:gap-1 rounded-xl border-2 flex items-center justify-center shrink-0 ${
+          className={`voxel-btn relative overflow-hidden cursor-pointer h-14 flex-1 flex-row gap-2 sm:h-[106px] sm:flex-none sm:w-[98px] sm:flex-col sm:gap-1 rounded-xl border-2 flex items-center justify-center shrink-0 ${hud.lesson?.key === 'Espace' ? 'lesson-glow' : ''} ${
             dodgeReady
               ? 'block-btn-primary'
               : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'
@@ -465,7 +481,7 @@ export function ExpeditionHud({
             e.currentTarget.blur();
             onUltimate();
           }}
-          className={`voxel-btn relative overflow-hidden cursor-pointer h-14 flex-1 flex-row gap-2 sm:h-[106px] sm:flex-none sm:w-[98px] sm:flex-col sm:gap-1 rounded-xl border-2 flex items-center justify-center shrink-0 ${
+          className={`voxel-btn relative overflow-hidden cursor-pointer h-14 flex-1 flex-row gap-2 sm:h-[106px] sm:flex-none sm:w-[98px] sm:flex-col sm:gap-1 rounded-xl border-2 flex items-center justify-center shrink-0 ${hud.lesson?.key === 'R' ? 'lesson-glow' : ''} ${
             ultimateReady
               ? 'hover:brightness-110 border-[#141925] text-[#0F172A]'
               : 'bg-[#181E2A]/92 border-[#39445A] text-[#94A3B8] cursor-not-allowed'

@@ -183,6 +183,7 @@ export const FR = {
       premiereFoisTrio: 'TRIO ! Un troisième élément sur un ennemi fêlé.',
       carapace: 'Carapace de magma',
       defiEtat: (a: string | number, b: string | number) => `Défi : ${a} (${b})`,
+      autoPlusTard: 'Auto : disponible après le premier boss',
       etatsDefi: { pending: 'en cours', done: 'réussi', lost: 'manqué' },
       eclatsTrios: (a: string | number, b: string | number) => `Éclats ${a} · Trios ${b}`,
       previewTrio: 'TRIO',
@@ -262,6 +263,8 @@ export const FR = {
       exporter: 'Exporter mon journal',
       effacer: 'Effacer',
       confirmerEffacer: 'Confirmer l’effacement',
+      lecons: 'Leçons du début',
+      revoirLecons: 'Revoir les leçons (elles reviennent dans la Prairie)',
     },
     questsDrawer: {
       or: 'Or',
@@ -399,6 +402,14 @@ export const FR = {
     },
   },
   engine: {
+    /** Phrases des leçons (S07.2), 60 caractères au plus. */
+    lecons: {
+      cast: '1 : ton compagnon lance son sort.',
+      burst: 'Le cube s’allume : 2 le fait éclater.',
+      dodge: 'Espace : esquive maintenant.',
+      trio: 'Un troisième élément : TRIO !',
+      ultimate: 'R : Déchaînement.',
+    },
     alerteBossPreparezLEsquive: 'ALERTE BOSS ! Préparez l\'Esquive !',
     contrecoupEloignezVous: 'Contrecoup — éloignez-vous !',
     boucl: (a: string | number) => `+${a} BOUCL.`,
@@ -421,6 +432,8 @@ export const FR = {
     pv: (a: string | number) => `+${a} PV`,
   },
   rules: {
+    /** Titres des leçons (options : « Revoir les leçons »). */
+    titresLecons: { cast: 'Lancer un sort', burst: 'Faire éclater un cube', dodge: 'Esquive parfaite', trio: 'Trio', ultimate: 'Déchaînement' },
     /** Défis des niveaux (S06). */
     defi: {
       esquives: (a: string | number) => (Number(a) > 1 ? `${a} esquives parfaites` : '1 esquive parfaite'),

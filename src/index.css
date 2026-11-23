@@ -392,3 +392,15 @@ textarea:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .starter-hop { animation: none; }
 }
+
+/* Leçon (S07.2) : la touche à presser s'allume */
+@keyframes lesson-glow {
+  0%, 100% { box-shadow: 0 0 0 3px #f4b942, 0 0 14px 2px rgba(244, 185, 66, 0.55); }
+  50% { box-shadow: 0 0 0 3px #f4b942, 0 0 4px 0 rgba(244, 185, 66, 0.2); }
+}
+.lesson-glow {
+  animation: lesson-glow 0.9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lesson-glow { animation: none; box-shadow: 0 0 0 3px #f4b942; }
+}
