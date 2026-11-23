@@ -14,6 +14,18 @@ const GalleryPage = lazy(() =>
   import('./components/GalleryPage.tsx').then((module) => ({default: module.GalleryPage})),
 );
 
+// `?bench=1` : mesure de performance (outil). Le combat est « écrit à l'avance » : l'aléatoire est à graine fixe,
+// dans cette page seulement (le jeu normal n'est jamais touché).
+if (new URLSearchParams(window.location.search).get('bench') === '1') {
+  let a = 0x2f6e2b1;
+  Math.random = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 createRoot(document.getElementById('root')!).render(
   isUiGallery ? (
     <Suspense fallback={null}>

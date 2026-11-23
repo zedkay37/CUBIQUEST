@@ -55,6 +55,13 @@ $screens = [ordered]@{
   'galerie-ui'     = '?gallery=ui'
   'galerie'        = '?gallery=1'
   'lignee-foudre'  = '?gallery=1&line=voltik'
+  'combat-prairie' = '?stage=meadow-2'
+  'combat-rive'    = '?stage=shore-2'
+  'combat-crete'   = '?stage=volcano-2'
+  'combat-sanctuaire' = '?stage=sanctuary-2'
+  'combat-toundra' = '?stage=tundra-2'
+  'combat-cime'    = '?stage=stormpeak-2'
+  'combat-canyon'  = '?stage=canyon-2'
 }
 $sizes = @{ 'bureau' = '1280,720'; 'mobile' = '360,640' }
 New-Item -ItemType Directory -Force (Join-Path $root $Out) | Out-Null

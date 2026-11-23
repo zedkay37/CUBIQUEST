@@ -71,6 +71,8 @@ import { VoxelEngine } from './game/VoxelEngine';
 const DEBUG_ENABLED =
   typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1';
 const DebugOverlay = lazy(() => import('./components/DebugOverlay'));
+const BenchOverlay = lazy(() => import('./components/BenchOverlay'));
+const isBench = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('bench') === '1';
 
 /**
  * `?ui=<écran>` (outil de développement, captures) : ouvre directement un écran sans toucher à la sauvegarde.
@@ -96,7 +98,8 @@ function hasAutostartParam(): boolean {
 function getPreviewParams(): { stage: StageDef; squad: string[]; level: number; bonus: number } | null {
   if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
-  const stage = STAGE_BY_ID[params.get('stage') ?? ''];
+  // ?bench=1 sans niveau : le Cratère (volcano-2), combat chargé en effets
+  const stage = STAGE_BY_ID[params.get('stage') ?? (params.get('bench') === '1' ? 'volcano-2' : '')];
   if (!stage) return null;
   // Sans paramètre, on prend l'escouade de référence du niveau (la même que l'outil `npm run sim`)
   const reference = getReferenceConfig(stage);
@@ -749,6 +752,11 @@ export default function App() {
       {DEBUG_ENABLED && (
         <Suspense fallback={null}>
           <DebugOverlay getStats={getDebugStats} />
+        </Suspense>
+      )}
+      {isBench && (
+        <Suspense fallback={null}>
+          <BenchOverlay getStats={getDebugStats} quality={() => 'aucun effet (avant G1.2)'} />
         </Suspense>
       )}
 
