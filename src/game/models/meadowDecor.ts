@@ -105,6 +105,12 @@ export function buildMeadowGroundTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/**
+ * ART3 : teintes du décor épuré (sol, plateaux, couches des falaises). Tenues en phase avec le code ci-dessous ;
+ * art.test.ts vérifie que le rouge des attaques annoncées reste bien distinct de chacune.
+ */
+export const ART3_GROUND_TONES = ['#5DB04A', '#66B851', '#55A545', '#5FAE4B', '#664A2E', '#807A70', '#523B26', '#8CDBFA', '#B08A5A'];
+
 /** ART3 : lueur des veines de cristal (0 le jour, 1 la nuit), partagée par toutes les falaises. */
 const crystalNight = { value: 0 };
 
@@ -177,6 +183,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const rnd = seeded(isCamp ? 7 : 3);
   const flat = isCamp ? 10 : 14.5;
   const time = { value: 0 };
+  if (!isCamp) crystalNight.value = 0; // ART3 : pas de nuit en combat
   /**
    * ART2 : au camp, tout ce qui est haut (arbres, buissons, rochers) et les touffes passent du côté opposé à
    * la caméra (z négatif) : le bas et les côtés de l'écran restent dégagés. En combat, rien ne change.

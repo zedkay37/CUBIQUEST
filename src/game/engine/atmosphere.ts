@@ -2,7 +2,7 @@
  * Ambiance : météo du biome, éclairage, éclairs et flash d'orage, cycle jour/nuit du camp.
  */
 import * as THREE from 'three';
-import { setDecorNight } from '../models/meadowDecor';
+import { isArtDecorOn, setDecorNight } from '../models/meadowDecor';
 import { setCreatureNight } from '../models/voxelSculpt';
 import { soundFx } from '../audio';
 import type { BiomeId } from '../types';
@@ -176,6 +176,12 @@ export function updateDayNight(self: VoxelEngine, dt: number): void {
   const f = raw * raw * (3 - 2 * raw);
   if (self.scene.background instanceof THREE.Color) self.scene.background.lerpColors(a.sky, b.sky, f);
   if (self.scene.fog) self.scene.fog.color.lerpColors(a.fog, b.fog, f);
+  // ART3 : brume légère au loin, plus marquée le matin (autour de l'aube) ; Prairie du sprint Art seulement
+  if (isArtDecorOn() && self.scene.fog instanceof THREE.Fog) {
+    const morning = Math.max(0, 1 - Math.min(self.campClock, 1 - self.campClock) / 0.14);
+    self.scene.fog.near = THREE.MathUtils.lerp(28, 18, morning);
+    self.scene.fog.far = THREE.MathUtils.lerp(78, 62, morning);
+  }
   self.keyLight.color.lerpColors(a.key, b.key, f);
   self.keyLight.intensity = THREE.MathUtils.lerp(a.keyI, b.keyI, f);
   self.baseHemiIntensity = THREE.MathUtils.lerp(a.hemiI, b.hemiI, f);

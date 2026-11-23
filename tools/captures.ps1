@@ -42,6 +42,7 @@ $screens = [ordered]@{
   'depart'         = '?ui=starter'
   'camp-jour'      = '?autostart=1&hour=0.3'
   'camp-nuit'      = '?autostart=1&hour=0.8'
+  'camp-aube'      = '?autostart=1&hour=0.01'
   'expeditions'    = '?autostart=1&ui=expeditions'
   'equipe'         = '?autostart=1&ui=team'
   'carnet'         = '?autostart=1&ui=carnet'

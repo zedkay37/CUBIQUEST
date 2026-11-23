@@ -136,3 +136,15 @@ test('ART3 : ajouts seulement (dégradé de volume ≤ 10 %, bobines lumineuses)
     assert.equal(glowing, id === 'sparkube' || id === 'raicube', `${id} : bobines lumineuses`);
   }
 });
+
+test('ART3 : le rouge des attaques annoncées reste bien distinct de toutes les teintes du décor épuré', async () => {
+  const { ART3_GROUND_TONES } = await import('./models/meadowDecor');
+  const { DANGER } = await import('./styleGuide');
+  const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const d = rgb(DANGER);
+  for (const tone of ART3_GROUND_TONES) {
+    const c = rgb(tone);
+    const dist = Math.hypot(d[0] - c[0], d[1] - c[1], d[2] - c[2]);
+    assert.ok(dist >= 0.35, `${tone} : écart ${dist.toFixed(2)}`);
+  }
+});

@@ -29,6 +29,7 @@ import { emitHudSnapshot } from './hud';
 import { triggerUltimate, updatePendingUltimateHits } from './skills';
 import type { CombatActor, CombatTelemetry, ExpeditionResult } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
+import { setCreatureNight } from '../models/voxelSculpt';
 import { FR } from '../../i18n/fr';
 
 export function emptyTelemetry(): CombatTelemetry {
@@ -84,6 +85,7 @@ export function startExpedition(
   self.ultZoomTimer = 0;
   self.touchMoveX = 0;
   self.touchMoveZ = 0;
+  setCreatureNight(0); // ART3 : pas de nuit en combat, les lueurs reprennent leur force de jour
   resetLessonState(self);
   self.hazardsAvoided = 0;
   self.hazardHitsTaken = 0;
