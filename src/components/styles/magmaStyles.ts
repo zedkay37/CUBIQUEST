@@ -8,9 +8,9 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { SPECIES } from '../../game/catalog';
 import { buildVoxelCreature } from '../../game/models/creatures';
-import { SCULPT_DEFS } from '../../game/models/sculptDefs';
 import { getCrispShadowTexture } from '../../game/models/shared';
-import { buildSculptRig, voxelize, type ColorKey, type SculptPalette, type Voxel } from '../../game/models/voxelSculpt';
+import { buildSculptRig, type ColorKey, type SculptPalette, type Voxel } from '../../game/models/voxelSculpt';
+import { res, subj } from './subject';
 
 export type StyleId = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 export const STYLE_LIST: { id: StyleId; name: string; note: string }[] = [
@@ -47,6 +47,8 @@ export interface StyledModel {
   after?: (ctx: LightContext) => void;
   /** STYLES2 : passe d'image propre à la variante (pixels, crayon, aquarelle…) appliquée à toute la case. */
   post?: PostPass;
+  /** STYLES3 : petite animation de repos propre au modèle (queue qui balance…). */
+  animate?: (t: number) => void;
 }
 
 export interface LightContext {
@@ -82,10 +84,10 @@ export function glowController(mats: THREE.MeshStandardMaterial[]): (night: numb
 
 export function wrap(content: THREE.Object3D, glowMats: THREE.MeshStandardMaterial[]): StyledModel {
   const root = new THREE.Group();
-  content.scale.setScalar(GAME_SCALE);
+  content.scale.setScalar(subj().scale);
   root.add(content);
   const disc = shadowDisc();
-  disc.scale.setScalar(GAME_SCALE);
+  disc.scale.setScalar(subj().scale * subj().discScale);
   root.add(disc);
   return { root, setNight: glowController(glowMats) };
 }
@@ -93,6 +95,9 @@ export function wrap(content: THREE.Object3D, glowMats: THREE.MeshStandardMateri
 // ---------------------------------------------------------------- A : étalon ART 3
 
 function styleA(): StyledModel {
+  // STYLES3 : une créature hors du jeu fournit sa propre construction de base (comme ART 3)
+  const own = subj().buildA;
+  if (own) return own();
   // le modèle du jeu, tel quel (même constructeur, même lumière, mêmes lueurs, même ombre)
   const rig = buildVoxelCreature(SPECIES_ID);
   return { root: rig.root, setNight: () => {} }; // la nuit passe par l'uniforme partagé (setCreatureNight)
@@ -101,14 +106,15 @@ function styleA(): StyledModel {
 // ---------------------------------------------------------------- B : gros blocs
 
 function styleB(): StyledModel {
+  if (subj().bigBlocks) return bigBlocksModel();
   const mat = (hex: string, glow = 0) =>
     new THREE.MeshStandardMaterial({ color: hex, roughness: 0.7, metalness: 0.02, emissive: glow ? hex : '#000000', emissiveIntensity: glow });
   const m = {
-    primary: mat(PALETTE.primary),
-    secondary: mat(PALETTE.secondary),
-    belly: mat(PALETTE.belly),
-    lava: mat(PALETTE.accent, 0.9),
-    eye: mat(PALETTE.eye, 0.35),
+    primary: mat(subj().palette.primary),
+    secondary: mat(subj().palette.secondary),
+    belly: mat(subj().palette.belly),
+    lava: mat(subj().palette.accent, 0.9),
+    eye: mat(subj().palette.eye, 0.35),
   };
   const g = new THREE.Group();
   const box = (at: [number, number, number], size: [number, number, number], material: THREE.Material) => {
@@ -137,13 +143,40 @@ function styleB(): StyledModel {
   return wrap(g, [m.lava, m.eye]);
 }
 
+/** STYLES3 : B pour une créature qui donne ses 15 volumes (mêmes matières que le B de Magmadrake). */
+function bigBlocksModel(): StyledModel {
+  const p = subj().palette;
+  const mats = new Map<ColorKey, THREE.MeshStandardMaterial>();
+  const glowMats: THREE.MeshStandardMaterial[] = [];
+  const matFor = (k: ColorKey) => {
+    let mm = mats.get(k);
+    if (!mm) {
+      const glow = k === 'accent' ? 0.9 : k === 'eye' ? 0.6 : 0;
+      mm = new THREE.MeshStandardMaterial({ color: p[k], roughness: 0.7, metalness: 0.02, emissive: glow ? p[k] : '#000000', emissiveIntensity: glow });
+      if (glow) glowMats.push(mm);
+      mats.set(k, mm);
+    }
+    return mm;
+  };
+  const g = new THREE.Group();
+  for (const b of subj().bigBlocks!) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(...b.size), matFor(b.color));
+    mesh.position.set(...b.at);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    g.add(mesh);
+  }
+  return wrap(g, glowMats);
+}
+
 // ---------------------------------------------------------------- C : voxel moyen cohérent
 
 /** 22 blocs de haut environ : une seule taille de bloc, et les blocs isolés (micro-détails) retirés. */
 export const MID_RES = 12;
+/** Finesse de C pour la créature courante (12 par unité pour Magmadrake). */
+export const midRes = (): number => res(MID_RES);
 export function midVoxels(): Voxel[] {
-  const def = SCULPT_DEFS[SPECIES_ID];
-  let vox = voxelize(def, MID_RES);
+  let vox = subj().voxelsAt(midRes());
   const key = (x: number, y: number, z: number) => `${x},${y},${z}`;
   for (let pass = 0; pass < 2; pass++) {
     const set = new Set(vox.map((v) => key(v.x, v.y, v.z)));
@@ -158,10 +191,10 @@ export function midVoxels(): Voxel[] {
 }
 
 function styleC(): StyledModel {
-  const def = SCULPT_DEFS[SPECIES_ID];
+  const def = subj().rigDef;
   // ombre douce réduite de moitié : moins de bruit de surface, les blocs se lisent comme une figurine
   // mêmes ajouts de rendu qu'ART 3 (lueurs, contour, dégradé) : seule la taille des blocs change
-  const parts = buildSculptRig({ ...def, voxels: midVoxels() }, PALETTE, MID_RES, 0.25, 0.08, false, true);
+  const parts = buildSculptRig({ ...def, voxels: midVoxels() }, subj().palette, midRes(), subj().glowBase, 0.08, false, true);
   const model = wrap(parts.bodyPivot, []);
   return { root: model.root, setNight: () => {} }; // la nuit passe par l'uniforme partagé, comme A
 }
@@ -169,7 +202,7 @@ function styleC(): StyledModel {
 // ---------------------------------------------------------------- D : voxel biseauté
 
 export function colorOf(v: Voxel): string {
-  return PALETTE[v.color as ColorKey] ?? PALETTE.primary;
+  return subj().palette[v.color as ColorKey] ?? subj().palette.primary;
 }
 
 export function exposed(vox: Voxel[]): Voxel[] {
@@ -180,13 +213,13 @@ export function exposed(vox: Voxel[]): Voxel[] {
 
 function styleD(): StyledModel {
   const vox = exposed(midVoxels());
-  const s = 1 / MID_RES;
+  const s = 1 / midRes();
   const geo = new RoundedBoxGeometry(s, s, s, 2, s * 0.2);
   const g = new THREE.Group();
   const glowMats: THREE.MeshStandardMaterial[] = [];
   for (const lit of [false, true]) {
     const list = vox.filter((v) => (v.color === 'accent') === lit);
-    const mat = new THREE.MeshStandardMaterial({ roughness: 0.55, metalness: 0.02, emissive: lit ? PALETTE.accent : '#000000', emissiveIntensity: lit ? GLOW * 1.6 : 0 });
+    const mat = new THREE.MeshStandardMaterial({ roughness: 0.55, metalness: 0.02, emissive: lit ? subj().palette.accent : '#000000', emissiveIntensity: lit ? GLOW * 1.6 : 0 });
     if (lit) glowMats.push(mat);
     const inst = new THREE.InstancedMesh(geo, mat, list.length);
     const dummy = new THREE.Object3D();
@@ -349,8 +382,8 @@ export function nightUniform(base: number): { uniform: { value: number }; set: (
 
 function styleE(): StyledModel {
   // finesse d'ART 3 (14 blocs par unité), sans pièces séparées : une seule peau, lissée
-  const vox = voxelize(SCULPT_DEFS[SPECIES_ID], 14);
-  const skin = buildSkin(vox, 14);
+  const vox = subj().voxelsAt(res(14));
+  const skin = buildSkin(vox, res(14));
   const { index, unique } = sharedIndex(skin.corners);
   smooth(unique, index, 6);
   const geo = skinGeometry(skin, unique, vertexNormals(unique, index), index);
@@ -378,7 +411,7 @@ export function getToonGradient(): THREE.DataTexture {
 
 function styleF(): StyledModel {
   const vox = midVoxels();
-  const skin = buildSkin(vox, MID_RES);
+  const skin = buildSkin(vox, midRes());
   const { index, unique } = sharedIndex(skin.corners);
   // faces plates pour le corps (blocs nets), normales moyennes pour gonfler le contour sans fissure
   const flat = skinGeometry(skin, unique, null, index).toNonIndexed();

@@ -5,12 +5,9 @@
  * risques (passe d'image, transparence, lumière de la lave) : c'est voulu. Rien ici n'est utilisé par le jeu.
  */
 import * as THREE from 'three';
-import { SCULPT_DEFS } from '../../game/models/sculptDefs';
-import { buildSculptRig, voxelize, type Voxel } from '../../game/models/voxelSculpt';
+import { buildSculptRig, type Voxel } from '../../game/models/voxelSculpt';
+import { res, subj } from './subject';
 import {
-  GAME_SCALE,
-  PALETTE,
-  SPECIES_ID,
   addSkinGlow,
   buildSkin,
   colorOf,
@@ -21,7 +18,7 @@ import {
   smooth,
   vertexNormals,
   wrap,
-  MID_RES,
+  midRes,
   type LightContext,
   type Skin,
   type StyledModel,
@@ -45,7 +42,6 @@ export const STYLE2_LIST: { id: Style2Id; name: string; note: string; risk: stri
   { id: 'T', name: 'Aquarelle', note: 'Ombrage peint à bords doux, papier, couleurs qui bavent.', risk: 'Très élevé' },
 ];
 
-const DEF = SCULPT_DEFS[SPECIES_ID];
 const LAVA_GLOW = 0.9;
 
 /** Maillage d'un seul tenant à partir d'une peau, avec une matière et la lave qui luit. */
@@ -128,7 +124,7 @@ function buildSkinAO(vox: Voxel[], res: number): Skin {
 }
 
 function styleG(): StyledModel {
-  const skin = buildSkinAO(midVoxels(), MID_RES);
+  const skin = buildSkinAO(midVoxels(), midRes());
   const { mesh, setNight } = skinMesh(skin, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, metalness: 0.02 }));
   return done(mesh, setNight);
 }
@@ -136,8 +132,8 @@ function styleG(): StyledModel {
 // ---------------------------------------------------------------- H : haute définition propre
 
 function styleH(): StyledModel {
-  const vox = voxelize(DEF, 26); // ≈ 48 blocs de haut
-  const { mesh, setNight } = skinMesh(buildSkin(vox, 26), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65, metalness: 0.02 }));
+  const vox = subj().voxelsAt(res(26)); // ≈ 48 blocs de haut
+  const { mesh, setNight } = skinMesh(buildSkin(vox, res(26)), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65, metalness: 0.02 }));
   return done(mesh, setNight);
 }
 
@@ -146,12 +142,12 @@ function styleH(): StyledModel {
 function styleI(): StyledModel {
   const fineGroups = new Set(['head', 'eyeL', 'eyeR', 'crest']);
   const isFine = (v: Voxel) => fineGroups.has(v.group) || v.color === 'accent';
-  const coarse = voxelize(DEF, 8).filter((v) => !isFine(v));
-  const fine = voxelize(DEF, 18).filter(isFine);
+  const coarse = subj().voxelsAt(res(8)).filter((v) => !isFine(v));
+  const fine = subj().voxelsAt(res(18)).filter(isFine);
   const g = new THREE.Group();
   // gros blocs nets pour le corps (ombre de blocs réduite), détails fins là où le regard va
-  const body = buildSculptRig({ ...DEF, voxels: coarse }, PALETTE, 8, 0.25, 0.05, false, true);
-  const details = buildSculptRig({ ...DEF, voxels: fine }, PALETTE, 18, 0.25, 0.12, false, true);
+  const body = buildSculptRig({ ...subj().rigDef, voxels: coarse }, subj().palette, res(8), subj().glowBase, 0.05, false, true);
+  const details = buildSculptRig({ ...subj().rigDef, voxels: fine }, subj().palette, res(18), subj().glowBase, 0.12, false, true);
   g.add(body.bodyPivot, details.bodyPivot);
   return done(g, () => {});
 }
@@ -159,7 +155,7 @@ function styleI(): StyledModel {
 // ---------------------------------------------------------------- J : briques jointées
 
 function styleJ(): StyledModel {
-  const skin = buildSkin(midVoxels(), MID_RES);
+  const skin = buildSkin(midVoxels(), midRes());
   const { index, unique } = sharedIndex(skin.corners);
   const geo = skinGeometry(skin, unique, null, index).toNonIndexed();
   geo.computeVertexNormals();
@@ -207,7 +203,7 @@ function styleJ(): StyledModel {
 
 function styleK(): StyledModel {
   // couleurs un peu plus franches (plastique teinté dans la masse), arêtes adoucies, vernis brillant
-  const skin = recolor(buildSkin(midVoxels(), MID_RES), (c, lava) => (lava ? c : c.offsetHSL(0, 0.12, 0.06)));
+  const skin = recolor(buildSkin(midVoxels(), midRes()), (c, lava) => (lava ? c : c.offsetHSL(0, 0.12, 0.06)));
   const mat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.28, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.6 });
   const { mesh, setNight } = skinMesh(skin, mat, { smoothPasses: 2, smoothNormals: true });
   return done(mesh, setNight);
@@ -216,7 +212,7 @@ function styleK(): StyledModel {
 // ---------------------------------------------------------------- L : pastel diffus
 
 function styleL(): StyledModel {
-  const skin = recolor(buildSkin(midVoxels(), MID_RES), (c, lava) => (lava ? c.lerp(new THREE.Color('#FFD2B8'), 0.35) : c.lerp(new THREE.Color('#F4E8FF'), 0.5)));
+  const skin = recolor(buildSkin(midVoxels(), midRes()), (c, lava) => (lava ? c.lerp(new THREE.Color('#FFD2B8'), 0.35) : c.lerp(new THREE.Color('#F4E8FF'), 0.5)));
   // les ombres tirent vers le bleu : une lumière propre bleutée remonte les zones sombres
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, emissive: '#3B4C8C', emissiveIntensity: 0.32 });
   const { mesh, setNight } = skinMesh(skin, mat);
@@ -245,7 +241,7 @@ function styleL(): StyledModel {
 
 function styleM(): StyledModel {
   const grey = new THREE.Color('#C9C7C2');
-  const skin = recolor(buildSkin(midVoxels(), MID_RES), (c, lava) => (lava ? new THREE.Color('#FF4A10') : grey.clone().multiplyScalar(c.r + c.g + c.b < 0.15 ? 0.72 : 1)));
+  const skin = recolor(buildSkin(midVoxels(), midRes()), (c, lava) => (lava ? new THREE.Color('#FF4A10') : grey.clone().multiplyScalar(c.r + c.g + c.b < 0.15 ? 0.72 : 1)));
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
   const night = nightUniform(2.6);
   addSkinGlow(mat, night.uniform);
@@ -272,7 +268,7 @@ function getLightToonGradient(): THREE.DataTexture {
 }
 
 function styleN(): StyledModel {
-  const skin = recolor(buildSkin(midVoxels(), MID_RES), (c, lava) => (lava ? c : c.lerp(new THREE.Color('#FFFFFF'), 0.18).multiplyScalar(1.15)));
+  const skin = recolor(buildSkin(midVoxels(), midRes()), (c, lava) => (lava ? c : c.lerp(new THREE.Color('#FFFFFF'), 0.18).multiplyScalar(1.15)));
   const { mesh, setNight, unique, index } = skinMesh(skin, new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: getLightToonGradient() }));
   // contour coloré : la version foncée de chaque couleur, jamais du noir
   const dark = recolor(skin, (c) => c.multiplyScalar(0.38));
@@ -308,7 +304,7 @@ function getHaloTexture(): THREE.CanvasTexture {
 
 function styleO(): StyledModel {
   const vox = midVoxels();
-  const skin = recolor(buildSkin(vox, MID_RES), (c, lava) => (lava ? new THREE.Color('#FF7A2A') : c.multiplyScalar(0.28)));
+  const skin = recolor(buildSkin(vox, midRes()), (c, lava) => (lava ? new THREE.Color('#FF7A2A') : c.multiplyScalar(0.28)));
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.1 });
   const night = nightUniform(3.2);
   addSkinGlow(mat, night.uniform);
@@ -320,9 +316,9 @@ function styleO(): StyledModel {
   mesh.receiveShadow = true;
   // la lave éclaire : une lumière orange au cœur des coulées, et un halo qui déborde sur le sol
   const lava = vox.filter((v) => v.color === 'accent');
-  const cx = lava.reduce((a, v) => a + v.x, 0) / lava.length / MID_RES;
-  const cy = lava.reduce((a, v) => a + v.y, 0) / lava.length / MID_RES;
-  const cz = lava.reduce((a, v) => a + v.z, 0) / lava.length / MID_RES;
+  const cx = lava.reduce((a, v) => a + v.x, 0) / lava.length / midRes();
+  const cy = lava.reduce((a, v) => a + v.y, 0) / lava.length / midRes();
+  const cz = lava.reduce((a, v) => a + v.z, 0) / lava.length / midRes();
   const light = new THREE.PointLight('#FF7A30', 9, 7, 1.4);
   light.position.set(cx, cy, cz);
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: getHaloTexture(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
@@ -370,11 +366,11 @@ function styleP(): StyledModel {
     return true;
   });
   const coreVox = [...deep.map((v) => ({ ...v, color: 'accent' as const })), ...vox.filter((v) => v.color === 'accent')];
-  const coreSkin = buildSkin(coreVox, MID_RES);
+  const coreSkin = buildSkin(coreVox, midRes());
   const coreMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4 });
   const core = skinMesh(coreSkin, coreMat);
   // coque : cristal fumé, brillant, qui laisse voir le cœur
-  const shellSkin = recolor(buildSkin(vox, MID_RES), (c, lava) => (lava ? c : c.lerp(new THREE.Color('#5A4E5E'), 0.4)));
+  const shellSkin = recolor(buildSkin(vox, midRes()), (c, lava) => (lava ? c : c.lerp(new THREE.Color('#5A4E5E'), 0.4)));
   const { index, unique } = sharedIndex(shellSkin.corners);
   smooth(unique, index, 1);
   const shellGeo = skinGeometry(shellSkin, unique, vertexNormals(unique, index), index);
@@ -401,8 +397,8 @@ function styleP(): StyledModel {
 
 function styleQ(): StyledModel {
   // forme grossière (7 blocs par unité), fortement lissée, puis dessinée en facettes plates
-  const vox = voxelize(DEF, 7);
-  const skin = buildSkin(vox, 7);
+  const vox = subj().voxelsAt(res(7));
+  const skin = buildSkin(vox, res(7));
   const { index, unique } = sharedIndex(skin.corners);
   smooth(unique, index, 12);
   const geo = skinGeometry(skin, unique, null, index).toNonIndexed();
@@ -466,9 +462,9 @@ vec3 post(vec2 uv) {
 function styleS(): StyledModel {
   // carton : couleurs tirées vers le kraft, faces légèrement de travers (déformation fixe par sommet)
   const kraft = new THREE.Color('#B89A72');
-  const skin = recolor(buildSkin(midVoxels(), MID_RES), (c, lava) => (lava ? c : c.lerp(kraft, 0.42)));
+  const skin = recolor(buildSkin(midVoxels(), midRes()), (c, lava) => (lava ? c : c.lerp(kraft, 0.42)));
   const { index, unique } = sharedIndex(skin.corners);
-  const s = 1 / MID_RES;
+  const s = 1 / midRes();
   unique.forEach((p, i) => {
     const h = (k: number) => (Math.sin(i * 12.9898 + k * 78.233) * 43758.5453) % 1;
     unique[i] = [p[0] + h(1) * s * 0.18, p[1] + h(2) * s * 0.18, p[2] + h(3) * s * 0.18];
@@ -521,7 +517,7 @@ vec3 post(vec2 uv) {
 
 function styleT(): StyledModel {
   // modèle doux (arêtes un peu fondues) puis peinture : bavures, bords de pigment, papier
-  const skin = buildSkin(midVoxels(), MID_RES);
+  const skin = buildSkin(midVoxels(), midRes());
   const { mesh, setNight } = skinMesh(skin, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), { smoothPasses: 3, smoothNormals: true });
   const model = done(mesh, setNight);
   return {
