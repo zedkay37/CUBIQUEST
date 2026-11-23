@@ -28,6 +28,11 @@ export function updateAllies(self: VoxelEngine, dt: number, simDt: number): void
   if (self.heldKeys.has('KeyD') || self.heldKeys.has('ArrowRight')) {
     moveInputX += 1;
   }
+  // ART2 : manette tactile (mode Manuel) quand aucune touche n'est tenue
+  if (moveInputX === 0 && moveInputZ === 0 && (self.touchMoveX !== 0 || self.touchMoveZ !== 0)) {
+    moveInputX = self.touchMoveX;
+    moveInputZ = self.touchMoveZ;
+  }
   const hasManualInput = moveInputX !== 0 || moveInputZ !== 0;
   if (hasManualInput) {
     const len = Math.hypot(moveInputX, moveInputZ);

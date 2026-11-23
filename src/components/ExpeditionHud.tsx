@@ -5,6 +5,7 @@ import { ELEMENT_META, STATUS_META } from '../game/catalog';
 import type { ControlMode, ExpeditionHudSnapshot } from '../game/types';
 import { ElementIcon, DodgeIcon, VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
+import { TouchStick } from './TouchStick';
 
 interface ExpeditionHudProps {
   hud: ExpeditionHudSnapshot;
@@ -15,6 +16,8 @@ interface ExpeditionHudProps {
   onToggleControlMode: () => void;
   onToggleMute: () => void;
   onPause: () => void;
+  /** ART2 : manette tactile du mode Manuel. */
+  onTouchMove?: (x: number, z: number) => void;
   /** Mode Auto pas encore ouvert (S07.2 : après le premier boss). */
   autoLocked?: boolean;
 }
@@ -35,6 +38,7 @@ export function ExpeditionHud({
   onToggleControlMode,
   onToggleMute,
   onPause,
+  onTouchMove,
 }: ExpeditionHudProps) {
   const dodgeReady = hud.dodgeCooldown <= 0.05;
   const dodgeRatio = Math.max(
@@ -186,6 +190,13 @@ export function ExpeditionHud({
           </div>
         </div>
 
+        {/* ART2 : manette tactile en mode Manuel (déplacement au doigt), au-dessus des sorts, à gauche */}
+        {hud.controlMode === 'manual' && onTouchMove && (
+          <div className="pointer-events-auto absolute bottom-[200px] left-3 sm:bottom-[150px]">
+            <TouchStick onMove={onTouchMove} />
+          </div>
+        )}
+
         {/* Leçon en cours (S07.2) : une phrase, jamais deux, rien qui bloque */}
         {hud.lesson && (
           <div className="pointer-events-none absolute left-1/2 top-16 -translate-x-1/2 z-20" role="status" aria-live="polite">
@@ -205,7 +216,7 @@ export function ExpeditionHud({
               e.currentTarget.blur();
               onToggleControlMode();
             }}
-            className={`voxel-btn cursor-pointer px-3 h-10 rounded-lg border-2 text-xs font-bold whitespace-nowrap shrink-0 ${
+            className={`voxel-btn cursor-pointer px-3 h-11 rounded-lg border-2 text-xs font-bold whitespace-nowrap shrink-0 ${
               hud.controlMode === 'auto'
                 ? 'bg-[#2FB97A] text-[#0F172A] border-[#141925]'
                 : 'bg-[#181E2A]/92 text-[#FAF7F0] border-[#39445A] hover:border-[#F4B942]'
@@ -225,7 +236,7 @@ export function ExpeditionHud({
               e.currentTarget.blur();
               onToggleMute();
             }}
-            className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
+            className="voxel-btn cursor-pointer w-11 h-11 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
             aria-label={muted ? FR.ui.expeditionHud.activerLeSon : FR.ui.expeditionHud.couperLeSon}
           >
             {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -238,7 +249,7 @@ export function ExpeditionHud({
               e.currentTarget.blur();
               onPause();
             }}
-            className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
+            className="voxel-btn cursor-pointer w-11 h-11 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
             aria-label={FR.ui.expeditionHud.mettreEnPause}
           >
             <Pause className="w-4 h-4" />
@@ -406,7 +417,7 @@ export function ExpeditionHud({
                     e.currentTarget.blur();
                     onCastSkill(idx);
                   }}
-                  className={`voxel-btn relative overflow-hidden cursor-pointer rounded-lg px-2 py-1.5 border-2 text-left flex items-center justify-between gap-1.5 ${previewRing} ${hud.lesson?.key === String(idx + 1) ? 'lesson-glow' : ''} ${
+                  className={`voxel-btn relative overflow-hidden cursor-pointer min-h-[44px] rounded-lg px-2 py-1.5 border-2 text-left flex items-center justify-between gap-1.5 ${previewRing} ${hud.lesson?.key === String(idx + 1) ? 'lesson-glow' : ''} ${
                     skillReady
                       ? 'border-[#141925] text-[#FAF7F0]'
                       : 'border-[#39445A] bg-[#161C28] text-[#94A3B8] cursor-not-allowed'

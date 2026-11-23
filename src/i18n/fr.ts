@@ -218,6 +218,7 @@ export const FR = {
       carapace: 'Carapace de magma',
       defiEtat: (a: string | number, b: string | number) => `Défi : ${a} (${b})`,
       autoPlusTard: 'Auto : disponible après le premier boss',
+      manetteTactile: 'Manette : glisse le doigt pour déplacer le meneur',
       etatsDefi: { pending: 'en cours', done: 'réussi', lost: 'manqué' },
       eclatsTrios: (a: string | number, b: string | number) => `Éclats ${a} · Trios ${b}`,
       previewTrio: 'TRIO',

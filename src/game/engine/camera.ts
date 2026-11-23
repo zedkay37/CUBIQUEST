@@ -90,7 +90,9 @@ export function updateCamera(self: VoxelEngine, dt: number): void {
       }
       const wanted = 1 + Math.min(TELEGRAPH_KIT.cameraBackoff, Math.max(0, (reach - CAMERA_FRAME_REACH) / CAMERA_FRAME_REACH));
       self.camBackoff += (wanted - self.camBackoff) * (1 - Math.exp(-3 * dt));
-      _vecA.set(focusX, 15.8 * self.camBackoff, focusZ + 16.5 * self.camBackoff);
+      // ART2 (R17) : sur un écran en hauteur (téléphone), la caméra recule pour garder toute la mêlée en vue
+      const narrow = self.camera.aspect < 0.8 ? 1.35 : 1;
+      _vecA.set(focusX, 15.8 * self.camBackoff * narrow, focusZ + 16.5 * self.camBackoff * narrow);
       _vecB.set(focusX, 0.7, focusZ);
       // Sprint Art : léger balancement d'accompagnement, et zoom bref (0,9 s) sur le Déchaînement
       _vecA.x += Math.sin(self.expeditionElapsed * 0.35) * 0.6;

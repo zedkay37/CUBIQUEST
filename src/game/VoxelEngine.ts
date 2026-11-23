@@ -173,6 +173,9 @@ export class VoxelEngine {
   manualCasts = 0;
   /** Sprint Art : zoom bref de la caméra sur le Déchaînement. */
   ultZoomTimer = 0;
+  /** ART2 : déplacement à la manette tactile (mode Manuel), -1 à 1. */
+  touchMoveX = 0;
+  touchMoveZ = 0;
   /** Sprint Art : lumière de la Prairie (null en headless). */
   artLight: { dome: THREE.Mesh; top: THREE.Color; bottom: THREE.Color; rays: THREE.Group; rayMat: THREE.MeshBasicMaterial } | null = null;
   lessonTriggerAge = 0;
@@ -566,6 +569,12 @@ export class VoxelEngine {
       ],
       elapsed: this.expeditionElapsed,
     };
+  }
+
+  /** Manette tactile (ART2) : direction voulue à l'écran (x vers la droite, z vers le bas). */
+  public setTouchMove(x: number, z: number): void {
+    this.touchMoveX = x;
+    this.touchMoveZ = z;
   }
 
   /** Hub cliquable (A3.1) : lieu sous le pointeur, surbrillance, positions à l'écran. */

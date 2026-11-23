@@ -640,3 +640,20 @@ test('Hub (A3.1): quatre lieux cliquables au camp, aucun pendant un combat', () 
     h.engine.dispose();
   });
 });
+
+test('Tactile (ART2) : en mode Manuel, la manette déplace le meneur comme les touches ; relancer la remet à zéro', () => {
+  withSeededRandom(4, () => {
+    const h = makeHarness();
+    const stage = STAGE_BY_ID['meadow-1'];
+    h.engine.setScreenState('playing');
+    h.engine.startExpedition(stage, h.squad(stage), [], 'manual');
+    const leader = h.engine.allies[0];
+    const x0 = leader.x;
+    h.engine.setTouchMove(1, 0);
+    h.run(1.5);
+    assert.ok(leader.x > x0 + 1, `${x0} -> ${leader.x}`);
+    h.engine.startExpedition(stage, h.squad(stage), [], 'manual');
+    assert.equal(h.engine.touchMoveX, 0);
+    h.engine.dispose();
+  });
+});

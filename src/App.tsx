@@ -906,6 +906,7 @@ export default function App() {
           autoLocked={!previewRef.current && !isAutoUnlocked(save)}
           onToggleMute={handleToggleMute}
           onPause={() => setScreenState('paused')}
+            onTouchMove={(x, z) => engineRef.current?.setTouchMove(x, z)}
         />
       )}
 
