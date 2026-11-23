@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { INGREDIENTS, RUNES, POT_TIER_META } from '../game/catalog';
-import { computeVictoryStars } from '../game/rules';
+import { STAGE_CHALLENGES } from '../game/catalog';
+import { challengeText } from '../game/rules';
 import type { ExpeditionOutcome } from '../game/types';
 import { StoneIcon } from './Icons';
 import { FR } from '../i18n/fr';
@@ -16,7 +17,6 @@ interface OutcomeModalProps {
   onReturnCamp: () => void;
 }
 
-const STAR_LABELS = [FR.ui.outcomeModal.victoire, FR.ui.outcomeModal.t2Eclats, FR.ui.outcomeModal.ultimeOuEsquiveParfaite];
 
 const listVariants = {
   hidden: {},
@@ -36,7 +36,10 @@ export function OutcomeModal({
 }: OutcomeModalProps) {
   const mins = Math.floor(outcome.clearTimeSec / 60);
   const secs = Math.floor(outcome.clearTimeSec % 60);
-  const stars = computeVictoryStars(outcome);
+  // Étoiles du niveau : victoire, aucun K.O., défi ; celles déjà acquises restent pleines mais grisées
+  const starLabels = [FR.rules.etoileVictoire, FR.rules.etoileSansKo, challengeText(STAGE_CHALLENGES[outcome.stageId])];
+  const earned = [outcome.stars.win, outcome.stars.noKo, outcome.stars.challenge];
+  const previous = [outcome.previousStars.win, outcome.previousStars.noKo, outcome.previousStars.challenge];
 
   return (
     <motion.div
@@ -69,7 +72,7 @@ export function OutcomeModal({
           </p>
 
           {/* Étoiles qui tombent une à une, chacune sur une note plus haute */}
-          {outcome.victory && <StarRain stars={stars} labels={STAR_LABELS} />}
+          {outcome.victory && <StarRain earned={earned} previous={previous} labels={starLabels} />}
 
           <motion.h2
             id="outcome-modal-title"
@@ -85,9 +88,9 @@ export function OutcomeModal({
 
           {outcome.victory ? (
             <p className="mt-1 flex flex-wrap justify-center gap-x-3 gap-y-0.5 text-[10px] text-[#94A3B8]">
-              {STAR_LABELS.map((label, i) => (
-                <span key={label} className={i < stars ? 'text-[#F4B942] font-semibold' : ''}>
-                  ★ {label}
+              {starLabels.map((label, i) => (
+                <span key={label} className={earned[i] || previous[i] ? 'text-[#F4B942] font-semibold' : ''}>
+                  {earned[i] || previous[i] ? '★' : '☆'} {label}
                 </span>
               ))}
             </p>

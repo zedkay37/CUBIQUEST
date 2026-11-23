@@ -181,6 +181,10 @@ const demoOutcome = (victory: boolean): ExpeditionOutcome => ({
   unlockedNextStageName: victory ? 'Clairière du Colosse' : null,
   unlockedBiomeName: null,
   unlockedPotTier: null,
+  stars: { win: victory, noKo: victory, challenge: false },
+  previousStars: { win: victory, noKo: false, challenge: false },
+  koCount: victory ? 0 : 2,
+  hazardHits: 1,
 });
 
 const MOMENT_DEMOS: MomentDemo[] = [

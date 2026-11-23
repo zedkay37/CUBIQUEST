@@ -188,6 +188,7 @@ export function applyDamageToActor(
     );
 
     if (target.isAlly) {
+      self.allyKos += 1;
       target.reviveTimer = 11.0;
     } else {
       target.koDissolveTimer = 0.42;

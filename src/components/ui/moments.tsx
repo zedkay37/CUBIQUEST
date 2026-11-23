@@ -212,26 +212,32 @@ export function LevelUpBurst({ speciesId, from, to, delay = 0 }: { speciesId: st
 // ------------------------------------------------------------------ 4. Étoiles de victoire
 
 /** Les étoiles tombent une à une, chacune avec une note plus haute. */
-export function StarRain({ stars, labels }: { stars: number; labels: string[] }) {
+export function StarRain({ earned, previous = [false, false, false], labels }: { earned: boolean[]; previous?: boolean[]; labels: string[] }) {
   const reduced = usePrefersReducedMotion();
+  // seules les étoiles nouvelles tombent et sonnent ; celles déjà acquises sont pleines et grisées
+  const fresh = earned.map((e, i) => e && !previous[i]);
+  const total = earned.filter((e, i) => e || previous[i]).length;
   useEffect(() => {
-    const ids = [0, 1, 2].filter((i) => i < stars).map((i) => window.setTimeout(() => soundFx.playStar(i), 350 + i * 320));
+    let k = 0;
+    const ids = fresh.map((f, i) => (f ? window.setTimeout(() => soundFx.playStar(k++), 350 + i * 320) : 0)).filter(Boolean);
     return () => ids.forEach((id) => window.clearTimeout(id));
-  }, [stars]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
-    <div className="mt-2 flex items-end justify-center gap-2" role="img" aria-label={FR.ui.outcomeModal.etoileSur3(stars, stars > 1 ? 's' : '')}>
+    <div className="mt-2 flex items-end justify-center gap-2" role="img" aria-label={FR.ui.outcomeModal.etoileSur3(total, total > 1 ? 's' : '')}>
       {[0, 1, 2].map((i) => {
-        const earned = i < stars;
+        const isFresh = fresh[i];
+        const owned = earned[i] || previous[i];
         return (
           <motion.span
             key={i}
             title={labels[i]}
-            initial={reduced ? { opacity: 0 } : { y: -90, opacity: 0, rotate: -30 }}
-            animate={{ y: 0, opacity: 1, rotate: 0, scale: earned ? 1 : 0.8 }}
+            initial={reduced || !isFresh ? { opacity: 0 } : { y: -90, opacity: 0, rotate: -30 }}
+            animate={{ y: 0, opacity: owned && !isFresh ? 0.55 : 1, rotate: 0, scale: owned ? 1 : 0.8 }}
             transition={reduced ? { duration: 0.2 } : { type: 'spring', stiffness: 380, damping: 14, delay: 0.3 + i * 0.32 }}
             className={i === 1 ? '-translate-y-1.5' : ''}
           >
-            <Star className={i === 1 ? 'w-12 h-12' : 'w-10 h-10'} fill={earned ? '#F4B942' : 'transparent'} stroke={earned ? '#141925' : '#475569'} strokeWidth={1.6} />
+            <Star className={i === 1 ? 'w-12 h-12' : 'w-10 h-10'} fill={isFresh ? '#F4B942' : owned ? '#9CA3AF' : 'transparent'} stroke={owned ? '#141925' : '#475569'} strokeWidth={1.6} />
           </motion.span>
         );
       })}

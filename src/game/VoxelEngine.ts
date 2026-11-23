@@ -153,6 +153,8 @@ export class VoxelEngine {
   resolvingHazard = false;
   /** Compteurs d'esquive du combat : appuis, attaques annoncées esquivées et subies. */
   dodgesUsed = 0;
+  /** Compagnons tombés pendant ce combat (étoile « Aucun K.O. »). */
+  allyKos = 0;
   hazardsAvoided = 0;
   hazardHitsTaken = 0;
   /** Facteur du ralenti en cours (0,35 pour un Trio, 0,5 pour une esquive parfaite). */

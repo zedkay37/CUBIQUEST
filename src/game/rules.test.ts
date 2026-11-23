@@ -17,7 +17,11 @@ import {
   computeSquadPower,
   computeStatusDuration,
   computeUltimateCharge,
-  computeVictoryStars,
+  challengeLiveState,
+  challengeMet,
+  computeStageStars,
+  mergeStars,
+  totalStars,
   countClaimableRewards,
   createInitialSaveState,
   createOwnedCreature,
@@ -50,6 +54,7 @@ import {
   RECIPES,
   SPECIES,
   STAGES,
+  STAGE_CHALLENGES,
 } from './catalog';
 import { buildPreviewQuery, evolvedFormAtLevel, getReferenceConfig, listReferenceConfigs } from './previewConfigs';
 import { normalizeSettings } from './settings';
@@ -638,7 +643,7 @@ function oldRuneId(kind: string): string {
 }
 
 test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intacte)', () => {
-  assert.equal(SAVE_VERSION, 6);
+  assert.equal(SAVE_VERSION, 7);
   const fresh = createInitialSaveState('aquabloc', true);
   // Sauvegarde v2 réaliste : pas de pierres/stats des confins, quête en cours, créature équipée
   const { frontierWins: _fw, frontierDishes: _fd, ...v2Stats } = fresh.stats;
@@ -685,13 +690,9 @@ test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intact
 });
 
 test('Giga: écran de victoire — étoiles et annonce du biome débloqué', () => {
-  const base = { victory: true, burstsTriggered: 0, ultimatesUsed: 0, perfectDodges: 0 };
-  assert.equal(computeVictoryStars({ ...base, victory: false, burstsTriggered: 9, ultimatesUsed: 3 }), 0);
-  assert.equal(computeVictoryStars(base), 1);
-  assert.equal(computeVictoryStars({ ...base, burstsTriggered: 1 }), 1);
-  assert.equal(computeVictoryStars({ ...base, burstsTriggered: 2 }), 2);
-  assert.equal(computeVictoryStars({ ...base, perfectDodges: 1 }), 2);
-  assert.equal(computeVictoryStars({ ...base, burstsTriggered: 2, ultimatesUsed: 1 }), 3);
+  // S06 : les trois étoiles (victoire, aucun K.O., défi) — voir aussi le test « Étoiles »
+  const s = { victory: true, clearTimeSec: 20, perfectDodges: 0, hazardHits: 0, ultimatesUsed: 0, koCount: 0 };
+  assert.deepEqual(computeStageStars({ ...s, victory: false }, { id: 'meadow-1' }), { win: false, noKo: false, challenge: false });
 
   const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 10, bossHpPercentRemaining: 0 };
   const fresh = createInitialSaveState('pyrocube', true);
@@ -786,4 +787,39 @@ test('Socle: chaque escouade de référence aligne trois éléments et trois lig
     assert.equal(new Set(config.squad.map((id) => SPECIES[id].element)).size, 3, `${stage.id} : éléments`);
     assert.equal(new Set(config.squad.map(root)).size, 3, `${stage.id} : lignées`);
   }
+});
+
+test('Étoiles: victoire, aucun K.O., défi ; elles restent acquises ; défis sans Éclat ni Trio', () => {
+  const s = { victory: true, clearTimeSec: 30, perfectDodges: 2, hazardHits: 1, ultimatesUsed: 1, koCount: 0 };
+  assert.equal(challengeMet({ kind: 'perfectDodges', n: 2 }, s), true);
+  assert.equal(challengeMet({ kind: 'perfectDodges', n: 3 }, s), false);
+  assert.equal(challengeMet({ kind: 'duration', maxSec: 30 }, s), true);
+  assert.equal(challengeMet({ kind: 'duration', maxSec: 29 }, s), false);
+  assert.equal(challengeMet({ kind: 'noTelegraphHit' }, s), false);
+  assert.equal(challengeMet({ kind: 'noUltimate' }, { ...s, ultimatesUsed: 0 }), true);
+  assert.equal(challengeMet({ kind: 'all', of: [{ kind: 'noUltimate' }, { kind: 'perfectDodges', n: 1 }] }, { ...s, ultimatesUsed: 0 }), true);
+  assert.equal(challengeMet({ kind: 'noUltimate' }, { ...s, ultimatesUsed: 0, victory: false }), false);
+  // en combat : acquis, perdu, en cours
+  const live = { elapsed: 10, perfectDodges: 2, hazardHits: 0, ultimatesUsed: 0 };
+  assert.equal(challengeLiveState({ kind: 'perfectDodges', n: 2 }, live), 'done');
+  assert.equal(challengeLiveState({ kind: 'duration', maxSec: 9 }, live), 'lost');
+  assert.equal(challengeLiveState({ kind: 'noTelegraphHit' }, live), 'pending');
+  // étoiles : K.O. et défaite
+  assert.deepEqual(computeStageStars({ ...s, koCount: 1 }, { id: 'meadow-2' }), { win: true, noKo: false, challenge: true });
+  // une étoile acquise le reste
+  assert.deepEqual(mergeStars({ win: true, noKo: true, challenge: false }, { win: true, noKo: false, challenge: true }), { win: true, noKo: true, challenge: true });
+  // aucun défi ne dépend des Éclats ou des Trios (retour du propriétaire)
+  const kinds = (c: { kind: string; of?: { kind: string }[] }): string[] => (c.of ? c.of.flatMap(kinds) : [c.kind]);
+  assert.equal(Object.keys(STAGE_CHALLENGES).length, STAGES.length);
+  for (const c of Object.values(STAGE_CHALLENGES)) for (const k of kinds(c)) assert.ok(['perfectDodges', 'duration', 'noTelegraphHit', 'noUltimate'].includes(k), k);
+  // la victoire enregistre les étoiles dans la sauvegarde ; une défaite n'en retire aucune
+  let save = createInitialSaveState('pyrocube', true);
+  const stage = STAGES[0];
+  const win = applyExpeditionRewards(save, stage, true, { clearTimeSec: 18, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0, koCount: 0, hazardHits: 0, perfectDodges: 0, ultimatesUsed: 0 }, () => 0.5);
+  save = win.nextSave;
+  assert.deepEqual(save.stageStars[stage.id], { win: true, noKo: true, challenge: true });
+  const lost = applyExpeditionRewards(save, stage, false, { clearTimeSec: 40, wavesCleared: 2, damageDealt: 1, bossHpPercentRemaining: 30, koCount: 3 }, () => 0.5);
+  assert.deepEqual(lost.nextSave.stageStars[stage.id], { win: true, noKo: true, challenge: true });
+  assert.equal(totalStars(lost.nextSave), 3);
+  assert.equal(totalStars(lost.nextSave, 'shore'), 0);
 });

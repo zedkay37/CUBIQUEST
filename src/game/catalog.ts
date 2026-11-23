@@ -1,6 +1,7 @@
 import { BIOME_BOSS_KITS, STAGE_TUNING } from './balance';
 import type {
   AchievementDef,
+  StageChallenge,
   BiomeDef,
   BiomeId,
   BurstDef,
@@ -2673,6 +2674,36 @@ export const BURSTS: Record<ElementType, BurstDef> = {
 };
 
 // === V0.2 ROTATING QUEST POOL ===
+/**
+ * DÉFIS DES NIVEAUX (S06.1) : la troisième étoile. Retour du propriétaire : aucun défi ne dépend des Éclats
+ * ni des Trios. Types : esquives parfaites, chrono, aucune attaque annoncée subie, sans Déchaînement.
+ * Seuils calibrés avec `npm run sim` (rapport S06) : l'expert réussit au moins 6 fois sur 10 parmi ses victoires,
+ * le joueur actif 15 à 40 fois sur 100 ; durées : 80 % de la durée médiane du profil actif.
+ */
+export const STAGE_CHALLENGES: Record<string, StageChallenge> = {
+  'meadow-1': { kind: 'duration', maxSec: 25 },
+  'meadow-2': { kind: 'perfectDodges', n: 1 },
+  'meadow-3': { kind: 'noTelegraphHit' },
+  'shore-1': { kind: 'duration', maxSec: 16 },
+  'shore-2': { kind: 'perfectDodges', n: 3 },
+  'shore-3': { kind: 'noTelegraphHit' },
+  'volcano-1': { kind: 'perfectDodges', n: 2 },
+  'volcano-2': { kind: 'duration', maxSec: 37 },
+  'volcano-3': { kind: 'noUltimate' },
+  'sanctuary-1': { kind: 'duration', maxSec: 41 },
+  'sanctuary-2': { kind: 'noTelegraphHit' },
+  'sanctuary-3': { kind: 'perfectDodges', n: 4 },
+  'tundra-1': { kind: 'perfectDodges', n: 4 },
+  'tundra-2': { kind: 'duration', maxSec: 41 },
+  'tundra-3': { kind: 'noTelegraphHit' },
+  'stormpeak-1': { kind: 'perfectDodges', n: 3 },
+  'stormpeak-2': { kind: 'duration', maxSec: 38 },
+  'stormpeak-3': { kind: 'noUltimate' },
+  'canyon-1': { kind: 'duration', maxSec: 38 },
+  'canyon-2': { kind: 'perfectDodges', n: 5 },
+  'canyon-3': { kind: 'all', of: [{ kind: 'noTelegraphHit' }, { kind: 'noUltimate' }] },
+};
+
 export const QUEST_POOL: QuestTemplate[] = [
   {
     templateId: 'q_win_1',

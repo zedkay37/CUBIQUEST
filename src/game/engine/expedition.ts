@@ -75,6 +75,7 @@ export function startExpedition(
   self.dodgePerfectGiven = true;
   self.resolvingHazard = false;
   self.dodgesUsed = 0;
+  self.allyKos = 0;
   self.hazardsAvoided = 0;
   self.hazardHitsTaken = 0;
   self.lastBurstLabel = null;
@@ -301,6 +302,8 @@ function buildExpeditionResult(self: VoxelEngine): ExpeditionResult {
     ultimatesUsed: self.ultimatesUsed,
     perfectDodges: self.perfectDodges,
     triosTriggered: self.triosTriggered,
+    koCount: self.allyKos,
+    hazardHits: self.hazardHitsTaken,
   };
 }
 

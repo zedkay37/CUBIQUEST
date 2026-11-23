@@ -380,6 +380,16 @@ export const FR = {
     pv: (a: string | number) => `+${a} PV`,
   },
   rules: {
+    /** Défis des niveaux (S06). */
+    defi: {
+      esquives: (a: string | number) => (Number(a) > 1 ? `${a} esquives parfaites` : '1 esquive parfaite'),
+      chrono: (a: string | number) => `Gagner en moins de ${a} s`,
+      aucuneAttaque: 'Aucune attaque annoncée subie',
+      sansDechainement: 'Sans Déchaînement',
+      et: ' et ',
+    },
+    etoileVictoire: 'Victoire',
+    etoileSansKo: 'Aucun K.O.',
     niv: (a: string | number, b: string | number) => `${a} Niv.${b}`,
     creature: CREATURE_NOUN.singular,
     leContenuJsonEstVide: 'Le contenu JSON est vide.',

@@ -9,6 +9,7 @@ import {
   MOVES,
   POT_TIER_META,
   QUEST_POOL,
+  STAGE_CHALLENGES,
   RECIPE_BY_ID,
   RECIPES,
   SPECIES,
@@ -40,6 +41,8 @@ import type {
   StoneRarity,
   StoneSlot,
   StoneSlotType,
+  StageChallenge,
+  StageStars,
 } from './types';
 import { FR } from '../i18n/fr';
 import { LEGACY_ACHIEVEMENT_IDS, LEGACY_QUEST_IDS, LEGACY_RECIPE_IDS, LEGACY_RUNE_IDS, LEGACY_STAT_FIELDS } from './legacyIds';
@@ -84,8 +87,9 @@ export const LEGACY_SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v1');
 // v5 (S04) : statistique des anciennes réactions -> `burstsTriggered` ; `triosTriggered` (cumul, repart de 0) ;
 //            quêtes et succès renommés (legacyIds.ts) ; `firstTimesSeen` (bulles « première fois »).
 // v6 (S05) : `hazardHintsSeen` (consignes d'attaque déjà montrées).
-// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 6.
-export const SAVE_VERSION = 6;
+// v7 (S06) : `stageStars` (trois étoiles par niveau) ; les niveaux déjà terminés reçoivent l'étoile de victoire.
+// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 7.
+export const SAVE_VERSION = 7;
 
 export type RngFn = () => number;
 
@@ -846,6 +850,8 @@ export function applyExpeditionRewards(
     ultimatesUsed?: number;
     perfectDodges?: number;
     triosTriggered?: number;
+    koCount?: number;
+    hazardHits?: number;
   },
   rng: RngFn = Math.random,
 ): { nextSave: SaveState; outcome: ExpeditionOutcome } {
@@ -957,6 +963,13 @@ export function applyExpeditionRewards(
   const ultimatesUsed = Math.max(0, Math.round(stats.ultimatesUsed ?? 0));
   const perfectDodges = Math.max(0, Math.round(stats.perfectDodges ?? 0));
   const triosTriggered = Math.max(0, Math.round(stats.triosTriggered ?? 0));
+  const koCount = Math.max(0, Math.round(stats.koCount ?? 0));
+  const hazardHits = Math.max(0, Math.round(stats.hazardHits ?? 0));
+
+  // Étoiles : celles du combat s'ajoutent à celles déjà acquises
+  const previousStars = save.stageStars?.[stage.id] ?? NO_STARS;
+  const stars = computeStageStars({ victory, clearTimeSec: stats.clearTimeSec, perfectDodges, hazardHits, ultimatesUsed, koCount }, stage);
+  const stageStars = { ...(save.stageStars ?? {}), [stage.id]: mergeStars(previousStars, stars) };
 
   const baseNextSave: SaveState = {
     ...save,
@@ -970,6 +983,7 @@ export function applyExpeditionRewards(
     completedStageIds,
     discoveredSpeciesIds: nextDiscovered,
     expeditionsCompleted: save.expeditionsCompleted + (victory ? 1 : 0),
+    stageStars,
   };
 
   const nextSave = recordPlayerProgress(baseNextSave, {
@@ -1009,23 +1023,119 @@ export function applyExpeditionRewards(
     unlockedNextStageName,
     unlockedBiomeName,
     unlockedPotTier,
+    stars,
+    previousStars,
+    koCount,
+    hazardHits,
   };
 
   return { nextSave, outcome };
 }
 
-/**
- * Étoiles de l'écran de victoire (0 en cas de défaite) :
- * 1 = victoire, +1 pour au moins 2 réactions élémentaires, +1 pour un Ultime ou une esquive parfaite.
- * Purement cosmétique : rien n'est stocké dans la sauvegarde.
- */
-export function computeVictoryStars(
-  outcome: Pick<ExpeditionOutcome, 'victory' | 'burstsTriggered' | 'ultimatesUsed' | 'perfectDodges'>,
-): 0 | 1 | 2 | 3 {
-  if (!outcome.victory) return 0;
-  const tactical = outcome.burstsTriggered >= 2 ? 1 : 0;
-  const clutch = outcome.ultimatesUsed >= 1 || outcome.perfectDodges >= 1 ? 1 : 0;
-  return (1 + tactical + clutch) as 1 | 2 | 3;
+/** Ce qu'un combat dit des étoiles : issue, durée, esquives parfaites, attaques annoncées subies, Déchaînements, K.O. */
+export interface StarStats {
+  victory: boolean;
+  clearTimeSec: number;
+  perfectDodges: number;
+  hazardHits: number;
+  ultimatesUsed: number;
+  koCount: number;
+}
+
+export const NO_STARS: StageStars = { win: false, noKo: false, challenge: false };
+
+/** Le défi est-il rempli à la fin d'un combat gagné ? */
+export function challengeMet(ch: StageChallenge | undefined, s: StarStats): boolean {
+  if (!ch || !s.victory) return false;
+  switch (ch.kind) {
+    case 'perfectDodges':
+      return s.perfectDodges >= ch.n;
+    case 'duration':
+      return s.clearTimeSec <= ch.maxSec;
+    case 'noTelegraphHit':
+      return s.hazardHits === 0;
+    case 'noUltimate':
+      return s.ultimatesUsed === 0;
+    case 'all':
+      return ch.of.every((c) => challengeMet(c, s));
+  }
+}
+
+/** État du défi pendant le combat (ligne discrète du HUD) : acquis, perdu ou en cours. */
+export function challengeLiveState(
+  ch: StageChallenge | undefined,
+  live: { elapsed: number; perfectDodges: number; hazardHits: number; ultimatesUsed: number },
+): 'pending' | 'done' | 'lost' {
+  if (!ch) return 'pending';
+  switch (ch.kind) {
+    case 'perfectDodges':
+      return live.perfectDodges >= ch.n ? 'done' : 'pending';
+    case 'duration':
+      return live.elapsed > ch.maxSec ? 'lost' : 'pending';
+    case 'noTelegraphHit':
+      return live.hazardHits > 0 ? 'lost' : 'pending';
+    case 'noUltimate':
+      return live.ultimatesUsed > 0 ? 'lost' : 'pending';
+    case 'all': {
+      const parts = ch.of.map((c) => challengeLiveState(c, live));
+      if (parts.includes('lost')) return 'lost';
+      return parts.every((p) => p === 'done') ? 'done' : 'pending';
+    }
+  }
+}
+
+/** Texte d'un défi (carte, HUD, écran de fin). */
+export function challengeText(ch: StageChallenge | undefined): string {
+  if (!ch) return '';
+  switch (ch.kind) {
+    case 'perfectDodges':
+      return FR.rules.defi.esquives(ch.n);
+    case 'duration':
+      return FR.rules.defi.chrono(ch.maxSec);
+    case 'noTelegraphHit':
+      return FR.rules.defi.aucuneAttaque;
+    case 'noUltimate':
+      return FR.rules.defi.sansDechainement;
+    case 'all':
+      return ch.of.map(challengeText).join(FR.rules.defi.et);
+  }
+}
+
+/** Étoiles gagnées par un combat (S06.1) : victoire, sans K.O., défi du niveau. */
+export function computeStageStars(s: StarStats, stage: Pick<StageDef, 'id'>): StageStars {
+  return {
+    win: s.victory,
+    noKo: s.victory && s.koCount === 0,
+    challenge: challengeMet(STAGE_CHALLENGES[stage.id], s),
+  };
+}
+
+/** Les étoiles s'additionnent d'une partie à l'autre : une étoile acquise le reste. */
+export function mergeStars(a: StageStars | undefined, b: StageStars): StageStars {
+  return { win: Boolean(a?.win) || b.win, noKo: Boolean(a?.noKo) || b.noKo, challenge: Boolean(a?.challenge) || b.challenge };
+}
+
+export const starCount = (s: StageStars | undefined): number => (s ? Number(s.win) + Number(s.noKo) + Number(s.challenge) : 0);
+
+/** Total d'étoiles d'une sauvegarde, éventuellement limité à un biome. */
+export function totalStars(save: Pick<SaveState, 'stageStars'>, biomeId?: BiomeId): number {
+  return STAGES.filter((st) => !biomeId || st.biomeId === biomeId).reduce((n, st) => n + starCount(save.stageStars[st.id]), 0);
+}
+
+function normalizeStageStars(raw: unknown, completedStageIds: string[]): Record<string, StageStars> {
+  const out: Record<string, StageStars> = {};
+  const src = raw && typeof raw === 'object' ? (raw as Record<string, Partial<StageStars>>) : {};
+  for (const st of STAGES) {
+    const r = src[st.id];
+    const s: StageStars = {
+      // un niveau déjà terminé (sauvegardes v1 à v6) garde au moins l'étoile de victoire
+      win: Boolean(r?.win) || completedStageIds.includes(st.id),
+      noKo: Boolean(r?.noKo),
+      challenge: Boolean(r?.challenge),
+    };
+    if (s.win || s.noKo || s.challenge) out[st.id] = s;
+  }
+  return out;
 }
 
 /**
@@ -1131,6 +1241,7 @@ export function createInitialSaveState(
     claimedAchievementIds: [],
     firstTimesSeen: [],
     hazardHintsSeen: {},
+    stageStars: {},
   };
 }
 
@@ -1547,7 +1658,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
   if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.pot !== 'object') return null;
   if (!obj.ingredients || typeof obj.ingredients !== 'object') return null;
-  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== SAVE_VERSION) return null;
+  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== 6 && obj.version !== SAVE_VERSION) return null;
 
   // Pierres de Pouvoir : valides, identifiants uniques
   const powerStones: PowerStone[] = [];
@@ -1666,6 +1777,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     ),
     firstTimesSeen: uniqueKnown(obj.firstTimesSeen, (id) => (FIRST_TIME_KINDS as readonly string[]).includes(id)),
     hazardHintsSeen: normalizeHintCounts(obj.hazardHintsSeen),
+    stageStars: normalizeStageStars(obj.stageStars, completedStageIds),
   };
 }
 export function exportSaveToJson(save: SaveState): string {

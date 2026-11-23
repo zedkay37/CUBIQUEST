@@ -288,13 +288,13 @@ test('Chargement: une sauvegarde illisible est copiée avant que le jeu ne repar
   }
 });
 
-test('Sauvegarde: une sauvegarde v3 réaliste se charge en v6 sans perte, identifiants renommés', () => {
+test('Sauvegarde: une sauvegarde v3 réaliste se charge en v7 sans perte, identifiants renommés', () => {
   const v3 = clone(SAVE_V3_FIXTURE) as Record<string, any>;
   assert.equal(v3.version, 3);
   const m = migrateSaveState(clone(v3));
   assert.ok(m !== null);
   assert.equal(m.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 6);
+  assert.equal(SAVE_VERSION, 7);
 
   // escouade et créatures : rien ne bouge, sauf le nom du champ des runes équipées
   assert.deepEqual(m.squadIds, v3.squadIds);
@@ -326,6 +326,8 @@ test('Sauvegarde: une sauvegarde v3 réaliste se charge en v6 sans perte, identi
   assert.deepEqual(m.stats, { ...otherStats, burstsTriggered: v3.stats[LEGACY_STAT_FIELDS.bursts], triosTriggered: 0 });
   assert.deepEqual(m.firstTimesSeen, []);
   assert.deepEqual(m.hazardHintsSeen, {});
+  // v7 : les niveaux déjà terminés reçoivent l'étoile de victoire
+  for (const id of v3.completedStageIds) assert.deepEqual(m.stageStars[id], { win: true, noKo: false, challenge: false });
   assert.deepEqual(m.discoveredSpeciesIds, v3.discoveredSpeciesIds);
   assert.deepEqual(m.claimedAchievementIds, v3.claimedAchievementIds);
   assert.deepEqual(m.unlockedPotTiers, v3.unlockedPotTiers);

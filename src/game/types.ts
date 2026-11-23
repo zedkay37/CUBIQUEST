@@ -336,6 +336,8 @@ export interface SaveState {
   firstTimesSeen: string[];
   /** Consignes d'attaque déjà montrées, par type d'attaque (S05.2). */
   hazardHintsSeen: Record<string, number>;
+  /** Étoiles acquises par niveau (S06). */
+  stageStars: Record<string, StageStars>;
 }
 
 export interface ExpeditionUnitHud {
@@ -398,6 +400,25 @@ export interface ExpeditionHudSnapshot {
   bossIntro: { name: string; title: string; element: ElementType } | null;
 }
 
+/**
+ * Défi d'un niveau (S06.1). Retour du propriétaire : aucun défi ne dépend des Éclats ni des Trios
+ * (les cubes pourraient être retirés) ; seulement esquive parfaite, chrono, aucune attaque annoncée subie,
+ * sans Déchaînement, et leurs combinaisons.
+ */
+export type StageChallenge =
+  | { kind: 'perfectDodges'; n: number }
+  | { kind: 'duration'; maxSec: number }
+  | { kind: 'noTelegraphHit' }
+  | { kind: 'noUltimate' }
+  | { kind: 'all'; of: StageChallenge[] };
+
+/** Les trois étoiles d'un niveau : victoire, sans K.O., défi. Elles restent acquises d'une partie à l'autre. */
+export interface StageStars {
+  win: boolean;
+  noKo: boolean;
+  challenge: boolean;
+}
+
 export interface ExpeditionOutcome {
   victory: boolean;
   stageId: string;
@@ -424,6 +445,12 @@ export interface ExpeditionOutcome {
   /** Nom du biome qui vient de s'ouvrir (quand le niveau débloqué est le premier d'un nouveau biome). */
   unlockedBiomeName: string | null;
   unlockedPotTier: PotTier | null;
+  /** Étoiles gagnées dans ce combat, et celles déjà acquises avant lui. */
+  stars: StageStars;
+  previousStars: StageStars;
+  /** Compagnons tombés, attaques annoncées subies (pour les étoiles et le conseil de défaite). */
+  koCount: number;
+  hazardHits: number;
 }
 
 export interface CodexSource {
