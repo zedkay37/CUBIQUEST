@@ -106,6 +106,7 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | `actors.ts` | État commun des acteurs, pose animée des modèles, recherche de cible, disparition. |
 | `fx.ts` | Particules, projectiles, ondes de choc, télégraphes au sol, confettis. |
 | `hud.ts` | Instantané de combat envoyé à l'interface. |
+| `hub.ts` | Hub cliquable du camp (A3) : lieux, survol, positions à l'écran, promeneurs. Seulement au camp. |
 | `postfx.ts` | Pipeline d'effets (G1) : GTAO, contour, halo, étalonnage par biome ; niveaux Bas/Moyen/Haut/Automatique. Jamais en headless. |
 | `debug.ts` | Mesures de l'overlay `?debug=1`. |
 
