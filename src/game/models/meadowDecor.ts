@@ -116,7 +116,8 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const color = new THREE.Color();
 
   // --- relief : colonnes de blocs en terrasses entre l'arène plate et le bord de l'île
-  const step = low ? 2 : 1;
+  // qualité Bas : relief grossier, ni herbe ni fleurs ni insectes (aussi léger que l'ancien décor)
+  const step = low ? 3 : 1;
   const cells: { x: number; z: number; h: number }[] = [];
   for (let x = -arenaRadius; x <= arenaRadius; x += step)
     for (let z = -arenaRadius; z <= arenaRadius; z += step) {
@@ -142,7 +143,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   const heightAt = (x: number, z: number) => cells.find((c) => Math.abs(c.x - x) <= step / 2 && Math.abs(c.z - z) <= step / 2)?.h ?? 0;
 
   // --- touffes d'herbe et fleurs (instanciées, ondulent au vent)
-  const grassCount = low ? 160 : 480;
+  const grassCount = low ? 0 : 480;
   const grassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
   if (!low) addSway(grassMat, time, 0.35);
   const grass = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.4, 0.12), grassMat, grassCount);
@@ -163,7 +164,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   }
   env.add(grass);
 
-  const flowerCount = low ? 40 : 110;
+  const flowerCount = low ? 0 : 110;
   const flowerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, emissive: new THREE.Color('#222222') });
   if (!low) addSway(flowerMat, time, 0.25);
   const flowers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), flowerMat, flowerCount);
@@ -194,7 +195,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
     [[0.6, 2.1, 0, 1.2, 1.1, 1.2], [-0.6, 2.3, 0.2, 1.3, 1.2, 1.3], [0, 2.9, -0.1, 1.2, 0.9, 1.2]],
     [[0, 2.4, 0, 2.6, 1.6, 2.6]],
   ];
-  const treeCount = low ? 12 : 22;
+  const treeCount = low ? 10 : 22;
   const leafTotal = Array.from({ length: treeCount }, (_, i) => SHAPES[i % SHAPES.length].length).reduce((a, b) => a + b, 0);
   const trunks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 1.6, 0.5), trunkMat, treeCount);
   const leaves = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), leafMat, leafTotal);
@@ -228,7 +229,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   env.add(trunks, leaves);
 
   // --- buissons et rochers moussus
-  const bushCount = low ? 10 : 26;
+  const bushCount = low ? 6 : 26;
   const bushes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), leafMat, bushCount * 2);
   for (let i = 0; i < bushCount; i++) {
     const a = rnd() * Math.PI * 2;
@@ -248,7 +249,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   }
   bushes.castShadow = true;
   env.add(bushes);
-  const rockCount = low ? 8 : 18;
+  const rockCount = low ? 6 : 18;
   const rockMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
   const rocks = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.7, 0.9), rockMat, rockCount * 2);
   for (let i = 0; i < rockCount; i++) {
@@ -310,7 +311,7 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
   env.add(rim);
 
   // --- vie : papillons le jour, lucioles la nuit, pollen dans la lumière
-  const bugCount = low ? 8 : 18;
+  const bugCount = low ? 1 : 18;
   const bugMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const bugs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.04, 0.12), bugMat, bugCount);
   const bugSeeds = Array.from({ length: bugCount }, () => [rnd() * Math.PI * 2, 2 + rnd() * (flat + 3), rnd() * 10]);

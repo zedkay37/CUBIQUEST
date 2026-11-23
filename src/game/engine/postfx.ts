@@ -124,17 +124,20 @@ export function setupPostFx(self: VoxelEngine, width: number, height: number): v
     lastFrameAt: 0,
     fpsWindow: [],
   };
-  applyQualityLevel(self, 'high');
+  applyQualityLevel(self, 'high', false);
 }
 
 /** Active les passes du niveau choisi. */
-export function applyQualityLevel(self: VoxelEngine, level: QualityLevel): void {
+export function applyQualityLevel(self: VoxelEngine, level: QualityLevel, detail = true): void {
   const fx = self.postfx;
   if (!fx) return;
   fx.level = level;
   // sprint Art : en qualité Bas, les créatures sculptées sont construites en version simplifiée (combat suivant)
-  setSculptDetail(level === 'low' ? 'low' : 'high');
-  setDecorDetail(level === 'low' ? 'low' : 'high');
+  // (pas au démarrage : main.tsx a déjà choisi le détail selon les options, avant la première scène)
+  if (detail) {
+    setSculptDetail(level === 'low' ? 'low' : 'high');
+    setDecorDetail(level === 'low' ? 'low' : 'high');
+  }
   fx.gtao.enabled = level === 'high';
   fx.outline.enabled = level !== 'low';
   fx.bloom.enabled = level !== 'low';

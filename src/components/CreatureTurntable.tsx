@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildVoxelCreature } from '../game/voxelModels';
+import { buildLegacyCreature } from '../game/models/creatures';
+import { SPECIES } from '../game/catalog';
 import { usePrefersReducedMotion } from './ui';
 import { VoxelCreatureAvatar } from './Icons';
 
@@ -9,7 +11,21 @@ import { VoxelCreatureAvatar } from './Icons';
  * Portrait qui tourne (G1.3) : une petite scène 3D, réservée aux grands affichages (arrivée d'une créature)
  * pour ne pas multiplier les rendus. Sans WebGL ou avec « mouvement réduit » : le portrait fixe.
  */
-export function CreatureTurntable({ speciesId, size = 160, variant = false }: { speciesId: string; size?: number; variant?: boolean }) {
+export function CreatureTurntable({
+  speciesId,
+  size = 160,
+  variant,
+  legacy,
+  silhouette,
+}: {
+  speciesId: string;
+  size?: number;
+  variant?: boolean;
+  /** Sprint Art : l'ancien modèle « gros pavés » (comparaison). */
+  legacy?: boolean;
+  /** Sprint Art : ombre noire unie (comparaison des silhouettes). */
+  silhouette?: boolean;
+}) {
   const mount = useRef<HTMLDivElement | null>(null);
   const reduced = usePrefersReducedMotion();
   const failed = useRef(false);
@@ -41,7 +57,15 @@ export function CreatureTurntable({ speciesId, size = 160, variant = false }: { 
     const rim = new THREE.DirectionalLight('#9CC8FF', 0.7);
     rim.position.set(-5, 4, -6);
     scene.add(key, rim, new THREE.HemisphereLight('#DDEBFF', '#5B4A3A', 0.55));
-    const rig = buildVoxelCreature(speciesId, 1, variant);
+    const rig = legacy ? buildLegacyCreature(SPECIES[speciesId], 1, variant) : buildVoxelCreature(speciesId, 1, variant);
+    if (silhouette) {
+      // comparaison des silhouettes : une seule matière noire
+      const black = new THREE.MeshBasicMaterial({ color: '#000000' });
+      rig.bodyPivot.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.isMesh) m.material = black;
+      });
+    }
     scene.add(rig.root);
     rig.root.updateMatrixWorld(true);
     const bounds = new THREE.Box3().setFromObject(rig.bodyPivot);
@@ -73,7 +97,7 @@ export function CreatureTurntable({ speciesId, size = 160, variant = false }: { 
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [speciesId, size, reduced, variant]);
+  }, [speciesId, size, reduced, variant, legacy, silhouette]);
 
   if (reduced || failed.current) return <VoxelCreatureAvatar speciesId={speciesId} size={size} />;
   return <div ref={mount} style={{ width: size, height: size }} aria-hidden="true" />;

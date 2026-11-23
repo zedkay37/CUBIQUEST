@@ -2,8 +2,9 @@ import {lazy, Suspense} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import {setSculptModels} from './game/models/creatures';
-import {setArtDecor} from './game/models/meadowDecor';
+import {setSculptDetail, setSculptModels} from './game/models/creatures';
+import {setArtDecor, setDecorDetail} from './game/models/meadowDecor';
+import {loadSettings} from './game/settings';
 
 // `?gallery=1` : galerie de revue des créatures et des biomes (outil de développement, le jeu n'est pas lancé).
 // Chargée à la demande : son code n'est pas téléchargé par les joueurs.
@@ -13,6 +14,9 @@ const isGallery = galleryParam === '1';
 const isUiGallery = galleryParam === 'ui';
 // `?gallery=reveal` : révélations du Cube Scellé, une par rareté (outil de développement)
 const isRevealGallery = galleryParam === 'reveal';
+// `?gallery=art` : créatures refaites, avant / après (sprint Art)
+const isArtGallery = galleryParam === 'art';
+const ArtGallery = lazy(() => import('./components/ArtGallery.tsx').then((module) => ({default: module.ArtGallery})));
 const RevealGallery = lazy(() => import('./components/RevealGallery.tsx').then((module) => ({default: module.RevealGallery})));
 const UiGallery = lazy(() => import('./components/ui/UiGallery.tsx').then((module) => ({default: module.UiGallery})));
 const GalleryPage = lazy(() =>
@@ -34,9 +38,21 @@ if (new URLSearchParams(window.location.search).get('bench') === '1') {
 // Sprint Art : modèles sculptés dans le navigateur (les outils headless gardent les anciens, golden inchangé)
 setSculptModels(true);
 setArtDecor(true);
+// qualité Bas choisie (options ou ?quality=low) : versions simplifiées dès la première scène
+{
+  const q = new URLSearchParams(window.location.search).get('quality') ?? loadSettings().quality;
+  if (q === 'low') {
+    setDecorDetail('low');
+    setSculptDetail('low');
+  }
+}
 
 createRoot(document.getElementById('root')!).render(
-  isRevealGallery ? (
+  isArtGallery ? (
+    <Suspense fallback={null}>
+      <ArtGallery />
+    </Suspense>
+  ) : isRevealGallery ? (
     <Suspense fallback={null}>
       <RevealGallery />
     </Suspense>
