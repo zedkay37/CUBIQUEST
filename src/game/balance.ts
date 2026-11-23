@@ -87,7 +87,7 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   'tundra-3': { enemyHpMult: 9, enemyAtkMult: 0.125, bossHpMult: 4.01 },
   // --- Cime des Orages ---
   // avant 9 / 0.48 / 2.0 (100 %, boss 10 s)              -> ~79 %, boss ~19 s
-  'stormpeak-1': { enemyHpMult: 12, enemyAtkMult: 0.293, bossHpMult: 5.92 },
+  'stormpeak-1': { enemyHpMult: 12, enemyAtkMult: 0.28, bossHpMult: 5.92 }, // S06 : 0,293 -> 0,28 (mur du parcours : actif 48 % -> 63 %, Auto 51 % -> 50 %)
   // avant 9.5 / 0.45 / 1.8 (83 %, boss 18 s)             -> ~74 %, boss ~29 s
   'stormpeak-2': { enemyHpMult: 9.5, enemyAtkMult: 0.285, bossHpMult: 2.92 },
   // avant 10 / 0.45 / 1.9 (70 %, phases 2 et 3 de 4 s)   -> ~74 %, phases 12 / 6,5 / 9 s
@@ -150,7 +150,7 @@ export const ULTIMATE_CHARGE = {
  */
 export const XP_KIT = {
   /** Multiplie l'XP de base de tous les niveaux : réglé avec `npm run journey` (retour du propriétaire : ~3 parties par niveau). */
-  xpScale: 1,
+  xpScale: 0.2, // S06 : réglé avec npm run journey (docs/sim/06-parcours.md)
   firstClearXpMult: 2.5,
   benchXpShare: 0.6,
 };

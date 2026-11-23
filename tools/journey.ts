@@ -14,6 +14,7 @@
  */
 import fs from 'node:fs';
 import { fightSeed, runFight, STAGES, type SimProfile } from './simFight';
+import { mulberry32 } from './headlessDom';
 
 const { createInitialSaveState, applyExpeditionRewards, canEvolve, evolveCreature, canEquipStone, equipPowerStone } = await import('../src/game/rules');
 type Save = ReturnType<typeof createInitialSaveState>;
@@ -72,6 +73,8 @@ export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 
   let firstEvolutionMin: number | null = null;
   let lossStreak = 0;
   let games = 0;
+  // butin à graine fixe : le parcours est reproductible
+  const rewardRng = mulberry32((seed * 7919) >>> 0);
   while (games < maxGames && save.completedStageIds.length < STAGES.length) {
     const frontier = Math.min(save.highestStageIndex, STAGES.length - 1);
     // après deux défaites de suite : une partie sur le niveau précédent
@@ -94,7 +97,7 @@ export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 
       triosTriggered: o?.triosTriggered,
       koCount: o?.koCount,
       hazardHits: o?.hazardHits,
-    }).nextSave;
+    }, rewardRng).nextSave;
     const row = stages[idx];
     row.games += 1;
     if (victory) {

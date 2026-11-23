@@ -62,7 +62,7 @@ import {
 } from './catalog';
 import { buildPreviewQuery, evolvedFormAtLevel, getReferenceConfig, listReferenceConfigs } from './previewConfigs';
 import { normalizeSettings } from './settings';
-import { BOSS_KITS, STAGE_TUNING } from './balance';
+import { BOSS_KITS, STAGE_TUNING, XP_KIT } from './balance';
 import { LEGACY_RUNE_IDS } from './legacyIds';
 
 test('elemental type effectiveness returns accurate multipliers', () => {
@@ -840,13 +840,13 @@ test('Expérience (S06.3): table des niveaux, première victoire x 2,5, 60 % au 
   const stats = { clearTimeSec: 30, wavesCleared: 3, damageDealt: 1, bossHpPercentRemaining: 0 };
   const first = applyExpeditionRewards(save, stage, true, stats, () => 0.5);
   assert.equal(first.outcome.firstClear, true);
-  assert.equal(first.outcome.xpPerUnit, Math.round(stage.xpReward * 2.5));
+  assert.equal(first.outcome.xpPerUnit, Math.round(stage.xpReward * XP_KIT.xpScale * 2.5));
   assert.equal(first.outcome.benchXp, Math.round(first.outcome.xpPerUnit * 0.6));
   const benchAfter = first.nextSave.roster.find((c) => c.uid === bench.uid)!;
   assert.ok(benchAfter.level > bench.level || benchAfter.xp > bench.xp, 'la créature au camp gagne de l’XP');
   const again = applyExpeditionRewards(first.nextSave, stage, true, stats, () => 0.5);
   assert.equal(again.outcome.firstClear, false);
-  assert.equal(again.outcome.xpPerUnit, stage.xpReward);
+  assert.equal(again.outcome.xpPerUnit, Math.round(stage.xpReward * XP_KIT.xpScale));
   // une défaite ne compte jamais comme première victoire
   assert.equal(applyExpeditionRewards(save, stage, false, { ...stats, wavesCleared: 1 }, () => 0.5).outcome.firstClear, false);
 });
