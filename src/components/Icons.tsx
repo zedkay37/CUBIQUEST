@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { cachedPortrait, requestPortrait } from '../game/portraitStudio';
 import { ELEMENT_META, SPECIES } from '../game/catalog';
 import type { ElementType } from '../game/types';
 import { FR } from '../i18n/fr';
@@ -116,21 +117,51 @@ export function ElementIcon({
   );
 }
 
+/** Portrait 3D d'une espèce (G1.3) : null tant qu'il n'est pas prêt, ou sans WebGL. */
+export function usePortrait(speciesId: string): string | null {
+  const [url, setUrl] = useState<string | null>(() => cachedPortrait(speciesId));
+  useEffect(() => {
+    const req = requestPortrait(speciesId, () => setUrl(cachedPortrait(speciesId)));
+    setUrl(req.url);
+    return req.cancel;
+  }, [speciesId]);
+  return url;
+}
+
 /**
- * Crisp isometric voxel portrait icon matched 1-to-1 with each creature's 3D palette
+ * Portrait d'une créature (G1.3) : la vraie créature en 3D, photographiée par PortraitStudio.
+ * En attendant le portrait (ou sans WebGL), l'icône dessinée aux couleurs de l'espèce.
+ * `silhouette` : ombre noire unie (créature non découverte).
  */
 export function VoxelCreatureAvatar({
   speciesId,
   size = 44,
   className = '',
+  silhouette = false,
 }: {
   speciesId: string;
   size?: number;
   className?: string;
+  silhouette?: boolean;
 }) {
   const sp = SPECIES[speciesId] ?? SPECIES.pyrocube;
+  const portrait = usePortrait(sp.id);
+  if (portrait) {
+    return (
+      <img
+        src={portrait}
+        width={size}
+        height={size}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={className}
+        style={{ width: size, height: size, objectFit: 'contain', filter: silhouette ? 'brightness(0)' : undefined }}
+      />
+    );
+  }
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" className={className} aria-hidden="true">
+    <svg style={silhouette ? { filter: 'brightness(0)' } : undefined} width={size} height={size} viewBox="0 0 48 48" className={className} aria-hidden="true">
       {/* Ground shadow */}
       <ellipse cx="24" cy="41" rx="14" ry="4" fill="rgba(10,14,24,0.45)" />
       {/* Ears / Horns / Crest */}

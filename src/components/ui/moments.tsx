@@ -9,6 +9,7 @@ import { Star } from 'lucide-react';
 import { soundFx } from '../../game/audio';
 import { ELEMENT_META, SPECIES } from '../../game/catalog';
 import { VoxelCreatureAvatar } from '../Icons';
+import { CreatureTurntable } from '../CreatureTurntable';
 import { FR } from '../../i18n/fr';
 import { CountUp, ElementBadge, usePrefersReducedMotion } from './index';
 
@@ -119,7 +120,7 @@ export function ArrivalScene({ speciesId, isNew, onDone }: { speciesId: string; 
           className="rounded-[6px] border-4 bg-[#141925] p-3"
           style={{ borderColor: color, boxShadow: `0 0 48px ${color}88, 0 8px 0 rgba(0,0,0,0.6)` }}
         >
-          <VoxelCreatureAvatar speciesId={speciesId} size={132} />
+          <CreatureTurntable speciesId={speciesId} size={132} />
         </motion.div>
         <motion.h2
           className="mt-5 font-display text-4xl sm:text-5xl font-extrabold text-[#FAF7F0] hud-text-stroke"

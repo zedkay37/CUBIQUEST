@@ -285,7 +285,7 @@ export function CodexDrawer({
                     }`}
                   >
                     {/* A1.2 : une espèce non découverte n'est qu'une ombre noire, sans élément ni statistiques */}
-                    <VoxelCreatureAvatar speciesId={sp.id} size={46} className={`shrink-0 ${seen ? '' : 'brightness-0'}`} />
+                    <VoxelCreatureAvatar speciesId={sp.id} size={46} className="shrink-0" silhouette={!seen} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         {seen && <ElementIcon element={sp.element} size={15} />}
