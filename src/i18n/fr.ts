@@ -68,6 +68,19 @@ export const FR = {
       rock: 'Dégâts sur tous, et bouclier de 35 % des PV pour chaque allié.',
       psychic: 'Dégâts sur tous, et les trois sorts sont prêts.',
     },
+    /** Navigation du camp (sprint Art, section 0). */
+    nav: {
+      titre: 'Lieux du camp',
+      expeditions: 'Expéditions',
+      atelier: 'Atelier',
+      team: 'Équipe',
+      carnet: 'Carnet',
+      options: 'Options',
+      replier: 'Replier la barre',
+      deplier: 'Déplier la barre',
+      sonActif: 'Son : activé',
+      sonCoupe: 'Son : coupé',
+    },
     /** Hub cliquable du camp (A3.1). */
     hub: {
       lieux: { map: 'Panneau de l’île : expéditions', atelier: 'Atelier : Cubes Scellés', team: 'Tente : équipe', carnet: 'Bibliothèque : Carnet' },

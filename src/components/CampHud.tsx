@@ -1,21 +1,10 @@
 import React from 'react';
-import {
-  BookOpen,
-  ChevronDown,
-  ChevronUp,
-  Compass,
-  Home,
-  Users,
-  Vibrate,
-  VibrateOff,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
 import { computeSquadPower } from '../game/rules';
 import type { SaveState } from '../game/types';
 import { VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
-import { NewBadge } from './ui';
+import { CampNav, TAB_TO_PLACE } from './CampNav';
+import type { HubPlaceId } from '../game/engine/hub';
 
 export type CampDrawerTab = 'expeditions' | 'atelier' | 'team' | 'carnet' | null;
 
@@ -38,6 +27,11 @@ interface CampHudProps {
   unlocked?: Set<string>;
   unseen?: string[];
   onSeenUnlock?: (feature: string) => void;
+  /** Sprint Art, section 0 : navigation latérale et lien avec les bâtiments du camp. */
+  hubHover?: HubPlaceId | null;
+  onNavHover?: (place: HubPlaceId | null) => void;
+  navCollapsed?: boolean;
+  onToggleNav?: () => void;
 }
 
 export function CampHud({
@@ -57,6 +51,10 @@ export function CampHud({
   unlocked,
   unseen = [],
   onSeenUnlock,
+  hubHover = null,
+  onNavHover,
+  navCollapsed = false,
+  onToggleNav,
 }: CampHudProps) {
   const isOpen = (tab: string) => !unlocked || unlocked.has(tab);
   const cubeCount = save.sealedCubes?.length ?? 0;
@@ -100,160 +98,26 @@ export function CampHud({
             ))}
           </div>
         </div>
-
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {quality && onCycleQuality && (
-            <button
-              type="button"
-              tabIndex={-1}
-              onClick={(e) => {
-                e.currentTarget.blur();
-                onCycleQuality();
-              }}
-              className="voxel-btn cursor-pointer h-10 px-2.5 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[11px] font-bold text-[#FAF7F0] border-2 border-[#39445A]"
-              aria-label={FR.ui.campHud.qualiteAria(FR.ui.campHud.qualites[quality])}
-              title={FR.ui.campHud.qualiteAria(FR.ui.campHud.qualites[quality])}
-            >
-              {FR.ui.campHud.qualiteCourt(FR.ui.campHud.qualites[quality])}
-            </button>
-          )}
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={(e) => {
-              e.currentTarget.blur();
-              onToggleShake();
-            }}
-            className={`voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] border-2 border-[#39445A] flex items-center justify-center ${
-              screenShake ? 'text-[#FAF7F0]' : 'text-[#64748B]'
-            }`}
-            aria-label={
-              screenShake
-                ? FR.ui.campHud.desactiverLeTremblementDeCamera
-                : FR.ui.campHud.activerLeTremblementDeCamera
-            }
-            aria-pressed={screenShake}
-            title={screenShake ? FR.ui.campHud.tremblementDeCameraActive : FR.ui.campHud.tremblementDeCameraDesactive}
-          >
-            {screenShake ? <Vibrate className="w-4 h-4" /> : <VibrateOff className="w-4 h-4" />}
-          </button>
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={(e) => {
-              e.currentTarget.blur();
-              onToggleMute();
-            }}
-            className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
-            aria-label={muted ? FR.ui.campHud.activerLeSon : FR.ui.campHud.couperLeSon}
-          >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={(e) => {
-              e.currentTarget.blur();
-              onReturnTitle();
-            }}
-            className="voxel-btn cursor-pointer w-10 h-10 rounded-lg bg-[#181E2A]/92 hover:bg-[#242D3F] text-[#FAF7F0] border-2 border-[#39445A] flex items-center justify-center"
-            aria-label={FR.ui.campHud.retourALEcranTitre}
-          >
-            <Home className="w-4 h-4" />
-          </button>
-        </div>
       </div>
 
-      {/* Dock du bas. A3.1 : sur bureau, les lieux du camp sont les menus ; le dock reste pour le clavier
-          (il réapparaît dès qu'un de ses boutons a le focus) et pour le téléphone. */}
-      <div className="flex flex-col items-center pointer-events-auto sm:pointer-events-none sm:opacity-0 sm:focus-within:pointer-events-auto sm:focus-within:opacity-100 transition-opacity">
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="cursor-pointer mb-1.5 px-3 py-1 rounded-t-lg bg-[#181E2A]/92 border border-[#39445A] text-[11px] font-semibold text-[#B8C2D1] hover:text-[#FAF7F0] inline-flex items-center gap-1"
-        >
-          {dockCollapsed ? (
-            <>
-              <ChevronUp className="w-3.5 h-3.5" />{FR.ui.campHud.afficherLeCamp}
-            </>
-          ) : (
-            <>
-              <ChevronDown className="w-3.5 h-3.5" />{FR.ui.campHud.masquerLeDock}
-            </>
-          )}
-        </button>
-
-        {!dockCollapsed && newest && (
-          <p className="voxel-panel px-3 py-1.5 text-xs font-semibold text-[#F4B942]" role="status">
-            {FR.ui.campHud.nouveautes[newest]}
-          </p>
-        )}
-        {!dockCollapsed && (
-          <div className="voxel-panel rounded-2xl p-2 flex flex-wrap items-center justify-center gap-2 max-w-[min(860px,95vw)]">
-            <button
-              type="button"
-              onClick={() => onSelectDrawer('expeditions')}
-              className={`voxel-btn cursor-pointer px-4 sm:px-5 py-2.5 rounded-xl font-display font-bold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
-                activeDrawer === 'expeditions'
-                  ? 'block-btn-primary outline outline-2 outline-[#FAF7F0]'
-                  : 'block-btn-primary'
-              }`}
-            >
-              <Compass className="w-4 h-4" />
-              <span>{isOpen('team') ? FR.ui.campHud.expeditions : FR.ui.campHud.partir}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => selectDrawer('atelier')}
-              title={isNew('atelier') ? FR.ui.campHud.nouveautes.atelier : undefined}
-              className={`${isOpen('atelier') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
-                activeDrawer === 'atelier' ? 'block-btn-gold' : 'block-btn-secondary'
-              }`}
-            >
-              <span aria-hidden="true" className="inline-block h-3.5 w-3.5 rounded-[3px] bg-[#F4B942]" />
-              <span>{FR.ui.atelier.bouton}</span>
-              {cubeCount > 0 && <span className="ui-new-badge font-mono-num text-[11px] font-bold rounded-[4px] bg-[#F4B942] text-[#1A0E08] px-1.5">{cubeCount}</span>}
-              {isNew('atelier') && <NewBadge />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => selectDrawer('team')}
-              title={isNew('team') ? FR.ui.campHud.nouveautes.team : undefined}
-              className={`${isOpen('team') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
-                activeDrawer === 'team'
-                  ? 'block-btn-gold'
-                  : 'block-btn-secondary'
-              }`}
-            >
-              <Users className="w-4 h-4 text-[#38BDF8]" />
-              <span>{FR.ui.campHud.equipePierres}</span>
-              {isNew('team') && <NewBadge />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => selectDrawer('carnet')}
-              title={isNew('carnet') ? FR.ui.campHud.nouveautes.carnet : undefined}
-              className={`${isOpen('carnet') ? '' : 'hidden! '}voxel-btn cursor-pointer min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
-                activeDrawer === 'carnet'
-                  ? 'block-btn-gold'
-                  : 'block-btn-secondary'
-              }`}
-            >
-              <BookOpen className="w-4 h-4 text-[#C084FC]" />
-              <span>{FR.ui.campHud.carnet}</span>
-              {isNew('carnet') && <NewBadge />}
-              {claimableCount > 0 && (
-                <span className="ui-new-badge font-mono-num text-[11px] font-bold rounded-[4px] bg-[#F4B942] text-[#1A0E08] px-1.5" aria-label={FR.ui.components.nouveau}>
-                  {claimableCount}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
+      <CampNav
+        active={activeDrawer}
+        isOpen={(tab) => tab === 'expeditions' || isOpen(tab)}
+        isNew={(tab) => isNew(tab)}
+        counts={{ atelier: cubeCount, carnet: claimableCount }}
+        hoveredPlace={hubHover}
+        onHover={(tab) => onNavHover?.(tab ? TAB_TO_PLACE[tab] : null)}
+        onSelect={(tab) => selectDrawer(tab)}
+        collapsed={navCollapsed}
+        onToggleCollapsed={() => onToggleNav?.()}
+        muted={muted}
+        screenShake={screenShake}
+        quality={quality}
+        onToggleMute={onToggleMute}
+        onToggleShake={onToggleShake}
+        onCycleQuality={onCycleQuality}
+        onReturnTitle={onReturnTitle}
+      />
     </div>
   );
 }

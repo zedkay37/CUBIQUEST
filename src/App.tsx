@@ -4,6 +4,7 @@ import { CampHud, type CampDrawerTab } from './components/CampHud';
 import { CarnetDrawer } from './components/CarnetDrawer';
 import { AtelierDrawer } from './components/AtelierDrawer';
 import { HubOverlay } from './components/HubOverlay';
+import type { HubPlaceId } from './game/engine/hub';
 import { SummonReveal, type SummonRevealProps } from './components/SummonReveal';
 import { Modal } from './components/ui';
 import { ExpeditionDrawer } from './components/ExpeditionDrawer';
@@ -124,6 +125,8 @@ export default function App() {
   const engineRef = useRef<VoxelEngine | null>(null);
   const getDebugStats = useCallback(() => engineRef.current?.getDebugStats() ?? null, []);
   const getEngine = useCallback(() => engineRef.current, []);
+  // lieu du camp survolé (bâtiment ou entrée de la barre latérale)
+  const [hubHover, setHubHover] = useState<HubPlaceId | null>(null);
 
   const [save, setSave] = useState<SaveState>(() => {
     const loaded = loadSaveState();
@@ -716,6 +719,7 @@ export default function App() {
               carnet: claimableCount || false,
               team: !save.allUnlocked && unlockedFeatures(save).has('team') && !save.unlocksSeen.includes('team'),
             }}
+            onHoverChange={setHubHover}
             onOpen={(id) => {
               soundFx.playUiClick();
               const tab = ({ map: 'expeditions', atelier: 'atelier', team: 'team', carnet: 'carnet' } as const)[id];
@@ -737,6 +741,13 @@ export default function App() {
             onToggleShake={handleToggleShake}
             quality={settings.quality}
             onCycleQuality={handleCycleQuality}
+            hubHover={hubHover}
+            onNavHover={(place) => {
+              setHubHover(place);
+              engineRef.current?.setHubHover(place);
+            }}
+            navCollapsed={settings.navCollapsed}
+            onToggleNav={() => setSettings((prev) => ({ ...prev, navCollapsed: !prev.navCollapsed }))}
             onSelectDrawer={(tab) => {
               soundFx.playUiClick();
               setActiveDrawer((cur) => (tab ? nextDrawer(cur, tab) : null));

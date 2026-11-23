@@ -12,18 +12,20 @@ interface HubOverlayProps {
   /** Pastille au-dessus d'un lieu quand il y a du nouveau (nombre, ou true). */
   badges: Partial<Record<HubPlaceId, number | boolean>>;
   onOpen: (id: HubPlaceId) => void;
+  /** Le lieu survolé change (pour mettre en avant son entrée dans la barre latérale). */
+  onHoverChange?: (id: HubPlaceId | null) => void;
 }
 
 /**
  * Hub cliquable (spec Atelier, A3.1) : survol (ou premier toucher) = le lieu s'illumine et son nom s'affiche ;
  * clic (ou second toucher) = l'écran s'ouvre. Pastilles au-dessus des lieux qui ont du nouveau.
  */
-export function HubOverlay({ getEngine, enabled, isOpen, badges, onOpen }: HubOverlayProps) {
+export function HubOverlay({ getEngine, enabled, isOpen, badges, onOpen, onHoverChange }: HubOverlayProps) {
   const [hover, setHover] = useState<HubPlaceId | null>(null);
   const [anchors, setAnchors] = useState<{ id: HubPlaceId; x: number; y: number }[]>([]);
   const hoverRef = useRef<HubPlaceId | null>(null);
-  const propsRef = useRef({ isOpen, onOpen });
-  propsRef.current = { isOpen, onOpen };
+  const propsRef = useRef({ isOpen, onOpen, onHoverChange });
+  propsRef.current = { isOpen, onOpen, onHoverChange };
 
   useEffect(() => {
     const engine = getEngine();
@@ -42,6 +44,7 @@ export function HubOverlay({ getEngine, enabled, isOpen, badges, onOpen }: HubOv
       return id && propsRef.current.isOpen(id) ? id : null;
     };
     const setH = (id: HubPlaceId | null) => {
+      if (hoverRef.current !== id) propsRef.current.onHoverChange?.(id);
       hoverRef.current = id;
       setHover(id);
       getEngine()?.setHubHover(id);
