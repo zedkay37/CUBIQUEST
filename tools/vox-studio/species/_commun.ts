@@ -78,6 +78,8 @@ export function elementPalette(body: [string, string, string, string], glow: [st
  */
 export const FEU = elementPalette(['#0D0B0D', '#1B1718', '#3B322D', '#D2BFA6'], ['#FF3D00', '#FF6A00', '#FFB300'], '#FFD02A');
 export const EAU = elementPalette(['#1C2A36', '#2F4C5E', '#5E8597', '#E3DCCB'], ['#00C2A8', '#3DF2D0', '#B8FFF0'], '#9DFFEA');
+/** Eau, variante glace (lignée Givrelin) : même ardoise bleue et même lueur, os remplacé par une glace bleutée. */
+export const GLACE = elementPalette(['#1C2A36', '#2F4C5E', '#5E8597', '#BFE6F5'], ['#00C2A8', '#3DF2D0', '#B8FFF0'], '#9DFFEA');
 
 /** Passes de couleur : dessus clair (croûte), dessous sombre. Ce contraste fait la lisibilité. */
 export function shade(m: Model, from = [BODY]): void {
