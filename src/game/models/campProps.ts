@@ -1,13 +1,13 @@
 /**
- * Objets du camp : marmite (liquide, feu) et totem central.
+ * Objets du camp : atelier central (en attendant son établi : bac, feu, trépied) et totem.
  */
 import * as THREE from 'three';
 import { getToyBumpTexture, makeBox } from './shared';
 
 /**
- * Builds the iconic Base Camp Cooking Pot with campfire logs, liquid mesh & tripod
+ * Atelier du camp : feu de bûches, bac et trépied (modèle provisoire, remplacé par un établi en A2.3)
  */
-export function buildCookingPotProp(): {
+export function buildWorkbenchProp(): {
   group: THREE.Group;
   liquidMesh: THREE.Mesh;
   fireMesh: THREE.Mesh;
@@ -70,13 +70,13 @@ export function buildCookingPotProp(): {
   const fireMesh = makeBox(0.7, 0.45, 0.7, fireMat, 0, 0.32, 0, false);
   group.add(fireMesh);
 
-  // Cauldron body & beveled rim (composite 4 parts)
+  // Bac et rebord biseauté (4 parties)
   group.add(makeBox(1.56, 0.92, 1.56, ironMat, 0, 0.95, 0));
   group.add(makeBox(1.78, 0.22, 1.78, rimMat, 0, 1.44, 0));
   group.add(makeBox(0.24, 0.26, 0.44, rimMat, -0.92, 1.18, 0));
   group.add(makeBox(0.24, 0.26, 0.44, rimMat, 0.92, 1.18, 0));
 
-  // Soup liquid surface inside pot
+  // Surface liquide dans le bac
   const liquidMesh = makeBox(1.36, 0.16, 1.36, liquidMat, 0, 1.48, 0, false);
   group.add(liquidMesh);
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SPECIES, STAGES } from './catalog';
+import { SPECIES, STAGES, QUEST_POOL } from './catalog';
 import {
   addPowerStoneToBag,
   applyExpeditionRewards,
@@ -9,6 +9,7 @@ import {
   createInitialSaveState,
   createOwnedCreature,
   importSaveFromJson,
+  lineageOf,
   loadSaveState,
   markFirstTimeSeen,
   migrateSaveState,
@@ -21,6 +22,7 @@ import {
 } from './rules';
 import type { PowerStone, SaveState } from './types';
 import { SAVE_V3_FIXTURE } from './saveV3.fixture';
+import { KITCHEN_EARLY, KITCHEN_LATE, KITCHEN_MID, REMOVED_KITCHEN_QUEST_ID } from './saveKitchen.fixture';
 import { withSaveSlot } from './saveSlot';
 import { LEGACY_QUEST_IDS, LEGACY_STAT_FIELDS } from './legacyIds';
 import { normalizedTerms, normalizeText } from '../../tools/lexiqueCore';
@@ -60,7 +62,7 @@ test('Sauvegarde: une créature abîmée est réparée au lieu de faire planter 
   assert.equal(normalizeCreature({ uid: '', speciesId: 'pyrocube' }, new Set()), null);
 });
 
-test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoyés', () => {
+test('Sauvegarde: pierres, sac et compteurs invalides sont nettoyés', () => {
   const fresh = createInitialSaveState('aquabloc', true);
   const broken = clone(fresh) as unknown as Record<string, unknown>;
   broken.powerStones = [
@@ -71,15 +73,12 @@ test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoy�
     { id: 'puissance_nulle', kind: 'hp', power: 'beaucoup', rarity: 'common', substats: [] },
     null,
   ];
-  broken.ingredients = { ruby_berry: -4, azure_drop: 'douze', sun_pollen: 3.9, ingredient_fantome: 50, pebble_gray: null };
   broken.runeBag = { rune_ampleur: -2, rune_cadence: 'x', rune_partage: 2.7 };
   broken.stats = { expeditionsWon: -3, triosTriggered: 'beaucoup', burstsTriggered: 4 };
   broken.expeditionsCompleted = 'trois';
   broken.completedStageIds = ['meadow-1', 'meadow-1', 'niveau_fantome', 42];
   broken.discoveredSpeciesIds = ['pyrocube', 'pyrocube', 'espece_fantome'];
-  broken.discoveredRecipeIds = ['camp_stew', 'recette_fantome'];
   broken.claimedAchievementIds = ['ach_first_win', 'ach_first_win', 'succes_fantome'];
-  broken.unlockedPotTiers = ['gold', 'platine'];
   broken.highestStageIndex = 'loin';
 
   const m = migrateSaveState(broken);
@@ -88,7 +87,6 @@ test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoy�
   assert.equal(m.powerStones.find((s) => s.id === 'init_stone_atk_2')!.power, 36);
   assert.deepEqual(m.powerStones.find((s) => s.id === 'sans_stats')!.substats, []);
   assert.equal(m.powerStones.some((s) => s.id === 'type_inconnu' || s.id === 'puissance_nulle'), false);
-  assert.deepEqual(m.ingredients, { ruby_berry: 0, azure_drop: 0, sun_pollen: 3, pebble_gray: 0 });
   assert.deepEqual(m.runeBag, { rune_ampleur: 0, rune_cadence: 0, rune_force: 0, rune_partage: 2, rune_precision: 0, rune_vigueur: 0 });
   assert.equal(m.stats.expeditionsWon, 0);
   assert.equal(m.stats.triosTriggered, 0);
@@ -99,9 +97,7 @@ test('Sauvegarde: pierres, ingrédients, sac et compteurs invalides sont nettoy�
   assert.equal(m.discoveredSpeciesIds.includes('espece_fantome'), false);
   assert.equal(new Set(m.discoveredSpeciesIds).size, m.discoveredSpeciesIds.length);
   for (const c of m.roster) assert.ok(m.discoveredSpeciesIds.includes(c.speciesId));
-  assert.deepEqual(m.discoveredRecipeIds, ['camp_stew']);
   assert.deepEqual(m.claimedAchievementIds, ['ach_first_win']);
-  assert.deepEqual(m.unlockedPotTiers, ['iron', 'gold']);
 
   assert.equal(normalizePowerStone({ id: 'ok', kind: 'hp', power: 12.4, rarity: 'inconnue', substats: [{ type: 'critRate', value: 5 }, { type: 'magie', value: 1 }] })?.rarity, 'common');
   assert.equal(normalizePowerStone('pierre'), null);
@@ -120,26 +116,8 @@ test('Sauvegarde: une pierre ne peut être équipée qu\'une fois, et une pierre
   assert.equal(m.roster[2].stoneBoard[0].stoneId, null);
 });
 
-test('Sauvegarde: marmite et quêtes incohérentes reviennent à un état jouable', () => {
+test('Sauvegarde: des quêtes incohérentes reviennent à un état jouable', () => {
   const fresh = createInitialSaveState('pyrocube', true);
-
-  // cuisson avec une recette inconnue, palier non débloqué, ingrédient inconnu dans un emplacement
-  const a = clone(fresh) as unknown as Record<string, unknown>;
-  a.pot = { tier: 'gold', slots: ['ruby_berry', 'ingredient_fantome', null], status: 'cooking', recipeId: 'recette_fantome', expeditionsRemaining: 2, expeditionsTotal: 2 };
-  const ma = migrateSaveState(a)!;
-  assert.deepEqual(ma.pot, { tier: 'iron', slots: ['ruby_berry', null, null, null, null], status: 'idle', recipeId: null, expeditionsRemaining: 0, expeditionsTotal: 0 });
-
-  // cuisson « en cours » mais plus aucune expédition à attendre : le plat est prêt
-  const b = clone(fresh);
-  b.pot = { ...b.pot, status: 'cooking', recipeId: 'camp_stew', expeditionsRemaining: 0, expeditionsTotal: 1 };
-  const mb = migrateSaveState(b)!;
-  assert.equal(mb.pot.status, 'ready');
-  assert.equal(mb.pot.recipeId, 'camp_stew');
-
-  // état « prêt » valide conservé tel quel
-  const c = clone(fresh);
-  c.pot = { ...c.pot, status: 'ready', recipeId: 'fiery_soup', expeditionsRemaining: 0, expeditionsTotal: 2 };
-  assert.deepEqual(migrateSaveState(c)!.pot, c.pot);
 
   // quêtes mal formées (récompense absente) : remplacées par les quêtes de départ
   const d = clone(fresh) as unknown as Record<string, unknown>;
@@ -155,6 +133,17 @@ test('Sauvegarde: marmite et quêtes incohérentes reviennent à un état jouabl
   const me = migrateSaveState(e)!;
   assert.equal(me.activeQuests[0].progress, me.activeQuests[0].target);
   assert.equal(me.activeQuests[1].progress, 0);
+
+  // A2.2 : une quête retirée du jeu est remplacée seule ; les deux autres gardent leur avancement
+  const f = clone(fresh);
+  f.activeQuests[1] = { ...f.activeQuests[1], templateId: REMOVED_KITCHEN_QUEST_ID, progress: 1 };
+  f.activeQuests[2].progress = 1;
+  const mf = migrateSaveState(f)!;
+  assert.equal(mf.activeQuests[0].templateId, fresh.activeQuests[0].templateId);
+  assert.equal(mf.activeQuests[2].progress, 1);
+  assert.ok(QUEST_POOL.some((t) => t.templateId === mf.activeQuests[1].templateId));
+  assert.equal(new Set(mf.activeQuests.map((q) => q.templateId)).size, 3);
+  assert.equal(mf.activeQuests[1].progress, 0);
 });
 
 test('Sauvegarde: imports JSON invalides refusés avec un message, jamais d\'exception', () => {
@@ -173,9 +162,6 @@ test('Sauvegarde: imports JSON invalides refusés avec un message, jamais d\'exc
     JSON.stringify({ ...fresh, roster: 'beaucoup' }),
     JSON.stringify({ ...fresh, roster: [{ uid: 'x', speciesId: 'espece_fantome' }] }),
     JSON.stringify({ ...fresh, squadIds: null }),
-    JSON.stringify({ ...fresh, pot: null }),
-    JSON.stringify({ ...fresh, pot: 'marmite' }),
-    JSON.stringify({ ...fresh, ingredients: null }),
     JSON.stringify({ ...fresh, version: SAVE_VERSION + 1 }),
     JSON.stringify({ ...fresh, version: '3' }),
     '{"roster": [',
@@ -192,11 +178,12 @@ test('Sauvegarde: imports JSON invalides refusés avec un message, jamais d\'exc
     if (res.ok) assert.equal(res.save.version, SAVE_VERSION);
   }
   // champs facultatifs absents : valeurs par défaut
-  const minimal = importSaveFromJson(JSON.stringify({ version: 1, roster: fresh.roster, squadIds: fresh.squadIds, pot: {}, ingredients: {} }));
+  const minimal = importSaveFromJson(JSON.stringify({ version: 1, roster: fresh.roster, squadIds: fresh.squadIds }));
   assert.equal(minimal.ok, true);
   if (minimal.ok) {
-    assert.deepEqual(minimal.save.unlockedPotTiers, ['iron']);
-    assert.equal(minimal.save.pot.status, 'idle');
+    assert.deepEqual(minimal.save.baits, {});
+    assert.deepEqual(minimal.save.sealedCubes, []);
+    assert.deepEqual(minimal.save.kitchenConversion, { baits: 0, crystal: 0, stone: 0, bonds: 0 });
     assert.equal(minimal.save.activeQuests.length, 3);
     assert.deepEqual(minimal.save.powerStones, []);
   }
@@ -309,13 +296,12 @@ test('Sauvegarde: une sauvegarde v3 réaliste se charge en v9 sans perte, identi
   assert.deepEqual(m.roster[1].runes, ['rune_partage', null]);
   assert.deepEqual(m.roster[2].runes, [null, null]);
 
-  // pierres, sac de runes (renommé, mêmes quantités), ingrédients, progression, compteurs
+  // pierres, sac de runes (renommé, mêmes quantités), progression, compteurs
   assert.deepEqual(m.powerStones, v3.powerStones);
   assert.deepEqual(m.runeBag, {
     rune_ampleur: 2, rune_cadence: 1, rune_force: 2, rune_partage: 0, rune_precision: 1, rune_vigueur: 1,
   });
   assert.equal('moveStoneBag' in m, false);
-  assert.deepEqual(m.ingredients, v3.ingredients);
   assert.deepEqual(m.completedStageIds, v3.completedStageIds);
   assert.equal(m.highestStageIndex, v3.highestStageIndex);
   assert.equal(m.expeditionsCompleted, v3.expeditionsCompleted);
@@ -323,6 +309,9 @@ test('Sauvegarde: une sauvegarde v3 réaliste se charge en v9 sans perte, identi
   const otherStats = { ...v3.stats };
   delete otherStats[LEGACY_STAT_FIELDS.bursts];
   delete otherStats[LEGACY_STAT_FIELDS.bestChain];
+  // A2.2 : les statistiques de l'ancienne cuisine disparaissent
+  delete otherStats.dishesCooked;
+  delete otherStats.frontierDishes;
   assert.deepEqual(m.stats, { ...otherStats, burstsTriggered: v3.stats[LEGACY_STAT_FIELDS.bursts], triosTriggered: 0 });
   assert.deepEqual(m.firstTimesSeen, []);
   assert.deepEqual(m.hazardHintsSeen, {});
@@ -330,11 +319,12 @@ test('Sauvegarde: une sauvegarde v3 réaliste se charge en v9 sans perte, identi
   for (const id of v3.completedStageIds) assert.deepEqual(m.stageStars[id], { win: true, noKo: false, challenge: false });
   assert.deepEqual(m.discoveredSpeciesIds, v3.discoveredSpeciesIds);
   assert.deepEqual(m.claimedAchievementIds, v3.claimedAchievementIds);
-  assert.deepEqual(m.unlockedPotTiers, v3.unlockedPotTiers);
-
-  // cuisson en cours et recettes découvertes : mêmes recettes sous leur nouveau nom
-  assert.deepEqual(m.pot, { ...v3.pot, recipeId: 'summit_feast' });
-  assert.deepEqual(m.discoveredRecipeIds, ['camp_stew', 'fiery_soup', 'summit_feast']);
+  // A2.2 : l'ancienne cuisine est convertie (rouges 19 -> 3 Feu, bleus 17 -> 3 Eau, jaunes 20 -> 4 Foudre,
+  // gris 11 -> 2 Roche ; 3 Fragments Mystiques -> 3 cubes Cristal ; le plat en route -> 1 cube Pierre)
+  assert.deepEqual(m.baits, { fire: 3, water: 3, electric: 4, rock: 2 });
+  assert.deepEqual(m.sealedCubes.map((c) => c.material), ['crystal', 'crystal', 'crystal', 'stone']);
+  assert.deepEqual(m.kitchenConversion, { baits: 12, crystal: 3, stone: 1, bonds: 0 });
+  for (const gone of Object.keys(KITCHEN_EARLY)) assert.equal(gone in m, false, gone);
 
   // quêtes : mêmes quêtes, même avancement, récompense au nouveau format
   assert.deepEqual(m.activeQuests.map((q) => [q.uid, q.templateId, q.progress, q.target]),
@@ -357,16 +347,11 @@ test('Sauvegarde: un identifiant inconnu est ignoré sans erreur', () => {
   const v3 = clone(SAVE_V3_FIXTURE) as Record<string, any>;
   v3.moveStoneBag.pierre_fantome = 3;
   v3.roster[2].moveStones = ['pierre_fantome', 12];
-  v3.pot.recipeId = 'recette_fantome';
-  v3.discoveredRecipeIds.push('recette_fantome', 7);
   const m = migrateSaveState(v3);
   assert.ok(m !== null);
   assert.equal('pierre_fantome' in m.runeBag, false);
   assert.equal(Object.keys(m.runeBag).length, 6);
   assert.deepEqual(m.roster[2].runes, [null, null]);
-  assert.equal(m.pot.status, 'idle'); // cuisson d'une recette inconnue : la marmite redevient libre
-  assert.equal(m.pot.recipeId, null);
-  assert.deepEqual(m.discoveredRecipeIds, ['camp_stew', 'fiery_soup', 'summit_feast']);
   assert.equal(m.roster.length, 4);
 });
 
@@ -383,4 +368,72 @@ test('Sauvegarde: les bulles « première fois » sont rangées une fois, les va
   assert.deepEqual(markFirstTimeSeen(once, 'burst').firstTimesSeen, ['burst']);
   const m = migrateSaveState({ ...clone(once), firstTimesSeen: ['burst', 'trio', 'inconnu', 3, 'trio'] });
   assert.deepEqual(m?.firstTimesSeen, ['burst', 'trio']);
+});
+
+/** Sauvegarde v8 (d'avant l'Atelier) : la partie neuve, sans les champs v9, avec l'ancienne cuisine et un effectif donné. */
+function v8Save(kitchen: object, extraSpecies: string[]): Record<string, unknown> {
+  const fresh = clone(createInitialSaveState('pyrocube', true)) as unknown as Record<string, unknown>;
+  for (const k of ['sealedCubes', 'cubeCounter', 'baits', 'awakenGauge', 'bonds', 'duplicates', 'variantsUnlocked', 'variantsOn', 'kitchenConversion']) delete fresh[k];
+  const extra = extraSpecies.map((id, i) => createOwnedCreature(id, 12, 20, `old_${i}`));
+  return { ...fresh, ...clone(kitchen), version: 8, roster: [...(fresh.roster as unknown[]), ...clone(extra)] };
+}
+
+test('Migration A2.2 : début de partie (rien à convertir), bilan à zéro pour l’écran de l’Atelier', () => {
+  const raw = v8Save(KITCHEN_EARLY, []);
+  const m = migrateSaveState(clone(raw))!;
+  assert.ok(m);
+  assert.equal(m.version, SAVE_VERSION);
+  assert.deepEqual(m.baits, {});
+  assert.deepEqual(m.sealedCubes, []);
+  assert.deepEqual(m.bonds, {});
+  assert.deepEqual(m.duplicates, {});
+  assert.deepEqual(m.kitchenConversion, { baits: 0, crystal: 0, stone: 0, bonds: 0 });
+  assert.deepEqual(m.roster.map((c) => c.uid), (raw.roster as { uid: string }[]).map((c) => c.uid));
+  for (const gone of Object.keys(KITCHEN_EARLY)) assert.equal(gone in m, false, gone);
+  // une partie neuve n'a rien à montrer
+  assert.equal(createInitialSaveState('pyrocube', true).kitchenConversion, null);
+});
+
+test('Migration A2.2 : milieu de partie (réserve, plat en route, un doublon)', () => {
+  // le trio Braise (Pyrocube, Voltik, Cailloc) + un Flambrix : deux créatures de la lignée Pyrocube
+  const raw = v8Save(KITCHEN_MID, ['flambrix']);
+  const m = migrateSaveState(clone(raw))!;
+  assert.ok(m);
+  assert.deepEqual(m.baits, { fire: 2, electric: 1 }); // 11 rouges -> 2, 5 jaunes -> 1 ; restes perdus
+  assert.deepEqual(m.sealedCubes.map((c) => c.material), ['stone']);
+  assert.equal(m.cubeCounter, 1);
+  assert.deepEqual(m.bonds, { pyrocube: 1 });
+  assert.deepEqual(m.duplicates, { pyrocube: 1 });
+  assert.deepEqual(m.kitchenConversion, { baits: 3, crystal: 0, stone: 1, bonds: 1 });
+  // rien n'est perdu côté créatures : mêmes créatures, mêmes niveaux, même escouade
+  const before = raw.roster as { uid: string; speciesId: string; level: number }[];
+  assert.deepEqual(m.roster.map((c) => [c.uid, c.speciesId, c.level]), before.map((c) => [c.uid, c.speciesId, c.level]));
+  assert.deepEqual(m.squadIds, raw.squadIds);
+  assert.equal(lineageOf('flambrix'), 'pyrocube');
+});
+
+test('Migration A2.2 : fin de partie (grosse réserve, Fragments Mystiques, plusieurs doublons, Lien plafonné)', () => {
+  // + 2 Bourgéon-lignée (sans l'original : 1 doublon), 6 Cailloc-lignée de plus (6 doublons, Lien plafonné à 5),
+  // + 1 Sparkube (lignée Voltik : 1 doublon)
+  const extra = ['bourgeon', 'feuilloc', 'cailloc', 'cailloc', 'granitox', 'cailloc', 'granitox', 'cailloc', 'sparkube'];
+  const raw = v8Save(KITCHEN_LATE, extra);
+  const m = migrateSaveState(clone(raw))!;
+  assert.ok(m);
+  assert.deepEqual(m.baits, { fire: 8, water: 8, electric: 8, rock: 7 });
+  assert.deepEqual(m.sealedCubes.map((c) => c.material), ['crystal', 'crystal', 'crystal', 'crystal', 'crystal', 'crystal', 'stone']);
+  assert.equal(new Set(m.sealedCubes.map((c) => c.id)).size, 7);
+  assert.deepEqual(m.duplicates, { voltik: 1, cailloc: 6, bourgeon: 1 });
+  assert.deepEqual(m.bonds, { voltik: 1, cailloc: 5, bourgeon: 1 });
+  assert.deepEqual(m.kitchenConversion, { baits: 31, crystal: 6, stone: 1, bonds: 7 });
+  assert.equal(m.roster.length, 3 + extra.length);
+  assert.deepEqual(m.roster.map((c) => c.speciesId), (raw.roster as { speciesId: string }[]).map((c) => c.speciesId));
+
+  // stable : la sauvegarde v9 obtenue se relit à l'identique (pas de deuxième conversion), et survit à un export / import
+  assert.deepEqual(migrateSaveState(clone(m)), m);
+  const round = importSaveFromJson(JSON.stringify(m));
+  assert.equal(round.ok, true);
+  if (round.ok) assert.deepEqual(round.save, m);
+  // une fois l'écran vu (null), la valeur reste null ; une valeur abîmée est normalisée
+  assert.equal(migrateSaveState({ ...clone(m), kitchenConversion: null })!.kitchenConversion, null);
+  assert.deepEqual(migrateSaveState({ ...clone(m), kitchenConversion: { baits: -2, crystal: 'x', stone: 1.8 } })!.kitchenConversion, { baits: 0, crystal: 0, stone: 1, bonds: 0 });
 });

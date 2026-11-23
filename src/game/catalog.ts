@@ -6,13 +6,10 @@ import type {
   BiomeId,
   BurstDef,
   ElementType,
-  IngredientDef,
   MoveDef,
   RuneDef,
   RuneKind,
-  PotTier,
   QuestTemplate,
-  RecipeDef,
   SpeciesDef,
   StageDef,
   StatusKind,
@@ -1407,15 +1404,15 @@ export type StarterTrioId = keyof typeof STARTER_TRIOS;
  * `quests` (qui porte les options et le journal de test) s'ouvre avec le camp : décision prise seul,
  * pour que les testeurs puissent exporter leur journal même bloqués au niveau 2.
  */
-export type UnlockFeature = 'camp' | 'quests' | 'team' | 'auto' | 'codex' | 'cooking' | 'stones';
+export type UnlockFeature = 'camp' | 'quests' | 'team' | 'auto' | 'codex' | 'stones';
 export const UNLOCKS: { afterStageId: string; features: UnlockFeature[]; companion?: boolean }[] = [
   { afterStageId: 'meadow-1', features: ['camp', 'quests'] },
   { afterStageId: 'meadow-2', features: [] }, // la première évolution (niveau 8) occupe ce moment
   { afterStageId: 'meadow-3', features: ['team', 'auto'], companion: true },
-  { afterStageId: 'shore-1', features: ['codex', 'cooking'] },
+  { afterStageId: 'shore-1', features: ['codex'] },
   { afterStageId: 'shore-3', features: ['stones'] },
 ];
-export const UNLOCK_FEATURES: UnlockFeature[] = ['camp', 'quests', 'team', 'auto', 'codex', 'cooking', 'stones'];
+export const UNLOCK_FEATURES: UnlockFeature[] = ['camp', 'quests', 'team', 'auto', 'codex', 'stones'];
 /**
  * Raretés d'invocation (spec Atelier, A2.1), par lignée (forme de base). Seules les formes de base sortent
  * des cubes ; la « forme éveillée » (stade 2) ne sort que d'un cube Prisme, pour une lignée déjà recrutée.
@@ -1430,357 +1427,6 @@ export const SUMMON_RARITY: Record<string, SummonRarity> = {
 /** Le compagnon qui rejoint le camp après le premier boss, selon le trio de départ. */
 export const STARTER_JOINER: Record<StarterTrioId, string> = { braise: 'bourgeon', maree: 'voltik' };
 export const STARTER_TRIO_IDS = Object.keys(STARTER_TRIOS) as StarterTrioId[];
-
-export const INGREDIENTS: Record<string, IngredientDef> = {
-  ruby_berry: {
-    id: 'ruby_berry',
-    name: FR.catalog.INGREDIENTS.ruby_berry.name,
-    color: 'red',
-    rarity: 'common',
-    hex: '#E85D4A',
-    accentHex: '#FCA5A5',
-    description: FR.catalog.INGREDIENTS.ruby_berry.description,
-  },
-  crimson_root: {
-    id: 'crimson_root',
-    name: FR.catalog.INGREDIENTS.crimson_root.name,
-    color: 'red',
-    rarity: 'rare',
-    hex: '#B92B27',
-    accentHex: '#F97316',
-    description: FR.catalog.INGREDIENTS.crimson_root.description,
-  },
-  azure_drop: {
-    id: 'azure_drop',
-    name: FR.catalog.INGREDIENTS.azure_drop.name,
-    color: 'blue',
-    rarity: 'common',
-    hex: '#3B9AE1',
-    accentHex: '#93C5FD',
-    description: FR.catalog.INGREDIENTS.azure_drop.description,
-  },
-  frost_crystal: {
-    id: 'frost_crystal',
-    name: FR.catalog.INGREDIENTS.frost_crystal.name,
-    color: 'blue',
-    rarity: 'rare',
-    hex: '#2563EB',
-    accentHex: '#67E8F9',
-    description: FR.catalog.INGREDIENTS.frost_crystal.description,
-  },
-  sun_pollen: {
-    id: 'sun_pollen',
-    name: FR.catalog.INGREDIENTS.sun_pollen.name,
-    color: 'yellow',
-    rarity: 'common',
-    hex: '#EAB308',
-    accentHex: '#FEF08A',
-    description: FR.catalog.INGREDIENTS.sun_pollen.description,
-  },
-  amber_honey: {
-    id: 'amber_honey',
-    name: FR.catalog.INGREDIENTS.amber_honey.name,
-    color: 'yellow',
-    rarity: 'rare',
-    hex: '#D97706',
-    accentHex: '#FDE047',
-    description: FR.catalog.INGREDIENTS.amber_honey.description,
-  },
-  pebble_gray: {
-    id: 'pebble_gray',
-    name: FR.catalog.INGREDIENTS.pebble_gray.name,
-    color: 'gray',
-    rarity: 'common',
-    hex: '#8B857C',
-    accentHex: '#D6D3CD',
-    description: FR.catalog.INGREDIENTS.pebble_gray.description,
-  },
-  mystic_shard: {
-    id: 'mystic_shard',
-    name: FR.catalog.INGREDIENTS.mystic_shard.name,
-    color: 'gray',
-    rarity: 'mystic',
-    hex: '#A855F7',
-    accentHex: '#67E8F9',
-    description: FR.catalog.INGREDIENTS.mystic_shard.description,
-  },
-
-  // === GIGA UPDATE : ingrédients des nouveaux biomes ===
-  snow_lichen: {
-    id: 'snow_lichen',
-    name: FR.catalog.INGREDIENTS.snow_lichen.name,
-    color: 'blue',
-    rarity: 'common',
-    hex: '#A5D8F3',
-    accentHex: '#FFFFFF',
-    description: FR.catalog.INGREDIENTS.snow_lichen.description,
-  },
-  aurora_petal: {
-    id: 'aurora_petal',
-    name: FR.catalog.INGREDIENTS.aurora_petal.name,
-    color: 'yellow',
-    rarity: 'rare',
-    hex: '#5EEAD4',
-    accentHex: '#F0ABFC',
-    description: FR.catalog.INGREDIENTS.aurora_petal.description,
-  },
-  storm_pepper: {
-    id: 'storm_pepper',
-    name: FR.catalog.INGREDIENTS.storm_pepper.name,
-    color: 'yellow',
-    rarity: 'rare',
-    hex: '#F59E0B',
-    accentHex: '#FDE047',
-    description: FR.catalog.INGREDIENTS.storm_pepper.description,
-  },
-  cloud_fluff: {
-    id: 'cloud_fluff',
-    name: FR.catalog.INGREDIENTS.cloud_fluff.name,
-    color: 'gray',
-    rarity: 'common',
-    hex: '#E5E7EB',
-    accentHex: '#FFFFFF',
-    description: FR.catalog.INGREDIENTS.cloud_fluff.description,
-  },
-  mesa_fig: {
-    id: 'mesa_fig',
-    name: FR.catalog.INGREDIENTS.mesa_fig.name,
-    color: 'red',
-    rarity: 'common',
-    hex: '#C2410C',
-    accentHex: '#FDBA74',
-    description: FR.catalog.INGREDIENTS.mesa_fig.description,
-  },
-  amber_resin: {
-    id: 'amber_resin',
-    name: FR.catalog.INGREDIENTS.amber_resin.name,
-    color: 'yellow',
-    rarity: 'rare',
-    hex: '#F59E0B',
-    accentHex: '#FEF3C7',
-    description: FR.catalog.INGREDIENTS.amber_resin.description,
-  },
-};
-
-export const INGREDIENT_LIST = Object.values(INGREDIENTS);
-
-export const POT_TIER_META: Record<
-  PotTier,
-  { label: string; costMultiplier: number; minLevel: number; maxLevel: number; statBonus: number; color: string; unlockHint: string }
-> = {
-  iron: {
-    label: FR.catalog.POT_TIER_META.iron.label,
-    costMultiplier: 1,
-    minLevel: 1,
-    maxLevel: 5,
-    statBonus: 0,
-    color: '#94A3B8',
-    unlockHint: FR.catalog.POT_TIER_META.iron.unlockHint,
-  },
-  bronze: {
-    label: FR.catalog.POT_TIER_META.bronze.label,
-    costMultiplier: 2,
-    minLevel: 7,
-    maxLevel: 12,
-    statBonus: 35,
-    color: '#D97706',
-    unlockHint: FR.catalog.POT_TIER_META.bronze.unlockHint,
-  },
-  silver: {
-    label: FR.catalog.POT_TIER_META.silver.label,
-    costMultiplier: 3,
-    minLevel: 13,
-    maxLevel: 18,
-    statBonus: 80,
-    color: '#CBD5E1',
-    unlockHint: FR.catalog.POT_TIER_META.silver.unlockHint,
-  },
-  gold: {
-    label: FR.catalog.POT_TIER_META.gold.label,
-    costMultiplier: 4,
-    minLevel: 19,
-    maxLevel: 26,
-    statBonus: 150,
-    color: '#F4B942',
-    unlockHint: FR.catalog.POT_TIER_META.gold.unlockHint,
-  },
-};
-
-export const RECIPES: RecipeDef[] = [
-  {
-    id: 'summit_feast',
-    name: FR.catalog.RECIPES.summit_feast.name,
-    soupHex: '#A855F7',
-    cookExpeditions: 3,
-    description: FR.catalog.RECIPES.summit_feast.description,
-    hint: FR.catalog.RECIPES.summit_feast.hint,
-    targetElement: 'psychic',
-    poolSpeciesIds: ['aetherion', 'ignisaur', 'abyssocube', 'raicube', 'magmadrake', 'cendrox', 'lunabloc'],
-  },
-  {
-    id: 'fiery_soup',
-    name: FR.catalog.RECIPES.fiery_soup.name,
-    soupHex: '#EA580C',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.fiery_soup.description,
-    hint: FR.catalog.RECIPES.fiery_soup.hint,
-    targetElement: 'fire',
-    poolSpeciesIds: ['pyrocube', 'braizard', 'flambrix', 'cendrox', 'ignisaur'],
-  },
-  {
-    id: 'ocean_nectar',
-    name: FR.catalog.RECIPES.ocean_nectar.name,
-    soupHex: '#0284C7',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.ocean_nectar.description,
-    hint: FR.catalog.RECIPES.ocean_nectar.hint,
-    targetElement: 'water',
-    poolSpeciesIds: ['aquabloc', 'crabloc', 'corallix', 'crabastion', 'abyssocube'],
-  },
-  {
-    id: 'spark_curry',
-    name: FR.catalog.RECIPES.spark_curry.name,
-    soupHex: '#CA8A04',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.spark_curry.description,
-    hint: FR.catalog.RECIPES.spark_curry.hint,
-    targetElement: 'electric',
-    poolSpeciesIds: ['voltik', 'sparkube', 'raicube'],
-  },
-  {
-    id: 'mineral_stew',
-    name: FR.catalog.RECIPES.mineral_stew.name,
-    soupHex: '#78716C',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.mineral_stew.description,
-    hint: FR.catalog.RECIPES.mineral_stew.hint,
-    targetElement: 'rock',
-    poolSpeciesIds: ['cailloc', 'chevrok', 'granitox', 'mouflambre', 'magmadrake', 'belithan'],
-  },
-  {
-    id: 'botanical_broth',
-    name: FR.catalog.RECIPES.botanical_broth.name,
-    soupHex: '#16A34A',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.botanical_broth.description,
-    hint: FR.catalog.RECIPES.botanical_broth.hint,
-    targetElement: 'grass',
-    poolSpeciesIds: ['bourgeon', 'mycelin', 'feuilloc', 'amanitox', 'bourgeoliath'],
-  },
-  {
-    id: 'astral_veloute',
-    name: FR.catalog.RECIPES.astral_veloute.name,
-    soupHex: '#7C3AED',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.astral_veloute.description,
-    hint: FR.catalog.RECIPES.astral_veloute.hint,
-    targetElement: 'psychic',
-    poolSpeciesIds: ['psycube', 'lunabloc', 'aetherion'],
-  },
-  {
-    id: 'sweet_crepe',
-    name: FR.catalog.RECIPES.sweet_crepe.name,
-    soupHex: '#F59E0B',
-    cookExpeditions: 1,
-    description: FR.catalog.RECIPES.sweet_crepe.description,
-    hint: FR.catalog.RECIPES.sweet_crepe.hint,
-    poolSpeciesIds: ['voltik', 'aquabloc', 'psycube', 'bourgeon', 'crabloc'],
-  },
-  {
-    id: 'royal_feast',
-    name: FR.catalog.RECIPES.royal_feast.name,
-    soupHex: '#DB2777',
-    cookExpeditions: 3,
-    description: FR.catalog.RECIPES.royal_feast.description,
-    hint: FR.catalog.RECIPES.royal_feast.hint,
-    poolSpeciesIds: ['flambrix', 'corallix', 'feuilloc', 'sparkube', 'granitox', 'lunabloc'],
-  },
-  // === GIGA UPDATE : recettes des nouveaux biomes ===
-  {
-    id: 'aurora_banquet',
-    name: FR.catalog.RECIPES.aurora_banquet.name,
-    soupHex: '#5EEAD4',
-    cookExpeditions: 3,
-    description: FR.catalog.RECIPES.aurora_banquet.description,
-    hint: FR.catalog.RECIPES.aurora_banquet.hint,
-    poolSpeciesIds: ['ramurgel', 'cryolithe', 'serpeclair', 'auroramure', 'glaciatitan', 'tempestrix', 'cumulord'],
-    frontier: true,
-  },
-  {
-    id: 'glacier_sorbet',
-    name: FR.catalog.RECIPES.glacier_sorbet.name,
-    soupHex: '#A5D8F3',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.glacier_sorbet.description,
-    hint: FR.catalog.RECIPES.glacier_sorbet.hint,
-    targetElement: 'water',
-    poolSpeciesIds: ['givrelin', 'ramurgel', 'auroramure'],
-    frontier: true,
-  },
-  {
-    id: 'permafrost_fondue',
-    name: FR.catalog.RECIPES.permafrost_fondue.name,
-    soupHex: '#8FA9C0',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.permafrost_fondue.description,
-    hint: FR.catalog.RECIPES.permafrost_fondue.hint,
-    targetElement: 'rock',
-    poolSpeciesIds: ['givrock', 'cryolithe', 'glaciatitan'],
-    frontier: true,
-  },
-  {
-    id: 'thunder_tajine',
-    name: FR.catalog.RECIPES.thunder_tajine.name,
-    soupHex: '#F59E0B',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.thunder_tajine.description,
-    hint: FR.catalog.RECIPES.thunder_tajine.hint,
-    targetElement: 'electric',
-    poolSpeciesIds: ['crepitil', 'serpeclair', 'tempestrix'],
-    frontier: true,
-  },
-  {
-    id: 'cloud_meringue',
-    name: FR.catalog.RECIPES.cloud_meringue.name,
-    soupHex: '#E9E4FB',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.cloud_meringue.description,
-    hint: FR.catalog.RECIPES.cloud_meringue.hint,
-    targetElement: 'psychic',
-    poolSpeciesIds: ['nimbulle', 'nimbulle', 'cumulord'],
-    frontier: true,
-  },
-  {
-    id: 'frontier_hotpot',
-    name: FR.catalog.RECIPES.frontier_hotpot.name,
-    soupHex: '#94A3B8',
-    cookExpeditions: 1,
-    description: FR.catalog.RECIPES.frontier_hotpot.description,
-    hint: FR.catalog.RECIPES.frontier_hotpot.hint,
-    poolSpeciesIds: ['givrelin', 'givrock', 'crepitil', 'nimbulle', 'chevrok'],
-    frontier: true,
-  },
-  {
-    id: 'mesa_roast',
-    name: FR.catalog.RECIPES.mesa_roast.name,
-    soupHex: '#C2410C',
-    cookExpeditions: 2,
-    description: FR.catalog.RECIPES.mesa_roast.description,
-    hint: FR.catalog.RECIPES.mesa_roast.hint,
-    targetElement: 'rock',
-    poolSpeciesIds: ['chevrok', 'mouflambre', 'belithan'],
-    frontier: true,
-  },
-  {
-    id: 'camp_stew',
-    name: FR.catalog.RECIPES.camp_stew.name,
-    soupHex: '#B45309',
-    cookExpeditions: 1,
-    description: FR.catalog.RECIPES.camp_stew.description,
-    hint: FR.catalog.RECIPES.camp_stew.hint,
-    poolSpeciesIds: ['pyrocube', 'aquabloc', 'bourgeon', 'voltik', 'cailloc', 'psycube', 'mycelin'],
-  },
-];
 
 export const BIOMES: Record<BiomeId, BiomeDef> = {
   meadow: {
@@ -1891,7 +1537,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['meadow-1'].name,
     recommendedPower: 700,
     bossSpeciesId: 'feuilloc',
-    dropIngredients: ['ruby_berry', 'sun_pollen', 'pebble_gray'],
     stonePowerRange: [25, 55],
     xpReward: 270,
     waves: [
@@ -1924,7 +1569,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['meadow-2'].name,
     recommendedPower: 1050,
     bossSpeciesId: 'sparkube',
-    dropIngredients: ['sun_pollen', 'ruby_berry', 'amber_honey'],
     stonePowerRange: [45, 85],
     xpReward: 430,
     waves: [
@@ -1958,7 +1602,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['meadow-3'].name,
     recommendedPower: 1450,
     bossSpeciesId: 'bourgeoliath',
-    dropIngredients: ['sun_pollen', 'amber_honey', 'ruby_berry', 'crimson_root'],
     stonePowerRange: [70, 115],
     xpReward: 560,
     waves: [
@@ -1994,7 +1637,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['shore-1'].name,
     recommendedPower: 1850,
     bossSpeciesId: 'corallix',
-    dropIngredients: ['azure_drop', 'frost_crystal', 'pebble_gray'],
     stonePowerRange: [95, 145],
     xpReward: 760,
     waves: [
@@ -2028,7 +1670,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['shore-2'].name,
     recommendedPower: 2250,
     bossSpeciesId: 'raicube',
-    dropIngredients: ['azure_drop', 'frost_crystal', 'sun_pollen', 'amber_honey'],
     stonePowerRange: [120, 180],
     xpReward: 940,
     waves: [
@@ -2062,7 +1703,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['shore-3'].name,
     recommendedPower: 2700,
     bossSpeciesId: 'abyssocube',
-    dropIngredients: ['azure_drop', 'frost_crystal', 'amber_honey'],
     stonePowerRange: [150, 220],
     xpReward: 1180,
     waves: [
@@ -2098,7 +1738,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['volcano-1'].name,
     recommendedPower: 3200,
     bossSpeciesId: 'granitox',
-    dropIngredients: ['ruby_berry', 'crimson_root', 'pebble_gray'],
     stonePowerRange: [185, 260],
     xpReward: 1550,
     waves: [
@@ -2132,7 +1771,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['volcano-2'].name,
     recommendedPower: 3750,
     bossSpeciesId: 'ignisaur',
-    dropIngredients: ['crimson_root', 'ruby_berry', 'pebble_gray', 'mystic_shard'],
     stonePowerRange: [220, 310],
     xpReward: 1950,
     waves: [
@@ -2166,7 +1804,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['volcano-3'].name,
     recommendedPower: 4400,
     bossSpeciesId: 'magmadrake',
-    dropIngredients: ['crimson_root', 'pebble_gray', 'amber_honey', 'mystic_shard'],
     stonePowerRange: [260, 360],
     xpReward: 2550,
     waves: [
@@ -2202,7 +1839,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['sanctuary-1'].name,
     recommendedPower: 5100,
     bossSpeciesId: 'lunabloc',
-    dropIngredients: ['frost_crystal', 'amber_honey', 'mystic_shard'],
     stonePowerRange: [310, 420],
     xpReward: 3400,
     waves: [
@@ -2236,7 +1872,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['sanctuary-2'].name,
     recommendedPower: 5900,
     bossSpeciesId: 'ignisaur',
-    dropIngredients: ['crimson_root', 'frost_crystal', 'amber_honey', 'mystic_shard'],
     stonePowerRange: [360, 490],
     xpReward: 4800,
     waves: [
@@ -2270,7 +1905,6 @@ const RAW_STAGES: StageDef[] = [
     name: FR.catalog.RAW_STAGES['sanctuary-3'].name,
     recommendedPower: 6800,
     bossSpeciesId: 'aetherion',
-    dropIngredients: ['mystic_shard', 'frost_crystal', 'amber_honey', 'crimson_root'],
     stonePowerRange: [440, 620],
     xpReward: 5800,
     waves: [
@@ -2307,7 +1941,6 @@ const RAW_STAGES: StageDef[] = [
     recommendedPower: 7600,
     bossSpeciesId: 'ramurgel',
     bossKit: 'frost',
-    dropIngredients: ['snow_lichen', 'frost_crystal', 'pebble_gray'],
     stonePowerRange: [520, 700],
     xpReward: 6200,
     waves: [
@@ -2342,7 +1975,6 @@ const RAW_STAGES: StageDef[] = [
     recommendedPower: 8400,
     bossSpeciesId: 'cryolithe',
     bossKit: 'frost',
-    dropIngredients: ['snow_lichen', 'aurora_petal', 'pebble_gray'],
     stonePowerRange: [580, 780],
     xpReward: 6500,
     waves: [
@@ -2377,7 +2009,6 @@ const RAW_STAGES: StageDef[] = [
     recommendedPower: 9300,
     bossSpeciesId: 'glaciatitan',
     bossKit: 'frost',
-    dropIngredients: ['aurora_petal', 'snow_lichen', 'frost_crystal', 'mystic_shard'],
     stonePowerRange: [650, 880],
     xpReward: 6700,
     waves: [
@@ -2414,7 +2045,6 @@ const RAW_STAGES: StageDef[] = [
     recommendedPower: 10200,
     bossSpeciesId: 'serpeclair',
     bossKit: 'storm',
-    dropIngredients: ['storm_pepper', 'cloud_fluff', 'sun_pollen'],
     stonePowerRange: [720, 960],
     xpReward: 6900,
     waves: [
@@ -2449,7 +2079,6 @@ const RAW_STAGES: StageDef[] = [
     recommendedPower: 11200,
     bossSpeciesId: 'cumulord',
     bossKit: 'storm',
-    dropIngredients: ['cloud_fluff', 'storm_pepper', 'aurora_petal'],
     stonePowerRange: [800, 1060],
     xpReward: 7100,
     waves: [
@@ -2484,7 +2113,6 @@ const RAW_STAGES: StageDef[] = [
     recommendedPower: 12400,
     bossSpeciesId: 'tempestrix',
     bossKit: 'storm',
-    dropIngredients: ['storm_pepper', 'cloud_fluff', 'aurora_petal', 'mystic_shard'],
     stonePowerRange: [900, 1200],
     xpReward: 7300,
     waves: [
@@ -2521,7 +2149,6 @@ const RAW_STAGES: StageDef[] = [
     recommendedPower: 13700,
     bossSpeciesId: 'mouflambre',
     bossKit: 'amber',
-    dropIngredients: ['mesa_fig', 'pebble_gray', 'storm_pepper'],
     stonePowerRange: [1000, 1340],
     xpReward: 7500,
     waves: [
@@ -2556,7 +2183,6 @@ const RAW_STAGES: StageDef[] = [
     recommendedPower: 15100,
     bossSpeciesId: 'magmadrake',
     bossKit: 'amber',
-    dropIngredients: ['mesa_fig', 'amber_resin', 'cloud_fluff'],
     stonePowerRange: [1120, 1500],
     xpReward: 7700,
     waves: [
@@ -2591,7 +2217,6 @@ const RAW_STAGES: StageDef[] = [
     recommendedPower: 16600,
     bossSpeciesId: 'belithan',
     bossKit: 'amber',
-    dropIngredients: ['amber_resin', 'mesa_fig', 'mystic_shard', 'aurora_petal'],
     stonePowerRange: [1250, 1680],
     xpReward: 7900,
     waves: [
@@ -2635,10 +2260,6 @@ export const FRONTIER_STAGE_INDEX = STAGES.findIndex((s) => s.biomeId === 'tundr
 
 export const STAGE_BY_ID: Record<string, StageDef> = Object.fromEntries(
   STAGES.map((s) => [s.id, s]),
-);
-
-export const RECIPE_BY_ID: Record<string, RecipeDef> = Object.fromEntries(
-  RECIPES.map((r) => [r.id, r]),
 );
 
 // === V0.2 STATUS EFFECTS ===
@@ -2753,7 +2374,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     target: 1,
     reward: {
       label: FR.catalog.QUEST_POOL.q_win_1.reward.label,
-      ingredients: { ruby_berry: 3, azure_drop: 3 },
+      baits: { fire: 1, water: 1 },
     },
   },
   {
@@ -2764,7 +2385,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     target: 3,
     reward: {
       label: FR.catalog.QUEST_POOL.q_bursts_3.reward.label,
-      ingredients: { amber_honey: 2 },
+      baits: { electric: 1 },
       powerStoneRange: [65, 110],
       guaranteedRarity: 'silver',
     },
@@ -2777,19 +2398,8 @@ export const QUEST_POOL: QuestTemplate[] = [
     target: 1,
     reward: {
       label: FR.catalog.QUEST_POOL.q_ult_1.reward.label,
-      ingredients: { frost_crystal: 2 },
+      baits: { water: 1 },
       rune: 'rune_cadence',
-    },
-  },
-  {
-    templateId: 'q_cook_1',
-    title: FR.catalog.QUEST_POOL.q_cook_1.title,
-    description: FR.catalog.QUEST_POOL.q_cook_1.description,
-    metric: 'dishesCooked',
-    target: 1,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_cook_1.reward.label,
-      ingredients: { sun_pollen: 4, crimson_root: 2 },
     },
   },
   {
@@ -2800,7 +2410,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     target: 2,
     reward: {
       label: FR.catalog.QUEST_POOL.q_dodge_2.reward.label,
-      ingredients: { pebble_gray: 3 },
+      baits: { rock: 1 },
       rune: 'rune_partage',
     },
   },
@@ -2812,7 +2422,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     target: 2,
     reward: {
       label: FR.catalog.QUEST_POOL.q_boss_2.reward.label,
-      ingredients: { mystic_shard: 1 },
+      cube: 'wood',
       powerStoneRange: [95, 150],
       guaranteedRarity: 'gold',
     },
@@ -2825,7 +2435,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     target: 6,
     reward: {
       label: FR.catalog.QUEST_POOL.q_bursts_6.reward.label,
-      ingredients: { crimson_root: 2 },
+      baits: { fire: 1 },
       rune: 'rune_force',
     },
   },
@@ -2837,7 +2447,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     target: 3,
     reward: {
       label: FR.catalog.QUEST_POOL.q_win_3.reward.label,
-      ingredients: { mystic_shard: 2 },
+      cube: 'wood',
       rune: 'rune_ampleur',
     },
   },
@@ -2852,20 +2462,8 @@ export const QUEST_POOL: QuestTemplate[] = [
     requiresStageIndex: FRONTIER_STAGE_INDEX,
     reward: {
       label: FR.catalog.QUEST_POOL.q_frontier_win_2.reward.label,
-      ingredients: { snow_lichen: 3 },
+      baits: { water: 1 },
       rune: 'rune_precision',
-    },
-  },
-  {
-    templateId: 'q_frontier_dish_1',
-    title: FR.catalog.QUEST_POOL.q_frontier_dish_1.title,
-    description: FR.catalog.QUEST_POOL.q_frontier_dish_1.description,
-    metric: 'frontierDishes',
-    target: 1,
-    requiresStageIndex: FRONTIER_STAGE_INDEX,
-    reward: {
-      label: FR.catalog.QUEST_POOL.q_frontier_dish_1.reward.label,
-      ingredients: { aurora_petal: 2, cloud_fluff: 2 },
     },
   },
   {
@@ -2891,7 +2489,7 @@ export const QUEST_POOL: QuestTemplate[] = [
     requiresStageIndex: FRONTIER_STAGE_INDEX,
     reward: {
       label: FR.catalog.QUEST_POOL.q_evolve_frontier.reward.label,
-      ingredients: { storm_pepper: 2, amber_honey: 2 },
+      baits: { electric: 1 },
     },
   },
 ];
@@ -2906,7 +2504,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 1,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_first_win.reward.label,
-      ingredients: { ruby_berry: 4, sun_pollen: 4 },
+      baits: { fire: 1, electric: 1 },
     },
   },
   {
@@ -2929,7 +2527,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 1,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_first_burst.reward.label,
-      ingredients: { frost_crystal: 2, crimson_root: 2 },
+      baits: { water: 1, fire: 1 },
     },
   },
   {
@@ -2940,7 +2538,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 15,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_burst_master.reward.label,
-      ingredients: { mystic_shard: 2 },
+      cube: 'crystal',
       rune: 'rune_force',
     },
   },
@@ -2952,7 +2550,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 5,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_trios_5.reward.label,
-      ingredients: { amber_honey: 3 },
+      baits: { electric: 1 },
       rune: 'rune_cadence',
     },
   },
@@ -2976,19 +2574,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 3,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_dodge_3.reward.label,
-      ingredients: { azure_drop: 3 },
+      baits: { water: 1 },
       rune: 'rune_partage',
-    },
-  },
-  {
-    id: 'ach_cook_3',
-    title: FR.catalog.ACHIEVEMENTS.ach_cook_3.title,
-    description: FR.catalog.ACHIEVEMENTS.ach_cook_3.description,
-    metric: 'dishesCooked',
-    target: 3,
-    reward: {
-      label: FR.catalog.ACHIEVEMENTS.ach_cook_3.reward.label,
-      ingredients: { amber_honey: 3, mystic_shard: 1 },
     },
   },
   {
@@ -2999,7 +2586,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 1,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_evolve_1.reward.label,
-      ingredients: { crimson_root: 3 },
+      baits: { fire: 1 },
       rune: 'rune_ampleur',
     },
   },
@@ -3011,7 +2598,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 8,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_dex_8.reward.label,
-      ingredients: { mystic_shard: 2, frost_crystal: 3 },
+      baits: { water: 1 },
+      cube: 'crystal',
     },
   },
   {
@@ -3034,7 +2622,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 12,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_stages_12.reward.label,
-      ingredients: { mystic_shard: 5 },
+      cube: 'crystal',
       powerStoneRange: [380, 520],
       guaranteedRarity: 'gold',
     },
@@ -3049,7 +2637,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 3,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_tundra_clear.reward.label,
-      ingredients: { aurora_petal: 3 },
+      baits: { water: 1 },
       rune: 'rune_precision',
     },
   },
@@ -3074,7 +2662,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 18,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_stages_18.reward.label,
-      ingredients: { mystic_shard: 5 },
+      cube: 'crystal',
       powerStoneRange: [1100, 1400],
       guaranteedRarity: 'gold',
     },
@@ -3087,7 +2675,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 20,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_dex_20.reward.label,
-      ingredients: { aurora_petal: 3, storm_pepper: 3 },
+      baits: { water: 1, electric: 1 },
     },
   },
   {
@@ -3099,20 +2687,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: Object.keys(SPECIES).length,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_dex_all.reward.label,
-      ingredients: { mystic_shard: 3 },
+      cube: 'crystal',
       powerStoneRange: [1000, 1300],
       guaranteedRarity: 'gold',
-    },
-  },
-  {
-    id: 'ach_frontier_dish_3',
-    title: FR.catalog.ACHIEVEMENTS.ach_frontier_dish_3.title,
-    description: FR.catalog.ACHIEVEMENTS.ach_frontier_dish_3.description,
-    metric: 'frontierDishes',
-    target: 3,
-    reward: {
-      label: FR.catalog.ACHIEVEMENTS.ach_frontier_dish_3.reward.label,
-      ingredients: { snow_lichen: 4, cloud_fluff: 4, mystic_shard: 2 },
     },
   },
   {
@@ -3123,7 +2700,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 5,
     reward: {
       label: FR.catalog.ACHIEVEMENTS.ach_evolve_5.reward.label,
-      ingredients: { storm_pepper: 3 },
+      baits: { electric: 1 },
       rune: 'rune_force',
     },
   },

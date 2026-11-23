@@ -121,7 +121,7 @@ test('Moteur: changer de scène libère les géométries et matériaux de l\'anc
     const duringFight = collectResources(scene);
     assert.ok(duringFight.size > 40);
     watch(duringFight);
-    h.engine.loadCampScene(h.squad(stage), null, 'idle');
+    h.engine.loadCampScene(h.squad(stage));
     const atCamp = collectResources(scene);
     let leaked = 0;
     for (const res of duringFight) if (!atCamp.has(res) && !disposed.has(res)) leaked += 1;
@@ -147,7 +147,7 @@ test('Moteur: la scène ne grossit pas au fil des allers-retours camp / expédit
     for (let i = 0; i < 6; i++) {
       h.start('meadow-1');
       h.run(3);
-      h.engine.loadCampScene(h.squad(stage), null, 'idle');
+      h.engine.loadCampScene(h.squad(stage));
       h.run(1);
       const d = h.engine.getDebugInfo();
       assert.equal(d.telegraphs, 0);
@@ -167,7 +167,7 @@ test('Moteur: quitter ou relancer pendant l\'entrée du boss laisse un état pro
     assert.equal(h.engine.getDebugInfo().bossIntroActive, true);
 
     // retour au camp en pleine cinématique
-    h.engine.loadCampScene(h.squad(stage), null, 'idle');
+    h.engine.loadCampScene(h.squad(stage));
     assert.equal(h.engine.getDebugInfo().bossIntroActive, false);
     assert.equal(h.engine.getDebugInfo().playMode, 'camp');
     h.run(5);
@@ -195,7 +195,7 @@ test('Moteur: quitter avec des télégraphes au sol ne déclenche rien après co
     const stage = h.start('tundra-3');
     h.run(120, () => h.engine.getDebugInfo().telegraphs > 0 && h.engine.getCombatTelemetry().castsByPhase[0] > 0);
     assert.ok(h.engine.getDebugInfo().telegraphs > 0);
-    h.engine.loadCampScene(h.squad(stage), null, 'idle');
+    h.engine.loadCampScene(h.squad(stage));
     assert.equal(h.engine.getDebugInfo().telegraphs, 0);
     h.run(8); // les anciens rappels d'attaque ne doivent ni planter ni terminer un combat
     assert.equal(h.results.length, 0);
@@ -225,7 +225,7 @@ test('Moteur: animation d\'évolution — menée à terme une fois, ou abandonn�
   withSeededRandom(6, () => {
     const h = makeHarness();
     const stage = STAGE_BY_ID['meadow-1'];
-    h.engine.loadCampScene(h.squad(stage), null, 'idle');
+    h.engine.loadCampScene(h.squad(stage));
 
     // séquence complète
     let reveals = 0;
@@ -238,7 +238,7 @@ test('Moteur: animation d\'évolution — menée à terme une fois, ou abandonn�
     assert.equal(h.engine.getDebugInfo().evolutionActive, false);
 
     // séquence interrompue par un départ en expédition : plus aucun rappel, pas d'état résiduel
-    h.engine.loadCampScene(h.squad(stage), null, 'idle');
+    h.engine.loadCampScene(h.squad(stage));
     let lateCalls = 0;
     h.engine.playEvolutionSequence('aquabloc', 'corallix', { onReveal: () => lateCalls++, onDone: () => lateCalls++ });
     h.run(1);
@@ -260,7 +260,7 @@ test('Moteur: animation d\'évolution — menée à terme une fois, ou abandonn�
 test('diagnostic : getDebugStats compte les entités et ne mesure aucun rendu en headless', () => {
   withSeededRandom(11, () => {
     const h = makeHarness();
-    h.engine.loadCampScene(h.squad(STAGE_BY_ID['meadow-1']), null, 'idle');
+    h.engine.loadCampScene(h.squad(STAGE_BY_ID['meadow-1']));
     const camp = h.engine.getDebugStats();
     assert.equal(camp.entities, 3, 'au camp : les 3 créatures de l’escouade');
     assert.equal(camp.drawCalls, 0);
@@ -346,7 +346,7 @@ test('Victoire: pause pendant la bannière puis abandon — la victoire reste ac
     runToVictoryBanner(h, secured);
     h.engine.setScreenState('paused');
     h.run(2);
-    h.engine.loadCampScene(h.squad(stage), null, 'idle');
+    h.engine.loadCampScene(h.squad(stage));
     h.engine.setScreenState('playing');
     h.run(10);
     assert.deepEqual(secured, [{ victory: true }], 'quitter après la victoire ne la fait pas perdre');

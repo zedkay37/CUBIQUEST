@@ -10,7 +10,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { soundFx } from './audio';
 import { configureWeather } from './engine/atmosphere';
 import { fovForAspect, handleResize } from './engine/camera';
-import { clearGroup, loadCampScene, setPotVisual } from './engine/camp';
+import { clearGroup, loadCampScene } from './engine/camp';
 import { _color, _dummy, BOLT_POOL_SIZE, PARTICLE_POOL_SIZE, WEATHER_COUNT } from './engine/constants';
 import { playEvolutionSequence } from './engine/evolution';
 import { createCubeMeshes } from './engine/cubeFx';
@@ -133,11 +133,10 @@ export class VoxelEngine {
   shakeEnabled = true;
 
   // Camp props & wanderers
-  potLiquidMesh: THREE.Mesh | null = null;
-  potFireMesh: THREE.Mesh | null = null;
-  potCookingColor: string | null = null;
-  potSteamTimer = 0;
-  potLight: THREE.PointLight | null = null; // lueur chaude du feu, visible la nuit
+  workbenchLiquidMesh: THREE.Mesh | null = null;
+  workbenchFireMesh: THREE.Mesh | null = null;
+  workbenchSteamTimer = 0;
+  workbenchLight: THREE.PointLight | null = null; // lueur chaude du feu, visible la nuit
   campStars: THREE.InstancedMesh | null = null;
   campWanderers: CampWanderer[] = [];
 
@@ -419,16 +418,8 @@ export class VoxelEngine {
     emitHudSnapshot(this);
   }
 
-  public setPotVisual(recipeId: string | null, status: 'idle' | 'cooking' | 'ready'): void {
-    return setPotVisual(this, recipeId, status);
-  }
-
-  public loadCampScene(
-    squadCreatures: OwnedCreature[],
-    potRecipeId: string | null,
-    potStatus: 'idle' | 'cooking' | 'ready',
-  ): void {
-    return loadCampScene(this, squadCreatures, potRecipeId, potStatus);
+  public loadCampScene(squadCreatures: OwnedCreature[]): void {
+    return loadCampScene(this, squadCreatures);
   }
 
   public startExpedition(
@@ -508,8 +499,8 @@ export class VoxelEngine {
     return triggerUltimate(this);
   }
 
-  public triggerCookBurstFx(colorHex: string): void {
-    soundFx.playCookBubble();
+  public triggerWorkbenchBurstFx(colorHex: string): void {
+    soundFx.playWorkbenchBubble();
     spawnParticleBurst(this, 0, 1.8, -1.2, colorHex, 22, 4.6);
   }
 

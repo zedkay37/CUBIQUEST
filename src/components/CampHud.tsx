@@ -4,7 +4,6 @@ import {
   ChevronDown,
   ChevronUp,
   Compass,
-  Flame,
   Home,
   Trophy,
   Users,
@@ -19,7 +18,7 @@ import { VoxelCreatureAvatar } from './Icons';
 import { FR } from '../i18n/fr';
 import { NewBadge } from './ui';
 
-export type CampDrawerTab = 'expeditions' | 'cooking' | 'team' | 'quests' | 'codex' | null;
+export type CampDrawerTab = 'expeditions' | 'team' | 'quests' | 'codex' | null;
 
 interface CampHudProps {
   save: SaveState;
@@ -67,18 +66,11 @@ export function CampHud({
     onSelectDrawer(tab);
   };
   // une phrase pour la dernière ouverture pas encore vue
-  const newest = (['team', 'codex', 'cooking', 'quests'] as const).find((t) => isNew(t));
+  const newest = (['team', 'codex', 'quests'] as const).find((t) => isNew(t));
   const squadPower = computeSquadPower(save);
   const squad = save.squadIds
     .map((uid) => save.roster.find((c) => c.uid === uid))
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
-
-  const potNotice =
-    save.pot.status === 'ready'
-      ? FR.ui.campHud.platPret
-      : save.pot.status === 'cooking'
-        ? FR.ui.campHud.cuisson(save.pot.expeditionsRemaining)
-        : null;
 
   return (
     <div className="fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-3 sm:p-4 ui-screen-enter">
@@ -208,26 +200,6 @@ export function CampHud({
             >
               <Compass className="w-4 h-4" />
               <span>{isOpen('team') ? FR.ui.campHud.expeditions : FR.ui.campHud.partir}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => selectDrawer('cooking')}
-              title={isNew('cooking') ? FR.ui.campHud.nouveautes.cooking : undefined}
-              className={`${isOpen('cooking') ? '' : 'hidden! '}voxel-btn cursor-pointer px-4 py-2.5 rounded-xl font-semibold text-sm border-2 inline-flex items-center gap-2 whitespace-nowrap shrink-0 ${
-                activeDrawer === 'cooking'
-                  ? 'block-btn-gold'
-                  : 'block-btn-secondary'
-              }`}
-            >
-              <Flame className="w-4 h-4 text-[#F4B942]" />
-              <span>{FR.ui.campHud.marmite}</span>
-              {isNew('cooking') && <NewBadge />}
-              {potNotice && (
-                <span className="font-mono-num text-[11px] text-[#2FB97A] font-bold">
-                  · {potNotice}
-                </span>
-              )}
             </button>
 
             <button

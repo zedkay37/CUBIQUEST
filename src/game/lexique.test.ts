@@ -22,6 +22,7 @@ test('Lexique: les fichiers exemptés existent et restent les seuls à citer les
   for (const file of Object.keys(EXEMPT_FILES)) assert.ok(fs.existsSync(file), `${file} est exempté mais n'existe pas`);
   assert.deepEqual(Object.keys(EXEMPT_FILES).sort(), [
     'src/game/legacyIds.ts',
+    'src/game/saveKitchen.fixture.ts',
     'src/game/saveV3.fixture.ts',
     'tools/lexiqueCore.ts',
   ]);

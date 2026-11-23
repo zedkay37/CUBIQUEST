@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installHeadlessDom } from '../../tools/headlessDom';
-import { MOVES, RECIPES, SPECIES, STAGES } from './catalog';
+import { MOVES, SPECIES, STAGES, SUMMON_RARITY } from './catalog';
+import { lineageOf } from './summon';
 import { checkMoveStyle, checkSpeciesStyle, getEvolutionTier } from './styleGuide';
 import { buildVoxelCreature } from './voxelModels';
 
@@ -44,12 +45,9 @@ test('Style: lignées — 2 ou 3 stades, même élément, un seul changement de 
   assert.equal(seen.size, Object.keys(SPECIES).length);
 });
 
-test('Style: chaque créature se recrute à la Marmite et son modèle voxel se construit', () => {
+test("Style: chaque lignée sort d'un Cube Scellé et chaque modèle voxel se construit", () => {
   for (const species of Object.values(SPECIES)) {
-    assert.ok(
-      RECIPES.some((r) => r.poolSpeciesIds.includes(species.id)),
-      `${species.id} n'est dans aucun vivier de recette`,
-    );
+    assert.ok(SUMMON_RARITY[lineageOf(species.id)], `${species.id} : sa lignée n'a pas de rareté d'invocation`);
     const rig = buildVoxelCreature(species.id);
     let blocks = 0;
     rig.root.traverse((node) => {
@@ -73,7 +71,6 @@ test('Style: structure des niveaux — 3 vagues, boss en dernière vague, 2 à 3
     assert.equal(boss.ai, 'boss', stage.id);
     assert.equal(boss.speciesId, stage.bossSpeciesId, stage.id);
     assert.ok(boss.level - escort.level >= 2 && boss.level - escort.level <= 3, stage.id);
-    assert.ok(stage.dropIngredients.length >= 3 && stage.dropIngredients.length <= 4, stage.id);
     if (stage.stageNumber === 3) assert.equal(SPECIES[stage.bossSpeciesId].isRare, true, stage.id);
   }
 });

@@ -50,7 +50,7 @@ export const ELEMENT_FX: Record<
   psychic: { colors: ['#C084FC', '#E9D5FF', '#67E8F9'], speed: 2.4, vyMin: 0.8, vyMax: 2.6, gravity: -1.6, drag: 1.1, stretchY: 1, bounce: 0, lifeMin: 0.6, lifeMax: 1.0, sizeMin: 0.1, sizeMax: 0.2, spin: 4.2 },
 };
 
-// Scène d'évolution : devant la marmite, face caméra
+// Scène d'évolution : devant l'atelier, face caméra
 export const EVO_X = 0;
 
 export const EVO_Z = 3.2; // assez près du centre pour que la caméra reste devant les arbres du pourtour
@@ -75,7 +75,7 @@ export const CAMP_SKY_KEYS = [
   skyKey(0.1, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52, 0.42), // jour
   skyKey(0.52, '#A7D8F7', '#C5E6FA', '#FFF2D6', 1.28, 0.52, 0.42),
   skyKey(0.64, '#F0A774', '#F3C3A0', '#FFB27A', 0.95, 0.42, 0.3), // crépuscule
-  // Nuit : ciel vraiment sombre, clair de lune faible. La lisibilité vient du feu de la marmite
+  // Nuit : ciel vraiment sombre, clair de lune faible. La lisibilité vient du feu de l'atelier
   // (lumière chaude ponctuelle, voir updateDayNight) et non d'un éclairage ambiant élevé.
   skyKey(0.74, '#0A0F24', '#121936', '#8FA8FF', 0.2, 0.15, 0.05),
   skyKey(0.92, '#0A0F24', '#121936', '#8FA8FF', 0.2, 0.15, 0.05),

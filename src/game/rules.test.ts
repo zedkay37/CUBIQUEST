@@ -8,7 +8,6 @@ import {
   canEvolve,
   claimAchievementReward,
   claimQuestReward,
-  collectCookedCreature,
   computeBossPhase,
   computeCreatureStats,
   computeHighestUnlockedStageIndex,
@@ -45,9 +44,7 @@ import {
   importSaveFromJson,
   migrateSaveState,
   recordPlayerProgress,
-  resolveRecipe,
   SAVE_VERSION,
-  startCookingPot,
   unequipPowerStone,
 } from './rules';
 import {
@@ -58,15 +55,15 @@ import {
   RUNE_ORDER,
   QUEST_POOL,
   BIOMES,
-  INGREDIENTS,
+  ELEMENT_META,
   MOVES,
-  RECIPES,
   SPECIES,
   STAGES,
   STAGE_CHALLENGES,
   STARTER_TRIOS,
   STARTER_TRIO_IDS,
 } from './catalog';
+import { KITCHEN_RED_19 } from './saveKitchen.fixture';
 import { buildPreviewQuery, evolvedFormAtLevel, getReferenceConfig, listReferenceConfigs } from './previewConfigs';
 import { normalizeSettings } from './settings';
 import { BOSS_KITS, STAGE_TUNING, XP_KIT } from './balance';
@@ -78,38 +75,6 @@ test('elemental type effectiveness returns accurate multipliers', () => {
   assert.equal(getTypeEffectiveness('electric', 'water'), 1.5);
   assert.equal(getTypeEffectiveness('grass', 'water'), 1.5);
   assert.equal(getTypeEffectiveness('fire', 'electric'), 1.0);
-});
-
-test('recipe resolution identifies specialty and fallback recipes accurately', () => {
-  assert.equal(
-    resolveRecipe(['mystic_shard', 'mystic_shard', 'ruby_berry', 'azure_drop', 'sun_pollen'])?.id,
-    'summit_feast',
-  );
-  assert.equal(
-    resolveRecipe(['ruby_berry', 'ruby_berry', 'ruby_berry', 'pebble_gray', 'sun_pollen'])?.id,
-    'fiery_soup',
-  );
-  assert.equal(
-    resolveRecipe(['azure_drop', 'azure_drop', 'azure_drop', 'pebble_gray', 'ruby_berry'])?.id,
-    'ocean_nectar',
-  );
-  assert.equal(
-    resolveRecipe(['sun_pollen', 'sun_pollen', 'sun_pollen', 'ruby_berry', 'pebble_gray'])?.id,
-    'spark_curry',
-  );
-  assert.equal(
-    resolveRecipe(['pebble_gray', 'pebble_gray', 'pebble_gray', 'ruby_berry', 'azure_drop'])?.id,
-    'mineral_stew',
-  );
-  assert.equal(
-    resolveRecipe(['sun_pollen', 'sun_pollen', 'azure_drop', 'azure_drop', 'pebble_gray'])?.id,
-    'sweet_crepe',
-  );
-  assert.equal(
-    resolveRecipe(['ruby_berry', 'azure_drop', 'sun_pollen', 'pebble_gray', 'ruby_berry'])?.id,
-    'camp_stew',
-  );
-  assert.equal(resolveRecipe(['ruby_berry', 'azure_drop', null, null, null]), null);
 });
 
 test('Power Stone board enforces slot type and level lock, and updates squad power', () => {
@@ -176,40 +141,6 @@ test('Evolution transforms species when required level is reached', () => {
   const preStats = computeCreatureStats(leveled.roster[0], leveled.powerStones);
   const postStats = computeCreatureStats(evolved.roster[0], evolved.powerStones);
   assert.ok(postStats.power > preStats.power);
-});
-
-test('Cooking Pot consumes ingredients, ticks on expedition, and recruits a creature', () => {
-  let save = createInitialSaveState('pyrocube', true);
-  save = {
-    ...save,
-    pot: {
-      ...save.pot,
-      slots: ['ruby_berry', 'azure_drop', 'sun_pollen', 'pebble_gray', 'ruby_berry'],
-    },
-  };
-
-  const cooking = startCookingPot(save);
-  assert.equal(cooking.pot.status, 'cooking');
-  assert.equal(cooking.pot.recipeId, 'camp_stew');
-  assert.equal(cooking.ingredients.ruby_berry, 4); // 6 - 2
-
-  const { nextSave: afterExp, outcome } = applyExpeditionRewards(
-    cooking,
-    STAGES[0],
-    true,
-    { clearTimeSec: 42, wavesCleared: 3, damageDealt: 1200, bossHpPercentRemaining: 0 },
-    () => 0.4,
-  );
-
-  assert.equal(outcome.victory, true);
-  assert.equal(outcome.potReadyNow, true);
-  assert.equal(afterExp.pot.status, 'ready');
-  assert.equal(afterExp.highestStageIndex, 1);
-
-  const { nextSave: afterCollect, creature } = collectCookedCreature(afterExp, () => 0.25);
-  assert.ok(creature !== null);
-  assert.equal(afterCollect.roster.length, save.roster.length + 1);
-  assert.equal(afterCollect.pot.status, 'idle');
 });
 
 test('createOwnedCreature initializes valid 9-slot board', () => {
@@ -285,10 +216,10 @@ test('V0.2 SaveState v1 -> v2 migration and JSON export/import validation', () =
     starterChosen: true,
     squadIds: freshV2.squadIds,
     roster: freshV2.roster,
-    ingredients: { ...freshV2.ingredients, ruby_berry: 19 },
+    ...KITCHEN_RED_19,
     powerStones: freshV2.powerStones,
     runeBag: freshV2.runeBag,
-    pot: freshV2.pot,
+    pot: { tier: 'iron', slots: [null, null, null, null, null], status: 'idle', recipeId: null, expeditionsRemaining: 0, expeditionsTotal: 0 },
     unlockedPotTiers: ['iron', 'bronze'],
     highestStageIndex: 4,
     completedStageIds: ['meadow-1', 'meadow-2', 'meadow-3', 'shore-1'],
@@ -300,7 +231,7 @@ test('V0.2 SaveState v1 -> v2 migration and JSON export/import validation', () =
   const migrated = migrateSaveState(legacyV1);
   assert.ok(migrated !== null);
   assert.equal(migrated.version, SAVE_VERSION);
-  assert.equal(migrated.ingredients.ruby_berry, 19);
+  assert.equal(migrated.baits.fire, 3); // 19 rouges : 3 tranches de 5, le reste est perdu
   assert.equal(migrated.highestStageIndex, 4);
   assert.equal(migrated.stats.expeditionsWon, 7);
   assert.equal(migrated.activeQuests.length, 3);
@@ -309,7 +240,8 @@ test('V0.2 SaveState v1 -> v2 migration and JSON export/import validation', () =
   const imported = importSaveFromJson(exported);
   assert.equal(imported.ok, true);
   if (imported.ok) {
-    assert.equal(imported.save.ingredients.ruby_berry, 19);
+    assert.equal(imported.save.baits.fire, 3);
+    assert.deepEqual(imported.save.kitchenConversion, migrated.kitchenConversion);
     assert.equal(imported.save.stats.expeditionsWon, 7);
   }
 
@@ -326,7 +258,7 @@ test('Giga: options de confort normalisées (tremblement de caméra désactivabl
   assert.equal(normalizeSettings({ screenShake: 'oui' }).screenShake, true);
 });
 
-test('Giga: intégrité du catalogue (niveaux, espèces, sorts, ingrédients, lignées)', () => {
+test('Giga: intégrité du catalogue (niveaux, espèces, sorts, lignées)', () => {
   STAGES.forEach((stage, idx) => {
     assert.equal(stage.index, idx, `index de ${stage.id}`);
     assert.ok(BIOMES[stage.biomeId], `biome de ${stage.id}`);
@@ -335,7 +267,6 @@ test('Giga: intégrité du catalogue (niveaux, espèces, sorts, ingrédients, li
     for (const wave of stage.waves) {
       for (const enemy of wave.enemies) assert.ok(SPECIES[enemy.speciesId], enemy.speciesId);
     }
-    for (const ing of stage.dropIngredients) assert.ok(INGREDIENTS[ing], ing);
     if (idx > 0) assert.ok(stage.recommendedPower > STAGES[idx - 1].recommendedPower);
   });
   for (const biomeId of BIOME_ORDER) {
@@ -348,9 +279,6 @@ test('Giga: intégrité du catalogue (niveaux, espèces, sorts, ingrédients, li
       assert.ok((species.evolveLevel ?? 0) > 1);
       assert.equal(SPECIES[species.evolvesTo].element, species.element);
     }
-  }
-  for (const recipe of RECIPES) {
-    for (const id of recipe.poolSpeciesIds) assert.ok(SPECIES[id], `${recipe.id} -> ${id}`);
   }
 });
 
@@ -485,59 +413,6 @@ test('Giga: lignées à 3 stades — évolutions en chaîne et gain de puissance
   }
 });
 
-test('Giga: recettes des nouveaux biomes — résolution, priorités et non-régression', () => {
-  const r = (ids: (string | null)[]) => resolveRecipe(ids)?.id;
-  assert.equal(r(['aurora_petal', 'aurora_petal', 'mystic_shard', 'ruby_berry', 'azure_drop']), 'aurora_banquet');
-  // 2 Fragments + 2 Pétales : le Banquet (plus spécifique) passe avant le Festin
-  assert.equal(r(['aurora_petal', 'aurora_petal', 'mystic_shard', 'mystic_shard', 'azure_drop']), 'aurora_banquet');
-  assert.equal(r(['snow_lichen', 'snow_lichen', 'snow_lichen', 'ruby_berry', 'sun_pollen']), 'glacier_sorbet');
-  assert.equal(r(['snow_lichen', 'snow_lichen', 'pebble_gray', 'pebble_gray', 'ruby_berry']), 'permafrost_fondue');
-  assert.equal(r(['storm_pepper', 'storm_pepper', 'ruby_berry', 'azure_drop', 'pebble_gray']), 'thunder_tajine');
-  assert.equal(r(['cloud_fluff', 'cloud_fluff', 'cloud_fluff', 'ruby_berry', 'azure_drop']), 'cloud_meringue');
-  assert.equal(r(['snow_lichen', 'cloud_fluff', 'ruby_berry', 'sun_pollen', 'pebble_gray']), 'frontier_hotpot');
-  // 3 Lichens + 2 Galets : le Sorbet l'emporte (règle la plus haute)
-  assert.equal(r(['snow_lichen', 'snow_lichen', 'snow_lichen', 'pebble_gray', 'pebble_gray']), 'glacier_sorbet');
-  // Un seul ingrédient nouveau ne détourne pas les recettes historiques
-  assert.equal(r(['snow_lichen', 'azure_drop', 'azure_drop', 'ruby_berry', 'pebble_gray']), 'ocean_nectar');
-  assert.equal(r(['cloud_fluff', 'pebble_gray', 'pebble_gray', 'ruby_berry', 'azure_drop']), 'mineral_stew');
-  assert.equal(r(['storm_pepper', 'sun_pollen', 'sun_pollen', 'ruby_berry', 'pebble_gray']), 'spark_curry');
-  assert.equal(r(['snow_lichen', 'snow_lichen', 'snow_lichen', 'snow_lichen', null]), undefined);
-
-  for (const recipe of RECIPES.filter((x) => x.frontier)) {
-    assert.ok(recipe.cookExpeditions >= 1 && recipe.poolSpeciesIds.length >= 3, recipe.id);
-  }
-  assert.equal(RECIPES.filter((x) => x.frontier).length, 7);
-  assert.equal(RECIPES[RECIPES.length - 1].id, 'camp_stew');
-
-  // Cuisson complète d'une recette des confins : stock, stat dédiée, recrue du bon vivier
-  let save = createInitialSaveState('pyrocube', true);
-  save = {
-    ...save,
-    ingredients: { ...save.ingredients, storm_pepper: 2 },
-    pot: { ...save.pot, slots: ['storm_pepper', 'storm_pepper', 'ruby_berry', 'azure_drop', 'pebble_gray'] },
-  };
-  const cooking = startCookingPot(save);
-  assert.equal(cooking.pot.recipeId, 'thunder_tajine');
-  assert.equal(cooking.ingredients.storm_pepper, 0);
-  assert.equal(cooking.stats.frontierDishes, 1);
-  assert.equal(cooking.stats.dishesCooked, 1);
-  assert.ok(cooking.discoveredRecipeIds.includes('thunder_tajine'));
-  const ready = { ...cooking, pot: { ...cooking.pot, status: 'ready' as const, expeditionsRemaining: 0 } };
-  const { nextSave, creature } = collectCookedCreature(ready, () => 0);
-  assert.equal(creature?.speciesId, 'crepitil');
-  assert.ok(nextSave.discoveredSpeciesIds.includes('crepitil'));
-
-  // Sans stock suffisant, la cuisson ne démarre pas
-  const noStock = startCookingPot({ ...save, ingredients: { ...save.ingredients, storm_pepper: 1 } });
-  assert.equal(noStock.pot.status, 'idle');
-  // Une recette historique n'incrémente pas la stat des confins
-  const classic = startCookingPot({
-    ...save,
-    pot: { ...save.pot, slots: ['ruby_berry', 'azure_drop', 'sun_pollen', 'pebble_gray', 'ruby_berry'] },
-  });
-  assert.equal(classic.stats.frontierDishes, 0);
-});
-
 test('Giga: Runes de Précision et de Vigueur — modificateurs, équipement et butin', () => {
   const none = getMoveModifiers([]);
   assert.equal(none.critBonus, 0);
@@ -585,7 +460,9 @@ test('Giga: quêtes et succès des nouveaux biomes', () => {
   assert.equal(ids.size, QUEST_POOL.length);
   assert.equal(new Set(ACHIEVEMENTS.map((a) => a.id)).size, ACHIEVEMENTS.length);
   for (const def of [...QUEST_POOL, ...ACHIEVEMENTS]) {
-    for (const id of Object.keys(def.reward.ingredients ?? {})) assert.ok(INGREDIENTS[id], id);
+    for (const el of Object.keys(def.reward.baits ?? {})) assert.ok(ELEMENT_META[el as keyof typeof ELEMENT_META], el);
+    assert.ok(!def.reward.cube || ['wood', 'stone', 'crystal', 'prism'].includes(def.reward.cube), def.reward.cube);
+    assert.ok(def.metric !== ('dishesCooked' as string), 'plus de quête de cuisine');
   }
   const dexAll = ACHIEVEMENTS.find((a) => a.id === 'ach_dex_all')!;
   assert.equal(dexAll.target, Object.keys(SPECIES).length);
@@ -596,11 +473,11 @@ test('Giga: quêtes et succès des nouveaux biomes', () => {
   const early = createInitialSaveState('pyrocube', true);
   assert.equal(isQuestTemplateAvailable(frontierTpl, early), false);
   assert.equal(isQuestTemplateAvailable(frontierTpl, { highestStageIndex: FRONTIER_STAGE_INDEX }), true);
-  let rotating = recordPlayerProgress(early, { expeditionsWon: 50, burstsTriggered: 50, ultimatesUsed: 50, dishesCooked: 50, perfectDodges: 50, bossesDefeated: 50 });
+  let rotating = recordPlayerProgress(early, { expeditionsWon: 50, burstsTriggered: 50, ultimatesUsed: 50, perfectDodges: 50, bossesDefeated: 50 });
   for (let i = 0; i < 40; i++) {
     const done = rotating.activeQuests.find((q) => q.progress >= q.target);
     if (!done) {
-      rotating = recordPlayerProgress(rotating, { expeditionsWon: 50, burstsTriggered: 50, ultimatesUsed: 50, dishesCooked: 50, perfectDodges: 50, bossesDefeated: 50 });
+      rotating = recordPlayerProgress(rotating, { expeditionsWon: 50, burstsTriggered: 50, ultimatesUsed: 50, perfectDodges: 50, bossesDefeated: 50 });
       continue;
     }
     rotating = claimQuestReward(rotating, done.uid, () => (i % 10) / 10);
@@ -630,7 +507,7 @@ test('Giga: quêtes et succès des nouveaux biomes', () => {
   const beforeBag = save.runeBag.rune_precision;
   const claimed = claimQuestReward(save, 'q_test', () => 0.3);
   assert.equal(claimed.runeBag.rune_precision, beforeBag + 1);
-  assert.equal(claimed.ingredients.snow_lichen, (save.ingredients.snow_lichen ?? 0) + 3);
+  assert.equal(claimed.baits.water, (save.baits.water ?? 0) + 1);
 
   // Succès de biome : progression dérivée des niveaux terminés, réclamation unique
   const tundraAch = ACHIEVEMENTS.find((a) => a.id === 'ach_tundra_clear')!;
@@ -657,7 +534,7 @@ test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intact
   assert.equal(SAVE_VERSION, 9);
   const fresh = createInitialSaveState('aquabloc', true);
   // Sauvegarde v2 réaliste : pas de pierres/stats des confins, quête en cours, créature équipée
-  const { frontierWins: _fw, frontierDishes: _fd, ...v2Stats } = fresh.stats;
+  const { frontierWins: _fw, ...v2Stats } = fresh.stats;
   const v2: Record<string, unknown> = {
     ...fresh,
     version: 2,
@@ -676,7 +553,6 @@ test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intact
   assert.equal(migrated.version, SAVE_VERSION);
   assert.deepEqual(migrated.runeBag, { rune_ampleur: 2, rune_cadence: 0, rune_force: 3, rune_partage: 1, rune_precision: 0, rune_vigueur: 0 });
   assert.equal(migrated.stats.frontierWins, 0);
-  assert.equal(migrated.stats.frontierDishes, 0);
   assert.equal(migrated.stats.expeditionsWon, 9);
   assert.equal(migrated.stats.triosTriggered, 14);
   assert.equal(migrated.highestStageIndex, 7);
@@ -963,6 +839,6 @@ test('Ouvertures (S07.3): table UNLOCKS, compagnon après le premier boss, ancie
   // une sauvegarde d'avant S07 a tout ouvert, et ne reçoit pas de compagnon
   const old = migrateSaveState({ ...createInitialSaveState('braise', true), version: 7, allUnlocked: undefined, starterTrio: undefined })!;
   assert.equal(old.allUnlocked, true);
-  assert.equal(unlockedFeatures(old).size, 7);
+  assert.equal(unlockedFeatures(old).size, 6); // A2.2 : plus d'onglet de cuisine
   assert.equal(markUnlockSeen(markUnlockSeen(save, 'team'), 'team').unlocksSeen.filter((f) => f === 'team').length, 1);
 });

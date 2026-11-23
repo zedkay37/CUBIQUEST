@@ -2,7 +2,6 @@ import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { CampHud, type CampDrawerTab } from './components/CampHud';
 import { CodexDrawer } from './components/CodexDrawer';
-import { CookingDrawer } from './components/CookingDrawer';
 import { ExpeditionDrawer } from './components/ExpeditionDrawer';
 import { EvolutionOverlay } from './components/EvolutionOverlay';
 import { ArrivalScene } from './components/ui/moments';
@@ -23,7 +22,7 @@ const FIRST_TIME_TEXT: Record<FirstTimeKind, string> = {
 import { TeamDrawer } from './components/TeamDrawer';
 import { TitleOverlay } from './components/TitleOverlay';
 import { soundFx } from './game/audio';
-import { INGREDIENT_LIST, RECIPE_BY_ID, SPECIES, STAGE_BY_ID, STAGES } from './game/catalog';
+import { SPECIES, STAGE_BY_ID, STAGES } from './game/catalog';
 import {
   applyExpeditionRewards,
   markFirstTimeSeen,
@@ -36,17 +35,14 @@ import {
   buildPreviewSave,
   claimAchievementReward,
   claimQuestReward,
-  collectCookedCreature,
   countClaimableRewards,
   createInitialSaveState,
   createOwnedCreature,
   equipRune,
   equipPowerStone,
   evolveCreature,
-  getPotIngredientCost,
   loadSaveState,
   persistSaveState,
-  startCookingPot,
   unequipPowerStone,
 } from './game/rules';
 import { appendJournal, loadJournal, markRetry, saveJournal } from './game/journal';
@@ -60,7 +56,6 @@ import type {
   RuneKind,
   OwnedCreature,
   PlayMode,
-  PotTier,
   SaveState,
   StageDef,
 } from './game/types';
@@ -77,7 +72,7 @@ const isBench = typeof window !== 'undefined' && new URLSearchParams(window.loca
 
 /**
  * `?ui=<écran>` (outil de développement, captures) : ouvre directement un écran sans toucher à la sauvegarde.
- * Tiroirs du camp : expeditions, team, cooking, quests, codex (avec ?autostart=1). Départ : starter.
+ * Tiroirs du camp : expeditions, team, quests, codex (avec ?autostart=1). Départ : starter.
  * Avec ?stage=<id> : pause, victory, defeat. Évolution : evolution (avec ?autostart=1).
  */
 function getUiParam(): string | null {
@@ -293,11 +288,7 @@ export default function App() {
     engineRef.current = engine;
 
     const initialSave = saveRef.current;
-    engine.loadCampScene(
-      getSquadCreatures(initialSave),
-      initialSave.pot.recipeId,
-      initialSave.pot.status,
-    );
+    engine.loadCampScene(getSquadCreatures(initialSave));
     engine.setScreenState(hasAutostartParam() ? 'playing' : 'title');
 
     // ?hour=0.8 : règle l'heure du camp (0 aube · 0.3 jour · 0.64 crépuscule · 0.8 nuit)
@@ -322,7 +313,7 @@ export default function App() {
 
     // ?ui=... : écran ouvert d'office, pour les captures (rien n'est enregistré)
     const ui = getUiParam();
-    if (ui === 'expeditions' || ui === 'team' || ui === 'cooking' || ui === 'quests' || ui === 'codex') {
+    if (ui === 'expeditions' || ui === 'team' || ui === 'quests' || ui === 'codex') {
       setActiveDrawer(ui);
     } else if (ui === 'starter') {
       setScreenState('playing');
@@ -367,13 +358,6 @@ export default function App() {
     setSettings((prev) => ({ ...prev, screenShake: !prev.screenShake }));
   }, []);
 
-  // Sync Camp 3D pot liquid visual whenever pot state changes in Camp
-  useEffect(() => {
-    if (playMode === 'camp') {
-      engineRef.current?.setPotVisual(save.pot.recipeId, save.pot.status);
-    }
-  }, [playMode, save.pot.recipeId, save.pot.status]);
-
   // Actions
   const handleStartFromTitle = useCallback(() => {
     soundFx.playUiClick();
@@ -391,11 +375,7 @@ export default function App() {
     setActiveDrawer(null);
     setPlayMode('camp');
     setScreenState('playing');
-    engineRef.current?.loadCampScene(
-      getSquadCreatures(fresh),
-      fresh.pot.recipeId,
-      fresh.pot.status,
-    );
+    engineRef.current?.loadCampScene(getSquadCreatures(fresh));
   }, [getSquadCreatures]);
 
   const handleSelectStarter = useCallback(
@@ -406,7 +386,7 @@ export default function App() {
       setSave(fresh);
       // S07.3 : une nouvelle partie va droit au niveau 1, sans passer par le camp
       if (launchStageRef.current) launchStageRef.current(STAGES[0]);
-      else engineRef.current?.loadCampScene(getSquadCreatures(fresh), fresh.pot.recipeId, fresh.pot.status);
+      else engineRef.current?.loadCampScene(getSquadCreatures(fresh));
     },
     [getSquadCreatures],
   );
@@ -449,11 +429,7 @@ export default function App() {
     setHudSnapshot(null);
     setPlayMode('camp');
     setScreenState('playing');
-    engineRef.current?.loadCampScene(
-      getSquadCreatures(saveRef.current),
-      saveRef.current.pot.recipeId,
-      saveRef.current.pot.status,
-    );
+    engineRef.current?.loadCampScene(getSquadCreatures(saveRef.current));
     if (pendingArrivalRef.current) {
       setArrival({ speciesId: pendingArrivalRef.current, isNew: true });
       pendingArrivalRef.current = null;
@@ -555,96 +531,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', onAutoKey);
   }, [handleToggleControlMode, playMode, screenState]);
 
-  // Cooking Pot handlers
-  const handleChangePotTier = (tier: PotTier) => {
-    soundFx.playUiClick();
-    setSave((prev) => ({
-      ...prev,
-      pot: { ...prev.pot, tier, slots: [null, null, null, null, null] },
-    }));
-  };
-
-  const handleAddIngredient = (ingId: string) => {
-    soundFx.playUiClick();
-    setSave((prev) => {
-      const emptyIdx = prev.pot.slots.indexOf(null);
-      if (emptyIdx === -1) return prev;
-      const nextSlots = [...prev.pot.slots];
-      nextSlots[emptyIdx] = ingId;
-      return { ...prev, pot: { ...prev.pot, slots: nextSlots } };
-    });
-  };
-
-  const handleRemovePotSlot = (idx: number) => {
-    soundFx.playUiClick();
-    setSave((prev) => {
-      const nextSlots = [...prev.pot.slots];
-      nextSlots[idx] = null;
-      return { ...prev, pot: { ...prev.pot, slots: nextSlots } };
-    });
-  };
-
-  const handleClearPotSlots = () => {
-    soundFx.playUiClick();
-    setSave((prev) => ({
-      ...prev,
-      pot: { ...prev.pot, slots: [null, null, null, null, null] },
-    }));
-  };
-
-  const handleAutoFillPot = () => {
-    soundFx.playUiClick();
-    setSave((prev) => {
-      const cost = getPotIngredientCost(prev.pot.tier);
-      const nextSlots = [...prev.pot.slots];
-      const tempStock = { ...prev.ingredients };
-      for (const id of nextSlots) {
-        if (id) tempStock[id] = Math.max(0, (tempStock[id] ?? 0) - cost);
-      }
-      for (let i = 0; i < 5; i++) {
-        if (nextSlots[i] !== null) continue;
-        const pick = INGREDIENT_LIST.find((ing) => (tempStock[ing.id] ?? 0) >= cost);
-        if (!pick) break;
-        nextSlots[i] = pick.id;
-        tempStock[pick.id] -= cost;
-      }
-      return { ...prev, pot: { ...prev.pot, slots: nextSlots } };
-    });
-  };
-
-  const handleStartCooking = () => {
-    setSave((prev) => {
-      const next = startCookingPot(prev);
-      if (next.pot.status === 'cooking' && next.pot.recipeId) {
-        const hex = RECIPE_BY_ID[next.pot.recipeId]?.soupHex ?? '#F4B942';
-        engineRef.current?.triggerCookBurstFx(hex);
-      }
-      return next;
-    });
-  };
-
-  const handleFastFinishCooking = () => {
-    soundFx.playCookBubble();
-    setSave((prev) => {
-      if (prev.pot.status !== 'cooking') return prev;
-      return {
-        ...prev,
-        pot: { ...prev.pot, expeditionsRemaining: 0, status: 'ready' },
-      };
-    });
-  };
-
-  const handleCollectCreature = () => {
-    const wasKnown = (speciesId: string) => saveRef.current.discoveredSpeciesIds.includes(speciesId);
-    const { nextSave, creature } = collectCookedCreature(saveRef.current);
-    if (creature) {
-      engineRef.current?.triggerCookBurstFx('#2FB97A');
-      setArrival({ speciesId: creature.speciesId, isNew: !wasKnown(creature.speciesId) });
-      setSave(nextSave);
-      setRecruitedPreview(creature);
-    }
-  };
-
   // Team & Stones handlers
   const handleToggleSquadMember = (uid: string) => {
     soundFx.playUiClick();
@@ -660,11 +546,7 @@ export default function App() {
       }
       const nextSave = { ...prev, squadIds: nextSquad };
       if (playMode === 'camp') {
-        engineRef.current?.loadCampScene(
-          getSquadCreatures(nextSave),
-          nextSave.pot.recipeId,
-          nextSave.pot.status,
-        );
+        engineRef.current?.loadCampScene(getSquadCreatures(nextSave));
       }
       return nextSave;
     });
@@ -704,11 +586,7 @@ export default function App() {
     const finish = () => {
       window.clearTimeout(evolutionGuardRef.current);
       setEvolution(null);
-      engineRef.current?.loadCampScene(
-        getSquadCreatures(saveRef.current),
-        saveRef.current.pot.recipeId,
-        saveRef.current.pot.status,
-      );
+      engineRef.current?.loadCampScene(getSquadCreatures(saveRef.current));
     };
     // Filet de sécurité : si la séquence 3D est interrompue, l'habillage ne reste jamais bloqué
     window.clearTimeout(evolutionGuardRef.current);
@@ -739,11 +617,7 @@ export default function App() {
     soundFx.playRewardClaim();
     setSave(imported);
     if (playMode === 'camp') {
-      engineRef.current?.loadCampScene(
-        getSquadCreatures(imported),
-        imported.pot.recipeId,
-        imported.pot.status,
-      );
+      engineRef.current?.loadCampScene(getSquadCreatures(imported));
     }
   };
 
@@ -838,23 +712,6 @@ export default function App() {
             <ExpeditionDrawer
               save={save}
               onLaunchStage={handleLaunchStage}
-              onClose={() => setActiveDrawer(null)}
-            />
-          )}
-
-          {activeDrawer === 'cooking' && (
-            <CookingDrawer
-              save={save}
-              recruitedPreview={recruitedPreview}
-              onDismissRecruit={() => setRecruitedPreview(null)}
-              onChangePotTier={handleChangePotTier}
-              onAddIngredient={handleAddIngredient}
-              onRemoveSlot={handleRemovePotSlot}
-              onClearSlots={handleClearPotSlots}
-              onAutoFillSlots={handleAutoFillPot}
-              onStartCooking={handleStartCooking}
-              onFastFinishCooking={handleFastFinishCooking}
-              onCollectCreature={handleCollectCreature}
               onClose={() => setActiveDrawer(null)}
             />
           )}

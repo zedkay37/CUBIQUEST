@@ -103,7 +103,7 @@ export function UiGallery() {
                 ]}
               />
               <div className="flex flex-wrap gap-2">
-                <BlockButton size="sm" onClick={() => setToast('Recette découverte !')}>
+                <BlockButton size="sm" onClick={() => setToast('Nouvelle espèce découverte !')}>
                   Afficher un Toast
                 </BlockButton>
                 <BlockButton size="sm" variant="primary" onClick={() => setModal(true)}>
@@ -172,15 +172,12 @@ const demoOutcome = (victory: boolean): ExpeditionOutcome => ({
   perfectDodges: 2,
   triosTriggered: victory ? 2 : 0,
   xpPerUnit: 140,
-  droppedIngredients: [{ id: 'sun_pollen', count: 5 }, { id: 'ruby_berry', count: 2 }],
   droppedStone: null,
   droppedRune: 'rune_cadence',
   leveledUpNames: victory ? ['Pyrocube Niv.8'] : [],
   levelUps: victory ? [{ speciesId: 'pyrocube', from: 7, to: 8 }] : [],
-  potReadyNow: false,
   unlockedNextStageName: victory ? 'Clairière du Colosse' : null,
   unlockedBiomeName: null,
-  unlockedPotTier: null,
   stars: { win: victory, noKo: victory, challenge: false },
   previousStars: { win: victory, noKo: false, challenge: false },
   koCount: victory ? 0 : 2,

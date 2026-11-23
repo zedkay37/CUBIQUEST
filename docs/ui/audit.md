@@ -11,11 +11,11 @@ Constat commun : tous les panneaux sont la même boîte (`.voxel-panel` : fond a
 | Camp (jour, nuit) | Dock de cinq boutons plats identiques, sous-titres gris | Boutons en bloc qui s'enfoncent, pastilles « Nouveau » qui pulsent |
 | Carte des expéditions | Onglets de biomes en ligne, liste de niveaux en rectangles : rien d'une carte | Biomes reliés par un chemin, étoiles sous chaque niveau, verrous grisés, détail du niveau en panneau bloc |
 | Équipe | Liste dense, mêmes rectangles pour tout ; la fiche de la créature choisie est longue à atteindre sur mobile | Cartes de créature en bloc, liseré d’élément, comparaison claire |
-| Marmite, Quêtes, Codex | Mêmes boîtes, beaucoup de texte | Nouveaux composants seulement (écrans appelés à disparaître) |
+| Atelier (ex-cuisine, retirée en A2.2), Quêtes, Codex | Mêmes boîtes, beaucoup de texte | Nouveaux composants seulement (écrans appelés à disparaître) |
 | Combat | HUD lisible mais cartes de sorts plates ; Esquive et Déchaînement de même poids que le reste | Cartes de sorts en bloc à liseré d'élément, gros boutons en bloc pour Esquive et Déchaînement |
 | Pause | Boîte et trois boutons plats | `Modal` en bloc, `BlockButton` |
 | Victoire | Étoiles fixes, chiffres fixes, deux boutons de même poids | Étoiles qui tombent une à une, chiffres qui défilent, récompenses en cascade, « Suivant » mis en avant, montée de niveau visible |
 | Défaite | Rouge et texte d'encouragement | Écran calme, ce qui a manqué en gros, « Réessayer » mis en avant |
 | Évolution | Scène 3D réussie, fin abrupte | Seconde finale « avant → après », les deux formes côte à côte |
 
-Écrans non capturables directement : combat de boss (le navigateur sans interface n'avance pas le combat) ; arrivée d'une créature à la marmite (demande une cuisson terminée). Ils sont montrés dans la galerie `?gallery=ui`.
+Écrans non capturables directement : combat de boss (le navigateur sans interface n'avance pas le combat) ; arrivée d'une créature à l'Atelier (demande un Cube Scellé ouvert). Ils sont montrés dans la galerie `?gallery=ui`.

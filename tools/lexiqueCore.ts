@@ -19,17 +19,20 @@ export const FORBIDDEN_TERMS: readonly string[] = [
   'électrik',
   // A1.1 (spec Atelier) : rien qui rappelle une créature-éclair d'une autre licence
   'joues', 'pika',
+  // A2.2 (spec Atelier) : la cuisine disparaît, la Marmite devient l'Atelier
+  'marmite', 'chaudron', 'recette', 'ingrédient', 'cuisson',
 ];
 
 /**
  * Fichiers qui DOIVENT citer d'anciens identifiants, et rien d'autre :
- * la table de conversion des sauvegardes v3 et la sauvegarde v3 d'essai des tests.
+ * la table de conversion des sauvegardes v1 à v8 et les sauvegardes d'essai des tests.
  * Ils sont comptés à part (« exemptés »), jamais ignorés en silence.
  */
 export const EXEMPT_FILES: Readonly<Record<string, string>> = {
   'tools/lexiqueCore.ts': 'la liste des mots interdits elle-même',
-  'src/game/legacyIds.ts': 'table de conversion des identifiants des sauvegardes v1 à v3',
+  'src/game/legacyIds.ts': 'table de conversion des identifiants des sauvegardes v1 à v8',
   'src/game/saveV3.fixture.ts': "sauvegarde v3 d'essai (test de migration)",
+  'src/game/saveKitchen.fixture.ts': "ancienne cuisine des sauvegardes v1 à v8 (tests de migration A2.2)",
 };
 
 /** Dossiers et fichiers hors audit (fiche S03.1). */

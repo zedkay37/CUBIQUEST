@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installHeadlessDom } from '../../tools/headlessDom';
-import { MOVES, RECIPE_BY_ID, SPECIES, STAGES } from './catalog';
-import { canEvolve, createInitialSaveState, createOwnedCreature, evolveCreature, rollCreatureFromPot } from './rules';
+import { MOVES, SPECIES, STAGES, SUMMON_RARITY } from './catalog';
+import { canEvolve, createInitialSaveState, createOwnedCreature, evolveCreature } from './rules';
 import { checkMoveStyle, checkSpeciesStyle } from './styleGuide';
 import { buildVoxelCreature } from './voxelModels';
 
@@ -16,7 +16,7 @@ const countBlocks = (id: string): number => {
   return n;
 };
 
-test('Lignée Mycélin -> Amanitox : données, style, évolution, Marmite, rencontres, modèle', () => {
+test('Lignée Mycélin -> Amanitox : données, style, évolution, Cube Scellé, rencontres, modèle', () => {
   const base = SPECIES.mycelin;
   const final = SPECIES.amanitox;
   assert.ok(base && final);
@@ -41,15 +41,8 @@ test('Lignée Mycélin -> Amanitox : données, style, évolution, Marmite, renco
   assert.equal(evolved.moveId, 'fungal_bloom');
   assert.ok(save.discoveredSpeciesIds.includes('amanitox'));
 
-  // Marmite : recrutable par la recette de son élément et par la recette de départ
-  assert.ok(RECIPE_BY_ID.botanical_broth.poolSpeciesIds.includes('mycelin'));
-  assert.ok(RECIPE_BY_ID.botanical_broth.poolSpeciesIds.includes('amanitox'));
-  assert.ok(RECIPE_BY_ID.camp_stew.poolSpeciesIds.includes('mycelin'));
-  const pool = RECIPE_BY_ID.botanical_broth.poolSpeciesIds;
-  const roll = (pool.indexOf('mycelin') + 0.5) / pool.length;
-  assert.equal(rollCreatureFromPot('iron', RECIPE_BY_ID.botanical_broth, () => roll).speciesId, 'mycelin');
-  // le stade de base vient avant le stade final (les marmites d'argent et d'or favorisent la fin)
-  assert.ok(pool.indexOf('mycelin') < pool.indexOf('amanitox'));
+  // Cube Scellé (A2.2) : la forme de base a une rareté d'invocation
+  assert.ok(SUMMON_RARITY.mycelin);
 
   // rencontres : présent dans la Prairie, et le stade final plus loin dans le jeu
   const seenIn = (id: string) =>

@@ -46,7 +46,7 @@ for (const id of ['camp', ...process.argv.slice(2)]) {
   engine.setScreenState('playing');
   if (id === 'camp') {
     const squad = ['pyrocube', 'aquabloc', 'bourgeon'].map((s, i) => createOwnedCreature(s, 8, 0, `c_${i}`));
-    engine.loadCampScene(squad, null, 'idle');
+    engine.loadCampScene(squad);
   } else {
     const stage = STAGES.find((s) => s.id === id)!;
     const config = getReferenceConfig(stage);

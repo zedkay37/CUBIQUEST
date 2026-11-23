@@ -79,10 +79,7 @@ export const FR = {
         quests: 'Nouveau : les quêtes et les options (journal de test) sont ouvertes.',
         team: 'Nouveau : l’écran d’équipe s’ouvre, ton nouveau compagnon t’y attend.',
         codex: 'Nouveau : le Codex recense les créatures rencontrées.',
-        cooking: 'Nouveau : la marmite cuisine des plats pour l’escouade.',
       },
-      platPret: 'Plat prêt !',
-      cuisson: (a: string | number) => `Cuisson (${a})`,
       leCamp: 'Le Camp',
       ileAuxCubes: WORLD_NAME_BARE,
       puissance: 'Puissance',
@@ -96,52 +93,10 @@ export const FR = {
       afficherLeCamp: ' Afficher le camp',
       masquerLeDock: ' Masquer le dock',
       expeditions: 'Expéditions',
-      marmite: 'Marmite',
       equipePierres: 'Équipe & Galets',
       quetes: 'Quêtes',
       codexWeb: 'Codex Web',
       codex: 'Codex',
-    },
-    cookingDrawer: {
-      marmiteDuCampement: 'Marmite du Campement',
-      placez5IngredientsPourCuisinerUn: `Placez 5 ingrédients pour cuisiner un plat et attirer un nouveau ${CREATURE_NOUN.singular}.`,
-      chaudron: 'Chaudron',
-      recettes: 'Recettes (',
-      fermerLaMarmite: 'Fermer la marmite',
-      nouvelleRecrueAttireeAuCamp: 'Nouvelle recrue attirée au camp !',
-      niv: ' · Niv.',
-      ajouteAVotreReserveEquipezLe: 'Ajouté à votre réserve — équipez-le depuis l’onglet Équipe & Galets.',
-      super: 'Super !',
-      exp: ' exp.',
-      astuce: 'Astuce : ',
-      decouverte: '· Découverte',
-      typeDeChaudron: 'Type de chaudron (',
-      parIngredient: '× par ingrédient)',
-      niv2: 'Niv.',
-      emplacements5Requis: 'Emplacements (5 requis)',
-      remplirAuto: 'Remplir auto',
-      vider: 'Vider',
-      retirerDeLEmplacement: (a: string | number, b: string | number) => `Retirer ${a} de l'emplacement ${b}`,
-      emplacementVide: (a: string | number) => `Emplacement ${a} vide`,
-      cuisson: 'Cuisson :',
-      expedition: 'expédition',
-      type: (a: string | number) => ` · Type ${a}`,
-      chaqueEmplacementCouteIngredientAvecCe: (a: string | number, b: string | number) => `Chaque emplacement coûte ${a} ingrédient${b} avec ce chaudron.`,
-      lancerLaCuisson: 'Lancer la cuisson',
-      stockInsuffisant: 'Stock insuffisant',
-      cliquezSurVosIngredientsADroite: 'Cliquez sur vos ingrédients à droite pour remplir les 5 emplacements de la marmite.',
-      cuissonEnCours: 'Cuisson en cours : ',
-      encore: 'Encore',
-      avantDegustation: ' avant dégustation.',
-      terminerMaintenant: 'Terminer maintenant',
-      estPret: ' est prêt !',
-      uneCreatureAttireeParLOdeur: `Un ${CREATURE_NOUN.singular} attiré par l’odeur attend près du feu de camp.`,
-      accueillirLaRecrue: 'Accueillir la recrue',
-      reserveDIngredients: 'Réserve d’ingrédients',
-      mystique: 'Mystique',
-      rare: 'Rare',
-      commun: 'Commun',
-      cout: '· coût ',
     },
     evolutionOverlay: {
       metamorphose: 'Métamorphose',
@@ -173,7 +128,7 @@ export const FR = {
       conseille: 'Conseillé',
       bossDuNiveau: 'Boss du niveau · ',
       vaguesXpDeBase: ' vagues · XP de base',
-      butinIngredients: 'Butin & Ingrédients',
+      butin: 'Butin',
       pierresDePouvoir: 'Galets :',
       a: ' à +',
       niveauVerrouilleTerminezDAbord: 'Niveau verrouillé : terminez d’abord « ',
@@ -232,7 +187,7 @@ export const FR = {
       expeditionReussie: 'Expédition réussie !',
       escouadeVaincue: 'Escouade vaincue',
       siPresDuButGardezLEsquive: 'Si près du but ! Gardez l\'Esquive pour ses attaques télégraphiées.',
-      renforcezVosPierresDePouvoirOu: 'Renforcez vos Galets ou tentez une recrue à la Marmite.',
+      renforcezVosPierresDePouvoirOu: 'Renforcez vos Galets ou ouvrez un Cube Scellé à l’Atelier.',
       temps: 'Temps',
       vagues: 'Vagues',
       degats: 'Dégâts',
@@ -243,13 +198,10 @@ export const FR = {
       dechainements: 'Déchaînements ',
       esquivesParfaites: 'Esquives parfaites ',
       nouveauBiomeDecouvert: 'Nouveau biome découvert',
-      ingredientsRecoltes: 'Ingrédients récoltés',
       pierre: 'Galet ',
       atq: 'ATQ',
       pv: 'PV',
       monteeDeNiveau: 'Montée de niveau : ',
-      votrePlatDansLaMarmiteEst: 'Votre plat dans la Marmite est prêt ! Rentrez au Camp pour accueillir la recrue.',
-      nouveauChaudronDebloque: 'Nouveau chaudron débloqué : ',
       nouveauNiveauOuvert: 'Nouveau niveau ouvert : ',
       retourAuCamp: 'Retour au Camp',
       niveauSuivant: 'Niveau suivant',
@@ -284,6 +236,9 @@ export const FR = {
       bronze: 'Bronze',
       aleatoire: 'Aléatoire',
       pierre: (a: string | number) => `Galet (${a})`,
+      appat: (a: string | number, b: string | number) => `+${a} Appât (${b})`,
+      cube: (a: string | number) => `+1 Cube Scellé (${a})`,
+      matieres: { wood: 'Bois', stone: 'Pierre', crystal: 'Cristal', prism: 'Prisme' },
       fichierDeSauvegardeTelechargeJson: 'Fichier de sauvegarde téléchargé (.json).',
       sauvegardeCopieeDansLePressePapiers: 'Sauvegarde copiée dans le presse-papiers.',
       impossibleDAccederAuPressePapiers: 'Impossible d’accéder au presse-papiers. Utilisez le bouton Télécharger (.json).',
@@ -295,7 +250,7 @@ export const FR = {
       missions: 'Missions (',
       succes: 'Succès (',
       sauvegarde: 'Sauvegarde',
-      completezDesObjectifsEnExpeditionOu: 'Complétez des objectifs en expédition ou à la marmite pour gagner des ressources. Chaque mission réclamée est remplacée par un nouveau défi.',
+      completezDesObjectifsEnExpeditionOu: 'Complétez des objectifs en expédition pour gagner des ressources. Chaque mission réclamée est remplacée par un nouveau défi.',
       recompense: 'Récompense : ',
       reclamer: 'Réclamer',
       enCours: 'En cours',
@@ -311,7 +266,7 @@ export const FR = {
       trios: 'Trios',
       creatures: CREATURE_NOUN.plural,
       exporterVotreSauvegardeLocaleV: 'Exporter votre sauvegarde locale (v',
-      conservezUneCopieDeVotreEquipe: 'Conservez une copie de votre équipe, vos galets, vos ingrédients et vos succès au format JSON.',
+      conservezUneCopieDeVotreEquipe: 'Conservez une copie de votre équipe, vos galets, vos Appâts, vos Cubes Scellés et vos succès au format JSON.',
       telechargerJson: 'Télécharger (.json)',
       copie: 'Copié !',
       copierLeJson: 'Copier le JSON',
@@ -806,169 +761,6 @@ export const FR = {
         dexNote: 'Souverain de la mer de nuages, il façonne des mirages si réels qu’on peut s’y abriter.',
       },
     },
-    INGREDIENTS: {
-      ruby_berry: {
-        name: 'Baie Rubis',
-        description: 'Petit fruit rouge croquant apprécié des créatures Feu et Plante.',
-      },
-      crimson_root: {
-        name: 'Racine Ardente',
-        description: 'Racine épicée rare qui relève les soupes de type Feu.',
-      },
-      azure_drop: {
-        name: 'Baie Azur',
-        description: 'Baie juteuse bleue adorée des espèces aquatiques.',
-      },
-      frost_crystal: {
-        name: 'Cristal Glacé',
-        description: 'Éclat minéral bleu profond prisé des créatures Eau et Psy.',
-      },
-      sun_pollen: {
-        name: 'Pollen Solaire',
-        description: 'Poudre dorée sucrée qui attire les créatures Foudre et Plante.',
-      },
-      amber_honey: {
-        name: 'Miel Ambré',
-        description: 'Nectar épais et rare qui attire des recrues d’élite.',
-      },
-      pebble_gray: {
-        name: 'Pierre Fossile',
-        description: 'Caillou aromatique prisé des créatures Roche et défensives.',
-      },
-      mystic_shard: {
-        name: 'Fragment Mystique',
-        description: `Relique prismatique rare capable d’attirer les ${CREATURE_NOUN.plural} légendaires.`,
-      },
-      snow_lichen: {
-        name: 'Lichen des Neiges',
-        description: 'Mousse croquante cueillie sous la glace, friandise des créatures de la Toundra.',
-      },
-      aurora_petal: {
-        name: 'Pétale d’Aurore',
-        description: 'Pétale lumineux qui ne s’ouvre que sous les aurores boréales.',
-      },
-      storm_pepper: {
-        name: 'Poivre d’Orage',
-        description: 'Grain qui crépite sur la langue, ramassé au pied des paratonnerres.',
-      },
-      cloud_fluff: {
-        name: 'Flocon de Nuage',
-        description: 'Mousse de nuage sucrée, légère comme l’air, prélevée sur la mer de nuages.',
-      },
-      mesa_fig: {
-        name: 'Figue des Mesas',
-        description: 'Fruit confit par le soleil du canyon, que les béliers des mesas se disputent.',
-      },
-      amber_resin: {
-        name: 'Résine d’Ambre',
-        description: 'Goutte dorée qui perle des arches fossiles et parfume toute la marmite.',
-      },
-    },
-    POT_TIER_META: {
-      iron: {
-        label: 'Marmite en Fer',
-        unlockHint: 'Disponible dès le départ',
-      },
-      bronze: {
-        label: 'Marmite en Bronze',
-        unlockHint: 'Débloquée après la Prairie Émeraude',
-      },
-      silver: {
-        label: 'Marmite en Argent',
-        unlockHint: 'Débloquée après la Rive Azur',
-      },
-      gold: {
-        label: 'Marmite en Or',
-        unlockHint: 'Débloquée après la Crête Volcanique',
-      },
-    },
-    RECIPES: {
-      summit_feast: {
-        name: 'Festin des Cimes',
-        description: 'Un festin irisé, servi tout en haut, qui attire les formes rares et mystiques.',
-        hint: 'Utilisez au moins 2 Fragments Mystiques.',
-      },
-      fiery_soup: {
-        name: 'Soupe Ardente',
-        description: 'Un potage épicé fumant qui attire les créatures de type Feu.',
-        hint: 'Au moins 3 ingrédients rouges (Baie Rubis, Racine Ardente).',
-      },
-      ocean_nectar: {
-        name: 'Nectar des Océans',
-        description: 'Un velouté bleu azur irrésistible pour les créatures de type Eau.',
-        hint: 'Au moins 3 ingrédients bleus (Baie Azur, Cristal Glacé).',
-      },
-      spark_curry: {
-        name: 'Curry Foudroyant Doré',
-        description: 'Un plat pétillant aux arômes dorés qui attire les créatures Foudre.',
-        hint: 'Au moins 3 ingrédients jaunes (Pollen Solaire, Miel Ambré).',
-      },
-      mineral_stew: {
-        name: 'Mijoté Minéral',
-        description: 'Un ragoût roboratif qui fait sortir les créatures de type Roche.',
-        hint: 'Au moins 3 ingrédients gris (Pierre Fossile).',
-      },
-      botanical_broth: {
-        name: 'Bouillon Végétal',
-        description: 'Mélange parfumé de baies et de pollen adoré des créatures Plante.',
-        hint: 'Combinez au moins 2 jaunes et 2 rouges (ou 2 bleus).',
-      },
-      astral_veloute: {
-        name: 'Velouté Astral',
-        description: 'Recette délicate aux cristaux et miel, qui attire les compagnons de l’élément Psy.',
-        hint: 'Mélangez au moins 3 ingrédients rares (Cristal, Miel, Racine) ou 1 Fragment Mystique.',
-      },
-      sweet_crepe: {
-        name: 'Crêpe Douceur Cubique',
-        description: 'Recette rapide et gourmande appréciée des jeunes compagnons vifs.',
-        hint: 'Au moins 2 Pollen Solaire et 2 Baie Azur.',
-      },
-      royal_feast: {
-        name: 'Festin d’Élite',
-        description: 'Un mets raffiné composé de 5 ingrédients rares pour attirer des formes évoluées.',
-        hint: '5 ingrédients de rareté Rare ou Mystique.',
-      },
-      aurora_banquet: {
-        name: 'Banquet Boréal',
-        description: 'Un festin phosphorescent qui attire les formes évoluées et rares des confins.',
-        hint: 'Au moins 2 Pétales d’Aurore et 1 Fragment Mystique.',
-      },
-      glacier_sorbet: {
-        name: 'Sorbet du Glacier',
-        description: 'Une glace pilée au lichen dont raffolent les cerfs de givre.',
-        hint: 'Au moins 3 Lichens des Neiges.',
-      },
-      permafrost_fondue: {
-        name: 'Fondue Permafrost',
-        description: 'Des galets brûlants plongés dans la neige fondue : irrésistible pour les golems de glace.',
-        hint: 'Au moins 2 Lichens des Neiges et 2 Galets Fossiles.',
-      },
-      thunder_tajine: {
-        name: 'Tajine Tonnerre',
-        description: 'Un plat qui crépite dans la marmite et fait accourir les serpents-éclairs.',
-        hint: 'Au moins 2 Poivres d’Orage.',
-      },
-      cloud_meringue: {
-        name: 'Meringue Céleste',
-        description: 'Une mousse si légère qu’elle flotte hors de la marmite jusqu’aux nuages rêveurs.',
-        hint: 'Au moins 3 Flocons de Nuage.',
-      },
-      frontier_hotpot: {
-        name: 'Potée des Confins',
-        description: 'La soupe du voyageur : attire les jeunes créatures de la Toundra et de la Cime.',
-        hint: 'Au moins 1 Lichen des Neiges et 1 Flocon de Nuage.',
-      },
-      mesa_roast: {
-        name: 'Rôti des Mesas',
-        description: 'Des figues rôties sur pierre chaude qui font dévaler les béliers des mesas.',
-        hint: 'Au moins 3 Figues des Mesas.',
-      },
-      camp_stew: {
-        name: 'Ragoût du Camp',
-        description: `La recette classique de ${WORLD_NAME} : attire toutes les espèces de base.`,
-        hint: 'N’importe quel mélange varié de 5 ingrédients.',
-      },
-    },
     BIOMES: {
       meadow: {
         name: 'Prairie Émeraude',
@@ -1109,70 +901,56 @@ export const FR = {
         title: 'Patrouille de l’Île',
         description: 'Remportez 1 expédition dans n’importe quel biome.',
         reward: {
-          label: '3× Baie Rubis · 3× Baie Azur',
+          label: '1× Appât (Feu) · 1× Appât (Eau)',
         },
       },
       q_bursts_3: {
         title: 'Alchimiste Élémentaire',
         description: 'Déclenchez 3 Éclats en combat.',
         reward: {
-          label: 'Galet (Argent) · 2× Miel Ambré',
+          label: 'Galet (Argent) · 1× Appât (Foudre)',
         },
       },
       q_ult_1: {
         title: 'Force Unie',
         description: 'Déclenchez 1 Déchaînement (touche R) en expédition.',
         reward: {
-          label: '1× Rune de Cadence · 2× Cristal Glacé',
-        },
-      },
-      q_cook_1: {
-        title: 'Chef du Camp',
-        description: 'Lancez 1 cuisson dans la Marmite du Camp.',
-        reward: {
-          label: '4× Pollen Solaire · 2× Racine Ardente',
+          label: '1× Rune de Cadence · 1× Appât (Eau)',
         },
       },
       q_dodge_2: {
         title: 'Réflexes de Cube',
         description: 'Réussissez 2 Esquives Parfaites pendant un télégraphe.',
         reward: {
-          label: '1× Rune de Partage · 3× Pierre Fossile',
+          label: '1× Rune de Partage · 1× Appât (Roche)',
         },
       },
       q_boss_2: {
         title: 'Chasseur de Boss',
         description: 'Vainquez 2 Boss de fin de niveau.',
         reward: {
-          label: 'Galet (Or) · 1× Fragment Mystique',
+          label: 'Galet (Or) · 1× Cube Scellé (Bois)',
         },
       },
       q_bursts_6: {
         title: 'Maître des Synergies',
         description: 'Déclenchez 6 Éclats au total.',
         reward: {
-          label: '1× Rune de Force · 2× Racine Ardente',
+          label: '1× Rune de Force · 1× Appât (Feu)',
         },
       },
       q_win_3: {
         title: 'Explorateur Infatigable',
         description: 'Terminez 3 expéditions victorieuses.',
         reward: {
-          label: '1× Rune d’Ampleur · 2× Fragment Mystique',
+          label: '1× Rune d’Ampleur · 1× Cube Scellé (Bois)',
         },
       },
       q_frontier_win_2: {
         title: 'Éclaireur des Confins',
         description: 'Remportez 2 expéditions dans la Toundra Boréale ou la Cime des Orages.',
         reward: {
-          label: '1× Rune de Précision · 3× Lichen des Neiges',
-        },
-      },
-      q_frontier_dish_1: {
-        title: 'Cuisine des Confins',
-        description: 'Lancez 1 recette des nouveaux biomes dans la Marmite.',
-        reward: {
-          label: '2× Pétale d’Aurore · 2× Flocon de Nuage',
+          label: '1× Rune de Précision · 1× Appât (Eau)',
         },
       },
       q_frontier_boss_3: {
@@ -1186,7 +964,7 @@ export const FR = {
         title: 'Nouvelle Forme',
         description: `Faites évoluer 1 ${CREATURE_NOUN.singular} au Camp.`,
         reward: {
-          label: '2× Poivre d’Orage · 2× Miel Ambré',
+          label: '1× Appât (Foudre)',
         },
       },
     },
@@ -1195,7 +973,7 @@ export const FR = {
         title: 'Premier Pas sur l’Île',
         description: 'Remportez votre toute première expédition.',
         reward: {
-          label: '4× Baie Rubis · 4× Pollen Solaire',
+          label: '1× Appât (Feu) · 1× Appât (Foudre)',
         },
       },
       ach_veteran_5: {
@@ -1209,21 +987,21 @@ export const FR = {
         title: 'Étincelle Tactique',
         description: 'Déclenchez votre premier Éclat.',
         reward: {
-          label: '2× Cristal Glacé · 2× Racine Ardente',
+          label: '1× Appât (Eau) · 1× Appât (Feu)',
         },
       },
       ach_burst_master: {
         title: 'Architecte des Éclats',
         description: 'Déclenchez 15 Éclats au total.',
         reward: {
-          label: '1× Rune de Force · 2× Fragment Mystique',
+          label: '1× Rune de Force · 1× Cube Scellé (Cristal)',
         },
       },
       ach_trios_5: {
         title: 'Cadence Infernale',
         description: 'Réussissez 5 Trios au total.',
         reward: {
-          label: '1× Rune de Cadence · 3× Miel Ambré',
+          label: '1× Rune de Cadence · 1× Appât (Foudre)',
         },
       },
       ach_ult_3: {
@@ -1237,28 +1015,21 @@ export const FR = {
         title: 'Intouchables',
         description: 'Réussissez 3 Esquives Parfaites face aux attaques télégraphiées.',
         reward: {
-          label: '1× Rune de Partage · 3× Baie Azur',
-        },
-      },
-      ach_cook_3: {
-        title: 'Toque Cubique',
-        description: 'Préparez 3 plats dans la Marmite du Camp.',
-        reward: {
-          label: '3× Miel Ambré · 1× Fragment Mystique',
+          label: '1× Rune de Partage · 1× Appât (Eau)',
         },
       },
       ach_evolve_1: {
         title: 'Métamorphose',
         description: `Faites évoluer votre premier ${CREATURE_NOUN.singular}.`,
         reward: {
-          label: '1× Rune d’Ampleur · 3× Racine Ardente',
+          label: '1× Rune d’Ampleur · 1× Appât (Feu)',
         },
       },
       ach_dex_8: {
         title: 'Naturaliste de l’Île',
         description: 'Découvrez 8 espèces différentes dans le Bestiaire.',
         reward: {
-          label: '2× Fragment Mystique · 3× Cristal Glacé',
+          label: '1× Appât (Eau) · 1× Cube Scellé (Cristal)',
         },
       },
       ach_stages_6: {
@@ -1272,14 +1043,14 @@ export const FR = {
         title: `Légende de ${WORLD_NAME}`,
         description: 'Triomphez des 12 niveaux jusqu’au Cœur d’Aetherion.',
         reward: {
-          label: '5× Fragment Mystique · Galet Or (+380–520)',
+          label: 'Galet Or (+380–520) · 1× Cube Scellé (Cristal)',
         },
       },
       ach_tundra_clear: {
         title: 'Brise-Glace',
         description: 'Terminez les 3 niveaux de la Toundra Boréale.',
         reward: {
-          label: '1× Rune de Précision · 3× Pétale d’Aurore',
+          label: '1× Rune de Précision · 1× Appât (Eau)',
         },
       },
       ach_storm_clear: {
@@ -1293,35 +1064,28 @@ export const FR = {
         title: 'Maître des Six Biomes',
         description: 'Triomphez des 18 niveaux jusqu’à l’Œil du Cyclone.',
         reward: {
-          label: '5× Fragment Mystique · Galet Or (+1100–1400)',
+          label: 'Galet Or (+1100–1400) · 1× Cube Scellé (Cristal)',
         },
       },
       ach_dex_20: {
         title: 'Grand Naturaliste',
         description: 'Découvrez 20 espèces différentes dans le Bestiaire.',
         reward: {
-          label: '3× Pétale d’Aurore · 3× Poivre d’Orage',
+          label: '1× Appât (Eau) · 1× Appât (Foudre)',
         },
       },
       ach_dex_all: {
         title: 'Bestiaire Complet',
         description: (a: string | number) => `Découvrez les ${a} espèces de ${WORLD_NAME} et de ses confins.`,
         reward: {
-          label: '3× Fragment Mystique · Galet Or (+1000–1300)',
-        },
-      },
-      ach_frontier_dish_3: {
-        title: 'Chef des Confins',
-        description: 'Préparez 3 recettes des nouveaux biomes.',
-        reward: {
-          label: '4× Lichen des Neiges · 4× Flocon de Nuage · 2× Fragment Mystique',
+          label: 'Galet Or (+1000–1300) · 1× Cube Scellé (Cristal)',
         },
       },
       ach_evolve_5: {
         title: 'Éleveur Émérite',
         description: `Faites évoluer 5 ${CREATURE_NOUN.plural}.`,
         reward: {
-          label: '1× Rune de Force · 3× Poivre d’Orage',
+          label: '1× Rune de Force · 1× Appât (Foudre)',
         },
       },
     },

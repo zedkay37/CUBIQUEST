@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BIOME_ORDER, BIOMES, ELEMENT_META, MOVES, RECIPES, SPECIES, STAGES } from '../game/catalog';
+import { BIOME_ORDER, BIOMES, ELEMENT_META, MOVES, SPECIES, STAGES, SUMMON_RARITY } from '../game/catalog';
 import { renderGalleryShots, type GalleryShots } from '../game/galleryRenderer';
 import { buildPreviewQuery } from '../game/previewConfigs';
 import type { SpeciesDef } from '../game/types';
@@ -84,7 +84,7 @@ export function GalleryPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {chain.map((species, idx) => {
                 const move = MOVES[species.moveId];
-                const recipes = RECIPES.filter((r) => r.poolSpeciesIds.includes(species.id)).map((r) => r.name);
+                const summonRarity = SUMMON_RARITY[species.id];
                 const seenIn = STAGES.filter((st) =>
                   st.waves.some((w) => w.enemies.some((e) => e.speciesId === species.id)),
                 ).map((st) => st.id);
@@ -148,7 +148,7 @@ export function GalleryPage() {
                     </p>
                     <p className="mt-1 text-[11px] italic text-[#CBD5E1]">{species.dexNote}</p>
                     <p className="mt-1 text-[10px] text-[#94A3B8]">
-                      Marmite : {recipes.length ? recipes.join(', ') : 'aucune recette'}
+                      Cube Scellé : {summonRarity ?? 'ne sort pas des cubes'}
                       <br />
                       Rencontré dans : {seenIn.length ? seenIn.join(', ') : 'aucun niveau'}
                     </p>

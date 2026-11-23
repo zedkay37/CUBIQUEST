@@ -250,7 +250,7 @@ class ToyboxAudio {
     this.playTone(280, 75, 0.24, 'sawtooth', 0.11);
   }
 
-  public playCookBubble(): void {
+  public playWorkbenchBubble(): void {
     this.playTone(260, 520, 0.09, 'sine', 0.09);
     this.playTone(340, 640, 0.09, 'sine', 0.08, 0.09);
   }

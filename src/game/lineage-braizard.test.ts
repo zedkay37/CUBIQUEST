@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installHeadlessDom } from '../../tools/headlessDom';
-import { MOVES, RECIPE_BY_ID, SPECIES, STAGES } from './catalog';
-import { canEvolve, createInitialSaveState, createOwnedCreature, evolveCreature, rollCreatureFromPot } from './rules';
+import { MOVES, SPECIES, STAGES, SUMMON_RARITY } from './catalog';
+import { canEvolve, createInitialSaveState, createOwnedCreature, evolveCreature } from './rules';
 import { checkMoveStyle, checkSpeciesStyle } from './styleGuide';
 import { buildVoxelCreature } from './voxelModels';
 
@@ -16,7 +16,7 @@ const countBlocks = (id: string): number => {
   return n;
 };
 
-test('Lignée Braizard -> Cendrox : données, style, évolution, Marmite, rencontres, modèle', () => {
+test('Lignée Braizard -> Cendrox : données, style, évolution, Cube Scellé, rencontres, modèle', () => {
   const base = SPECIES.braizard;
   const final = SPECIES.cendrox;
   assert.ok(base && final);
@@ -41,15 +41,8 @@ test('Lignée Braizard -> Cendrox : données, style, évolution, Marmite, rencon
   assert.equal(evolved.moveId, 'cinder_wave');
   assert.ok(save.discoveredSpeciesIds.includes('cendrox'));
 
-  // Marmite : recrutable par la recette de son élément , et le stade final par le Festin des Cimes
-  assert.ok(RECIPE_BY_ID.fiery_soup.poolSpeciesIds.includes('braizard'));
-  assert.ok(RECIPE_BY_ID.fiery_soup.poolSpeciesIds.includes('cendrox'));
-  assert.ok(RECIPE_BY_ID.summit_feast.poolSpeciesIds.includes('cendrox'));
-  const pool = RECIPE_BY_ID.fiery_soup.poolSpeciesIds;
-  const roll = (pool.indexOf('braizard') + 0.5) / pool.length;
-  assert.equal(rollCreatureFromPot('iron', RECIPE_BY_ID.fiery_soup, () => roll).speciesId, 'braizard');
-  // le stade de base vient avant le stade final (les marmites d'argent et d'or favorisent la fin)
-  assert.ok(pool.indexOf('braizard') < pool.indexOf('cendrox'));
+  // Cube Scellé (A2.2) : la forme de base a une rareté d'invocation
+  assert.ok(SUMMON_RARITY.braizard);
 
   // rencontres : présent sur la Crête, et le stade final plus loin dans le jeu
   const seenIn = (id: string) =>

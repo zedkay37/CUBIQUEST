@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installHeadlessDom } from '../../tools/headlessDom';
-import { MOVES, RECIPE_BY_ID, SPECIES } from './catalog';
-import { canEvolve, createInitialSaveState, createOwnedCreature, evolveCreature, rollCreatureFromPot } from './rules';
+import { MOVES, SPECIES, SUMMON_RARITY } from './catalog';
+import { canEvolve, createInitialSaveState, createOwnedCreature, evolveCreature } from './rules';
 import { checkMoveStyle, checkSpeciesStyle } from './styleGuide';
 import { buildVoxelCreature } from './voxelModels';
 
@@ -16,7 +16,7 @@ const countBlocks = (id: string): number => {
   return n;
 };
 
-test('Lignée Chevrok -> Mouflambre -> Bélithan : données, style, évolutions, Marmite, modèle', () => {
+test('Lignée Chevrok -> Mouflambre -> Bélithan : données, style, évolutions, Cube Scellé, modèle', () => {
   const chain = ['chevrok', 'mouflambre', 'belithan'].map((id) => SPECIES[id]);
   for (const s of chain) {
     assert.ok(s);
@@ -45,13 +45,8 @@ test('Lignée Chevrok -> Mouflambre -> Bélithan : données, style, évolutions,
   assert.equal(canEvolve(save.roster.find((c) => c.uid === cub.uid)!), false);
   assert.equal(save.roster.find((c) => c.uid === cub.uid)!.moveId, 'amber_quake');
 
-  // Marmite : les trois stades dans le Mijoté Minéral, du plus commun au plus rare
-  const pool = RECIPE_BY_ID.mineral_stew.poolSpeciesIds;
-  assert.ok(pool.indexOf('chevrok') >= 0);
-  assert.ok(pool.indexOf('chevrok') < pool.indexOf('mouflambre'));
-  assert.ok(pool.indexOf('mouflambre') < pool.indexOf('belithan'));
-  const roll = (pool.indexOf('chevrok') + 0.5) / pool.length;
-  assert.equal(rollCreatureFromPot('iron', RECIPE_BY_ID.mineral_stew, () => roll).speciesId, 'chevrok');
+  // Cube Scellé (A2.2) : la forme de base a une rareté d'invocation
+  assert.ok(SUMMON_RARITY.chevrok);
 
   // modèle : un peu plus riche à chaque stade
   const blocks = chain.map((s) => countBlocks(s.id));

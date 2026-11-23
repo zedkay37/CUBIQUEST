@@ -12,7 +12,7 @@ interface CodexDrawerProps {
 }
 
 const PRESET_QUERIES = [
-  'Quelles recettes préparer à la Marmite pour bien démarrer ?',
+  'Quelle équipe de départ choisir pour bien démarrer ?',
   'Comment tirer parti des Runes de Partage et de Vigueur en combat ?',
   'Quels conseils pour éviter les attaques de Boss avec Esquive ?',
   'Quelles synergies de types élémentaires fonctionnent le mieux pour une équipe de 3 ?',
@@ -173,7 +173,7 @@ export function CodexDrawer({
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Ex. : Recettes pour débuter, astuces Boss, synergies de runes..."
+                  placeholder="Ex. : Équipe pour débuter, astuces Boss, synergies de runes..."
                   className="flex-1 rounded-xl bg-[#141A26] border-2 border-[#344056] focus:border-[#F4B942] focus:outline-none px-4 py-2.5 text-sm text-[#FAF7F0] placeholder:text-[#64748B]"
                 />
                 <button
@@ -302,7 +302,7 @@ export function CodexDrawer({
                         </p>
                       )}
                       <p className="text-xs text-[#CBD5E1] mt-1 leading-snug">
-                        {seen ? sp.dexNote : 'Explorez l’île ou cuisinez pour découvrir cette espèce.'}
+                        {seen ? sp.dexNote : 'Explorez l’île ou ouvrez des Cubes Scellés à l’Atelier pour découvrir cette espèce.'}
                       </p>
                     </div>
                   </div>

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installHeadlessDom } from '../../tools/headlessDom';
-import { MOVES, RECIPE_BY_ID, SPECIES, STAGES } from './catalog';
-import { canEvolve, createInitialSaveState, createOwnedCreature, evolveCreature, rollCreatureFromPot } from './rules';
+import { MOVES, SPECIES, STAGES, SUMMON_RARITY } from './catalog';
+import { canEvolve, createInitialSaveState, createOwnedCreature, evolveCreature } from './rules';
 import { checkMoveStyle, checkSpeciesStyle } from './styleGuide';
 import { buildVoxelCreature } from './voxelModels';
 
@@ -16,7 +16,7 @@ const countBlocks = (id: string): number => {
   return n;
 };
 
-test('Lignée Crabloc -> Crabastion : données, style, évolution, Marmite, rencontres, modèle', () => {
+test('Lignée Crabloc -> Crabastion : données, style, évolution, Cube Scellé, rencontres, modèle', () => {
   const base = SPECIES.crabloc;
   const final = SPECIES.crabastion;
   assert.ok(base && final);
@@ -41,15 +41,8 @@ test('Lignée Crabloc -> Crabastion : données, style, évolution, Marmite, renc
   assert.equal(evolved.moveId, 'tide_crush');
   assert.ok(save.discoveredSpeciesIds.includes('crabastion'));
 
-  // Marmite : recrutable par la recette de son élément et par la crêpe des débutants
-  assert.ok(RECIPE_BY_ID.ocean_nectar.poolSpeciesIds.includes('crabloc'));
-  assert.ok(RECIPE_BY_ID.ocean_nectar.poolSpeciesIds.includes('crabastion'));
-  assert.ok(RECIPE_BY_ID.sweet_crepe.poolSpeciesIds.includes('crabloc'));
-  const pool = RECIPE_BY_ID.ocean_nectar.poolSpeciesIds;
-  const roll = (pool.indexOf('crabloc') + 0.5) / pool.length;
-  assert.equal(rollCreatureFromPot('iron', RECIPE_BY_ID.ocean_nectar, () => roll).speciesId, 'crabloc');
-  // le stade de base vient avant le stade final (les marmites d'argent et d'or favorisent la fin)
-  assert.ok(pool.indexOf('crabloc') < pool.indexOf('crabastion'));
+  // Cube Scellé (A2.2) : la forme de base a une rareté d'invocation
+  assert.ok(SUMMON_RARITY.crabloc);
 
   // rencontres : présent sur la Rive, et le stade final plus loin dans le jeu
   const seenIn = (id: string) =>

@@ -1,15 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BOSS_KITS, STAGE_TUNING } from './balance';
-import { BIOME_ORDER, BIOMES, INGREDIENTS, RECIPE_BY_ID, SPECIES, STAGES, STATUS_META } from './catalog';
+import { BIOME_ORDER, BIOMES, SPECIES, STAGES, STATUS_META } from './catalog';
 import { getReferenceConfig } from './previewConfigs';
 import {
   applyExpeditionRewards,
   createInitialSaveState,
   getBiomeProgress,
   isBiomeUnlocked,
-  resolveRecipe,
-  startCookingPot,
 } from './rules';
 
 const canyon = STAGES.filter((s) => s.biomeId === 'canyon');
@@ -48,17 +46,11 @@ test('Canyon d\'Ambre : niveaux croissants, lignée du bélier présente, équil
     const species = stage.waves.flatMap((w) => w.enemies.map((e) => e.speciesId));
     assert.ok(species.some((id) => SPECIES[id].archetype === 'ram'), `${stage.id} : la lignée du canyon doit apparaître`);
     assert.ok(new Set(species.map((id) => SPECIES[id].element)).size >= 2, `${stage.id} : vagues mélangées`);
-    for (const id of stage.dropIngredients) assert.ok(INGREDIENTS[id], id);
     const cfg = getReferenceConfig(stage);
     assert.equal(cfg.level, 50);
     assert.equal(cfg.squad.length, 3);
   }
   assert.equal(canyon[2].bossSpeciesId, 'belithan');
-  assert.ok(canyon.some((s) => s.dropIngredients.includes('mesa_fig')));
-  assert.ok(canyon.some((s) => s.dropIngredients.includes('amber_resin')));
-  // un ingrédient commun et un rare, comme les autres biomes récents
-  assert.equal(INGREDIENTS.mesa_fig.rarity, 'common');
-  assert.equal(INGREDIENTS.amber_resin.rarity, 'rare');
 });
 
 test('Canyon d\'Ambre : le kit de boss ne fait que recombiner des attaques et statuts existants', () => {
@@ -78,25 +70,4 @@ test('Canyon d\'Ambre : le kit de boss ne fait que recombiner des attaques et st
   const statuses = [...(kit.ring?.statuses.flat() ?? []), kit.eye?.status, kit.strike?.status].filter(Boolean);
   for (const status of statuses) assert.ok(STATUS_META[status as keyof typeof STATUS_META], String(status));
   assert.ok(kit.ring && kit.eye);
-});
-
-test('Canyon d\'Ambre : recette Rôti des Mesas', () => {
-  const r = (ids: string[]) => resolveRecipe(ids)?.id;
-  assert.equal(r(['mesa_fig', 'mesa_fig', 'mesa_fig', 'ruby_berry', 'pebble_gray']), 'mesa_roast');
-  // 2 figues seulement : la recette rouge historique garde la main (non-régression)
-  assert.equal(r(['mesa_fig', 'mesa_fig', 'ruby_berry', 'pebble_gray', 'azure_drop']), 'fiery_soup');
-  assert.equal(r(['amber_resin', 'sun_pollen', 'sun_pollen', 'ruby_berry', 'pebble_gray']), 'spark_curry');
-  assert.deepEqual(RECIPE_BY_ID.mesa_roast.poolSpeciesIds, ['chevrok', 'mouflambre', 'belithan']);
-  assert.ok(RECIPE_BY_ID.frontier_hotpot.poolSpeciesIds.includes('chevrok'));
-
-  let save = createInitialSaveState('pyrocube', true);
-  save = {
-    ...save,
-    ingredients: { ...save.ingredients, mesa_fig: 3 },
-    pot: { ...save.pot, slots: ['mesa_fig', 'mesa_fig', 'mesa_fig', 'ruby_berry', 'pebble_gray'] },
-  };
-  const cooking = startCookingPot(save);
-  assert.equal(cooking.pot.recipeId, 'mesa_roast');
-  assert.equal(cooking.ingredients.mesa_fig, 0);
-  assert.equal(cooking.stats.frontierDishes, 1);
 });

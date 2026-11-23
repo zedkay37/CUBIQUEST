@@ -106,9 +106,9 @@ export function startExpedition(
   clearGroup(self, self.worldGroup);
   clearGroup(self, self.actorsGroup);
   self.campWanderers = [];
-  self.potLiquidMesh = null;
-  self.potFireMesh = null;
-  self.potLight = null;
+  self.workbenchLiquidMesh = null;
+  self.workbenchFireMesh = null;
+  self.workbenchLight = null;
   self.campStars = null;
 
   const biome = BIOMES[stage.biomeId];

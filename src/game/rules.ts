@@ -5,9 +5,7 @@ import {
   FRONTIER_STAGE_INDEX,
   RUNE_ORDER,
   ELEMENT_META,
-  INGREDIENTS,
   MOVES,
-  POT_TIER_META,
   QUEST_POOL,
   STARTER_TRIOS,
   STARTER_TRIO_IDS,
@@ -17,8 +15,6 @@ import {
   type StarterTrioId,
   type UnlockFeature,
   STAGE_CHALLENGES,
-  RECIPE_BY_ID,
-  RECIPES,
   SPECIES,
   STAGES,
   STATUS_META,
@@ -33,17 +29,16 @@ import type {
   ComputedCreatureStats,
   ElementType,
   ExpeditionOutcome,
+  KitchenConversion,
   MoveDef,
   RuneKind,
   OwnedCreature,
   PlayerStats,
-  PotTier,
   PowerStone,
   PowerStoneSubstat,
   QuestMetric,
   QuestReward,
   QuestTemplate,
-  RecipeDef,
   SaveState,
   StageDef,
   StatusKind,
@@ -55,7 +50,7 @@ import type {
   DefeatAdvice,
 } from './types';
 import { FR } from '../i18n/fr';
-import { LEGACY_ACHIEVEMENT_IDS, LEGACY_QUEST_IDS, LEGACY_RECIPE_IDS, LEGACY_RUNE_IDS, LEGACY_STAT_FIELDS } from './legacyIds';
+import { LEGACY_ACHIEVEMENT_IDS, LEGACY_QUEST_IDS, LEGACY_RUNE_IDS, LEGACY_STAT_FIELDS, readLegacyKitchen } from './legacyIds';
 
 /** Gestes expliqués une fois par une bulle (S04.3) ; la liste est rangée dans la sauvegarde. */
 export const FIRST_TIME_KINDS = ['cube', 'weak', 'burst', 'trio'] as const;
@@ -92,15 +87,16 @@ export const SAVE_BACKUP_STORAGE_KEY = withSaveSlot('cubiquest_save_unreadable_b
 /** Taille maximale du sac de Pierres de Pouvoir (les pierres équipées ne comptent jamais parmi celles qu'on retire). */
 export const POWER_STONE_BAG_LIMIT = 48;
 export const LEGACY_SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v1');
-// v3 (Giga Update) : sac de runes étendu (rune_precision, rune_vigueur) + stats frontierWins/frontierDishes.
-// v4 (S03) : identifiants renommés (runes, recettes) ; `moveStoneBag` devient `runeBag`, `moveStones` devient `runes`.
+// v3 (Giga Update) : sac de runes étendu (rune_precision, rune_vigueur) + stat frontierWins.
+// v4 (S03) : identifiants renommés (runes) ; `moveStoneBag` devient `runeBag`, `moveStones` devient `runes`.
 // v5 (S04) : statistique des anciennes réactions -> `burstsTriggered` ; `triosTriggered` (cumul, repart de 0) ;
 //            quêtes et succès renommés (legacyIds.ts) ; `firstTimesSeen` (bulles « première fois »).
 // v6 (S05) : `hazardHintsSeen` (consignes d'attaque déjà montrées).
 // v7 (S06) : `stageStars` (trois étoiles par niveau) ; les niveaux déjà terminés reçoivent l'étoile de victoire.
 // v8 (S07) : `lessonsDone` (leçons du début) ; une sauvegarde qui a déjà gagné la Prairie-2 a tout appris.
 // v9 (spec Atelier, A2) : Cube Scellé (`sealedCubes`, `cubeCounter`, `baits`, `awakenGauge`), Lien (`bonds`,
-//            `duplicates`), variantes (`variantsUnlocked`, `variantsOn`). La cuisine est convertie (A2.2).
+//            `duplicates`), variantes (`variantsUnlocked`, `variantsOn`). A2.2 : l'ancienne cuisine disparaît, convertie en
+//            Appâts, cubes et Lien (`readLegacyKitchen`, legacyIds.ts) ; `kitchenConversion` garde le bilan.
 // La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 9.
 export const SAVE_VERSION = 9;
 
@@ -609,157 +605,6 @@ export function evolveCreature(save: SaveState, creatureUid: string): SaveState 
 }
 
 /**
- * Cooking Pot Recipe Resolution (5 ingredient slots)
- */
-export function resolveRecipe(ingredientIds: (string | null)[]): RecipeDef | null {
-  const valid = ingredientIds.filter((id): id is string => Boolean(id && INGREDIENTS[id]));
-  if (valid.length < 5) return null;
-
-  const colorCounts = { red: 0, blue: 0, yellow: 0, gray: 0 };
-  let rareCount = 0;
-  let mysticCount = 0;
-  let sunPollenCount = 0;
-  let azureDropCount = 0;
-  const idCounts: Record<string, number> = {};
-
-  for (const id of valid) {
-    const ing = INGREDIENTS[id];
-    idCounts[id] = (idCounts[id] ?? 0) + 1;
-    colorCounts[ing.color] += 1;
-    if (ing.rarity === 'rare') rareCount += 1;
-    if (ing.rarity === 'mystic') mysticCount += 1;
-    if (id === 'sun_pollen') sunPollenCount += 1;
-    if (id === 'azure_drop') azureDropCount += 1;
-  }
-
-  // Giga Update : les recettes des nouveaux biomes dépendent d'ingrédients précis, donc
-  // elles passent avant les règles génériques par couleur/rareté.
-  const lichen = idCounts.snow_lichen ?? 0;
-  const aurora = idCounts.aurora_petal ?? 0;
-  const pepper = idCounts.storm_pepper ?? 0;
-  const fluff = idCounts.cloud_fluff ?? 0;
-  if (aurora >= 2 && mysticCount >= 1) return RECIPE_BY_ID.aurora_banquet;
-  if ((idCounts.mesa_fig ?? 0) >= 3) return RECIPE_BY_ID.mesa_roast;
-  if (lichen >= 3) return RECIPE_BY_ID.glacier_sorbet;
-  if (lichen >= 2 && (idCounts.pebble_gray ?? 0) >= 2) return RECIPE_BY_ID.permafrost_fondue;
-  if (pepper >= 2) return RECIPE_BY_ID.thunder_tajine;
-  if (fluff >= 3) return RECIPE_BY_ID.cloud_meringue;
-  if (lichen >= 1 && fluff >= 1) return RECIPE_BY_ID.frontier_hotpot;
-
-  // Priority order from rarest/most specific to general
-  if (mysticCount >= 2) return RECIPE_BY_ID.summit_feast;
-  if (rareCount + mysticCount === 5) return RECIPE_BY_ID.royal_feast;
-  if (mysticCount >= 1 || rareCount >= 3) return RECIPE_BY_ID.astral_veloute;
-  if (sunPollenCount >= 2 && azureDropCount >= 2) return RECIPE_BY_ID.sweet_crepe;
-  if (colorCounts.red >= 3) return RECIPE_BY_ID.fiery_soup;
-  if (colorCounts.blue >= 3) return RECIPE_BY_ID.ocean_nectar;
-  if (colorCounts.yellow >= 3) return RECIPE_BY_ID.spark_curry;
-  if (colorCounts.gray >= 3) return RECIPE_BY_ID.mineral_stew;
-  if (colorCounts.yellow >= 2 && (colorCounts.red >= 2 || colorCounts.blue >= 2)) {
-    return RECIPE_BY_ID.botanical_broth;
-  }
-  return RECIPE_BY_ID.camp_stew;
-}
-
-export function getPotIngredientCost(tier: PotTier): number {
-  return POT_TIER_META[tier].costMultiplier;
-}
-
-export function startCookingPot(save: SaveState): SaveState {
-  if (save.pot.status !== 'idle') return save;
-  const recipe = resolveRecipe(save.pot.slots);
-  if (!recipe) return save;
-
-  const costPerSlot = getPotIngredientCost(save.pot.tier);
-  const needed: Record<string, number> = {};
-  for (const id of save.pot.slots) {
-    if (!id) return save;
-    needed[id] = (needed[id] ?? 0) + costPerSlot;
-  }
-
-  for (const [id, qty] of Object.entries(needed)) {
-    if ((save.ingredients[id] ?? 0) < qty) {
-      return save;
-    }
-  }
-
-  const nextIngredients = { ...save.ingredients };
-  for (const [id, qty] of Object.entries(needed)) {
-    nextIngredients[id] = Math.max(0, (nextIngredients[id] ?? 0) - qty);
-  }
-
-  const nextDiscoveredRecipes = save.discoveredRecipeIds.includes(recipe.id)
-    ? save.discoveredRecipeIds
-    : [...save.discoveredRecipeIds, recipe.id];
-
-  const updated: SaveState = {
-    ...save,
-    ingredients: nextIngredients,
-    discoveredRecipeIds: nextDiscoveredRecipes,
-    pot: {
-      ...save.pot,
-      status: 'cooking',
-      recipeId: recipe.id,
-      expeditionsRemaining: recipe.cookExpeditions,
-      expeditionsTotal: recipe.cookExpeditions,
-    },
-  };
-  return recordPlayerProgress(updated, {
-    dishesCooked: 1,
-    frontierDishes: recipe.frontier ? 1 : 0,
-  });
-}
-
-export function rollCreatureFromPot(
-  tier: PotTier,
-  recipe: RecipeDef,
-  rng: RngFn = Math.random,
-): OwnedCreature {
-  const tierMeta = POT_TIER_META[tier];
-  const pool = recipe.poolSpeciesIds;
-  // Higher pot tiers favor later/rarer entries in the pool
-  let idx = Math.floor(rng() * pool.length);
-  if (tier === 'silver' || tier === 'gold') {
-    const secondRoll = Math.floor(rng() * pool.length);
-    idx = Math.max(idx, secondRoll);
-  }
-  const speciesId = pool[idx] ?? 'pyrocube';
-  const levelSpan = tierMeta.maxLevel - tierMeta.minLevel + 1;
-  const level = tierMeta.minLevel + Math.floor(rng() * levelSpan);
-  return createOwnedCreature(speciesId, level, tierMeta.statBonus);
-}
-
-export function collectCookedCreature(
-  save: SaveState,
-  rng: RngFn = Math.random,
-): { nextSave: SaveState; creature: OwnedCreature | null } {
-  if (save.pot.status !== 'ready' || !save.pot.recipeId) {
-    return { nextSave: save, creature: null };
-  }
-  const recipe = RECIPE_BY_ID[save.pot.recipeId] ?? RECIPES[RECIPES.length - 1];
-  const creature = rollCreatureFromPot(save.pot.tier, recipe, rng);
-
-  const nextDiscovered = save.discoveredSpeciesIds.includes(creature.speciesId)
-    ? save.discoveredSpeciesIds
-    : [...save.discoveredSpeciesIds, creature.speciesId];
-
-  const nextSave: SaveState = {
-    ...save,
-    roster: [...save.roster, creature],
-    discoveredSpeciesIds: nextDiscovered,
-    pot: {
-      ...save.pot,
-      slots: [null, null, null, null, null],
-      status: 'idle',
-      recipeId: null,
-      expeditionsRemaining: 0,
-      expeditionsTotal: 0,
-    },
-  };
-  return { nextSave, creature };
-}
-
-/**
  * Ajoute une Pierre de Pouvoir au sac. Au-delà de la limite, on retire les plus ANCIENNES pierres
  * NON équipées. (Avant : un simple `.slice(0, 48)` pouvait jeter une pierre encore équipée, dont
  * le bonus disparaissait alors sans prévenir.)
@@ -850,7 +695,7 @@ export function generatePowerStone(
 }
 
 /**
- * Apply expedition outcome rewards, XP, level-ups, pot cooking tick, quest tracking, and unlocks
+ * Apply expedition outcome rewards, XP, level-ups, quest tracking, and unlocks
  */
 export function applyExpeditionRewards(
   save: SaveState,
@@ -923,19 +768,6 @@ export function applyExpeditionRewards(
     if (firstClear) baitsWon.push(biome.dominantElement);
   }
 
-  // Drops
-  const droppedIngredientsMap: Record<string, number> = {};
-  const dropCount = victory ? 5 : Math.max(1, stats.wavesCleared);
-  for (let i = 0; i < dropCount; i++) {
-    const id = stage.dropIngredients[Math.floor(rng() * stage.dropIngredients.length)];
-    droppedIngredientsMap[id] = (droppedIngredientsMap[id] ?? 0) + 1;
-  }
-
-  const nextIngredients = { ...save.ingredients };
-  for (const [id, count] of Object.entries(droppedIngredientsMap)) {
-    nextIngredients[id] = (nextIngredients[id] ?? 0) + count;
-  }
-
   const droppedStone = victory ? generatePowerStone(stage.stonePowerRange, rng) : null;
   const nextPowerStones = droppedStone
     ? addPowerStoneToBag(save.powerStones, save.roster, droppedStone)
@@ -951,20 +783,7 @@ export function applyExpeditionRewards(
     nextRuneBag[droppedRune] = (nextRuneBag[droppedRune] ?? 0) + 1;
   }
 
-  // Advance Cooking Pot if cooking
-  let nextPot = { ...save.pot };
-  let potReadyNow = false;
-  if (nextPot.status === 'cooking') {
-    const remaining = Math.max(0, nextPot.expeditionsRemaining - 1);
-    nextPot = {
-      ...nextPot,
-      expeditionsRemaining: remaining,
-      status: remaining === 0 ? 'ready' : 'cooking',
-    };
-    if (remaining === 0) potReadyNow = true;
-  }
-
-  // Stage & Pot unlocks
+  // Niveaux débloqués
   let highestStageIndex = save.highestStageIndex;
   let unlockedNextStageName: string | null = null;
   const completedStageIds = save.completedStageIds.includes(stage.id)
@@ -982,21 +801,6 @@ export function applyExpeditionRewards(
   let unlockedBiomeName: string | null = null;
   if (unlockedNextStageName && STAGES[highestStageIndex].biomeId !== stage.biomeId) {
     unlockedBiomeName = BIOMES[STAGES[highestStageIndex].biomeId].name;
-  }
-
-  const unlockedPotTiers = [...save.unlockedPotTiers];
-  let unlockedPotTier: PotTier | null = null;
-  if (victory) {
-    if (stage.id === 'meadow-3' && !unlockedPotTiers.includes('bronze')) {
-      unlockedPotTiers.push('bronze');
-      unlockedPotTier = 'bronze';
-    } else if (stage.id === 'shore-3' && !unlockedPotTiers.includes('silver')) {
-      unlockedPotTiers.push('silver');
-      unlockedPotTier = 'silver';
-    } else if (stage.id === 'volcano-3' && !unlockedPotTiers.includes('gold')) {
-      unlockedPotTiers.push('gold');
-      unlockedPotTier = 'gold';
-    }
   }
 
   // Discover boss species on sight
@@ -1054,11 +858,8 @@ export function applyExpeditionRewards(
   const baseNextSave: SaveState = {
     ...save,
     roster: nextRoster,
-    ingredients: nextIngredients,
     powerStones: nextPowerStones,
     runeBag: nextRuneBag,
-    pot: nextPot,
-    unlockedPotTiers,
     highestStageIndex,
     completedStageIds,
     discoveredSpeciesIds: nextDiscovered,
@@ -1097,18 +898,12 @@ export function applyExpeditionRewards(
     perfectDodges,
     triosTriggered,
     xpPerUnit,
-    droppedIngredients: Object.entries(droppedIngredientsMap).map(([id, count]) => ({
-      id,
-      count,
-    })),
     droppedStone,
     droppedRune,
     leveledUpNames,
     levelUps,
-    potReadyNow,
     unlockedNextStageName,
     unlockedBiomeName,
-    unlockedPotTier,
     stars,
     previousStars,
     koCount,
@@ -1385,16 +1180,6 @@ export function createInitialSaveState(
     starterChosen,
     squadIds: [starter.uid, companionA.uid, companionB.uid],
     roster: [starter, companionA, companionB],
-    ingredients: {
-      ruby_berry: 6,
-      crimson_root: 2,
-      azure_drop: 6,
-      frost_crystal: 2,
-      sun_pollen: 6,
-      amber_honey: 2,
-      pebble_gray: 5,
-      mystic_shard: 1,
-    },
     powerStones: startingStones,
     runeBag: {
       rune_ampleur: 1,
@@ -1404,21 +1189,11 @@ export function createInitialSaveState(
       rune_precision: 0,
       rune_vigueur: 0,
     },
-    pot: {
-      tier: 'iron',
-      slots: [null, null, null, null, null],
-      status: 'idle',
-      recipeId: null,
-      expeditionsRemaining: 0,
-      expeditionsTotal: 0,
-    },
-    unlockedPotTiers: ['iron'],
     highestStageIndex: 0,
     completedStageIds: [],
     discoveredSpeciesIds: Array.from(
       new Set([starter.speciesId, companionA.speciesId, companionB.speciesId]),
     ),
-    discoveredRecipeIds: [],
     expeditionsCompleted: 0,
     stats: createEmptyStats(),
     activeQuests: createInitialQuests(),
@@ -1439,6 +1214,7 @@ export function createInitialSaveState(
     duplicates: {},
     variantsUnlocked: [],
     variantsOn: [],
+    kitchenConversion: null,
   };
 }
 
@@ -1447,13 +1223,11 @@ export function createEmptyStats(): PlayerStats {
     expeditionsWon: 0,
     burstsTriggered: 0,
     ultimatesUsed: 0,
-    dishesCooked: 0,
     evolutionsDone: 0,
     perfectDodges: 0,
     bossesDefeated: 0,
     triosTriggered: 0,
     frontierWins: 0,
-    frontierDishes: 0,
   };
 }
 
@@ -1487,13 +1261,11 @@ export function recordPlayerProgress(
     expeditionsWon: prevStats.expeditionsWon + (deltas.expeditionsWon ?? 0),
     burstsTriggered: prevStats.burstsTriggered + (deltas.burstsTriggered ?? 0),
     ultimatesUsed: prevStats.ultimatesUsed + (deltas.ultimatesUsed ?? 0),
-    dishesCooked: prevStats.dishesCooked + (deltas.dishesCooked ?? 0),
     evolutionsDone: prevStats.evolutionsDone + (deltas.evolutionsDone ?? 0),
     perfectDodges: prevStats.perfectDodges + (deltas.perfectDodges ?? 0),
     bossesDefeated: prevStats.bossesDefeated + (deltas.bossesDefeated ?? 0),
     triosTriggered: (prevStats.triosTriggered ?? 0) + (deltas.triosTriggered ?? 0),
     frontierWins: (prevStats.frontierWins ?? 0) + (deltas.frontierWins ?? 0),
-    frontierDishes: (prevStats.frontierDishes ?? 0) + (deltas.frontierDishes ?? 0),
   };
 
   const nextQuests = (save.activeQuests ?? createInitialQuests()).map((q) => {
@@ -1504,21 +1276,17 @@ export function recordPlayerProgress(
           ? deltas.burstsTriggered ?? 0
           : q.metric === 'ultimatesUsed'
             ? deltas.ultimatesUsed ?? 0
-            : q.metric === 'dishesCooked'
-              ? deltas.dishesCooked ?? 0
-              : q.metric === 'perfectDodges'
-                ? deltas.perfectDodges ?? 0
-                : q.metric === 'bossesDefeated'
-                  ? deltas.bossesDefeated ?? 0
-                  : q.metric === 'evolutionsDone'
-                    ? deltas.evolutionsDone ?? 0
-                    : q.metric === 'frontierWins'
-                      ? deltas.frontierWins ?? 0
-                      : q.metric === 'frontierDishes'
-                        ? deltas.frontierDishes ?? 0
-                        : q.metric === 'triosTriggered'
-                          ? deltas.triosTriggered ?? 0
-                          : 0;
+            : q.metric === 'perfectDodges'
+              ? deltas.perfectDodges ?? 0
+              : q.metric === 'bossesDefeated'
+                ? deltas.bossesDefeated ?? 0
+                : q.metric === 'evolutionsDone'
+                  ? deltas.evolutionsDone ?? 0
+                  : q.metric === 'frontierWins'
+                    ? deltas.frontierWins ?? 0
+                    : q.metric === 'triosTriggered'
+                      ? deltas.triosTriggered ?? 0
+                      : 0;
     if (inc <= 0) return q;
     return {
       ...q,
@@ -1538,10 +1306,10 @@ function applyRewardToSave(
   reward: QuestReward,
   rng: RngFn = Math.random,
 ): SaveState {
-  const nextIngredients = { ...save.ingredients };
-  if (reward.ingredients) {
-    for (const [id, qty] of Object.entries(reward.ingredients)) {
-      nextIngredients[id] = (nextIngredients[id] ?? 0) + qty;
+  const nextBaits = { ...save.baits };
+  if (reward.baits) {
+    for (const [el, qty] of Object.entries(reward.baits) as [ElementType, number][]) {
+      nextBaits[el] = (nextBaits[el] ?? 0) + qty;
     }
   }
 
@@ -1556,12 +1324,13 @@ function applyRewardToSave(
     nextPowerStones = addPowerStoneToBag(save.powerStones, save.roster, stone);
   }
 
-  return {
+  const rewarded: SaveState = {
     ...save,
-    ingredients: nextIngredients,
+    baits: nextBaits,
     runeBag: nextRuneBag,
     powerStones: nextPowerStones,
   };
+  return reward.cube ? addSealedCubes(rewarded, [reward.cube]).nextSave : rewarded;
 }
 
 export function claimQuestReward(
@@ -1607,8 +1376,6 @@ export function getAchievementProgress(save: SaveState, ach: AchievementDef): nu
       return stats.burstsTriggered;
     case 'ultimatesUsed':
       return stats.ultimatesUsed;
-    case 'dishesCooked':
-      return stats.dishesCooked;
     case 'perfectDodges':
       return stats.perfectDodges;
     case 'bossesDefeated':
@@ -1623,8 +1390,6 @@ export function getAchievementProgress(save: SaveState, ach: AchievementDef): nu
       return stats.triosTriggered;
     case 'frontierWins':
       return stats.frontierWins ?? 0;
-    case 'frontierDishes':
-      return stats.frontierDishes ?? 0;
     case 'tundraStages':
       return getBiomeProgress(save, 'tundra').completed;
     case 'stormStages':
@@ -1659,14 +1424,12 @@ export function countClaimableRewards(save: SaveState): number {
   return questsReady + achReady;
 }
 
-const ALL_POT_TIERS: PotTier[] = ['iron', 'bronze', 'silver', 'gold'];
 const ALL_STONE_RARITIES: StoneRarity[] = ['common', 'bronze', 'silver', 'gold'];
 const ALL_SUBSTAT_TYPES: PowerStoneSubstat['type'][] = ['critRate', 'hitHeal', 'moveSpeed', 'statusRes'];
 const ALL_QUEST_METRICS: QuestMetric[] = [
   'expeditionsWon',
   'burstsTriggered',
   'ultimatesUsed',
-  'dishesCooked',
   'perfectDodges',
   'bossesDefeated',
   'evolutionsDone',
@@ -1674,7 +1437,6 @@ const ALL_QUEST_METRICS: QuestMetric[] = [
   'speciesDiscovered',
   'triosTriggered',
   'frontierWins',
-  'frontierDishes',
   'tundraStages',
   'stormStages',
 ];
@@ -1699,14 +1461,6 @@ function resolveRuneKind(raw: unknown): RuneKind | null {
   if (typeof raw !== 'string') return null;
   if (RUNE_ORDER.includes(raw as RuneKind)) return raw as RuneKind;
   return Object.hasOwn(LEGACY_RUNE_IDS, raw) ? LEGACY_RUNE_IDS[raw] : null;
-}
-
-/** Identifiant de recette actuel pour une valeur lue dans une sauvegarde (ancien nom converti) ; null si inconnu. */
-function resolveRecipeId(raw: unknown): string | null {
-  if (typeof raw !== 'string') return null;
-  if (RECIPE_BY_ID[raw]) return raw;
-  const renamed = Object.hasOwn(LEGACY_RECIPE_IDS, raw) ? LEGACY_RECIPE_IDS[raw] : undefined;
-  return renamed && RECIPE_BY_ID[renamed] ? renamed : null;
 }
 
 /**
@@ -1822,7 +1576,10 @@ function normalizeQuests(raw: unknown): ActiveQuest[] {
     // Les textes et la récompense d'une quête sont copiés dans la sauvegarde : on les reprend du modèle,
     // pour qu'une ancienne sauvegarde n'affiche pas d'ancien nom et ne garde pas d'ancien identifiant.
     const templateId = Object.hasOwn(LEGACY_QUEST_IDS, q.templateId) ? LEGACY_QUEST_IDS[q.templateId] : q.templateId;
-    const tpl = QUEST_POOL.find((t) => t.templateId === templateId);
+    const known = QUEST_POOL.find((t) => t.templateId === templateId);
+    // A2.2 : une quête retirée du jeu (cuisine) est remplacée par une autre, sans toucher aux deux autres
+    const taken = new Set([...quests.map((x) => x.templateId), ...raw.map((x) => (x as Partial<ActiveQuest> | null)?.templateId)]);
+    const tpl = known ?? QUEST_POOL.find((t) => !t.requiresStageIndex && !taken.has(t.templateId));
     if (!tpl) return createInitialQuests();
     quests.push({
       uid: q.uid,
@@ -1830,7 +1587,7 @@ function normalizeQuests(raw: unknown): ActiveQuest[] {
       title: tpl.title,
       description: tpl.description,
       metric: tpl.metric,
-      progress: Math.min(tpl.target, Math.max(0, Number(q.progress) || 0)),
+      progress: known ? Math.min(tpl.target, Math.max(0, Number(q.progress) || 0)) : 0,
       target: tpl.target,
       reward: tpl.reward,
     });
@@ -1839,10 +1596,12 @@ function normalizeQuests(raw: unknown): ActiveQuest[] {
 }
 
 /**
- * Migre une sauvegarde v1, v2 ou v3, ou normalise une v4, sans perdre la progression du joueur.
- * v3 -> v4 : identifiants renommés (runes, recettes) convertis par les tables de `legacyIds.ts` ;
+ * Migre une sauvegarde v1 à v8, ou normalise une v9, sans perdre la progression du joueur.
+ * v1 à v8 -> v9 (A2.2) : l'ancienne cuisine est convertie (`readLegacyKitchen`, legacyIds.ts) : Appâts, cubes
+ * Cristal et Pierre ; chaque doublon d'une lignée déjà possédée donne +1 Lien (★5 au plus) et compte comme doublon.
+ * v3 -> v4 : identifiants renommés (runes) convertis par les tables de `legacyIds.ts` ;
  * les quêtes en cours reprennent les textes et la récompense de leur modèle.
- * v2 -> v3 : ajoute les Runes de Précision et de Vigueur (0) au sac, les stats frontierWins/frontierDishes (0)
+ * v2 -> v3 : ajoute les Runes de Précision et de Vigueur (0) au sac, la stat frontierWins (0)
  * et ouvre la Toundra aux sauvegardes qui avaient déjà vaincu l'ancien dernier niveau.
  *
  * Toute sauvegarde (y compris un JSON importé à la main) est aussi NORMALISÉE : chaque champ est
@@ -1853,8 +1612,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const obj = raw as Partial<SaveState>;
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
-  if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.pot !== 'object') return null;
-  if (!obj.ingredients || typeof obj.ingredients !== 'object') return null;
+  if (!Array.isArray(obj.squadIds)) return null;
   if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== 6 && obj.version !== 7 && obj.version !== 8 && obj.version !== SAVE_VERSION) return null;
 
   // Pierres de Pouvoir : valides, identifiants uniques
@@ -1897,36 +1655,12 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     // v1 à v4 : ancien nom de la statistique (legacyIds.ts) ; l'ancien « meilleur enchaînement » ne devient pas des Trios
     burstsTriggered: toCount(incomingStats.burstsTriggered ?? (incomingStats as Record<string, unknown>)[LEGACY_STAT_FIELDS.bursts]),
     ultimatesUsed: toCount(incomingStats.ultimatesUsed),
-    dishesCooked: toCount(incomingStats.dishesCooked),
     evolutionsDone: toCount(incomingStats.evolutionsDone),
     perfectDodges: toCount(incomingStats.perfectDodges),
     bossesDefeated: Math.max(expeditionsCompleted, toCount(incomingStats.bossesDefeated)),
     triosTriggered: toCount(incomingStats.triosTriggered),
     frontierWins: toCount(incomingStats.frontierWins),
-    frontierDishes: toCount(incomingStats.frontierDishes),
   };
-
-  const ingredients: Record<string, number> = {};
-  for (const [id, qty] of Object.entries(obj.ingredients as Record<string, unknown>)) {
-    if (INGREDIENTS[id]) ingredients[id] = toCount(qty);
-  }
-
-  const unlockedPotTiers = ALL_POT_TIERS.filter(
-    (tier) => tier === 'iron' || (Array.isArray(obj.unlockedPotTiers) && obj.unlockedPotTiers.includes(tier)),
-  );
-
-  // Marmite : palier débloqué, 5 emplacements d'ingrédients connus, état cohérent
-  const rawPot = obj.pot as Partial<SaveState['pot']>;
-  const potSlots = [0, 1, 2, 3, 4].map((i) => {
-    const id = Array.isArray(rawPot.slots) ? rawPot.slots[i] : null;
-    return typeof id === 'string' && INGREDIENTS[id] ? id : null;
-  });
-  const potRecipeId = resolveRecipeId(rawPot.recipeId);
-  const potRemaining = toCount(rawPot.expeditionsRemaining);
-  let potStatus: SaveState['pot']['status'] =
-    rawPot.status === 'cooking' || rawPot.status === 'ready' ? rawPot.status : 'idle';
-  if (!potRecipeId) potStatus = 'idle'; // une cuisson sans recette connue ne peut pas aboutir
-  else if (potStatus === 'cooking' && potRemaining === 0) potStatus = 'ready';
 
   const completedStageIds = uniqueKnown(obj.completedStageIds, (id) => STAGES.some((s) => s.id === id));
   const discoveredSpeciesIds = uniqueKnown(
@@ -1936,33 +1670,19 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     (id) => Boolean(SPECIES[id]),
   );
 
-  return {
+  const migrated: SaveState = {
     version: SAVE_VERSION,
     starterChosen: Boolean(obj.starterChosen),
     squadIds: validSquad,
     roster: validRoster,
-    ingredients,
     powerStones,
     runeBag: normalizeRuneBag(obj.runeBag, (raw as { moveStoneBag?: unknown }).moveStoneBag),
-    pot: {
-      tier: unlockedPotTiers.includes(rawPot.tier as PotTier) ? (rawPot.tier as PotTier) : 'iron',
-      slots: potSlots,
-      status: potStatus,
-      recipeId: potStatus === 'idle' ? null : potRecipeId,
-      expeditionsRemaining: potStatus === 'cooking' ? potRemaining : 0,
-      expeditionsTotal: potStatus === 'idle' ? 0 : Math.max(potRemaining, toCount(rawPot.expeditionsTotal)),
-    },
-    unlockedPotTiers,
     highestStageIndex: computeHighestUnlockedStageIndex(
       completedStageIds,
       Math.max(0, Math.min(STAGES.length - 1, Number(obj.highestStageIndex ?? 0) || 0)),
     ),
     completedStageIds,
     discoveredSpeciesIds,
-    discoveredRecipeIds: uniqueKnown(
-      Array.isArray(obj.discoveredRecipeIds) ? obj.discoveredRecipeIds.map((id) => resolveRecipeId(id) ?? id) : [],
-      (id) => Boolean(RECIPE_BY_ID[id]),
-    ),
     expeditionsCompleted,
     stats,
     activeQuests: normalizeQuests(obj.activeQuests),
@@ -1984,6 +1704,63 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     starTiersClaimed: Array.isArray(obj.starTiersClaimed)
       ? STAR_TIERS.map((t) => t.at).filter((at) => (obj.starTiersClaimed as unknown[]).includes(at))
       : [],
+    kitchenConversion: normalizeKitchenConversion((obj as Record<string, unknown>).kitchenConversion),
+  };
+  return (obj.version as number) < 9 ? convertLegacyKitchen(migrated, obj) : migrated;
+}
+
+/** Bilan de la conversion de la cuisine lu dans une sauvegarde v9 (null s'il est absent ou abîmé). */
+function normalizeKitchenConversion(raw: unknown): KitchenConversion | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const bonds = Number(r.bonds);
+  return { baits: toCount(r.baits), crystal: toCount(r.crystal), stone: toCount(r.stone), bonds: Number.isFinite(bonds) && bonds > 0 ? Math.round(bonds * 10) / 10 : 0 };
+}
+
+/**
+ * v1 à v8 -> v9 (A2.2) : l'ancienne cuisine devient des Appâts et des cubes, les doublons déjà possédés du Lien.
+ * Les créatures restent toutes ; rien n'est tiré au hasard.
+ */
+function convertLegacyKitchen(save: SaveState, raw: object): SaveState {
+  const kitchen = readLegacyKitchen(raw);
+  const baits = { ...save.baits };
+  let baitCount = 0;
+  for (const [el, n] of Object.entries(kitchen.baits) as [ElementType, number][]) {
+    if (n > 0) {
+      baits[el] = (baits[el] ?? 0) + n;
+      baitCount += n;
+    }
+  }
+  // Doublons existants : deux créatures (ou plus) de la même lignée
+  const perLineage: Record<string, number> = {};
+  for (const c of save.roster) {
+    const l = lineageOf(c.speciesId);
+    perLineage[l] = (perLineage[l] ?? 0) + 1;
+  }
+  const bonds = { ...save.bonds };
+  const duplicates = { ...save.duplicates };
+  let bondsGained = 0;
+  for (const [l, count] of Object.entries(perLineage)) {
+    const extra = count - 1;
+    if (extra <= 0) continue;
+    duplicates[l] = (duplicates[l] ?? 0) + extra;
+    const before = bonds[l] ?? 0;
+    bonds[l] = Math.min(SUMMON.bondMax, before + extra);
+    bondsGained += bonds[l] - before;
+  }
+  const materials: CubeMaterial[] = [
+    ...Array<CubeMaterial>(kitchen.crystalCubes).fill('crystal'),
+    ...Array<CubeMaterial>(kitchen.stoneCubes).fill('stone'),
+  ];
+  const { nextSave, added } = addSealedCubes({ ...save, baits, bonds, duplicates }, materials);
+  return {
+    ...nextSave,
+    kitchenConversion: {
+      baits: baitCount,
+      crystal: added.filter((m) => m === 'crystal').length,
+      stone: added.filter((m) => m === 'stone').length,
+      bonds: Math.round(bondsGained * 10) / 10,
+    },
   };
 }
 export function exportSaveToJson(save: SaveState): string {

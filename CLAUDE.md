@@ -1,7 +1,7 @@
 # CubiQuest — guide de travail
 
 RPG 3D voxel (React 19 + Three.js + Vite + Tailwind 4) : un trio de créatures-cubes, des expéditions courtes en temps réel. Textes du jeu en français.
-Tout le contenu est 100 % original : aucun nom, terme, recette ni design repris d'un autre jeu (test des mots interdits : `npm run lexique`).
+Tout le contenu est 100 % original : aucun nom, terme, règle ni design repris d'un autre jeu (test des mots interdits : `npm run lexique`).
 
 ## Cadre du projet
 
@@ -48,10 +48,10 @@ URL utiles en développement (aucune ne touche à la sauvegarde) :
 ```
 src/i18n/fr.ts             TOUS les textes visibles par le joueur. Données pures, n'importe rien.
 src/game/types.ts          Types partagés (SaveState, SpeciesDef, StageDef...). Aucune logique.
-src/game/catalog.ts        DONNÉES : espèces, sorts, pierres, ingrédients, recettes, biomes, niveaux, quêtes, succès.
+src/game/catalog.ts        DONNÉES : espèces, sorts, pierres, raretés d'invocation, biomes, niveaux, quêtes, succès.
 src/game/balance.ts        ÉQUILIBRAGE des niveaux récents (multiplicateurs par niveau, kits de boss). Seul endroit à régler.
 src/game/previewConfigs.ts Escouades de référence par niveau (mode aperçu + simulation).
-src/game/rules.ts          RÈGLES PURES, sans DOM ni Three : dégâts, recettes, évolutions, récompenses, sauvegarde/migrations.
+src/game/rules.ts          RÈGLES PURES, sans DOM ni Three : dégâts, évolutions, récompenses, sauvegarde/migrations (règles du Cube Scellé : `summon.ts`).
 src/game/legacyIds.ts      Anciens identifiants des sauvegardes (tables de conversion). Seul fichier du jeu qui a le droit de les citer.
 src/game/settings.ts       Options de confort (hors SaveState).
 src/game/audio.ts          Sons synthétisés (WebAudio), aucun fichier audio.
@@ -92,7 +92,7 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | `loop.ts` | Boucle : cadence d'affichage et pas de jeu `advance` (commun au temps réel et au headless). |
 | `camera.ts` | Cadrage selon le format d'écran, suivi de l'escouade, tremblement. |
 | `atmosphere.ts` | Météo du biome, éclairage, éclairs, cycle jour/nuit du camp. |
-| `camp.ts` | Scène du camp, marmite, promeneurs ; `clearGroup` / `disposeObject`. |
+| `camp.ts` | Scène du camp, atelier central, promeneurs ; `clearGroup` / `disposeObject`. |
 | `evolution.ts` | Séquence d'évolution jouée au camp. |
 | `expedition.ts` | Départ, vagues, pas de combat (`updateExpedition`), défaite / victoire, envoi du résultat. |
 | `allies.ts` | Alliés : déplacement, attaque de base, sort automatique. |
@@ -115,7 +115,7 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 | --- | --- |
 | `shared.ts` | Textures générées une fois, brique `makeBox`. |
 | `creatures.ts` | Créatures par silhouette (`archetype`), barre de vie. |
-| `campProps.ts` | Marmite et totem du camp. |
+| `campProps.ts` | Atelier (modèle provisoire, `buildWorkbenchProp`) et totem du camp. |
 | `biomes.ts` | Sol, décor instancié et éléments propres à chaque biome. |
 | `floatingText.ts` | Texte flottant (pool fixe). |
 
@@ -135,7 +135,7 @@ Chaque module exporte des fonctions qui reçoivent le moteur en premier argument
 - **Textes** : tout texte visible vit dans `src/i18n/fr.ts` (`FR.ui.<composant>`, `FR.engine`, `FR.rules`, `FR.balance`, `FR.catalog.<TABLE>.<id>`). Un texte à trous est une fonction (`FR.ui.teamDrawer.nivRequis(niveau)`). Pour une nouvelle créature : ses données dans `catalog.ts`, son nom et ses descriptions dans `fr.ts`. Les noms propres du jeu (`GAME_TITLE`, `WORLD_NAME`, `CREATURE_NOUN`) sont des constantes en tête de `fr.ts` : ne jamais les réécrire en dur dans un texte. `npm run texts` doit rester à zéro. Trois fichiers gardent leurs textes en place : `CodexDrawer.tsx` (Codex, non modifié par prudence), `GalleryPage.tsx` et `DebugOverlay.tsx` (outils de développement).
 - **Règles pures testées** : toute nouvelle règle va dans `rules.ts` avec un test. Les fonctions qui tirent au hasard prennent un `rng` en paramètre (défaut `Math.random`) pour être testables.
 - **Moteur** : une nouvelle fonction va dans le module de `engine/` dont c'est le rôle, sous la forme `export function nom(self: VoxelEngine, ...)`. Viser moins de 800 lignes par fichier.
-- **Sauvegarde** : si la forme de `SaveState` change, incrémenter `SAVE_VERSION` (8 aujourd'hui), compléter `migrateSaveState` et tester depuis toutes les versions précédentes (`saveV3.fixture.ts` est une vraie sauvegarde v3). Un identifiant renommé s'ajoute à `legacyIds.ts` : une ancienne sauvegarde se charge toujours, un identifiant inconnu est ignoré sans erreur. Les quêtes en cours reprennent textes et récompense de leur modèle au chargement. `migrateSaveState` normalise TOUT ce qu'il lit (créatures, pierres, marmite, quêtes) : y ajouter chaque nouveau champ. La clé de stockage ne change pas.
+- **Sauvegarde** : si la forme de `SaveState` change, incrémenter `SAVE_VERSION` (9 aujourd'hui), compléter `migrateSaveState` et tester depuis toutes les versions précédentes (`saveV3.fixture.ts` est une vraie sauvegarde v3 ; `saveKitchen.fixture.ts` porte l'ancienne cuisine des v1 à v8, convertie en Appâts, cubes et Lien par `readLegacyKitchen`, legacyIds.ts). Un identifiant renommé s'ajoute à `legacyIds.ts` : une ancienne sauvegarde se charge toujours, un identifiant inconnu est ignoré sans erreur. Les quêtes en cours reprennent textes et récompense de leur modèle au chargement. `migrateSaveState` normalise TOUT ce qu'il lit (créatures, pierres, cubes, quêtes) : y ajouter chaque nouveau champ. La clé de stockage ne change pas.
 - **Identifiants** en `snake_case` anglais ou sans accent (`glacier_crash`, `givrelin`) ; noms affichés en français.
 - **Vocabulaire** : celui du lexique du plan (section 5.12) : Esquive (`dodge`), Rune (`rune_*`, `RuneKind`, `runeBag`), Déchaînement, le Camp, Galets (affichage des `powerStone*`), Fragment Mystique. Aucun terme venu d'un autre jeu : `lexique.test.ts` échoue sinon.
 - **Performance** : géométries/matériaux partagés, `InstancedMesh` pour tout ce qui se répète, pools à taille fixe (particules 320, météo 96, éclairs 6, texte flottant 28). Tout objet retiré de la scène passe par `disposeObject()`. Mesurer avec `?debug=1` avant et après.

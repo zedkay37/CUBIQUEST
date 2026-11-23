@@ -36,11 +36,6 @@ export type StoneKind = 'atk' | 'hp';
 export type StoneSlotType = 'atk' | 'hp' | 'flex';
 export type StoneRarity = 'common' | 'bronze' | 'silver' | 'gold';
 
-export type PotTier = 'iron' | 'bronze' | 'silver' | 'gold';
-
-export type IngredientColor = 'red' | 'blue' | 'yellow' | 'gray';
-export type IngredientRarity = 'common' | 'rare' | 'mystic';
-
 export type BiomeId = 'meadow' | 'shore' | 'volcano' | 'sanctuary' | 'tundra' | 'stormpeak' | 'canyon';
 
 /** Jeu de mécaniques télégraphiées d'un boss (voir VoxelEngine, IA 'boss'). */
@@ -141,38 +136,6 @@ export interface ComputedCreatureStats {
   statusRes: number; // 0..100
 }
 
-export interface IngredientDef {
-  id: string;
-  name: string;
-  color: IngredientColor;
-  rarity: IngredientRarity;
-  hex: string;
-  accentHex: string;
-  description: string;
-}
-
-export interface RecipeDef {
-  id: string;
-  name: string;
-  soupHex: string;
-  cookExpeditions: number;
-  description: string;
-  hint: string;
-  targetElement?: ElementType;
-  poolSpeciesIds: string[];
-  /** Recette des nouveaux biomes (compte pour la statistique frontierDishes). */
-  frontier?: boolean;
-}
-
-export interface PotState {
-  tier: PotTier;
-  slots: (string | null)[]; // 5 ingredient IDs
-  status: 'idle' | 'cooking' | 'ready';
-  recipeId: string | null;
-  expeditionsRemaining: number;
-  expeditionsTotal: number;
-}
-
 export interface StageWaveDef {
   enemies: {
     speciesId: string;
@@ -191,7 +154,6 @@ export interface StageDef {
   recommendedPower: number;
   bossSpeciesId: string;
   waves: StageWaveDef[];
-  dropIngredients: string[];
   stonePowerRange: [number, number];
   xpReward: number;
   /**
@@ -251,7 +213,6 @@ export type QuestMetric =
   | 'expeditionsWon'
   | 'burstsTriggered'
   | 'ultimatesUsed'
-  | 'dishesCooked'
   | 'perfectDodges'
   | 'bossesDefeated'
   | 'evolutionsDone'
@@ -260,13 +221,14 @@ export type QuestMetric =
   | 'triosTriggered'
   // Giga Update
   | 'frontierWins'
-  | 'frontierDishes'
   | 'tundraStages'
   | 'stormStages';
 
 export interface QuestReward {
   label: string;
-  ingredients?: Record<string, number>;
+  /** Appâts par élément (spec Atelier, A2.2 : remplacent les anciennes récompenses de la cuisine). */
+  baits?: Partial<Record<ElementType, number>>;
+  cube?: 'wood' | 'stone' | 'crystal' | 'prism';
   rune?: RuneKind;
   powerStoneRange?: [number, number];
   guaranteedRarity?: StoneRarity;
@@ -307,15 +269,12 @@ export interface PlayerStats {
   expeditionsWon: number;
   burstsTriggered: number;
   ultimatesUsed: number;
-  dishesCooked: number;
   evolutionsDone: number;
   perfectDodges: number;
   bossesDefeated: number;
   triosTriggered: number;
   /** v3 — victoires dans la Toundra Boréale / la Cime des Orages. */
   frontierWins: number;
-  /** v3 — cuissons lancées avec une recette des nouveaux biomes. */
-  frontierDishes: number;
 }
 
 export interface SaveState {
@@ -323,15 +282,11 @@ export interface SaveState {
   starterChosen: boolean;
   squadIds: string[]; // up to 3 OwnedCreature uids
   roster: OwnedCreature[];
-  ingredients: Record<string, number>;
   powerStones: PowerStone[];
   runeBag: Record<RuneKind, number>;
-  pot: PotState;
-  unlockedPotTiers: PotTier[];
   highestStageIndex: number; // 0..STAGES.length-1 unlocked
   completedStageIds: string[];
   discoveredSpeciesIds: string[];
-  discoveredRecipeIds: string[];
   expeditionsCompleted: number;
   stats: PlayerStats;
   activeQuests: ActiveQuest[];
@@ -362,6 +317,18 @@ export interface SaveState {
   duplicates: Record<string, number>;
   variantsUnlocked: string[];
   variantsOn: string[];
+  /**
+   * Ce que l'ancienne cuisine a rapporté à la migration (A2.2), pour l'écran qui présente l'Atelier.
+   * null pour une nouvelle partie, et une fois l'écran vu.
+   */
+  kitchenConversion: KitchenConversion | null;
+}
+
+export interface KitchenConversion {
+  baits: number;
+  crystal: number;
+  stone: number;
+  bonds: number;
 }
 
 export interface ExpeditionUnitHud {
@@ -465,17 +432,14 @@ export interface ExpeditionOutcome {
   perfectDodges: number;
   triosTriggered: number;
   xpPerUnit: number;
-  droppedIngredients: { id: string; count: number }[];
   droppedStone: PowerStone | null;
   droppedRune: RuneKind | null;
   leveledUpNames: string[];
   /** Montées de niveau détaillées (écran de fin). */
   levelUps: { speciesId: string; from: number; to: number }[];
-  potReadyNow: boolean;
   unlockedNextStageName: string | null;
   /** Nom du biome qui vient de s'ouvrir (quand le niveau débloqué est le premier d'un nouveau biome). */
   unlockedBiomeName: string | null;
-  unlockedPotTier: PotTier | null;
   /** Étoiles gagnées dans ce combat, et celles déjà acquises avant lui. */
   stars: StageStars;
   previousStars: StageStars;

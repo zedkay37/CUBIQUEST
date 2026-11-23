@@ -83,7 +83,7 @@ Le ventre (`belly`) est toujours une version très claire du corps ou un crème 
 ### 1.6 Textes de créature (`dexNote`)
 
 Une seule phrase, 80 à 110 caractères, au présent, ton tendre et légèrement amusé. Elle raconte une habitude concrète ou un lien avec le camp, pas des statistiques.
-Exemples : « Sa queue cubique crépite plus fort lorsqu'une bonne marmite mijote au camp. » · « Il se love autour des paratonnerres pour faire la sieste et se réveille chargé à bloc. »
+Exemples : « Sa queue cubique crépite plus fort quand le feu du camp s'allume le soir. » · « Il se love autour des paratonnerres pour faire la sieste et se réveille chargé à bloc. »
 Le stade final a une phrase plus solennelle, de l'ordre de la légende locale.
 
 ### 1.7 Statistiques
@@ -130,7 +130,7 @@ Lecture : le total PV + ATQ est d'environ 250–290 au stade de base, 390–485 
 - IA disponibles : `chaser` (poursuite au contact), `kiter` (garde ses distances et tire), `charger` (télégraphe en ligne puis ruée), `boss`.
 - Les niveaux d'ennemis montent d'environ +3 par niveau de jeu ; le boss a 2 à 3 niveaux de plus que son escorte.
 - Le boss du 3e niveau d'un biome est le stade final d'une lignée emblématique du biome et a **3 phases** ; les autres boss en ont 2. Le boss est une espèce normale, agrandie (x1,48).
-- Butin : 3 ou 4 ingrédients par niveau (dont ceux du biome), une plage de puissance de Pierres, de l'XP. Tout croît régulièrement d'un niveau au suivant.
+- Butin : une plage de puissance de Pierres, de l'XP ; à la première victoire, un Appât de l'élément dominant du biome et un Cube Scellé. Tout croît régulièrement d'un niveau au suivant.
 - Les vagues mêlent les espèces du biome et des visiteurs d'autres biomes (jamais un seul élément).
 
 ### 3.2 Identité visuelle d'un biome
@@ -158,17 +158,16 @@ Attaques télégraphiées existantes (une zone colorée au sol, puis l'impact) :
 
 Un nouveau boss se compose en choisissant un kit existant ; il ne reçoit pas d'attaque inédite.
 
-## 4. Marmite
+## 4. Atelier (Cube Scellé)
 
-- 12 ingrédients : 4 couleurs (rouge, bleu, jaune, gris), 3 raretés (commun, rare, mystique). Chaque biome récent apporte 2 ingrédients (1 commun, 1 rare).
-- 16 recettes. Une recette = un nom de plat, une couleur de soupe, 1 à 3 expéditions de cuisson, un indice en clair, un vivier de 3 à 7 espèces.
-- Schéma des viviers : recette d'élément ou de lignée = les 3 stades de la lignée, du plus commun au plus rare (les marmites d'argent et d'or favorisent la fin de liste) ; recette « débutant » = 4 à 6 espèces de base ; recette « d'élite » = 6 ou 7 stades avancés.
-- Noms de plats : cuisine familière + touche d'élément ou de lieu (« Soupe Ardente », « Tajine Tonnerre », « Meringue Céleste »).
+- Les créatures se recrutent à l'Atelier en ouvrant des Cubes Scellés (Bois, Pierre, Cristal, Prisme). Chaque nouvelle lignée donne à sa forme de base une rareté d'invocation dans `SUMMON_RARITY` (catalog.ts) : commune, peu commune ou rare. Seules les formes de base sortent des cubes ; la forme éveillée (stade 2) ne sort que d'un cube Prisme, pour une lignée déjà recrutée.
+- Les réglages (chances par matière, jauge d'Éveil, Appâts, Lien) vivent dans `SUMMON` (balance.ts), les règles dans `summon.ts`.
+- Un Appât porte un élément ; il oriente le tirage vers cet élément.
 
 ## 5. Ton des textes
 
-- Français, vouvoiement du joueur dans l'interface (« Placez 5 ingrédients », « Préparez l'Esquive ! »).
-- Registre chaleureux et clair, jamais ironique ni sombre. Vocabulaire du camp, de la cuisine et de l'exploration.
+- Français, vouvoiement du joueur dans l'interface (« Ouvrez un Cube Scellé », « Préparez l'Esquive ! »).
+- Registre chaleureux et clair, jamais ironique ni sombre. Vocabulaire du camp, de l'atelier et de l'exploration.
 - Annonces de combat en capitales avec point d'exclamation (« ALERTE BOSS ! », « TRIO ! », « DÉCHAÎNEMENT ! »).
 - Consignes de boss : nom de l'attaque, tiret, action à faire (« Anneau de Givre — collez-vous au boss ! »).
 - Typographie française : espace avant `!` `?` `:`, guillemets « », apostrophe courbe dans les textes du catalogue.

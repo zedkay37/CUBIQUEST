@@ -44,7 +44,6 @@ $screens = [ordered]@{
   'camp-nuit'      = '?autostart=1&hour=0.8'
   'expeditions'    = '?autostart=1&ui=expeditions'
   'equipe'         = '?autostart=1&ui=team'
-  'marmite'        = '?autostart=1&ui=cooking'
   'quetes'         = '?autostart=1&ui=quests'
   'codex'          = '?autostart=1&ui=codex'
   'combat'         = '?stage=tundra-1'

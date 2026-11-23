@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Play, X } from 'lucide-react';
-import { BIOME_ORDER, BIOMES, ELEMENT_META, INGREDIENTS, SPECIES, STAGES } from '../game/catalog';
+import { BIOME_ORDER, BIOMES, ELEMENT_META, SPECIES, STAGES } from '../game/catalog';
 import { challengeText, computeSquadPower, isBiomeUnlocked, nextStarTier, stageBaseXp, totalStars } from '../game/rules';
 import { STAGE_CHALLENGES } from '../game/catalog';
 import type { StageStars } from '../game/types';
@@ -248,27 +248,9 @@ export function ExpeditionDrawer({
 
               <div className="border-t border-[#283247] pt-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1] mb-2">
-                  {FR.ui.expeditionDrawer.butinIngredients}
+                  {FR.ui.expeditionDrawer.butin}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {activeStage.dropIngredients.map((ingId) => {
-                    const ing = INGREDIENTS[ingId];
-                    if (!ing) return null;
-                    return (
-                      <span
-                        key={ingId}
-                        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded bg-[#222B3D] border border-[#344056]"
-                      >
-                        <span
-                          className="w-2.5 h-2.5 rounded-xs"
-                          style={{ backgroundColor: ing.hex }}
-                        />
-                        {ing.name}
-                      </span>
-                    );
-                  })}
-                </div>
-                <p className="mt-2.5 text-xs text-[#B8C2D1]">
+                <p className="text-xs text-[#B8C2D1]">
                   {FR.ui.expeditionDrawer.pierresDePouvoir}{' '}
                   <strong className="font-mono-num text-[#F4B942]">
                     +{activeStage.stonePowerRange[0]}{FR.ui.expeditionDrawer.a}{activeStage.stonePowerRange[1]}

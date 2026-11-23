@@ -4,7 +4,7 @@
  *   cliquer sur le bouton de l'écran ouvert le referme ;
  * - Échap ferme la fenêtre du dessus, quelle qu'elle soit.
  */
-export type DockTab = 'expeditions' | 'cooking' | 'team' | 'quests' | 'codex';
+export type DockTab = 'expeditions' | 'team' | 'quests' | 'codex';
 
 export function nextDrawer(current: DockTab | null, clicked: DockTab): DockTab | null {
   return current === clicked ? null : clicked;

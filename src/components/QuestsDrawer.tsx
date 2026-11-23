@@ -10,13 +10,13 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { ACHIEVEMENTS, INGREDIENTS, RUNES, STAGES } from '../game/catalog';
+import { ACHIEVEMENTS, ELEMENT_META, RUNES, STAGES } from '../game/catalog';
 import {
   exportSaveToJson,
   getAchievementProgress,
   importSaveFromJson,
 } from '../game/rules';
-import type { QuestReward, SaveState } from '../game/types';
+import type { ElementType, QuestReward, SaveState } from '../game/types';
 import { JournalPanel } from './JournalPanel';
 import { BlockButton } from './ui';
 import { FR, GAME_TITLE } from '../i18n/fr';
@@ -37,12 +37,12 @@ interface QuestsDrawerProps {
 
 function formatRewardSummary(reward: QuestReward): string {
   const parts: string[] = [];
-  if (reward.ingredients) {
-    for (const [id, qty] of Object.entries(reward.ingredients)) {
-      const name = INGREDIENTS[id]?.name ?? id;
-      parts.push(`+${qty} ${name}`);
+  if (reward.baits) {
+    for (const [el, qty] of Object.entries(reward.baits)) {
+      if (qty) parts.push(FR.ui.questsDrawer.appat(qty, ELEMENT_META[el as ElementType].label));
     }
   }
+  if (reward.cube) parts.push(FR.ui.questsDrawer.cube(FR.ui.questsDrawer.matieres[reward.cube]));
   if (reward.powerStoneRange) {
     const rarityLabel =
       reward.guaranteedRarity === 'gold'

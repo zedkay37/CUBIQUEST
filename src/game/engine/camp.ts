@@ -1,14 +1,14 @@
 /**
- * Le Camp : construction de la scène, marmite, créatures qui se promènent.
+ * Le Camp : construction de la scène, atelier central, créatures qui se promènent.
  */
 import * as THREE from 'three';
 import { soundFx } from '../audio';
-import { BIOMES, RECIPE_BY_ID } from '../catalog';
+import { BIOMES } from '../catalog';
 import type { OwnedCreature } from '../types';
 import {
   buildBiomeEnvironment,
   buildCampLandmark,
-  buildCookingPotProp,
+  buildWorkbenchProp,
   buildVoxelCreature,
 } from '../voxelModels';
 import { animateRigPose } from './actors';
@@ -47,8 +47,6 @@ export function disposeObject(self: VoxelEngine, obj: THREE.Object3D): void {
 export function loadCampScene(
   self: VoxelEngine,
   squadCreatures: OwnedCreature[],
-  potRecipeId: string | null,
-  potStatus: 'idle' | 'cooking' | 'ready',
 ): void {
   self.playMode = 'camp';
   self.activeStage = null;
@@ -90,17 +88,17 @@ export function loadCampScene(
   landmark.position.set(4.5, 0, -5.5);
   self.worldGroup.add(landmark);
 
-  // Central Cooking Pot
-  const pot = buildCookingPotProp();
-  pot.group.position.set(0, 0, -1.2);
-  self.worldGroup.add(pot.group);
-  self.potLiquidMesh = pot.liquidMesh;
-  self.potFireMesh = pot.fireMesh;
+  // Atelier central
+  const workbench = buildWorkbenchProp();
+  workbench.group.position.set(0, 0, -1.2);
+  self.worldGroup.add(workbench.group);
+  self.workbenchLiquidMesh = workbench.liquidMesh;
+  self.workbenchFireMesh = workbench.fireMesh;
 
   // Lueur du feu : éteinte de jour, elle éclaire le cœur du camp la nuit
-  self.potLight = new THREE.PointLight('#FFAE5A', 0, 19, 1.5);
-  self.potLight.position.set(0, 2.1, -0.4);
-  self.worldGroup.add(self.potLight);
+  self.workbenchLight = new THREE.PointLight('#FFAE5A', 0, 19, 1.5);
+  self.workbenchLight.position.set(0, 2.1, -0.4);
+  self.worldGroup.add(self.workbenchLight);
 
   // Étoiles : petits cubes lointains, invisibles de jour (une seule InstancedMesh)
   const starCount = 90;
@@ -123,7 +121,7 @@ export function loadCampScene(
   stars.frustumCulled = false;
   self.worldGroup.add(stars);
   self.campStars = stars;
-  setPotVisual(self, potRecipeId, potStatus);
+  setWorkbenchVisual(self);
 
   // Spawn active squad roaming happily around the camp
   squadCreatures.slice(0, 3).forEach((c, idx) => {
@@ -158,36 +156,28 @@ export function loadCampScene(
   self.renderer?.render(self.scene, self.camera);
 }
 
-export function setPotVisual(self: VoxelEngine, recipeId: string | null, status: 'idle' | 'cooking' | 'ready'): void {
-  if (!self.potLiquidMesh) return;
-  const mat = self.potLiquidMesh.material as THREE.MeshStandardMaterial;
-  if (status === 'idle') {
-    self.potCookingColor = null;
-    mat.color.set('#38BDF8');
-    mat.emissive.set('#0284C7');
-    mat.emissiveIntensity = 0.2;
-  } else {
-    const hex = (recipeId && RECIPE_BY_ID[recipeId]?.soupHex) || '#F59E0B';
-    self.potCookingColor = hex;
-    mat.color.set(hex);
-    mat.emissive.set(hex);
-    mat.emissiveIntensity = status === 'ready' ? 0.75 : 0.42;
-  }
+/** Couleur de repos du liquide de l'atelier (l'ancienne couleur « au repos », inchangée). */
+export function setWorkbenchVisual(self: VoxelEngine): void {
+  if (!self.workbenchLiquidMesh) return;
+  const mat = self.workbenchLiquidMesh.material as THREE.MeshStandardMaterial;
+  mat.color.set('#38BDF8');
+  mat.emissive.set('#0284C7');
+  mat.emissiveIntensity = 0.2;
 }
 
 export function updateCamp(self: VoxelEngine, dt: number): void {
   updateDayNight(self, dt);
   updateEvolution(self, dt);
 
-  // Animate cooking pot embers & steam cubes
-  if (self.potFireMesh) {
+  // Braises et petits cubes de vapeur de l'atelier
+  if (self.workbenchFireMesh) {
     const flicker = 0.92 + Math.sin(self.elapsedTotal * 14) * 0.14;
-    self.potFireMesh.scale.set(flicker, 0.85 + Math.cos(self.elapsedTotal * 11) * 0.22, flicker);
+    self.workbenchFireMesh.scale.set(flicker, 0.85 + Math.cos(self.elapsedTotal * 11) * 0.22, flicker);
   }
-  self.potSteamTimer -= dt;
-  if (self.potSteamTimer <= 0) {
-    self.potSteamTimer = self.potCookingColor ? 0.22 : 0.65;
-    spawnSteamCube(self, 0, 1.65, -1.2, self.potCookingColor ?? '#E2F3FF');
+  self.workbenchSteamTimer -= dt;
+  if (self.workbenchSteamTimer <= 0) {
+    self.workbenchSteamTimer = 0.65;
+    spawnSteamCube(self, 0, 1.65, -1.2, '#E2F3FF');
   }
 
   for (const w of self.campWanderers) {

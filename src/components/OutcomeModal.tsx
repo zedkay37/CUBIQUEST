@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { INGREDIENTS, RUNES, POT_TIER_META } from '../game/catalog';
+import { RUNES } from '../game/catalog';
 import { SPECIES, STAGE_CHALLENGES } from '../game/catalog';
 import { XP_KIT } from '../game/balance';
 import { challengeText } from '../game/rules';
@@ -237,43 +237,13 @@ export function OutcomeModal({
             </motion.div>
           )}
 
-          {/* Loot & Progression Summary */}
+          {/* Butin : Galet et Rune */}
+          {(outcome.droppedStone || outcome.droppedRune) && (
           <motion.div
             variants={itemVariants}
             className="mt-3.5 voxel-panel p-3.5 space-y-2.5 text-sm"
           >
-            {outcome.droppedIngredients.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#B8C2D1] mb-1.5">
-                  {FR.ui.outcomeModal.ingredientsRecoltes}
-                </p>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {outcome.droppedIngredients.map((item, i) => {
-                    const ing = INGREDIENTS[item.id];
-                    if (!ing) return null;
-                    return (
-                      <motion.span
-                        key={item.id}
-                        initial={{ opacity: 0, scale: 0.6 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 20, delay: 0.75 + i * 0.08 }}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#222A3A] border border-[#39445A]"
-                      >
-                        <span
-                          className="w-2.5 h-2.5 rounded-xs inline-block"
-                          style={{ backgroundColor: ing.hex }}
-                        />
-                        <span>{ing.name}</span>
-                        <strong className="font-mono-num text-[#F4B942]">×{item.count}</strong>
-                      </motion.span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {(outcome.droppedStone || outcome.droppedRune) && (
-              <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-[#273145]">
+              <div className="flex flex-wrap items-center gap-3">
                 {outcome.droppedStone && (
                   <div className="flex items-center gap-2 text-xs">
                     <StoneIcon kind={outcome.droppedStone.kind} size={20} />
@@ -295,22 +265,8 @@ export function OutcomeModal({
                   </div>
                 )}
               </div>
-            )}
-
-
-            {outcome.potReadyNow && (
-              <p className="text-xs text-[#F4B942] font-bold pt-1 border-t border-[#273145]">
-                {FR.ui.outcomeModal.votrePlatDansLaMarmiteEst}
-              </p>
-            )}
-
-            {outcome.unlockedPotTier && (
-              <p className="text-xs text-[#38BDF8] font-bold pt-1 border-t border-[#273145]">
-                {FR.ui.outcomeModal.nouveauChaudronDebloque}{POT_TIER_META[outcome.unlockedPotTier].label} !
-              </p>
-            )}
-
           </motion.div>
+          )}
 
           {/* Actions : « Suivant » (ou « Réessayer ») mis en avant, toujours visibles (collées en bas quand l'écran défile) */}
           <motion.div variants={itemVariants} className="sticky bottom-0 z-10 -mx-1 mt-5 flex flex-wrap-reverse justify-end gap-2.5 bg-[var(--ui-panel,#1B2130)] px-1 pt-2 pb-1">
