@@ -170,6 +170,8 @@ export class VoxelEngine {
   lessonsPassed: string[] = [];
   /** Sorts lancés à la main (touches 1, 2, 3) dans ce combat. */
   manualCasts = 0;
+  /** Sprint Art : zoom bref de la caméra sur le Déchaînement. */
+  ultZoomTimer = 0;
   lessonTriggerAge = 0;
   /** Mesure du délai « Réessayer » -> première image du combat (overlay ?debug=1). */
   retryClickAt = 0;

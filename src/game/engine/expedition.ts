@@ -81,6 +81,7 @@ export function startExpedition(
   self.resolvingHazard = false;
   self.dodgesUsed = 0;
   self.allyKos = 0;
+  self.ultZoomTimer = 0;
   resetLessonState(self);
   self.hazardsAvoided = 0;
   self.hazardHitsTaken = 0;

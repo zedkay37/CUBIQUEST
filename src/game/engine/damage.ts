@@ -18,6 +18,7 @@ import { spawnElementBurst, spawnParticleBurst, spawnShockwaveRing } from './fx'
 import { emitHudSnapshot } from './hud';
 import type { CombatActor } from './types';
 import type { VoxelEngine } from '../VoxelEngine';
+import { ELEMENT_META } from '../catalog';
 import { LESSON_DODGE } from './lessons';
 import { FR } from '../../i18n/fr';
 
@@ -87,6 +88,10 @@ export function applyDamageToActor(
   }
   target.flashTimer = isHeavy || isCrit ? 0.11 : 0.07;
   target.squashY = 0.76;
+  // Sprint Art : recul visible, et éclat de blocs de la couleur de l'élément (jamais en headless : aucun tirage
+  // aléatoire de plus dans la simulation, golden inchangé)
+  target.rig.root.userData.recoil = isHeavy || isCrit ? 1 : 0.6;
+  if (!self.headless && finalDmg > 0) spawnParticleBurst(self, target.x, 0.9, target.z, fxColor, isHeavy || isCrit ? 10 : 5, 3.2);
   const effectiveness =
     incomingElement && !target.isAlly
       ? getTypeEffectiveness(incomingElement, target.rig.species.element)
@@ -178,6 +183,7 @@ export function applyDamageToActor(
     target.statuses = {};
     if (target.isBoss && !target.isAlly) self.telemetry.bossDefeatedAt = self.expeditionElapsed;
     soundFx.playKo();
+    if (!self.headless) spawnParticleBurst(self, target.x, 0.8, target.z, ELEMENT_META[target.rig.species.element].color, target.isBoss ? 40 : 22, 5.5);
     self.hitstopTimer = Math.max(self.hitstopTimer, target.isBoss ? 0.075 : 0.04);
     self.trauma = Math.min(1, self.trauma + (target.isBoss ? 0.65 : 0.25));
     spawnParticleBurst(

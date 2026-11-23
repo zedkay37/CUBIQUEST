@@ -127,6 +127,7 @@ export function triggerUltimate(self: VoxelEngine): boolean {
   self.ultimateCharge = 0;
   self.ultimateLockTimer = ULTIMATE_CHARGE.lockAfterUltimate;
   self.ultimatesUsed += 1;
+  self.ultZoomTimer = 0.9; // sprint Art : zoom bref de la caméra
   soundFx.playUltimate();
   self.hitstopTimer = 0.085;
   self.trauma = Math.min(1, self.trauma + 0.7);

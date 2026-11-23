@@ -140,18 +140,31 @@ export function animateRigPose(
   const arch = rig.species.archetype;
   // Déphasage par créature : personne ne respire ni ne se balance à l'unisson
   const seed = rig.root.id * 1.37;
-  const hopAmp = arch === 'serpentine' ? 0.08 : 0.24;
-  const hop = isMoving ? Math.abs(Math.sin(walkPhase)) * hopAmp : Math.sin(elapsed * 2.8 + seed) * 0.04;
+  // Sprint Art : démarche selon l'archétype : lourde (golem, cornu, crabe, bélier), sautillante, flottante
+  const heavy = arch === 'golem' || arch === 'horned' || arch === 'crab' || arch === 'ram';
+  const hopAmp = arch === 'serpentine' ? 0.08 : heavy ? 0.1 : 0.3;
+  const hopT = isMoving ? Math.abs(Math.sin(walkPhase)) : 0;
+  const hop = isMoving ? hopT * hopAmp : Math.sin(elapsed * 2.8 + seed) * 0.04;
   const hover = isHoverArchetype(arch) ? 0.16 + Math.sin(elapsed * 3.5 + seed) * 0.12 : 0;
   rig.bodyPivot.position.y = hop + hover;
+  // recul visible après un coup (posé par damage.ts), qui s'efface en 0,2 s
+  const ud = rig.root.userData as { recoil?: number; lastT?: number };
+  const dtPose = Math.max(0, Math.min(0.1, elapsed - (ud.lastT ?? elapsed)));
+  ud.lastT = elapsed;
+  ud.recoil = Math.max(0, (ud.recoil ?? 0) - dtPose * 5);
+  rig.bodyPivot.position.z = -(ud.recoil ?? 0) * 0.18;
 
   // Idle : respiration + regard qui se promène quand la créature est à l'arrêt
   const breath = isMoving ? 0 : Math.sin(elapsed * 2.1 + seed) * 0.022;
-  const sy = squashY * (1 + breath);
+  // squash and stretch : écrasée au contact du sol avant le saut, étirée en l'air (pas pour les flottants)
+  const stretch = isMoving && !isHoverArchetype(arch) && arch !== 'serpentine' ? (heavy ? 0.05 : 0.12) * hopT - (heavy ? 0.06 : 0.14) * Math.max(0, 1 - hopT * 4) : 0;
+  const sy = squashY * (1 + breath + stretch);
   const invXZ = 1 / Math.sqrt(Math.max(0.5, sy));
   rig.bodyPivot.scale.set(invXZ, sy, invXZ);
   rig.bodyPivot.rotation.y = isMoving ? 0 : Math.sin(elapsed * 0.7 + seed) * 0.16;
-  rig.bodyPivot.rotation.x = isMoving ? 0 : Math.sin(elapsed * 1.3 + seed * 0.7) * 0.025;
+  rig.bodyPivot.rotation.x = isMoving ? 0 : Math.sin(elapsed * 1.3 + seed * 0.7) * 0.025 - (ud.recoil ?? 0) * 0.12;
+  // démarche lourde : le corps roule d'un pied sur l'autre
+  rig.bodyPivot.rotation.z = isMoving && heavy ? Math.sin(walkPhase) * 0.08 : 0;
 
   // Leg gait sync (les bras du golem font partie de la démarche)
   rig.legs.forEach((leg, idx) => {

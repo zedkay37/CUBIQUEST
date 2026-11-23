@@ -92,6 +92,12 @@ export function updateCamera(self: VoxelEngine, dt: number): void {
       self.camBackoff += (wanted - self.camBackoff) * (1 - Math.exp(-3 * dt));
       _vecA.set(focusX, 15.8 * self.camBackoff, focusZ + 16.5 * self.camBackoff);
       _vecB.set(focusX, 0.7, focusZ);
+      // Sprint Art : léger balancement d'accompagnement, et zoom bref (0,9 s) sur le Déchaînement
+      _vecA.x += Math.sin(self.expeditionElapsed * 0.35) * 0.6;
+      if (self.ultZoomTimer > 0) {
+        self.ultZoomTimer = Math.max(0, self.ultZoomTimer - dt);
+        _vecA.lerp(_vecB, Math.sin((self.ultZoomTimer / 0.9) * Math.PI) * 0.35);
+      }
     }
   }
 
