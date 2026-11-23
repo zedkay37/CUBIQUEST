@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseVox, voxToSculptDef, writeVox, registerVoxModel, getVoxDef } from './models/voxFile';
+import { parseVox, voxToSculptDef, writeVox, registerVoxModel, getVoxDef, shiftVoxBody } from './models/voxFile';
 import { buildSculptRig } from './models/voxelSculpt';
 import { buildExampleVox } from '../../tools/voxExemple';
 
@@ -102,4 +102,16 @@ test('Vox (BESTIAIRE) : fusion des faces : moins de triangles, même surface, m�
   const strong = stats(2);
   assert.ok(exact.tris < none.tris && strong.tris < exact.tris, `${none.tris} → ${exact.tris} → ${strong.tris}`);
   assert.ok(Math.abs(exact.area - none.area) < 1e-6 && Math.abs(strong.area - none.area) < 1e-6, 'même surface');
+});
+
+test('Vox (BESTIAIRE) : variante de couleur : le corps et les pattes changent de teinte, pas la lueur ni les yeux', () => {
+  const file = readFileSync('tools/vox-studio/references/calcinarque-legendaire.vox');
+  const def = voxToSculptDef(parseVox(toArrayBuffer(new Uint8Array(file))));
+  const shifted = shiftVoxBody(def, () => '#00ff00');
+  def.voxels!.forEach((v, i) => {
+    const w = shifted.voxels![i];
+    const body = v.pi! <= 239 || v.pi! >= 250;
+    assert.equal(w.rgb, body ? '#00ff00' : v.rgb, `indice ${v.pi}`);
+  });
+  assert.ok(def.voxels!.some((v) => v.pi! >= 240 && v.pi! <= 247) && def.voxels!.some((v) => v.pi === 248));
 });

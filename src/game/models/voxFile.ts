@@ -143,6 +143,7 @@ export function voxToSculptDef(model: VoxModel): SculptDef {
       color: p.i === VOX_ROLES.eyeShine ? 'white' : 'primary',
       group: role,
       rgb: model.palette[p.i],
+      pi: p.i,
       ...(inRange(p.i, VOX_ROLES.glow) ? { glow: true } : {}),
     };
   });
@@ -172,6 +173,14 @@ export function voxToSculptDef(model: VoxModel): SculptDef {
     legs: legs.filter((g) => groups.has(g)),
     eyes: ['eyeL', 'eyeR'].filter((g) => groups.has(g)),
   };
+}
+
+/**
+ * BESTIAIRE : variante de couleur d'une lignée. Seuls le corps (1–239) et les pattes (250–255) changent de teinte ;
+ * la lueur d'élément (240–247) et les yeux (248, 249) gardent la couleur de l'élément.
+ */
+export function shiftVoxBody(def: SculptDef, shift: (hex: string) => string): SculptDef {
+  return { ...def, voxels: def.voxels?.map((v) => (v.rgb && v.pi !== undefined && (v.pi <= 239 || v.pi >= 250) ? { ...v, rgb: shift(v.rgb) } : v)) };
 }
 
 /** Modèles `.vox` déposés par le joueur ou essayés dans la galerie, par espèce. Vide par défaut. */

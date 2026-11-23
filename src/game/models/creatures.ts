@@ -9,7 +9,7 @@ import { buildSculptRig, withIsolatedRandom, type SculptPalette } from './voxelS
 import { SCULPT_DEFS } from './sculptDefs';
 import { SCULPT_DEFS_ART1 } from './sculptDefsArt1';
 import { SCULPT_DEFS_ART2 } from './sculptDefsArt2';
-import { getVoxDef } from './voxFile';
+import { getVoxDef, shiftVoxBody } from './voxFile';
 import { ART2_AO_STRENGTH, art2Palette } from './artPalette';
 
 export interface VoxelCreatureRig {
@@ -757,7 +757,10 @@ export function buildSculptCreature(species: SpeciesDef, scaleOverride?: number,
   const glow = species.element === 'fire' || species.element === 'electric' ? 0.45 : 0.25;
   const defs = mode === 'art3' ? SCULPT_DEFS : mode === 'art2' ? SCULPT_DEFS_ART2 : SCULPT_DEFS_ART1;
   // ART3 : un modèle `.vox` facultatif remplace le modèle du code (même lumière, animations et lueurs)
-  const vox = mode === 'art3' ? getVoxDef(species.id) : undefined;
+  const voxRaw = mode === 'art3' ? getVoxDef(species.id) : undefined;
+  // BESTIAIRE : variante de couleur d'une lignée : même rotation de teinte que les modèles du code, mais seulement sur le
+  // corps (1–239) et les pattes (250–255) ; la lueur d'élément (240–247) et les yeux (248, 249) gardent leur couleur
+  const vox = voxRaw && variant ? shiftVoxBody(voxRaw, shift) : voxRaw;
   const parts = buildSculptRig(vox ?? defs[species.id], palette, vox ? VOX_RES : sculptRes, glow, mode === 'art2' ? ART2_AO_STRENGTH : 0.16, false, mode === 'art3', !vox || voxMerge === 'jamais' ? 0 : sculptRes < 14 ? (voxMerge === 'bas' || voxMerge === 'toujours' ? voxFlatLow : 1) : voxMerge === 'toujours' ? 1 : 0); // normales lissées essayées puis écartées (taches sur les faces planes)
   const root = new THREE.Group();
   root.add(parts.bodyPivot);

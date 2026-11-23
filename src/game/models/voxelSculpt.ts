@@ -53,6 +53,8 @@ export interface Voxel {
   glow?: boolean;
   /** ART3 (`.vox`) : couleur propre du bloc, à la place de celle de la palette. */
   rgb?: string;
+  /** BESTIAIRE (`.vox`) : numéro de couleur dans la palette du fichier (rôle : corps, lueur, œil, patte). */
+  pi?: number;
 }
 
 const inside = (s: SculptShape, p: Vec3, mirrorSide: 1 | -1): boolean => {

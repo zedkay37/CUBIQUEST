@@ -22,6 +22,8 @@ const params = new URLSearchParams(window.location.search);
 // &fusion=jamais|toujours|bas : force la fusion des faces des .vox (comparaison de l'image avec et sans)
 const FUSION = params.get('fusion');
 if (FUSION === 'jamais' || FUSION === 'toujours' || FUSION === 'bas') setVoxMerge(FUSION);
+// &variante=1 : la variante de couleur de la lignée
+const VARIANTE = params.get('variante') === '1';
 const SPECIES_ID = SPECIES[params.get('species') ?? ''] ? params.get('species')! : 'magmadrake';
 const FICHIER = params.get('fichier');
 const LOT = (params.get('lot') ?? '')
@@ -200,7 +202,7 @@ export function PlancheGallery() {
     }
 
     // ---- planche d'une créature
-    const rig = buildVoxelCreature(SPECIES_ID);
+    const rig = buildVoxelCreature(SPECIES_ID, undefined, VARIANTE);
     scene.add(rig.root);
     const box = modelBox(rig.root);
     const big = 560;
@@ -295,7 +297,7 @@ export function PlancheGallery() {
   return (
     <div className="min-h-screen bg-[#18161E] p-3 text-[#FAF7F0]">
       <p className="font-display text-xl font-bold text-[#FFAA3C]">
-        {LOT.length ? `Alignement : ${LOT.map((id) => SPECIES[id].name).join(', ')}` : `${name}${FICHIER ? ` — essai : ${FICHIER}.vox` : ''}`}
+        {LOT.length ? `Alignement : ${LOT.map((id) => SPECIES[id].name).join(', ')}` : `${name}${FICHIER ? ` — essai : ${FICHIER}.vox` : ''}${VARIANTE ? ' — variante de couleur' : ''}`}
       </p>
       <p className="text-xs text-[#C8C4D2]">
         Rendu du vrai jeu (constructeur et matières du jeu, lumière des portraits). {info}
