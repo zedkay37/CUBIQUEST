@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { CubeMaterial } from '../game/balance';
 import type { SummonTier } from '../game/summon';
-import { SummonReveal } from './SummonReveal';
+import { SummonReveal, TIER_COLOR } from './SummonReveal';
+import { ObjectPortrait } from './Icons';
+import { SPECIES } from '../game/catalog';
 
 /**
  * `?gallery=reveal` (outil de développement, A2.5) : rejoue la révélation pour chaque rareté et pour un doublon.
@@ -22,24 +24,33 @@ export function RevealGallery() {
   const [run, setRun] = useState(0);
   const c = CASES.find((x) => x.id === current);
   return (
-    <div style={{ minHeight: '100vh', background: '#0F1420', color: '#FAF7F0', padding: 24, fontFamily: 'system-ui' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700 }}>Révélations (outil)</h1>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-        {CASES.map((x) => (
-          <button
-            key={x.id}
-            type="button"
-            onClick={() => {
-              setCurrent(x.id);
-              setRun((r) => r + 1);
-            }}
-            style={{ padding: '10px 14px', borderRadius: 8, border: '2px solid #39445A', background: '#222A3A', color: '#FAF7F0' }}
-          >
-            {x.label}
-          </button>
-        ))}
+    <div className="min-h-screen bg-[#0F1420] px-4 py-8 text-[#FAF7F0] sm:px-8">
+      <div className="mx-auto max-w-4xl">
+        <p className="text-xs font-bold uppercase tracking-wider text-[#F4B942]">Outil de développement</p>
+        <h1 className="font-display text-3xl font-bold">Révélations du Cube Scellé</h1>
+        <p className="mt-1 text-sm text-[#B8C2D1]">Chaque carte rejoue une révélation complète. Tape le cube trois fois (clic, toucher ou Espace) ; maintiens le clic pour accélérer.</p>
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {CASES.map((x) => (
+            <button
+              key={x.id}
+              type="button"
+              onClick={() => {
+                setCurrent(x.id);
+                setRun((r) => r + 1);
+              }}
+              className="voxel-panel voxel-btn flex min-h-[88px] items-center gap-3 rounded-xl px-4 py-3 text-left"
+              style={{ borderLeftColor: TIER_COLOR[x.tier], borderLeftWidth: 6 }}
+            >
+              <ObjectPortrait objectKey={`cube:${x.material}`} size={56} />
+              <span>
+                <span className="block font-display text-lg font-bold">{x.label}</span>
+                <span className="text-xs text-[#94A3B8]">{SPECIES[x.speciesId].name}</span>
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
-      {c && <SummonReveal key={`${c.id}-${run}`} {...c} autoTap={params.get('auto') === '1'} onDone={() => setCurrent(null)} />}
+      {c && <SummonReveal key={`${c.id}-${run}`} {...c} autoTap={params.get('auto') === '1'} startAtResult={params.get('fin') === '1'} onDone={() => setCurrent(null)} />}
     </div>
   );
 }

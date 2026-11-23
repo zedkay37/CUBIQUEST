@@ -29,7 +29,7 @@ function useSkippable(onDone: () => void, autoMs: number): void {
 const CONFETTI = ['#F4B942', '#E85D3F', '#2FB97A', '#38BDF8', '#C084FC', '#FAF7F0'];
 
 /** Confettis voxel en CSS pur (aucun coût côté moteur 3D). */
-export function VoxelConfetti({ count = 30 }: { count?: number }) {
+export function VoxelConfetti({ count = 30, colors = CONFETTI }: { count?: number; colors?: readonly string[] }) {
   const pieces = useMemo(
     () =>
       Array.from({ length: count }, (_, i) => ({
@@ -37,10 +37,10 @@ export function VoxelConfetti({ count = 30 }: { count?: number }) {
         delay: ((i * 53) % 24) / 10,
         duration: 2.4 + ((i * 29) % 18) / 10,
         size: 7 + ((i * 17) % 6),
-        color: CONFETTI[i % CONFETTI.length],
+        color: colors[i % colors.length],
         drift: ((i * 41) % 90) - 45,
       })),
-    [count],
+    [count, colors],
   );
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">

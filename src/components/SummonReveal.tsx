@@ -9,7 +9,15 @@ import { buildSealedCubeModel, disposeModel } from '../game/models/sealedCube';
 import { soundFx } from '../game/audio';
 import { FR } from '../i18n/fr';
 import { ElementIcon, VoxelCreatureAvatar } from './Icons';
-import { usePrefersReducedMotion } from './ui';
+import { ElementBadge, usePrefersReducedMotion } from './ui';
+import { VoxelConfetti } from './ui/moments';
+
+/** Fond de fin de révélation : dégradé de la couleur de rareté (A4.2). */
+const tierGradient = (tier: SummonTier) => {
+  const c = TIER_COLOR[tier];
+  // valeur CSS (pas un texte affiché)
+  return 'radial-gradient(ellipse at 50% 38%,' + c + 'aa 0%,' + c + '33 38%,rgba(5,7,12,0) 78%)';
+};
 
 /** Couleur de rareté (révélée au troisième coup). */
 export const TIER_COLOR: Record<SummonTier, string> = {
@@ -30,6 +38,8 @@ export interface SummonRevealProps {
   firstTime?: boolean;
   /** Outil de captures (`?gallery=reveal&auto=1`) : les trois coups sont donnés tout seuls. */
   autoTap?: boolean;
+  /** Outil de captures (`&fin=1`) : affiche directement l'image finale (le navigateur headless n'anime pas). */
+  startAtResult?: boolean;
   onDone: () => void;
 }
 
@@ -53,22 +63,33 @@ export function SummonReveal(props: SummonRevealProps) {
 function ResultPanel({ speciesId, tier, isNew, bondAfter, variantUnlocked, onDone }: SummonRevealProps) {
   const sp = SPECIES[speciesId];
   const color = TIER_COLOR[tier];
+  const stars = Math.floor(bondAfter);
   return (
-    <div className="pointer-events-auto mt-4 flex flex-col items-center gap-2 text-center">
-      <div className="flex items-center gap-2">
-        <ElementIcon element={sp.element} size={22} />
-        <h2 className="font-display text-4xl font-extrabold text-[#FAF7F0] hud-text-stroke">{sp.name}</h2>
+    <div className="pointer-events-auto flex flex-col items-center gap-2 px-4 text-center">
+      {/* A4.2 : le nom en très grand (trois fois l'ancienne taille), avec un rebond, et son badge d'élément */}
+      <h2
+        className="reveal-name font-display font-extrabold leading-none text-[#FAF7F0] hud-text-stroke"
+        style={{ fontSize: 'clamp(2.75rem, 12vw, 7rem)', textShadow: `0 0 28px ${color}, 0 6px 0 rgba(0,0,0,0.55)` }}
+      >
+        {sp.name}
+      </h2>
+      <div className="reveal-sub">
+        <ElementBadge element={sp.element} />
       </div>
-      <p className="font-display text-lg font-bold" style={{ color }}>
+      <p className="reveal-sub font-display text-xl sm:text-2xl font-bold" style={{ color }}>
         {tier === 'awakened' ? FR.ui.atelier.formeEveillee : isNew ? FR.ui.atelier.nouvelleCreature : FR.ui.atelier.doublon}
       </p>
       {!isNew && (
-        <p className="text-sm text-[#F4B942]" aria-label={FR.ui.atelier.lienAria(Math.floor(bondAfter))}>
-          {[0, 1, 2, 3, 4].map((i) => (i < Math.floor(bondAfter) ? '★' : '☆')).join(' ')}
+        <p className="reveal-sub flex gap-1 text-3xl text-[#F4B942]" aria-label={FR.ui.atelier.lienAria(stars)}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <span key={i} className={i < stars ? 'reveal-star' : 'opacity-40'} style={{ animationDelay: `${0.5 + i * 0.12}s` }}>
+              {i < stars ? '★' : '☆'}
+            </span>
+          ))}
         </p>
       )}
-      {variantUnlocked && <p className="text-sm font-bold text-[#C084FC]">{FR.ui.atelier.varianteDebloquee}</p>}
-      <button type="button" data-start="true" onClick={onDone} className="voxel-btn block-btn-primary mt-2 rounded-xl border-2 px-6 py-2 font-display font-bold">
+      {variantUnlocked && <p className="reveal-sub text-lg font-bold text-[#C084FC]">{FR.ui.atelier.varianteDebloquee}</p>}
+      <button type="button" data-start="true" onClick={onDone} className="reveal-sub voxel-btn block-btn-primary mt-2 min-h-[44px] rounded-xl border-2 px-8 py-2 font-display text-lg font-bold">
         {FR.ui.atelier.continuer}
       </button>
     </div>
@@ -82,7 +103,13 @@ function ReducedReveal(props: SummonRevealProps) {
     return () => window.clearTimeout(t);
   }, []);
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#05070C]/90" role="dialog" aria-modal="true" aria-label={FR.ui.atelier.revelationAria}>
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+      style={{ backgroundColor: '#05070C', backgroundImage: colored ? tierGradient(props.tier) : 'none' }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={FR.ui.atelier.revelationAria}
+    >
       <div style={{ transition: 'filter 900ms ease', filter: colored ? 'none' : 'brightness(0)' }}>
         <VoxelCreatureAvatar speciesId={props.speciesId} size={180} />
       </div>
@@ -109,8 +136,9 @@ function FullReveal(props: SummonRevealProps) {
       setPhase('result');
       return;
     }
-    const W = Math.min(window.innerWidth, 720);
-    const H = Math.min(window.innerHeight * 0.62, 520);
+    // plein écran : la créature occupera environ la moitié de la hauteur à la fin
+    const W = window.innerWidth;
+    const H = window.innerHeight;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(W, H);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -128,7 +156,8 @@ function FullReveal(props: SummonRevealProps) {
     scene.add(key, new THREE.HemisphereLight('#DDEBFF', '#3B2E22', 0.6));
     const camera = new THREE.PerspectiveCamera(32, W / H, 0.1, 100);
     camera.position.set(0, 1.6, 7);
-    camera.lookAt(0, 0.7, 0);
+    const camLook = new THREE.Vector3(0, 0.7, 0);
+    camera.lookAt(camLook);
 
     // le moule (socle lumineux) et le cube
     const moldMat = new THREE.MeshStandardMaterial({ color: '#2A3449', emissive: new THREE.Color(TIER_COLOR[tier]), emissiveIntensity: 0.0 });
@@ -172,6 +201,37 @@ function FullReveal(props: SummonRevealProps) {
     });
     // rangées des pieds à la tête
     const ys = [...new Set(parts.map((p) => Math.round(p.y * 6) / 6))].sort((a, b) => a - b);
+
+    // A4.2 : cadrage final (la créature fait environ la moitié de la hauteur de l'écran), un peu au-dessus du centre
+    const minY = Math.min(...parts.map((p) => p.y));
+    const maxY = Math.max(...parts.map((p) => p.y)) + 0.25;
+    const creatureH = Math.max(0.8, maxY - Math.max(0, minY - 0.2));
+    const halfFov = (camera.fov * Math.PI) / 360;
+    // sur un écran étroit (téléphone), la largeur limite aussi : la créature ne déborde jamais
+    const xs = parts.map((p) => p.home.x);
+    const creatureW = Math.max(0.8, Math.max(...xs) - Math.min(...xs) + 0.6);
+    const aspect = W / H;
+    const finalDist = Math.max(creatureH / (2 * Math.tan(halfFov) * 0.5), creatureW / (2 * Math.tan(halfFov) * aspect * 0.7));
+    const finalLook = new THREE.Vector3(0, creatureH * 0.5 - creatureH * (aspect < 1 ? 0.55 : 0.45), 0);
+    const finalEye = new THREE.Vector3(0, finalLook.y + creatureH * 0.15, finalDist);
+
+    // A4.2 : faisceau de lumière et rayons qui tournent, de la couleur de la rareté, derrière la créature
+    const beamMat = new THREE.MeshBasicMaterial({ color: TIER_COLOR[tier], transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, creatureH * 0.9, creatureH * 6, 32, 1, true), beamMat);
+    beam.position.set(0, creatureH * 2.6, -1.4);
+    scene.add(beam);
+    const rayMat = new THREE.MeshBasicMaterial({ color: TIER_COLOR[tier], transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+    const rays = new THREE.Group();
+    const rayGeo = new THREE.BoxGeometry(0.14, creatureH * 5, 0.01);
+    const rayCount = tier === 'awakened' ? 16 : tier === 'rare' ? 12 : 8;
+    for (let i = 0; i < rayCount; i++) {
+      const r = new THREE.Mesh(rayGeo, rayMat);
+      r.rotation.z = (i / rayCount) * Math.PI * 2;
+      rays.add(r);
+    }
+    rays.position.set(0, creatureH * 0.55, -1.8);
+    scene.add(rays);
+    let joyT = -1;
 
     // particules de rareté
     const sparkMat = new THREE.MeshBasicMaterial({ color: TIER_COLOR[tier] });
@@ -219,6 +279,21 @@ function FullReveal(props: SummonRevealProps) {
       }
     };
 
+    if (props.startAtResult) {
+      cube.root.visible = false;
+      rig.root.visible = true;
+      parts.forEach((p) => {
+        p.mesh.position.copy(p.home);
+        p.mesh.material = p.mat;
+      });
+      camera.position.copy(finalEye);
+      camLook.copy(finalLook);
+      camera.lookAt(camLook);
+      beamMat.opacity = 0.3;
+      rayMat.opacity = 0.18;
+      sparks.forEach((s) => (s.visible = false));
+      go('result');
+    }
     const tick = () => {
       const now = performance.now();
       // horloge de requestAnimationFrame : jamais de pas négatif (bases de temps différentes selon les navigateurs)
@@ -226,7 +301,7 @@ function FullReveal(props: SummonRevealProps) {
       last = now;
       if (fastRef.current && !firstTime) dt *= 3;
       // léger ralenti pour une rare (et plus) pendant l'éclatement
-      if (local === 'burst' && (tier === 'rare' || tier === 'awakened')) dt *= 0.7;
+      if ((local === 'burst' || local === 'color') && (tier === 'rare' || tier === 'awakened')) dt *= 0.7;
       t += dt;
       cube.extras.forEach((e) => (e.rotation.y += dt * 2));
       if (local === 'drop') {
@@ -273,6 +348,14 @@ function FullReveal(props: SummonRevealProps) {
         });
         if (t > 1.2) go('color');
       } else if (local === 'color') {
+        // A4.2 : la caméra se rapproche doucement, le faisceau et les rayons apparaissent
+        const k = 1 - Math.pow(0.02, dt);
+        camera.position.lerp(finalEye, k);
+        camLook.lerp(finalLook, k);
+        camera.lookAt(camLook);
+        beamMat.opacity = Math.min(0.32, beamMat.opacity + dt * 0.4);
+        rayMat.opacity = Math.min(0.18, rayMat.opacity + dt * 0.25);
+        rays.rotation.z += dt * 0.25;
         // face au joueur
         rig.root.rotation.y += (0 - rig.root.rotation.y) * Math.min(1, dt * 6);
         const target = Math.floor(t / 0.12);
@@ -282,15 +365,32 @@ function FullReveal(props: SummonRevealProps) {
           soundFx.playChime(colorRow);
           colorRow += 1;
         }
-        if (colorRow >= ys.length) {
-          rig.bodyPivot.position.y = Math.max(0, Math.sin(Math.min(Math.PI, (t - ys.length * 0.12) * 6)) * 0.5);
-          if (t > ys.length * 0.12 + 0.7) {
-            soundFx.playRevealTier(tier);
-            go('result');
-          }
+        if (colorRow >= ys.length && t > ys.length * 0.12 + 0.15) {
+          soundFx.playRevealTier(tier);
+          joyT = 0;
+          go('result');
         }
       } else if (local === 'result') {
-        rig.root.rotation.y = Math.sin(now / 900) * 0.25;
+        // A4.2 : petite animation de joie (saut et tour sur elle-même), puis elle regarde le joueur
+        camera.position.lerp(finalEye, 1 - Math.pow(0.02, dt));
+        camLook.lerp(finalLook, 1 - Math.pow(0.02, dt));
+        camera.lookAt(camLook);
+        rays.rotation.z += dt * 0.2;
+        beamMat.opacity = 0.26 + Math.sin(now / 500) * 0.06;
+        rayMat.opacity = Math.min(0.18, rayMat.opacity + dt * 0.25);
+        if (joyT >= 0) {
+          joyT += dt;
+          const j = Math.min(1, joyT / 0.9);
+          rig.bodyPivot.position.y = Math.sin(j * Math.PI) * creatureH * 0.35;
+          rig.root.rotation.y = j * Math.PI * 2;
+          if (j >= 1) {
+            joyT = -1;
+            rig.root.rotation.y = 0;
+            rig.bodyPivot.position.y = 0;
+          }
+        } else {
+          rig.root.rotation.y = Math.sin(now / 1200) * 0.12;
+        }
       }
       renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
@@ -304,6 +404,10 @@ function FullReveal(props: SummonRevealProps) {
       sparks.forEach((s) => s.geometry.dispose());
       crackMat.dispose();
       sparkMat.dispose();
+      beamMat.dispose();
+      beam.geometry.dispose();
+      rayMat.dispose();
+      rayGeo.dispose();
       shadowMat.dispose();
       moldMat.dispose();
       mold.geometry.dispose();
@@ -328,7 +432,9 @@ function FullReveal(props: SummonRevealProps) {
   const sp = SPECIES[speciesId];
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#05070C]/92 select-none"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center select-none overflow-hidden"
+      data-static={props.startAtResult ? 'true' : undefined}
+      style={{ backgroundColor: '#05070C', backgroundImage: phase === 'color' || phase === 'result' ? tierGradient(tier) : 'none' }}
       role="dialog"
       aria-modal="true"
       aria-label={FR.ui.atelier.revelationAria}
@@ -339,20 +445,29 @@ function FullReveal(props: SummonRevealProps) {
       onPointerUp={() => (fastRef.current = false)}
       onPointerLeave={() => (fastRef.current = false)}
     >
-      <div ref={mount} />
+      <div ref={mount} className="absolute inset-0" />
       {phase === 'tap' && (
-        <p className="mt-2 font-display text-xl font-bold text-[#FAF7F0] animate-pulse">{FR.ui.atelier.tapeLeCube(3 - taps)}</p>
+        <p className="absolute bottom-[18vh] font-display text-2xl font-bold text-[#FAF7F0] animate-pulse">{FR.ui.atelier.tapeLeCube(3 - taps)}</p>
       )}
       {(phase === 'suspense' || phase === 'color') && sp && (
-        <div className="mt-2 flex items-center gap-2 text-[#FAF7F0]" aria-hidden="true">
+        <div className="absolute bottom-[18vh] flex items-center gap-2 text-[#FAF7F0]" aria-hidden="true">
           <ElementIcon element={sp.element} size={26} />
           <span className="font-display text-2xl font-bold" style={{ color: ELEMENT_META[sp.element].color }}>
             ???
           </span>
         </div>
       )}
-      {phase === 'result' && <ResultPanel {...props} />}
-      {!firstTime && phase !== 'result' && <p className="mt-3 text-xs text-[#94A3B8]">{FR.ui.atelier.maintenirPourAccelerer}</p>}
+      {/* A4.2 : plus c'est rare, plus c'est fort : flash doré et pluie de petits cubes pour une forme éveillée */}
+      {phase === 'result' && tier === 'awakened' && <div className="reveal-flash pointer-events-none absolute inset-0" aria-hidden="true" />}
+      {phase === 'result' && (tier === 'awakened' || tier === 'rare') && (
+        <VoxelConfetti count={tier === 'awakened' ? 60 : 24} colors={tier === 'awakened' ? ['#F4B942', '#FFE27A', '#FFF3C4'] : ['#38BDF8', '#7DD3FC', '#FAF7F0']} />
+      )}
+      {phase === 'result' && (
+        <div className="absolute inset-x-0 bottom-[6vh] flex justify-center">
+          <ResultPanel {...props} />
+        </div>
+      )}
+      {!firstTime && phase !== 'result' && <p className="absolute bottom-6 text-xs text-[#94A3B8]">{FR.ui.atelier.maintenirPourAccelerer}</p>}
     </div>
   );
 }

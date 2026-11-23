@@ -404,3 +404,34 @@ textarea:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .lesson-glow { animation: none; box-shadow: 0 0 0 3px #f4b942; }
 }
+
+/* A4.2 : fin de révélation d'un Cube Scellé */
+@keyframes reveal-name-pop {
+  0% { transform: scale(0.2) translateY(40px); opacity: 0; }
+  55% { transform: scale(1.15) translateY(-6px); opacity: 1; }
+  75% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+@keyframes reveal-sub-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes reveal-star-pop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+@keyframes reveal-flash {
+  0% { background: rgba(255, 226, 122, 0.95); }
+  100% { background: rgba(255, 226, 122, 0); }
+}
+.reveal-name { animation: reveal-name-pop 700ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.reveal-sub { animation: reveal-sub-in 400ms ease 450ms both; }
+.reveal-star { display: inline-block; animation: reveal-star-pop 380ms ease both; }
+.reveal-flash { animation: reveal-flash 900ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal-name, .reveal-sub, .reveal-star { animation: none; }
+  .reveal-flash { display: none; }
+}
+/* captures (`&fin=1`) : image finale sans animation */
+[data-static] .reveal-name, [data-static] .reveal-sub, [data-static] .reveal-star { animation: none; }
