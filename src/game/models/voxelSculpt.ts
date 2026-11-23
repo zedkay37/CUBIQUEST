@@ -287,7 +287,8 @@ export function buildSculptRig(def: SculptDef, palette: SculptPalette, res: numb
       geo.setAttribute('color', new THREE.Float32BufferAttribute(clr, 3));
       geo.setIndex(idx);
       const mesh = new THREE.Mesh(geo, glowing ? glow : base);
-      mesh.castShadow = true;
+      // ART2 : les parties lumineuses et les yeux ne projettent pas d'ombre (invisible à l'écran, une passe d'ombre de moins)
+      mesh.castShadow = !glowing && !eyes.has(g);
       mesh.receiveShadow = true;
       holder.add(mesh);
     }

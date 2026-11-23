@@ -4,8 +4,8 @@ import { SCULPT_DEFS } from '../game/models/sculptDefs';
 import { CreatureTurntable } from './CreatureTurntable';
 
 /**
- * `?gallery=art` (outil, sprint Art section 5) : pour chaque créature refaite, l'ancien et le nouveau modèle
- * côte à côte, qui tournent ; un bouton « Silhouettes ». Une créature à la fois (deux rendus seulement).
+ * `?gallery=art` (outil, sprint Art section 5) : pour chaque créature refaite, l'ancien modèle, celui du sprint ART
+ * et celui d'ART 2 côte à côte, qui tournent ; un bouton « Silhouettes ». Une créature à la fois (trois rendus).
  * `&species=<id>&silhouette=1` pour les captures. Textes en place : outil de développement.
  */
 export function ArtGallery() {
@@ -17,7 +17,7 @@ export function ArtGallery() {
     <div className="min-h-screen bg-[#0F1420] px-4 py-6 text-[#FAF7F0] sm:px-8">
       <div className="mx-auto max-w-5xl">
         <p className="text-xs font-bold uppercase tracking-wider text-[#F4B942]">Outil de développement</p>
-        <h1 className="font-display text-3xl font-bold">Avant / après : créatures refaites</h1>
+        <h1 className="font-display text-3xl font-bold">Créatures refaites : Avant ART, ART, ART 2</h1>
         <div className="mt-4 flex flex-wrap gap-2">
           {ids.map((id) => (
             <button
@@ -38,11 +38,12 @@ export function ArtGallery() {
             Silhouettes
           </button>
         </div>
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {(['avant', 'après'] as const).map((label) => (
-            <div key={`${current}-${label}-${silhouette}`} className="voxel-panel flex flex-col items-center p-4">
-              <p className="mb-2 font-display text-lg font-bold">{label === 'avant' ? 'Avant (gros pavés)' : 'Après (volumes → blocs)'}</p>
-              <CreatureTurntable speciesId={current} size={300} legacy={label === 'avant'} silhouette={silhouette} />
+        {/* ART2 : trois colonnes, Avant ART · ART · ART 2 */}
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {(['avant', 'art1', 'art2'] as const).map((col) => (
+            <div key={`${current}-${col}-${silhouette}`} className="voxel-panel flex flex-col items-center p-4">
+              <p className="mb-2 font-display text-lg font-bold">{col === 'avant' ? 'Avant ART' : col === 'art1' ? 'ART' : 'ART 2'}</p>
+              <CreatureTurntable speciesId={current} size={240} legacy={col === 'avant'} art1={col === 'art1'} silhouette={silhouette} />
             </div>
           ))}
         </div>

@@ -253,7 +253,8 @@ export function addMeadowArtDecor(env: THREE.Group, arenaRadius: number, isCamp:
     dummy.updateMatrix();
     trunks.setMatrixAt(i, dummy.matrix);
     const tint = ['#4FA43C', '#3E8E34', '#62B84A', '#2F7A2E'][i % 4];
-    treePhase.push({ phase: rnd() * Math.PI * 2, period: 3 + rnd() * 2 });
+    // phase et période tirées de l'indice, sans consommer le hasard du décor (sa disposition reste celle d'ART)
+    treePhase.push({ phase: ((i * 2.399) % 1) * Math.PI * 2, period: 3 + ((i * 0.618) % 1) * 2 });
     const pivot = new THREE.Vector3(x, y0 + 1.6 * s, z);
     for (const [bx, by, bz, sx, sy, sz] of SHAPES[i % SHAPES.length]) {
       dummy.position.set(x + bx * s, y0 + by * s, z + bz * s);

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildVoxelCreature } from '../game/voxelModels';
-import { buildLegacyCreature } from '../game/models/creatures';
+import { buildLegacyCreature, buildSculptCreature } from '../game/models/creatures';
 import { SPECIES } from '../game/catalog';
 import { usePrefersReducedMotion } from './ui';
 import { VoxelCreatureAvatar } from './Icons';
@@ -16,6 +16,7 @@ export function CreatureTurntable({
   size = 160,
   variant,
   legacy,
+  art1,
   silhouette,
 }: {
   speciesId: string;
@@ -23,6 +24,8 @@ export function CreatureTurntable({
   variant?: boolean;
   /** Sprint Art : l'ancien modèle « gros pavés » (comparaison). */
   legacy?: boolean;
+  /** ART2 : la version figée du sprint ART (comparaison à trois colonnes). */
+  art1?: boolean;
   /** Sprint Art : ombre noire unie (comparaison des silhouettes). */
   silhouette?: boolean;
 }) {
@@ -57,7 +60,11 @@ export function CreatureTurntable({
     const rim = new THREE.DirectionalLight('#9CC8FF', 0.7);
     rim.position.set(-5, 4, -6);
     scene.add(key, rim, new THREE.HemisphereLight('#DDEBFF', '#5B4A3A', 0.55));
-    const rig = legacy ? buildLegacyCreature(SPECIES[speciesId], 1, variant) : buildVoxelCreature(speciesId, 1, variant);
+    const rig = legacy
+      ? buildLegacyCreature(SPECIES[speciesId], 1, variant)
+      : art1
+        ? buildSculptCreature(SPECIES[speciesId], 1, variant, 'art1')
+        : buildVoxelCreature(speciesId, 1, variant);
     if (silhouette) {
       // comparaison des silhouettes : une seule matière noire
       const black = new THREE.MeshBasicMaterial({ color: '#000000' });
@@ -98,7 +105,7 @@ export function CreatureTurntable({
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [speciesId, size, reduced, variant, legacy, silhouette]);
+  }, [speciesId, size, reduced, variant, legacy, art1, silhouette]);
 
   if (reduced || failed.current) return <VoxelCreatureAvatar speciesId={speciesId} size={size} />;
   return <div ref={mount} style={{ width: size, height: size }} aria-hidden="true" />;
