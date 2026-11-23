@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# vox-studio : sorties générées (planches, .vox de travail)
+tools/vox-studio/out/
