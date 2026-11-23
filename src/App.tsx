@@ -49,6 +49,7 @@ import {
   unequipPowerStone,
 } from './game/rules';
 import { appendJournal, loadJournal, markRetry, saveJournal } from './game/journal';
+import { escapeTarget, nextDrawer } from './game/uiNav';
 import type {
   CodexAnswer,
   ControlMode,
@@ -477,6 +478,24 @@ export default function App() {
         return;
       }
 
+      // A1.2 : Échap ferme toujours la fenêtre du dessus (arrivée, recrue, écran de fin, tiroir du camp)
+      if (e.code === 'Escape') {
+        const target = escapeTarget({
+          arrival: Boolean(arrival),
+          recruit: Boolean(recruitedPreview),
+          outcome: screenState === 'gameover' && Boolean(outcome),
+          drawer: playMode === 'camp' && Boolean(activeDrawer),
+        });
+        if (target) {
+          e.preventDefault();
+          if (target === 'arrival') setArrival(null);
+          else if (target === 'recruit') setRecruitedPreview(null);
+          else if (target === 'outcome') handleReturnCamp();
+          else setActiveDrawer(null);
+          return;
+        }
+      }
+
       if (playMode === 'expedition') {
         if (e.code === 'Escape' || e.code === 'KeyP') {
           e.preventDefault();
@@ -499,14 +518,12 @@ export default function App() {
             engineRef.current?.triggerUltimate();
           }
         }
-      } else if (playMode === 'camp' && e.code === 'Escape' && activeDrawer) {
-        setActiveDrawer(null);
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeDrawer, handleStartFromTitle, handleToggleMute, playMode, screenState]);
+  }, [activeDrawer, arrival, handleReturnCamp, handleStartFromTitle, handleToggleMute, outcome, playMode, recruitedPreview, screenState]);
 
   // Separate clean listener for `KeyE` Auto toggle during expedition
   useEffect(() => {
@@ -762,7 +779,7 @@ export default function App() {
             onToggleShake={handleToggleShake}
             onSelectDrawer={(tab) => {
               soundFx.playUiClick();
-              setActiveDrawer((cur) => (cur === tab ? null : tab));
+              setActiveDrawer((cur) => (tab ? nextDrawer(cur, tab) : null));
             }}
             unlocked={unlockedFeatures(save)}
             unseen={[...unlockedFeatures(save)].filter((f) => !save.allUnlocked && !save.unlocksSeen.includes(f))}

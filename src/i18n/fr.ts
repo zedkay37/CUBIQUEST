@@ -286,7 +286,7 @@ export const FR = {
       impossibleDAccederAuPressePapiers: 'Impossible d’accéder au presse-papiers. Utilisez le bouton Télécharger (.json).',
       sauvegardeRestaureeCreaturesNiveaux: (a: string | number, b: string | number, c: string | number) => `Sauvegarde restaurée (${a} ${CREATURE_NOUN.plural}, ${b}/${c} niveaux).`,
       erreurLorsDeLaLectureDu: 'Erreur lors de la lecture du fichier JSON.',
-      journalDuCampV02: 'Journal du Camp · V0.2',
+      journalDuCampV02: 'Journal du Camp',
       quetesSuccesSauvegarde: 'Quêtes, Succès & Sauvegarde',
       fermerLeJournal: 'Fermer le journal',
       missions: 'Missions (',
@@ -355,7 +355,7 @@ export const FR = {
     },
     teamDrawer: {
       critique: 'Critique',
-      vampirisme: 'Vampirisme',
+      vampirisme: 'Vol de vie',
       vitesse: 'Vitesse',
       resist: 'Résist.',
       escouadeGrilleDePierresDePouvoir: 'Escouade & Grille de Galets',
@@ -379,7 +379,7 @@ export const FR = {
       pv: 'PV',
       atq: 'ATQ',
       crit: 'Crit',
-      vamp: 'Vamp.',
+      vamp: 'Vol de vie',
       evolution: 'Évolution : ',
       niv2: ' (Niv. ',
       faireEvoluer: 'Faire évoluer',
@@ -400,7 +400,7 @@ export const FR = {
       pierreStandard: 'Galet standard',
       equipee: 'Équipé',
       equiper: 'Équiper',
-      mauvaisType: 'Mauvais type',
+      mauvaisType: 'Pour un autre emplacement',
     },
     titleOverlay: {
       continuerLAventure: 'Continuer l’aventure',
@@ -829,7 +829,7 @@ export const FR = {
         description: 'Nectar épais et rare qui attire des recrues d’élite.',
       },
       pebble_gray: {
-        name: 'Galet Fossile',
+        name: 'Pierre Fossile',
         description: 'Caillou aromatique prisé des créatures Roche et défensives.',
       },
       mystic_shard: {
@@ -903,7 +903,7 @@ export const FR = {
       mineral_stew: {
         name: 'Mijoté Minéral',
         description: 'Un ragoût roboratif qui fait sortir les créatures de type Roche.',
-        hint: 'Au moins 3 ingrédients gris (Galet Fossile).',
+        hint: 'Au moins 3 ingrédients gris (Pierre Fossile).',
       },
       botanical_broth: {
         name: 'Bouillon Végétal',
@@ -912,7 +912,7 @@ export const FR = {
       },
       astral_veloute: {
         name: 'Velouté Astral',
-        description: 'Recette délicate aux cristaux et miel attirant les créatures Psy.',
+        description: 'Recette délicate aux cristaux et miel, qui attire les compagnons de l’élément Psy.',
         hint: 'Mélangez au moins 3 ingrédients rares (Cristal, Miel, Racine) ou 1 Fragment Mystique.',
       },
       sweet_crepe: {
@@ -1134,7 +1134,7 @@ export const FR = {
         title: 'Réflexes de Cube',
         description: 'Réussissez 2 Esquives Parfaites pendant un télégraphe.',
         reward: {
-          label: '1× Rune de Partage · 3× Galet Fossile',
+          label: '1× Rune de Partage · 3× Pierre Fossile',
         },
       },
       q_boss_2: {

@@ -284,20 +284,23 @@ export function CodexDrawer({
                         : 'bg-[#141924] border-[#252E40] opacity-60'
                     }`}
                   >
-                    <VoxelCreatureAvatar speciesId={sp.id} size={46} className="shrink-0" />
+                    {/* A1.2 : une espèce non découverte n'est qu'une ombre noire, sans élément ni statistiques */}
+                    <VoxelCreatureAvatar speciesId={sp.id} size={46} className={`shrink-0 ${seen ? '' : 'brightness-0'}`} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <ElementIcon element={sp.element} size={15} />
+                        {seen && <ElementIcon element={sp.element} size={15} />}
                         <h3 className="font-display font-bold text-sm text-[#FAF7F0] truncate">
                           {seen ? sp.name : '???'}
                         </h3>
                       </div>
-                      <p className="text-[11px] text-[#94A3B8] mt-0.5">
-                        {ELEMENT_META[sp.element].label} ·{' '}
-                        <span className="font-mono-num">
-                          PV {sp.baseHp} / ATQ {sp.baseAtk}
-                        </span>
-                      </p>
+                      {seen && (
+                        <p className="text-[11px] text-[#94A3B8] mt-0.5">
+                          {ELEMENT_META[sp.element].label} ·{' '}
+                          <span className="font-mono-num">
+                            PV {sp.baseHp} / ATQ {sp.baseAtk}
+                          </span>
+                        </p>
+                      )}
                       <p className="text-xs text-[#CBD5E1] mt-1 leading-snug">
                         {seen ? sp.dexNote : 'Explorez l’île ou cuisinez pour découvrir cette espèce.'}
                       </p>

@@ -433,7 +433,7 @@ export function CookingDrawer({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1">
-                          <span className="font-semibold text-xs text-[#FAF7F0] truncate">
+                          <span className="font-semibold text-xs leading-tight text-[#FAF7F0] break-words">
                             {ing.name}
                           </span>
                           <span className="font-mono-num text-xs font-bold text-[#F4B942] shrink-0">
@@ -445,8 +445,7 @@ export function CookingDrawer({
                             ? FR.ui.cookingDrawer.mystique
                             : ing.rarity === 'rare'
                               ? FR.ui.cookingDrawer.rare
-                              : FR.ui.cookingDrawer.commun}{' '}
-                          {FR.ui.cookingDrawer.cout}{costPerSlot}
+                              : FR.ui.cookingDrawer.commun}
                         </p>
                       </div>
                     </button>
