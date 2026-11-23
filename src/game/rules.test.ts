@@ -20,6 +20,7 @@ import {
   computeUltimateCharge,
   challengeLiveState,
   isAutoUnlocked,
+  openSealedCube,
   markUnlockSeen,
   unlockedFeatures,
   markLessonDone,
@@ -653,7 +654,7 @@ function oldRuneId(kind: string): string {
 }
 
 test('Giga: migration v2 -> v4 (sac de runes renommé, stats, progression intacte)', () => {
-  assert.equal(SAVE_VERSION, 8);
+  assert.equal(SAVE_VERSION, 9);
   const fresh = createInitialSaveState('aquabloc', true);
   // Sauvegarde v2 réaliste : pas de pierres/stats des confins, quête en cours, créature équipée
   const { frontierWins: _fw, frontierDishes: _fd, ...v2Stats } = fresh.stats;
@@ -941,19 +942,24 @@ test('Ouvertures (S07.3): table UNLOCKS, compagnon après le premier boss, ancie
   assert.ok(unlockedFeatures(save).has('camp'));
   save = applyExpeditionRewards(save, STAGES[1], true, stats, () => 0.5).nextSave;
   const r3 = applyExpeditionRewards(save, STAGES[2], true, stats, () => 0.5);
-  // Bourgéon rejoint le trio Braise, au niveau moyen de l'escouade − 2, en réserve
-  assert.equal(r3.outcome.joinedSpeciesId, 'bourgeon');
-  const joined = r3.nextSave.roster.find((c) => c.speciesId === 'bourgeon')!;
-  const squad = r3.nextSave.roster.filter((c) => r3.nextSave.squadIds.includes(c.uid));
+  // A2.4 : le premier boss donne un cube qui contient forcément Bourgéon (trio Braise) ; à l'ouverture,
+  // il rejoint la réserve au niveau moyen de l'escouade − 2
+  const guaranteed = r3.nextSave.sealedCubes.find((c) => c.guaranteedSpeciesId);
+  assert.equal(guaranteed?.guaranteedSpeciesId, 'bourgeon');
+  const opened = openSealedCube(r3.nextSave, guaranteed!.id, null, () => 0.99)!;
+  assert.equal(opened.result.speciesId, 'bourgeon');
+  assert.equal(opened.result.isNew, true);
+  const joined = opened.nextSave.roster.find((c) => c.speciesId === 'bourgeon')!;
+  const squad = opened.nextSave.roster.filter((c) => opened.nextSave.squadIds.includes(c.uid));
   assert.equal(joined.level, Math.max(1, Math.round(squad.reduce((n, c) => n + c.level, 0) / 3) - 2));
-  assert.ok(!r3.nextSave.squadIds.includes(joined.uid));
+  assert.ok(!opened.nextSave.squadIds.includes(joined.uid));
   assert.ok(isAutoUnlocked(r3.nextSave) && unlockedFeatures(r3.nextSave).has('team'));
-  // rejouer le boss ne fait pas venir un second compagnon
-  assert.equal(applyExpeditionRewards(r3.nextSave, STAGES[2], true, stats, () => 0.5).outcome.joinedSpeciesId, null);
+  // rejouer le boss ne redonne pas de cube garanti
+  assert.ok(!applyExpeditionRewards(opened.nextSave, STAGES[2], true, stats, () => 0.5).nextSave.sealedCubes.some((c) => c.guaranteedSpeciesId));
   // trio Marée : Voltik
   let m = createInitialSaveState('maree', true);
   m = { ...m, completedStageIds: ['meadow-1', 'meadow-2'] };
-  assert.equal(applyExpeditionRewards(m, STAGES[2], true, stats, () => 0.5).outcome.joinedSpeciesId, 'voltik');
+  assert.equal(applyExpeditionRewards(m, STAGES[2], true, stats, () => 0.5).nextSave.sealedCubes.find((c) => c.guaranteedSpeciesId)?.guaranteedSpeciesId, 'voltik');
   // une sauvegarde d'avant S07 a tout ouvert, et ne reçoit pas de compagnon
   const old = migrateSaveState({ ...createInitialSaveState('braise', true), version: 7, allUnlocked: undefined, starterTrio: undefined })!;
   assert.equal(old.allUnlocked, true);

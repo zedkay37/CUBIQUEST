@@ -23,7 +23,9 @@ import {
   STAGES,
   STATUS_META,
 } from './catalog';
-import { CUBE_KIT, STAR_TIERS, XP_KIT } from './balance';
+import { CUBE_KIT, STAR_TIERS, SUMMON, XP_KIT, type CubeMaterial } from './balance';
+import { addSealedCubes, bondMultiplier, lineageOf } from './summon';
+export { openSealedCube, addSealedCubes, lineageOf, displayedOdds, bondMultiplier } from './summon';
 import type {
   AchievementDef,
   ActiveQuest,
@@ -97,8 +99,10 @@ export const LEGACY_SAVE_STORAGE_KEY = withSaveSlot('cubiquest_save_v1');
 // v6 (S05) : `hazardHintsSeen` (consignes d'attaque déjà montrées).
 // v7 (S06) : `stageStars` (trois étoiles par niveau) ; les niveaux déjà terminés reçoivent l'étoile de victoire.
 // v8 (S07) : `lessonsDone` (leçons du début) ; une sauvegarde qui a déjà gagné la Prairie-2 a tout appris.
-// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 8.
-export const SAVE_VERSION = 8;
+// v9 (spec Atelier, A2) : Cube Scellé (`sealedCubes`, `cubeCounter`, `baits`, `awakenGauge`), Lien (`bonds`,
+//            `duplicates`), variantes (`variantsUnlocked`, `variantsOn`). La cuisine est convertie (A2.2).
+// La clé de stockage reste la même : migrateSaveState accepte les versions 1 à 9.
+export const SAVE_VERSION = 9;
 
 export type RngFn = () => number;
 
@@ -363,8 +367,10 @@ export function computeCreatureStats(
   const levelHp = Math.round(species.baseHp + (creature.level - 1) * 18 + creature.potBonus);
   const levelAtk = Math.round(species.baseAtk + (creature.level - 1) * 15 + creature.potBonus);
 
-  const maxHp = levelHp + bonusHp;
-  const atk = levelAtk + bonusAtk;
+  // Lien (A2) : +4 % PV et attaque par étoile pleine ; sans Lien (outils, golden) le calcul est inchangé
+  const bondMult = creature.bond ? bondMultiplier(creature.bond) : 1;
+  const maxHp = Math.round((levelHp + bonusHp) * bondMult);
+  const atk = Math.round((levelAtk + bonusAtk) * bondMult);
   const power = maxHp + atk;
 
   return {
@@ -893,18 +899,29 @@ export function applyExpeditionRewards(
   });
 
   // S07.3 : première victoire sur le premier boss -> un compagnon rejoint le camp (niveau moyen de l'escouade − 2)
-  let joinedSpeciesId: string | null = null;
+  // A2.4 : le premier compagnon n'arrive plus tout seul : le premier boss donne un cube qui le contient
+  // forcément (Bourgéon pour le trio Braise, Voltik pour le trio Marée), à ouvrir à l'Atelier.
+  const joinedSpeciesId: string | null = null;
+  let guaranteedCube: string | undefined;
   const unlockRow = UNLOCKS.find((u) => u.afterStageId === stage.id);
   if (firstClear && unlockRow?.companion && !save.allUnlocked && save.starterTrio) {
     const joiner = STARTER_JOINER[save.starterTrio];
-    if (!nextRoster.some((c) => c.speciesId === joiner)) {
-      const squadNow = nextRoster.filter((c) => save.squadIds.includes(c.uid));
-      const avg = squadNow.reduce((n, c) => n + c.level, 0) / Math.max(1, squadNow.length);
-      nextRoster.push(createOwnedCreature(joiner, Math.max(1, Math.round(avg) - 2), 0, `joined_${stage.id}`));
-      joinedSpeciesId = joiner;
-    }
+    if (!nextRoster.some((c) => lineageOf(c.speciesId) === joiner)) guaranteedCube = joiner;
   }
   const newFeatures = firstClear && !save.allUnlocked ? [...(unlockRow?.features ?? [])] : [];
+
+  // Cubes Scellés (A2.1) : Bois à la première victoire d'un niveau (puis 30 %), Pierre au premier boss de
+  // biome (biomes 1 à 3) et aux 3 étoiles d'un niveau, Cristal aux paliers 12 à 48 et aux boss des biomes 4 à 7,
+  // Prisme à 63 étoiles. Un Appât de l'élément du biome à chaque première victoire de niveau.
+  const cubesWon: CubeMaterial[] = [];
+  const baitsWon: ElementType[] = [];
+  if (victory) {
+    if (firstClear) cubesWon.push('wood');
+    else if (rng() < SUMMON.woodRepeatChance) cubesWon.push('wood');
+    const isBiomeBoss = stage.stageNumber === 3;
+    if (firstClear && isBiomeBoss) cubesWon.push(stage.index >= FRONTIER_STAGE_INDEX ? 'crystal' : 'stone');
+    if (firstClear) baitsWon.push(biome.dominantElement);
+  }
 
   // Drops
   const droppedIngredientsMap: Record<string, number> = {};
@@ -1003,6 +1020,16 @@ export function applyExpeditionRewards(
   const starTiers = victory ? pendingStarTiers(totalStars({ stageStars }), claimedBefore) : [];
   const starTiersClaimed = [...claimedBefore, ...starTiers.map((t) => t.at)];
   for (const t of starTiers) if (t.rune) nextRuneBag[t.rune] = (nextRuneBag[t.rune] ?? 0) + 1;
+  for (const t of starTiers) cubesWon.push(t.at >= 63 ? 'prism' : 'crystal');
+  if (victory && starCount(previousStars) < 3 && starCount(mergeStars(previousStars, stars)) === 3) cubesWon.push('stone');
+  // Lien : +0,1 par victoire pour chaque lignée de l'escouade
+  const bondsAfter = { ...(save.bonds ?? {}) };
+  if (victory) for (const c of nextRoster.filter((x) => save.squadIds.includes(x.uid))) {
+    const l = lineageOf(c.speciesId);
+    bondsAfter[l] = Math.min(SUMMON.bondMax, Math.round(((bondsAfter[l] ?? 0) + SUMMON.bondPerWin) * 10) / 10);
+  }
+  const nextBaits = { ...(save.baits ?? {}) };
+  for (const el of baitsWon) nextBaits[el] = (nextBaits[el] ?? 0) + 1;
 
   // Conseil de défaite : niveau de l'escouade face aux ennemis, élément faible contre le boss
   const squad = save.roster.filter((c) => save.squadIds.includes(c.uid));
@@ -1038,9 +1065,14 @@ export function applyExpeditionRewards(
     expeditionsCompleted: save.expeditionsCompleted + (victory ? 1 : 0),
     stageStars,
     starTiersClaimed,
+    bonds: bondsAfter,
+    baits: nextBaits,
   };
 
-  const nextSave = recordPlayerProgress(baseNextSave, {
+  // le cube garanti passe en premier, pour être ouvert avant les autres
+  if (guaranteedCube) cubesWon.unshift('wood');
+  const withCubes = addSealedCubes(baseNextSave, cubesWon, guaranteedCube).nextSave;
+  const nextSave = recordPlayerProgress(withCubes, {
     expeditionsWon: victory ? 1 : 0,
     bossesDefeated: victory ? 1 : 0,
     frontierWins: victory && stage.index >= FRONTIER_STAGE_INDEX ? 1 : 0,
@@ -1086,6 +1118,8 @@ export function applyExpeditionRewards(
     firstClear,
     newFeatures,
     joinedSpeciesId,
+    cubesWon,
+    baitsWon,
     starTiers: starTiers.map((t) => ({ at: t.at, rune: t.rune })),
     benchXp: save.roster.some((c) => !save.squadIds.includes(c.uid)) ? benchXp : 0,
   };
@@ -1216,6 +1250,38 @@ export function nextStarTier(total: number): (typeof STAR_TIERS)[number] | null 
 /** Total d'étoiles d'une sauvegarde, éventuellement limité à un biome. */
 export function totalStars(save: Pick<SaveState, 'stageStars'>, biomeId?: BiomeId): number {
   return STAGES.filter((st) => !biomeId || st.biomeId === biomeId).reduce((n, st) => n + starCount(save.stageStars[st.id]), 0);
+}
+
+const CUBE_MATERIALS: CubeMaterial[] = ['wood', 'stone', 'crystal', 'prism'];
+const num = (v: unknown, min: number, max: number): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : min);
+
+/** Normalise l'état du Cube Scellé (A2) : tout ce qui est inconnu ou abîmé est ignoré sans erreur. */
+function normalizeSummonState(obj: Record<string, unknown>) {
+  const cubesRaw = Array.isArray(obj.sealedCubes) ? obj.sealedCubes : [];
+  const seen = new Set<string>();
+  const sealedCubes = cubesRaw
+    .filter((c): c is SaveState['sealedCubes'][number] => Boolean(c) && typeof (c as { id?: unknown }).id === 'string' && CUBE_MATERIALS.includes((c as { material: CubeMaterial }).material))
+    .filter((c) => !seen.has(c.id) && seen.add(c.id))
+    .map((c) => ({ id: c.id, material: c.material, ...(c.guaranteedSpeciesId && SPECIES[c.guaranteedSpeciesId] ? { guaranteedSpeciesId: c.guaranteedSpeciesId } : {}) }))
+    .slice(0, SUMMON.inventoryMax);
+  const record = (raw: unknown, max: number): Record<string, number> => {
+    const out: Record<string, number> = {};
+    if (raw && typeof raw === 'object') for (const [k, v] of Object.entries(raw)) if (SPECIES[k] && typeof v === 'number') out[k] = num(v, 0, max);
+    return out;
+  };
+  const baits: Partial<Record<ElementType, number>> = {};
+  if (obj.baits && typeof obj.baits === 'object') for (const [k, v] of Object.entries(obj.baits)) if (ELEMENT_META[k as ElementType] && typeof v === 'number') baits[k as ElementType] = Math.floor(num(v, 0, 999));
+  const lineages = (raw: unknown) => (Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string' && Boolean(SPECIES[id])) : []);
+  return {
+    sealedCubes,
+    cubeCounter: Math.max(num(obj.cubeCounter, 0, 1e9), sealedCubes.length),
+    baits,
+    awakenGauge: num(obj.awakenGauge, 0, 1),
+    bonds: record(obj.bonds, SUMMON.bondMax),
+    duplicates: record(obj.duplicates, 1e6),
+    variantsUnlocked: lineages(obj.variantsUnlocked),
+    variantsOn: lineages(obj.variantsOn),
+  };
 }
 
 /** Identifiants des leçons (engine/lessons.ts), recopiés ici : rules.ts ne dépend pas du moteur. */
@@ -1365,6 +1431,14 @@ export function createInitialSaveState(
     starterTrio: trioId,
     allUnlocked: false,
     unlocksSeen: [],
+    sealedCubes: [],
+    cubeCounter: 0,
+    baits: {},
+    awakenGauge: 0,
+    bonds: {},
+    duplicates: {},
+    variantsUnlocked: [],
+    variantsOn: [],
   };
 }
 
@@ -1781,7 +1855,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
   if (!Array.isArray(obj.roster) || obj.roster.length === 0) return null;
   if (!Array.isArray(obj.squadIds) || !obj.pot || typeof obj.pot !== 'object') return null;
   if (!obj.ingredients || typeof obj.ingredients !== 'object') return null;
-  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== 6 && obj.version !== 7 && obj.version !== SAVE_VERSION) return null;
+  if (obj.version !== 1 && obj.version !== 2 && obj.version !== 3 && obj.version !== 4 && obj.version !== 5 && obj.version !== 6 && obj.version !== 7 && obj.version !== 8 && obj.version !== SAVE_VERSION) return null;
 
   // Pierres de Pouvoir : valides, identifiants uniques
   const powerStones: PowerStone[] = [];
@@ -1905,6 +1979,7 @@ export function migrateSaveState(raw: unknown): SaveState | null {
     starterTrio: obj.starterTrio === 'braise' || obj.starterTrio === 'maree' ? obj.starterTrio : null,
     // une sauvegarde d'avant S07 (v1 à v7) a déjà tout ouvert
     allUnlocked: typeof obj.allUnlocked === 'boolean' ? obj.allUnlocked : (obj.version as number) < 8,
+    ...normalizeSummonState(obj),
     unlocksSeen: Array.isArray(obj.unlocksSeen) ? UNLOCK_FEATURES.filter((f) => (obj.unlocksSeen as unknown[]).includes(f)) : [],
     starTiersClaimed: Array.isArray(obj.starTiersClaimed)
       ? STAR_TIERS.map((t) => t.at).filter((at) => (obj.starTiersClaimed as unknown[]).includes(at))

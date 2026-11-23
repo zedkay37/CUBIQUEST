@@ -16,7 +16,8 @@ import fs from 'node:fs';
 import { fightSeed, runFight, STAGES, type SimProfile } from './simFight';
 import { mulberry32 } from './headlessDom';
 
-const { createInitialSaveState, applyExpeditionRewards, canEvolve, evolveCreature, canEquipStone, equipPowerStone } = await import('../src/game/rules');
+const { createInitialSaveState, applyExpeditionRewards, canEvolve, evolveCreature, canEquipStone, equipPowerStone, openSealedCube, lineageOf } = await import('../src/game/rules');
+const { SUMMON_RARITY } = await import('../src/game/catalog');
 type Save = ReturnType<typeof createInitialSaveState>;
 
 /** Le joueur simulé équipe, case par case, le Galet libre le plus puissant qui y entre (simple, sans sous-statistiques). */
@@ -38,6 +39,14 @@ function autoEquip(save: Save): Save {
 const { SPECIES } = await import('../src/game/catalog');
 
 const CAMP_OVERHEAD_SEC = 20;
+// essai de taux sans toucher balance.ts : --odds wood=0.9/0.09/0.01/0,stone=0.6/0.3/0.1/0
+const { SUMMON } = await import('../src/game/balance');
+if (process.argv.includes('--odds')) {
+  for (const part of process.argv[process.argv.indexOf('--odds') + 1].split(',')) {
+    const [k, v] = part.split('=');
+    (SUMMON.odds as Record<string, number[]>)[k] = v.split('/').map(Number);
+  }
+}
 const { XP_KIT } = await import('../src/game/balance');
 // essai sans toucher balance.ts : --xp-scale 0.4
 if (process.argv.includes('--xp-scale')) XP_KIT.xpScale = Number(process.argv[process.argv.indexOf('--xp-scale') + 1]);
@@ -68,6 +77,8 @@ export interface JourneyResult {
   finished: boolean;
   /** Séries de plus de 4 niveaux gagnés d'affilée sans nouveauté (premier et dernier niveau). */
   dryRuns: string[];
+  /** Cube Scellé (A2) : lignées recrutées par rareté à la fin de chaque niveau gagné (dans l'ordre). */
+  recruits: { stageId: string; common: number; uncommon: number; rare: number; cubes: number }[];
 }
 
 export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 250, trio = 'braise'): JourneyResult {
@@ -77,6 +88,7 @@ export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 
   let firstEvolutionMin: number | null = null;
   let lossStreak = 0;
   let games = 0;
+  const recruits: JourneyResult['recruits'] = [];
   // butin à graine fixe : le parcours est reproductible
   const rewardRng = mulberry32((seed * 7919) >>> 0);
   while (games < maxGames && save.completedStageIds.length < STAGES.length) {
@@ -123,6 +135,22 @@ export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 
     }
     if (idx === frontier) lossStreak = victory ? 0 : lossStreak + 1;
     else lossStreak = 0;
+    // A2 : le joueur simulé ouvre tous ses cubes, avec l'Appât dont il a le plus (s'il en a)
+    let cubesThisGame = 0;
+    while (save.sealedCubes.length) {
+      const baitEntry = Object.entries(save.baits).filter(([, n]) => (n ?? 0) > 0).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0];
+      const opened = openSealedCube(save, save.sealedCubes[0].id, (baitEntry?.[0] as never) ?? null, rewardRng);
+      if (!opened) break;
+      save = opened.nextSave;
+      cubesThisGame += 1;
+      if (firstWin && opened.result.isNew) row.novelties.push(`recrue ${opened.result.speciesId}`);
+    }
+    if (firstWin) {
+      const owned = new Set(save.roster.map((c) => lineageOf(c.speciesId)));
+      const count = (r: string) => [...owned].filter((id) => SUMMON_RARITY[id] === r).length;
+      recruits.push({ stageId: stage.id, common: count('common'), uncommon: count('uncommon'), rare: count('rare'), cubes: cubesThisGame });
+      if (cubesThisGame > 0) row.novelties.push(`${cubesThisGame} cube(s)`);
+    }
     save = autoEquip(save);
     for (const c of save.roster) {
       if (canEvolve(c)) {
@@ -142,7 +170,7 @@ export function runJourney(profile: SimProfile = 'active', seed = 1, maxGames = 
     } else run.push(s.id);
   }
   if (run.length > 4) dryRuns.push(`${run[0]} → ${run[run.length - 1]}`);
-  return { stages, totalGames: games, totalMin: +(elapsed / 60).toFixed(1), firstEvolutionMin, finished: save.completedStageIds.length === STAGES.length, dryRuns };
+  return { stages, totalGames: games, totalMin: +(elapsed / 60).toFixed(1), firstEvolutionMin, finished: save.completedStageIds.length === STAGES.length, dryRuns, recruits };
 }
 
 function toMarkdown(r: JourneyResult, profile: string, seed: number): string {

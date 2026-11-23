@@ -170,6 +170,34 @@ export const STAR_TIERS: { at: number; rune: 'rune_precision' | 'rune_vigueur' |
   { at: 63, rune: null },
 ];
 
+/**
+ * Cube Scellé (spec Atelier, A2.1). Chances par matière : commune / peu commune / rare / éveillée.
+ * Réglé avec `npm run journey` (cibles de la spec dans le rapport A2).
+ */
+export type CubeMaterial = 'wood' | 'stone' | 'crystal' | 'prism';
+export const SUMMON = {
+  odds: {
+    wood: [0.75, 0.22, 0.03, 0],
+    stone: [0.45, 0.4, 0.15, 0],
+    crystal: [0.15, 0.4, 0.42, 0.03],
+    prism: [0, 0.2, 0.65, 0.15],
+  } as Record<CubeMaterial, [number, number, number, number]>,
+  /** Chance d'un cube Bois à chaque victoire déjà faite (la première victoire d'un niveau en donne toujours un). */
+  woodRepeatChance: 0.3,
+  inventoryMax: 50,
+  /** Jauge d'Éveil : +10 % par ouverture sans rare ; à 100 %, la suivante donne une rare (ou mieux). */
+  awakenStep: 0.1,
+  /** Appât : 60 % de chances que la créature soit de son élément (si possible dans la rareté tirée). */
+  baitChance: 0.6,
+  /** Lien : +1 étoile par doublon (★5 au plus), +0,1 par victoire dans l'escouade ; +4 % PV et attaque par étoile. */
+  bondMax: 5,
+  bondPerWin: 0.1,
+  bondStatBonus: 0.04,
+  /** Au 5ᵉ doublon : variante de couleur ; au-delà, un doublon remplit la jauge d'Éveil de 25 %. */
+  variantAtDuplicates: 5,
+  duplicateAwakenBonus: 0.25,
+};
+
 export const DODGE_KIT = {
   cooldown: 4,
   invuln: 0.5,

@@ -1416,6 +1416,17 @@ export const UNLOCKS: { afterStageId: string; features: UnlockFeature[]; compani
   { afterStageId: 'shore-3', features: ['stones'] },
 ];
 export const UNLOCK_FEATURES: UnlockFeature[] = ['camp', 'quests', 'team', 'auto', 'codex', 'cooking', 'stones'];
+/**
+ * Raretés d'invocation (spec Atelier, A2.1), par lignée (forme de base). Seules les formes de base sortent
+ * des cubes ; la « forme éveillée » (stade 2) ne sort que d'un cube Prisme, pour une lignée déjà recrutée.
+ */
+export type SummonRarity = 'common' | 'uncommon' | 'rare';
+export const SUMMON_RARITY: Record<string, SummonRarity> = {
+  pyrocube: 'common', aquabloc: 'common', bourgeon: 'common', voltik: 'common', cailloc: 'common', psycube: 'common',
+  mycelin: 'uncommon', crabloc: 'uncommon', braizard: 'uncommon', chevrok: 'uncommon',
+  givrelin: 'rare', givrock: 'rare', crepitil: 'rare', nimbulle: 'rare',
+};
+
 /** Le compagnon qui rejoint le camp après le premier boss, selon le trio de départ. */
 export const STARTER_JOINER: Record<StarterTrioId, string> = { braise: 'bourgeon', maree: 'voltik' };
 export const STARTER_TRIO_IDS = Object.keys(STARTER_TRIOS) as StarterTrioId[];

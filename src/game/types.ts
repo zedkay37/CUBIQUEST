@@ -127,6 +127,8 @@ export interface OwnedCreature {
   moveId: string;
   runes: (RuneKind | null)[]; // 2 slots
   stoneBoard: StoneSlot[]; // 9 slots (3x3)
+  /** Lien de la lignée (A2), recopié de la sauvegarde au départ d'un combat ; jamais enregistré ici. */
+  bond?: number;
 }
 
 export interface ComputedCreatureStats {
@@ -350,6 +352,16 @@ export interface SaveState {
   allUnlocked: boolean;
   /** Ouvertures dont la pastille « Nouveau » a été vue. */
   unlocksSeen: string[];
+  /** Cube Scellé (spec Atelier, A2) : inventaire, compteur d'identifiants, Appâts, jauge d'Éveil. */
+  sealedCubes: { id: string; material: 'wood' | 'stone' | 'crystal' | 'prism'; guaranteedSpeciesId?: string }[];
+  cubeCounter: number;
+  baits: Partial<Record<ElementType, number>>;
+  awakenGauge: number;
+  /** Lien par lignée (0 à 5, décimal : +0,1 par victoire), doublons, variantes débloquées et choisies. */
+  bonds: Record<string, number>;
+  duplicates: Record<string, number>;
+  variantsUnlocked: string[];
+  variantsOn: string[];
 }
 
 export interface ExpeditionUnitHud {
@@ -472,6 +484,9 @@ export interface ExpeditionOutcome {
   /** Première victoire sur ce niveau (XP × 2,5) ; XP reçue par chaque créature restée au camp (0 si aucune). */
   firstClear: boolean;
   benchXp: number;
+  /** Cubes Scellés et Appâts gagnés par ce combat (A2). */
+  cubesWon: ('wood' | 'stone' | 'crystal' | 'prism')[];
+  baitsWon: ElementType[];
   /** Ce que cette victoire ouvre (S07.3) et le compagnon qui rejoint le camp, s'il y en a un. */
   newFeatures: string[];
   joinedSpeciesId: string | null;

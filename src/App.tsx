@@ -31,6 +31,7 @@ import {
   markLessonDone,
   isAutoUnlocked,
   markUnlockSeen,
+  lineageOf,
   unlockedFeatures,
   buildPreviewSave,
   claimAchievementReward,
@@ -191,7 +192,9 @@ export default function App() {
   const getSquadCreatures = useCallback((state: SaveState): OwnedCreature[] => {
     return state.squadIds
       .map((uid) => state.roster.find((c) => c.uid === uid))
-      .filter((c): c is OwnedCreature => Boolean(c));
+      .filter((c): c is OwnedCreature => Boolean(c))
+      // A2 : le Lien de la lignée (+4 % PV et attaque par étoile) accompagne la créature au combat
+      .map((c) => ({ ...c, bond: state.bonds?.[lineageOf(c.speciesId)] ?? 0 }));
   }, []);
 
   // Mount WebGLRenderer once in isolated ref container
