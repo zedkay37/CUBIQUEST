@@ -1,6 +1,6 @@
 /**
  * Sprint PROTO-MENEUR : 3 robots × 2 versions × 10 parties sur la simulation de la maquette (src/proto/sim.ts),
- * à graine fixe. Écrit `docs/proto/ROBOTS.md` (ou l'affiche seulement avec `--print`).
+ * à graine fixe. Écrit `docs/proto/ROBOTS-SALLE.md` (ou l'affiche seulement avec `--print`).
  *
  *   npx tsx tools/proto-robots.ts [--runs 10] [--print]
  */
@@ -86,7 +86,7 @@ ${detail.join('\n')}
 if (print) console.log(md);
 else {
   fs.mkdirSync('docs/proto', { recursive: true });
-  fs.writeFileSync('docs/proto/ROBOTS.md', md);
+  fs.writeFileSync('docs/proto/ROBOTS-SALLE.md', md);
   console.log(rows.join('\n'));
   console.log(verdict.join('\n'));
 }

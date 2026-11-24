@@ -152,6 +152,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
     loadProtoModels().then(() => {
       if (!alive) return;
       view = new ProtoView(el, { salle: false });
+      (window as unknown as { __donjonView: ProtoView }).__donjonView = view; // outil : mesure des images par seconde
       view.followSun = true;
       view.visibleFn = (u) => u.team === 'ally' || level.isSeen(u);
       env = new DonjonEnv(view.scene, level, view);
