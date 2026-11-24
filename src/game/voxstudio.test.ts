@@ -25,10 +25,26 @@ test('vox:check (BESTIAIRE) : la référence passe ; un fichier abîmé est refu
   const count = noEyes.readInt32LE(xyzi + 12);
   for (let k = 0; k < count; k++) if (noEyes[xyzi + 16 + k * 4 + 3] === 248) noEyes[xyzi + 16 + k * 4 + 3] = 2;
   assert.ok(checkVox(noEyes).some((e) => e.includes('yeux')));
-  // asymétrique : un voxel de corps décalé d'un cran en X
+  // un voxel de CORPS décalé d'un cran en X : accepté (petits détails asymétriques permis, porte du lot 4)
+  const bodyAsym = Buffer.from(ref);
+  const at = (q: number, k: number) => bodyAsym[xyzi + 16 + q * 4 + k];
+  const taken = new Set<string>();
+  for (let q = 0; q < count; q++) taken.add(`${at(q, 0)},${at(q, 1)},${at(q, 2)}`);
+  let moved = false;
+  for (let q = 0; q < count && !moved; q++) {
+    if (at(q, 3) >= 240 || at(q, 0) === 0) continue;
+    if (taken.has(`${at(q, 0) - 1},${at(q, 1)},${at(q, 2)}`)) continue;
+    bodyAsym[xyzi + 16 + q * 4] = at(q, 0) - 1; // déplacé vers une case vide : le corps n'est plus symétrique
+    moved = true;
+  }
+  assert.ok(moved);
+  assert.ok(!checkVox(bodyAsym).some((e) => e.includes('symétrie')));
+  // un ŒIL décalé d'un cran en X : refusé
   const asym = Buffer.from(ref);
-  asym[xyzi + 16] = Math.min(255, asym[xyzi + 16] + 1);
-  assert.ok(checkVox(asym).length > 0);
+  let e0 = 0;
+  while (asym[xyzi + 16 + e0 * 4 + 3] !== 248) e0++;
+  asym[xyzi + 16 + e0 * 4] = Math.min(255, asym[xyzi + 16 + e0 * 4] + 1);
+  assert.ok(checkVox(asym).some((e) => e.includes('symétrie')));
   // mauvaise version
   const v149 = Buffer.from(ref);
   v149.writeInt32LE(149, 4);

@@ -16,7 +16,8 @@ import { getVoxDef, parseVox, registerVoxModel } from '../game/models/voxFile';
  *
  * Textes en place : outil de développement (liste de tools/texts.ts).
  */
-const REFERENCES = import.meta.glob('../../tools/vox-studio/references/*.vox', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
+// BESTIAIRE : références et propositions (brouillons) qu'on peut montrer à la place d'une espèce (&fichier=nom)
+const REFERENCES = import.meta.glob(['../../tools/vox-studio/references/*.vox', '../../tools/vox-studio/brouillons/*.vox'], { query: '?url', import: 'default', eager: true }) as Record<string, string>;
 
 const params = new URLSearchParams(window.location.search);
 // &fusion=jamais|toujours|bas : force la fusion des faces des .vox (comparaison de l'image avec et sans)

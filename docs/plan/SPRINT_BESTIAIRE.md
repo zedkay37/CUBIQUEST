@@ -73,7 +73,7 @@ Compte les créatures et propose les **lots** (§6). Ne devine aucun nom ni aucu
 - Un script par créature : `tools/vox-studio/species/<identifiant>.(py|ts)`.
 - Commandes à fournir :
   - `vox:build` : régénère tous les `.vox` dans `src/assets/vox/` (déterministe : même script = même fichier, octet pour octet).
-  - `vox:check` : relit chaque `.vox` avec un lecteur indépendant et vérifie version 150, bornes, z min = 0, symétrie X (pattes gauche/droite échangées), présence des yeux (248), absence de lueur (240–247) sur les voxels de pattes, dimensions dans les limites du §4.4, indices 1–255 seulement. Échec = code de sortie non nul.
+  - `vox:check` : relit chaque `.vox` avec un lecteur indépendant et vérifie version 150, bornes, z min = 0, symétrie X des pattes (gauche/droite échangées) et des yeux, présence des yeux (248), absence de lueur (240–247) sur les voxels de pattes, dimensions dans les limites du §4.4, indices 1–255 seulement. Échec = code de sortie non nul.
   - `vox:planche` : une planche par créature (3/4 avant, face, profil, 3/4 arrière, taille réelle en combat : recadrage de l'image du jeu en 1280 × 720, où une forme finale fait 130 à 140 px de haut, silhouette) dans `docs/captures/bestiaire/`. **Rendu du vrai jeu** si le dépôt a déjà une capture automatisée (navigateur sans tête, comme pour `docs/captures/styles3/`), sinon le `render_rt` de `voxlib`. Indique toujours lequel a été utilisé.
   - Une planche d'**alignement** : toutes les créatures d'un lot côte à côte, à l'échelle du jeu, de profil et en silhouette.
 
@@ -119,7 +119,7 @@ Une lignée = une signature qui **grandit** avec l'évolution. Exemple Calcinarq
 ### 4.4 Construction (règles techniques du style)
 - Sculpter avec des volumes qui se chevauchent (ellipsoïdes, capsules, boîtes), puis passes de couleur automatiques : dessus = croûte plus claire, dessous = plus sombre. Ce contraste fait la lisibilité.
 - Aucune protubérance d'un seul voxel : tout fait au moins 2 voxels d'épaisseur. Les crocs et les griffes peuvent faire 1×2 s'ils restent dans la silhouette.
-- Symétrie gauche/droite parfaite (construire une moitié, miroir).
+- Symétrie gauche/droite (construire une moitié, miroir) ; petits détails asymétriques permis sur le corps (§4.7), jamais sur les pattes ni les yeux.
 - Yeux : 2×2, **enfoncés sous une arcade** qui les surplombe d'un voxel. Pas de reflet 249 sauf au stade 1 si le joueur le veut.
 - Pattes : indices 250–255, épaisses, coudes ou genoux qui sortent du corps. **Jamais de lueur sur une patte** (elle ne suivrait pas l'animation).
 - Queues, ailes, crêtes : statiques. Donc **pas de grandes ailes déployées** : ailes repliées et plaquées au corps, ou réduites à des ailerons, crêtes ou nageoires. (Leçon d'Ailebraise : des ailes figées font une cape.)
@@ -135,6 +135,23 @@ Une lignée = une signature qui **grandit** avec l'évolution. Exemple Calcinarq
 ### 4.6 Interdits (plagiat et clichés)
 - Aucune ressemblance avec une créature d'un autre jeu (Pokémon, Digimon, Monster Hunter, Palworld, Warcraft, Elden Ring, Spyro…). En cas de doute : changer le plan de corps.
 - Pas de flamme ou de boule lumineuse au bout de la queue. Pas de ventre crème sur un corps orange avec des ailes. Pas de couronne. Pas de cheminée ni d'objet manufacturé (ça fait machine). Pas de rangée unique de grandes plaques dorsales (ça fait stégosaure).
+- (Porte du lot 4) Pas de bête basse à six pattes qui porte des champignons (trop proche d'une créature connue).
+
+### 4.7 Personnalité (ajout de la porte du lot 4)
+- Chaque créature a un **trait de caractère** écrit dans `BESTIAIRE.md` (curieux, grognon, fier, timide, farceur, placide, nerveux…), pas forcément « épique ».
+- Ce trait **se voit** :
+  - posture : tête penchée, dos rond, menton levé ;
+  - yeux et sourcils : forme et position ;
+  - bouche : croc qui dépasse, sourire de travers ;
+  - détails de matière liés à son milieu.
+- **Petits détails asymétriques permis** (corne ébréchée, oreille tombante). `vox:check` n'exige plus la symétrie que sur les pattes (250–255) et les yeux (248).
+- **Jamais de gros blocs abstraits** : au minimum des yeux expressifs, une bouche lisible, des griffes ou des sabots, et deux détails de matière.
+- Le caractère **évolue avec la lignée** (exemple : timide → sûr de lui → serein).
+
+### 4.8 Diversité des plans de corps (ajout de la porte du lot 4)
+- Après le lot 4, on compte déjà cinq lignées à quatre pattes ou plus : Braizard, Aquabloc, Crabloc (six pattes), coureur des glaces, sanglier-souche.
+- Les lignées suivantes **varient les plans de corps** : bipède, serpentin, rampant, volant replié, trapu…
+- Pas de nouvelle lignée à quatre pattes sans accord du joueur.
 
 ---
 
@@ -148,7 +165,8 @@ Une lignée = une signature qui **grandit** avec l'évolution. Exemple Calcinarq
    - la tête se lit (gueule, yeux, arcade) de 3/4 et de face ;
    - de profil, pas d'ours assis ni de stégosaure ; de face, pas de boîte ;
    - la signature de lignée est visible ;
-   - les éléments interdits du §4.6 sont absents.
+   - les éléments interdits du §4.6 sont absents ;
+   - le trait de caractère (§4.7) se lit : posture, yeux, bouche, deux détails de matière.
 5. Corriger et recommencer. **Au plus 3 itérations** par créature dans une session ; au-delà, garder le modèle code (pas de fichier `.vox`) et le signaler dans le rapport.
 6. Vérifier en jeu (`?gallery=art`, puis un vrai combat) au moins une créature par lot.
 

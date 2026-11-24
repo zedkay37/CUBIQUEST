@@ -98,3 +98,42 @@ Il n'y a pas de lot « ennemis et boss » séparé : ce sont les mêmes modèles
 - **Mycélin → Amanitox** : essai « porteur de polypores » (bipède, champignons en étagères) refusé après 3 essais ; le jeu garde l'ancien modèle. Brouillon : `tools/vox-studio/brouillons/`.
 - **Langue « plante » ajustée** : corps en écorce brun sombre `#1A1712` `#3A2F23` `#5C4B36` (bois `#C9B48A`), mousse `#4A6B2A` et feuilles `#2E8040` en touches, lueur des spores inchangée, yeux ambre `#FFB02E`. Raison : le vert mousse validé se fondait dans l'herbe de la Prairie vue d'en haut (§4.5).
 - **Lot 3b** : la lignée glace a un indice de givre (`#93BDD0`) et des sabots sombres (`#141C24`).
+
+## Personnalité (bible §4.7, porte du lot 4, 24/11/2026)
+
+Traits proposés à partir de la fiche de chaque créature dans le jeu (`dexNote`). Colonne « se voit déjà » : relu sur les planches des lots 1 à 4b.
+**Rien n'est refait pour l'instant** ; « à reprendre » liste ce qui manque pour que le trait se lise.
+
+| Créature | Trait | Évolution du caractère | Se voit déjà | À reprendre |
+|---|---|---|---|---|
+| Braizard | **câlin et gourmand** (se chauffe le ventre, rapporte des braises) | → | fente de lave, petites cornes | tête un peu penchée, regard moins dur ; un détail de matière (cendre collée) |
+| Cendrox | **fier, chasseur** | câlin → fier | tête basse de prédateur, crocs, cornes, lave | — (référence) |
+| Aquabloc | **placide** | → | tête basse sous le bouclier | bouche quasi invisible ; yeux sans expression ; détails de récif (balanes) |
+| Corallix | **téméraire** (fend les courants) | placide → téméraire | branches de corail | menton levé, regard, bouche |
+| Abyssocube | **grognon protecteur** | → bougon | colosse, gorge lumineuse | sourcils froncés, croc qui dépasse |
+| Pyrocube | **têtu** (souffle sur ses étincelles) | → | gros yeux jaunes, gueule de braise | sourcils, bouche de travers ; posture campée |
+| Flambrix | **impulsif** | têtu → impulsif | crête, cornes | posture penchée en avant, gueule entrouverte |
+| Ignisaur | **colérique** | → colérique mais posé | carapace à volets de lave | sourcils lourds, croc ; un volet entrouvert (asymétrie) |
+| Crabloc | **farceur** (claque des pinces en rythme) | → | yeux sur pédoncules | **bouche absente** ; une pince levée (asymétrie), yeux plus ronds |
+| Crabastion | **placide, protecteur** | farceur → protecteur | aiguilles, grosses pinces | bouche ; balanes, algues |
+| Givrelin | **timide** (faon) | → | long cou | **oreille tombante, tête penchée** ; yeux plus grands ; bouche absente |
+| Ramurgel | **veilleur sérieux** | timide → sérieux | bois, crinière | menton levé, arcade marquée ; bouche |
+| Auroramure | **serein, majestueux** | sérieux → serein | port de tête, bois d'aurore | yeux mi-clos ; bouche ; détail de givre sur les sabots |
+| Bourgéon | **obstiné, un peu grognon** (« pousse obstinée ») | → | groin, petites défenses, yeux ambre | sourcils froncés ; une oreille-feuille tombante (asymétrie) |
+| Feuilloc | **méfiant** (se replie derrière ses feuilles) | grognon → méfiant | boucliers de feuilles | tête rentrée dans les épaules, regard de côté |
+| Bourgéoliath | **placide, ancestral** | méfiant → placide | racines, pousses, défenses | yeux mi-clos ; mousse qui pend du menton ; une défense ébréchée (asymétrie) |
+
+**Manquent nettement de personnalité** : Aquabloc, Crabloc, Givrelin (pas de bouche lisible ni de trait visible), puis Corallix, Abyssocube, Crabastion, Ramurgel, Auroramure (bouche absente). Les lignées de feu et du sanglier ont une bouche et des yeux lisibles, mais leur trait reste à pousser (sourcils, posture).
+
+## Lot 5 (électrique), 24/11/2026
+
+| Créature | Plan de corps | Trait | Signature |
+|---|---|---|---|
+| Ampoulin (`voltik`) | **bipède trapu** « scarabée-pile » : gros ventre de quartz, antennes-filaments, élytres de cuivre | **curieux** : tête penchée, antennes dressées, grands yeux | filaments lumineux des antennes, joint d'élytres lumineux |
+| Bobinard (`sparkube`) | bipède, avant-bras enroulés de spires de cuivre, longue antenne qui traîne derrière (le « câble ») | **bougon** : sourcils de chitine froncés, mandibule qui dépasse | spires lumineuses sur les avant-bras |
+| Voltacier (`raicube`) | bipède massif, **élytres entrouverts sur des ailettes repliées** (volant replié) | **fier** : menton levé, poitrail bombé | ailettes à nervures lumineuses, mandibules |
+| Crépitil | **serpentin sans pattes**, posé en S, tête levée | **nerveux** : yeux grands ouverts, crête hérissée | points lumineux le long du dos, en groupes |
+| Serpéclair | serpentin plus long, nageoires dorsales | **espiègle** : sourire de travers, une nageoire pliée | nageoires d'éclair qui s'allument par groupes |
+| Tempestrix | serpentin dressé (cobra), collerette de nageoires | **orageux, imposant** : arcade lourde, gueule entrouverte | collerette à nervures, ventre de quartz |
+
+Langue « électrique » (validée le 23/11) : ardoise `#1E2230` `#3A4157`, cuivre `#B87333`, quartz `#E8E4D8`, arc `#2D7BFF` `#6FC3FF` `#E6F7FF`.

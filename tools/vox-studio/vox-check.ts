@@ -4,7 +4,7 @@
  * `src/assets/vox/`. Code de sortie non nul au premier fichier en échec.
  *
  * Vérifié : en-tête « VOX » et version 150 ; voxels dans les bornes de SIZE ; z min = 0 ; indices 1 à 255 ;
- * symétrie gauche/droite parfaite (pattes 250–252 et 253–255 échangées) ; présence des yeux (248) ; aucune lueur
+ * symétrie gauche/droite des pattes (250–252 et 253–255 échangées) et des yeux (le corps peut être asymétrique) ; présence des yeux (248) ; aucune lueur
  * (240–247) collée à une patte (elle ne suivrait pas l'animation) ; dimensions dans les limites : largeur X de
  * 12 à 20, longueur Y ≤ 34, hauteur Z de 14 à 30.
  */
@@ -84,10 +84,13 @@ export function checkVox(buf: Buffer, opts: { boss?: boolean } = {}): string[] {
     const [lo, hi] = LIMITS[k];
     if (dims[k] < lo || dims[k] > hi) errors.push(`dimension ${k.toUpperCase()} = ${dims[k]} (limites ${lo} à ${hi})`);
   }
-  // symétrie : le voxel miroir (selon X, dans la boîte SIZE) existe, avec la patte opposée
+  // symétrie (règle « personnalité », porte du lot 4) : exigée seulement pour les pattes (250–255, la patte opposée en
+  // miroir : sinon l'animation boite) et les yeux (248 : le clignement est séparé au milieu). Le corps peut porter de
+  // petits détails asymétriques (corne ébréchée, oreille tombante).
   let asym = 0;
-  for (const [x, y, z, i] of v.voxels) if (at.get(`${W - 1 - x},${y},${z}`) !== swapLeg(i)) asym++;
-  if (asym) errors.push(`symétrie gauche/droite : ${asym} voxel(s) sans miroir`);
+  for (const [x, y, z, i] of v.voxels)
+    if ((i === 248 || (i >= 250 && i <= 255)) && at.get(`${W - 1 - x},${y},${z}`) !== swapLeg(i)) asym++;
+  if (asym) errors.push(`symétrie gauche/droite des pattes et des yeux : ${asym} voxel(s) sans miroir`);
   if (!v.voxels.some((p) => p[3] === 248)) errors.push('pas d’yeux (indice 248)');
   let glowOnLeg = 0;
   for (const [x, y, z, i] of v.voxels) {
