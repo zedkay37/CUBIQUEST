@@ -96,7 +96,7 @@ export const DENSITY_MULT: Record<Density, number> = { faible: 0.6, normale: 1, 
 /** Touches de chaque combinaison (vérifiées sans conflit : voir docs/proto/TOUCHES.md). */
 export function keysFor(s: DonjonSettings): [string, string][] {
   const out: [string, string][] = [];
-  if (s.modele === 'C') return keysForModel(s);
+  if (s.modele === 'C' || s.modele === 'D') return keysForModel(s);
   if (s.scheme === 1) out.push(['ZQSD', 'bouger'], ['Clic gauche', 'désigner un ennemi (attaque automatique sinon)']);
   if (s.scheme === 2) out.push(['Clic gauche', 'aller au sol · maintenu sur un ennemi : l’attaquer']);
   if (s.scheme === 3) out.push(['ZQSD', 'bouger'], ['Clic gauche', 'tirer vers le curseur']);
@@ -110,6 +110,7 @@ export function keysFor(s: DonjonSettings): [string, string][] {
 /** Touches des nouveaux modèles (PROTO-MODELES). */
 export function keysForModel(s: DonjonSettings): [string, string][] {
   const out: [string, string][] = [];
+  if (s.modele === 'D') out.push(['ZQSD', 'bouger'], ['Clic gauche', 'désigner un ennemi (attaque automatique sinon)'], ['1 · 2 · 3 · 4', 'compétences vers le curseur'], ['Espace', 'esquive']);
   if (s.modele === 'C')
     out.push(['ZQSD', 'bouger (l’équipe se bat seule, faiblement)'], ['1 · 2 · 3 · 4', 'choisir une carte'], ['Clic gauche', 'viser et jouer la carte'], ['Clic droit', 'annuler la carte choisie']);
   out.push(['F1', 'réglages'], ['M', 'mini-carte']);

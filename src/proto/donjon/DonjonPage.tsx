@@ -361,7 +361,12 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             <Chip k="1" label={L?.spell1 ?? ''} cd={cd('spell1')} total={CD.spell1} />
             <Chip k="2" label="Brasier" cd={cd('spell2')} total={CD.spell2} />
             <Chip k="Esp." label="Esquive" cd={cd('dodge')} total={CD.dodge} />
-            {version === 'A' ? (
+            {settings.modele === 'D' ? (
+              <>
+                <Chip k="3" label="Trait" cd={cd('spell3')} total={4} />
+                <Chip k="4" label="Onde de feu" cd={cd('spell4')} total={12} />
+              </>
+            ) : version === 'A' ? (
               <>
                 <Chip k="F" label={hud.focus ? 'Cible !' : 'Cible'} cd={cd('focus')} total={CD.focus} />
                 <Chip k="R" label="Retour" cd={cd('recall')} total={CD.recallA} />

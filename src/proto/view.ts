@@ -224,7 +224,7 @@ export class ProtoView {
     const model = buildAnyStyle('F', u.species);
     const body = new THREE.Group();
     body.add(model.root);
-    model.root.scale.multiplyScalar(SIZE[u.species] ?? 0.62);
+    model.root.scale.multiplyScalar((SIZE[u.species] ?? 0.62) * u.size);
     const root = new THREE.Group();
     root.add(body);
     const color = u.role === 'meneur' ? RING_COLORS.meneur : u.team === 'ally' ? RING_COLORS.ally : RING_COLORS.enemy;

@@ -294,6 +294,8 @@ export interface Unit {
   /** Ordre « tenir ce point » (regroupement, pause tactique) : la créature y va et s'y bat. */
   holdAt: Vec | null;
   holdT: number;
+  /** Taille d'affichage (D : petits suiveurs). */
+  size: number;
 }
 
 export interface Projectile {
@@ -454,6 +456,7 @@ function makeUnit(g: Game, role: Role, species: string, name: string, team: 'all
     enteredAt: 0,
     holdAt: null,
     holdT: 0,
+    size: 1,
   };
   g.units.push(u);
   return u;
@@ -885,6 +888,23 @@ function playerActions(g: Game, input: Input, dt: number) {
     if (g.scheme === 2) g.moveGoal = null;
     emit(g, { type: 'dodge', x: L.x, y: L.y, id: L.id });
   }
+  // D, le héros et ses suiveurs : 3 et 4 sont deux compétences de plus du Meneur ; aucun ordre aux suiveurs
+  if (g.mode === 'D') {
+    if (input.comp1 && ready(g, 'spell3')) {
+      act(g, 'sort 3');
+      shoot(g, L, aim, 45, 14, `${D.name} — Trait`, 24);
+      g.cds.spell3 = 4;
+      emit(g, { type: 'glow', x: L.x, y: L.y, id: L.id, color: '#FF8A30' });
+    }
+    if (input.comp2 && ready(g, 'spell4')) {
+      act(g, 'sort 4');
+      telegraph(g, { kind: 'disc', x: L.x, y: L.y, r: 3.6, r2: 0, angle: 0, len: 0, w: 0, dur: 0.25, dmg: 40, team: 'ally', source: `${D.name} — Onde de feu`, owner: L.id });
+      for (const e of enemies(g)) if (dist(e, L) < 3.6 + e.r) stunEnemy(g, e, 0.6);
+      g.cds.spell4 = 12;
+      emit(g, { type: 'glow', x: L.x, y: L.y, id: L.id, color: '#FF5A1F' });
+    }
+    return;
+  }
   if (g.version === 'A') {
     if (input.focus && ready(g, 'focus')) {
       const t = nearest(aim, enemies(g).filter((e) => dist(e, aim) < 3));
@@ -1053,6 +1073,30 @@ function updateComp(g: Game, c: Unit, rank: number, dt: number) {
     return;
   }
   const d = c.comp!;
+  // D : les suiveurs s'aident seuls (soin d'Amanitox, Carapace de Crabastion), sans ordre du joueur
+  if (g.mode === 'D') {
+    c.skillCd -= dt;
+    if (c.skillCd <= 0) {
+      const hurt = allyTargets(g).filter((a) => a.hp < a.maxHp * 0.5 && dist(a, c) < 7);
+      const crowd = enemies(g).filter((e) => e.aggro && dist(e, L) < 5).length;
+      if (c.species === 'amanitox' && hurt.length) {
+        for (const a of allyTargets(g)) if (dist(a, c) < 7) heal(g, a, 50);
+        c.skillCd = 12;
+        emit(g, { type: 'glow', x: c.x, y: c.y, id: c.id, color: '#9CFF7A' });
+      } else if (c.species === 'crabastion' && crowd >= 2) {
+        c.guard = 3;
+        for (const e of enemies(g)) {
+          if (dist(e, c) < 6) {
+            e.taunt = 3;
+            e.tauntBy = c.id;
+          }
+          if (dist(e, c) < 3 + e.r) stunEnemy(g, e, 0.8);
+        }
+        c.skillCd = 14;
+        emit(g, { type: 'glow', x: c.x, y: c.y, id: c.id, color: '#7FD7FF' });
+      } else c.skillCd = 0.5;
+    }
+  }
   const leash = dist(c, L) > 14;
   let target: Unit | null = null;
   if (g.version === 'A' && g.focusId >= 0) target = enemies(g).find((e) => e.id === g.focusId) ?? null;
