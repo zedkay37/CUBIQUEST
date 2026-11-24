@@ -23,7 +23,7 @@ export interface VoxModel {
 /** Blocs de fichier par unité de forme (même valeur que VOX_RES de creatures.ts). */
 export const VOX_UNIT = 14;
 /** Ondulation des créatures sans pattes : nombre de tranches, et longueur (en blocs) du cou fixe derrière les yeux. */
-export const VOX_SNAKE = { slices: 6, neck: 9 };
+export const VOX_SNAKE = { slices: 6, neck: 9, minRatio: 1.6 };
 export const VOX_ROLES = { glow: [240, 247], eye: 248, eyeShine: 249, legL: [250, 252], legR: [253, 255] } as const;
 
 const hex2 = (n: number) => n.toString(16).padStart(2, '0');
@@ -172,7 +172,8 @@ export function voxToSculptDef(model: VoxModel): SculptDef {
   // l'ordre). L'avant (tête, cou, yeux) reste fixe pour que les yeux ne se détachent pas. Toute créature qui a des
   // pattes est construite exactement comme avant.
   const extras: { group: string; pivot: [number, number, number] }[] = [];
-  if (!voxels.some((v) => v.group.startsWith('leg'))) {
+  // lot 7 : seulement un corps ALLONGÉ (serpent) ; un flotteur ou une gelée sans pattes reste d'un seul bloc
+  if (!voxels.some((v) => v.group.startsWith('leg')) && sy >= VOX_SNAKE.minRatio * sx) {
     const body = voxels.filter((v) => v.group === 'body');
     const eyeZ = Math.min(...voxels.filter((v) => v.group.startsWith('eye')).map((v) => v.z));
     const zMin = Math.min(...body.map((v) => v.z));

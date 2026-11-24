@@ -134,4 +134,7 @@ test('Vox (BESTIAIRE) : un serpent sans pattes est coupé en tranches qui ondule
     assert.equal(def.extras, undefined, id);
     assert.ok(def.voxels!.every((v) => !v.group.startsWith('seg')), id);
   }
+  // un modèle sans pattes mais trapu (flotteur, gelée) n'est pas coupé en tranches
+  const blob = parseVox(toArrayBuffer(writeVox({ size: [8, 8, 8], voxels: [{ x: 3, y: 3, z: 0, i: 2 }, { x: 4, y: 3, z: 0, i: 2 }, { x: 3, y: 2, z: 1, i: 248 }, { x: 4, y: 2, z: 1, i: 248 }], palette: Array(256).fill('#808080') })));
+  assert.equal(voxToSculptDef(blob).extras, undefined);
 });
