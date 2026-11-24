@@ -1,0 +1,85 @@
+/**
+ * PROTO-DONJON : les réglages du banc d'essai. Lus dans l'URL, modifiables par le panneau (F1), recopiés dans les
+ * résultats. Rien n'est stocké hors de l'URL (aucune clé de stockage).
+ */
+import type { LeaderId, Scheme, Version } from '../sim';
+
+export type CamDist = 'proche' | 'moyenne' | 'eloignee';
+export type CamAngle = 'forte' | 'rasante';
+export type Density = 'faible' | 'normale' | 'forte';
+export interface DonjonSettings {
+  seed: number;
+  scheme: Scheme;
+  version: Version;
+  leader: LeaderId;
+  cam: CamDist;
+  angle: CamAngle;
+  speed: 0.8 | 1 | 1.2;
+  density: Density;
+  /** Le donjon se réveille : plus on reste à un étage, plus des patrouilles arrivent. */
+  wake: boolean;
+  minimap: boolean;
+  recruit: 0 | 0.1 | 0.3;
+}
+
+export const DEFAULTS: DonjonSettings = {
+  seed: 1,
+  scheme: 1,
+  version: 'A',
+  leader: 'calcinarque',
+  cam: 'moyenne',
+  angle: 'forte',
+  speed: 1,
+  density: 'normale',
+  wake: false,
+  minimap: true,
+  recruit: 0,
+};
+
+/** Le préréglage demandé par la fiche (schéma 1, A, caméra moyenne, mini-carte, recrutement 10 %, réveil). */
+export const PRESET_EXPLORATION: Partial<DonjonSettings> = { scheme: 1, version: 'A', cam: 'moyenne', minimap: true, recruit: 0.1, wake: true };
+
+/** Réglages qui demandent de recommencer la descente (les autres s'appliquent en direct). */
+export const RESTART_KEYS: (keyof DonjonSettings)[] = ['seed', 'version', 'leader', 'density'];
+
+const pick = <T>(v: string | null, list: readonly T[], def: T): T => (list.map(String).includes(v ?? '') ? list[list.map(String).indexOf(v!)] : def);
+
+export function readSettings(search: string): DonjonSettings {
+  const p = new URLSearchParams(search);
+  let s: DonjonSettings = { ...DEFAULTS };
+  if (p.get('preset') === 'exploration') s = { ...s, ...PRESET_EXPLORATION };
+  const seed = Number(p.get('seed'));
+  return {
+    seed: Number.isFinite(seed) && seed > 0 ? Math.floor(seed) : s.seed,
+    scheme: pick(p.get('schema'), [1, 2, 3] as const, s.scheme),
+    version: pick(p.get('compo'), ['A', 'B'] as const, s.version),
+    leader: pick(p.get('meneur'), ['calcinarque', 'braizard'] as const, s.leader),
+    cam: pick(p.get('cam'), ['proche', 'moyenne', 'eloignee'] as const, s.cam),
+    angle: pick(p.get('angle'), ['forte', 'rasante'] as const, s.angle),
+    speed: pick(p.get('vitesse'), [0.8, 1, 1.2] as const, s.speed),
+    density: pick(p.get('densite'), ['faible', 'normale', 'forte'] as const, s.density),
+    wake: p.has('reveil') ? p.get('reveil') === '1' : s.wake,
+    minimap: p.has('carte') ? p.get('carte') === '1' : s.minimap,
+    recruit: pick(p.get('recrutement'), [0, 0.1, 0.3] as const, s.recruit),
+  };
+}
+
+export function settingsToQuery(s: DonjonSettings): string {
+  const p = new URLSearchParams({
+    proto: 'donjon',
+    seed: String(s.seed),
+    schema: String(s.scheme),
+    compo: s.version,
+    meneur: s.leader,
+    cam: s.cam,
+    angle: s.angle,
+    vitesse: String(s.speed),
+    densite: s.density,
+    reveil: s.wake ? '1' : '0',
+    carte: s.minimap ? '1' : '0',
+    recrutement: String(s.recruit),
+  });
+  return p.toString();
+}
+
+export const DENSITY_MULT: Record<Density, number> = { faible: 0.6, normale: 1, forte: 1.5 };

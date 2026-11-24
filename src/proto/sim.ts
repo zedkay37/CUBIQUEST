@@ -1,17 +1,18 @@
 /**
- * Sprint PROTO-MENEUR : simulation pure de la maquette `?proto=salle` (aucun DOM, aucun three.js, aucun
- * localStorage). La même boucle sert au navigateur et aux robots (`tools/proto-robots.ts`), à graine fixe.
- * Elle ne partage rien avec le moteur du jeu : le jeu actuel et son golden ne la voient pas.
+ * Maquettes PROTO-MENEUR et PROTO-DONJON : simulation pure (aucun DOM, aucun three.js, aucun localStorage).
+ * La même boucle sert au navigateur et aux robots, à graine fixe. Elle ne partage rien avec le moteur du jeu :
+ * le jeu actuel et son golden ne la voient pas.
  *
- * Plan de la salle (x vers la droite, y vers l'avant ; mètres) :
- * - entrée large (y 0–10), couloir étroit (y 10–19, x ±1,8), arène (y 19–42, x ±12) ;
- * - plateforme en hauteur contre le mur ouest (bonus de portée aux tirs), une rampe au sud ;
- * - quelques rochers fixes.
- * Version A : deux compagnons fixes (F : cible sous le curseur, R : retour, 3 et 4 : leurs sorts).
- * Version B : une réserve de quatre ; jauge d'Élan ; la créature BONDIT d'elle-même depuis le Meneur jusqu'au
- * point visé (aucun objet lancé), R la rappelle.
+ * Le terrain est un « niveau » (`Level`) : la salle faite à la main de PROTO-MENEUR (`SALLE`, ci-dessous) ou un
+ * étage de donjon généré (`donjon/level.ts`). Le combat, l'équipe et les ennemis sont communs.
+ * Version A : deux compagnons fixes (F : cible, R : retour, 3 et 4 : leurs sorts).
+ * Version B : une réserve ; jauge d'Élan ; la créature BONDIT d'elle-même depuis le Meneur jusqu'au point visé
+ * (aucun objet lancé), R la rappelle.
+ * Schémas de contrôle : 1 auto-attaque + ordres, 2 clic souris (aller / attaquer), 3 tir à la souris (ancien).
  */
 export type Version = 'A' | 'B';
+export type Scheme = 1 | 2 | 3;
+export type LeaderId = 'calcinarque' | 'braizard';
 export interface Vec {
   x: number;
   y: number;
@@ -32,6 +33,10 @@ export interface Input {
   /** Molette : −1, 0 ou +1. */
   select: number;
   enter: boolean;
+  /** Schémas 1 et 2 : ennemi désigné au clic (−1 : aucun changement, −2 : oublier la cible). */
+  designate: number;
+  /** Schéma 2 : point du sol où aller (null : aucun nouvel ordre). */
+  moveTo: Vec | null;
 }
 export const emptyInput = (): Input => ({
   move: { x: 0, y: 0 },
@@ -46,9 +51,22 @@ export const emptyInput = (): Input => ({
   comp2: false,
   select: 0,
   enter: false,
+  designate: -1,
+  moveTo: null,
 });
 
-// ---------------------------------------------------------------- la salle (faite à la main)
+// ---------------------------------------------------------------- le terrain
+export interface Level {
+  /** Repousse une unité hors des obstacles. */
+  collide(u: Unit): void;
+  /** Prochain point à viser pour aller de `u` vers `to` (couloirs, rampes, chemins). */
+  nav(g: Game, u: Unit, to: Vec): Vec;
+  height(p: Vec): number;
+  /** Vagues, réveil des groupes, objets, escalier… */
+  update(g: Game, dt: number): void;
+}
+
+// --- la salle de PROTO-MENEUR (faite à la main)
 export const PLATFORM: Rect = [-12, 24, -6.3, 32];
 export const RAMP: Rect = [-9.5, 21.5, -7, 24];
 export const PLATFORM_H = 1.2;
@@ -85,15 +103,94 @@ export const ROOM = {
 };
 const SOLIDS: Rect[] = [...ROOM.walls, ...ROOM.ledges, ...ROOM.rocks];
 
-const inRect = (x: number, y: number, r: Rect, m = 0) => x >= r[0] - m && x <= r[2] + m && y >= r[1] - m && y <= r[3] + m;
+export const inRect = (x: number, y: number, r: Rect, m = 0) => x >= r[0] - m && x <= r[2] + m && y >= r[1] - m && y <= r[3] + m;
 export const onPlatform = (p: Vec) => inRect(p.x, p.y, PLATFORM);
 export function heightAt(p: Vec): number {
   if (onPlatform(p)) return PLATFORM_H;
   if (inRect(p.x, p.y, RAMP)) return (PLATFORM_H * (p.y - RAMP[1])) / (RAMP[3] - RAMP[1]);
   return 0;
 }
-/** Bonus de portée des tirs depuis la plateforme. */
-const rangeMult = (p: Vec) => (heightAt(p) >= 1 ? 1.4 : 1);
+
+/** Repousse un cercle hors d'un rectangle (commun aux deux terrains). */
+export function pushOut(u: { x: number; y: number; r: number }, r: Rect) {
+  const cx = Math.max(r[0], Math.min(u.x, r[2]));
+  const cy = Math.max(r[1], Math.min(u.y, r[3]));
+  const dx = u.x - cx;
+  const dy = u.y - cy;
+  const d = Math.hypot(dx, dy);
+  if (d >= u.r) return;
+  if (d > 1e-6) {
+    u.x = cx + (dx / d) * u.r;
+    u.y = cy + (dy / d) * u.r;
+  } else {
+    const opts = [
+      [u.x - r[0], -1, 0],
+      [r[2] - u.x, 1, 0],
+      [u.y - r[1], 0, -1],
+      [r[3] - u.y, 0, 1],
+    ].sort((a, b) => a[0] - b[0])[0];
+    u.x += opts[1] * (opts[0] + u.r);
+    u.y += opts[2] * (opts[0] + u.r);
+  }
+}
+
+/** Navigation grossière de la salle : passe par le couloir, et par la rampe pour la plateforme. */
+export function navPoint(from: Vec, to: Vec): Vec {
+  const zone = (p: Vec) => (p.y < 10 ? 0 : p.y < 19 ? 1 : 2);
+  const zf = zone(from);
+  const zt = zone(to);
+  if (zf < zt) {
+    if (zf === 0) return Math.abs(from.x) > 1.1 ? { x: 0, y: 9.4 } : { x: 0, y: 11 };
+    return { x: 0, y: 19.8 };
+  }
+  if (zf > zt) {
+    if (zf === 2) return Math.abs(from.x) > 1.1 ? { x: 0, y: 19.8 } : { x: 0, y: 18 };
+    return { x: 0, y: 9.6 };
+  }
+  if (zf === 2) {
+    const fOn = onPlatform(from);
+    const tOn = onPlatform(to);
+    if (fOn && !tOn) return Math.abs(from.x + 8.25) > 1 && from.y > 24.3 ? { x: -8.25, y: 25 } : { x: -8.25, y: 21.2 };
+    if (!fOn && tOn) {
+      if (inRect(from.x, from.y, RAMP)) return { x: -8.25, y: 25.5 };
+      if (from.y > 22 && from.x > -6.3) return { x: -5.4, y: 21.2 };
+      if (Math.abs(from.x + 8.25) > 1) return { x: -8.25, y: 21.2 };
+      return { x: -8.25, y: 25.5 };
+    }
+  }
+  return to;
+}
+
+export const SALLE: Level = {
+  collide: (u) => {
+    for (const r of SOLIDS) pushOut(u, r);
+  },
+  nav: (_g, u, to) => navPoint(u, to),
+  height: heightAt,
+  update: (g, dt) => {
+    const alive = enemies(g).length;
+    if (g.wave === 0 && g.leader.y > 7) {
+      g.wave = 1;
+      spawnEnemy(g, 'chargeur', -1, 22, true);
+      spawnEnemy(g, 'chargeur', 1, 23.5, true);
+      spawnEnemy(g, 'soigneur', 0, 28, true);
+    } else if ((g.wave === 1 || g.wave === 2) && alive === 0) {
+      if (g.waveTimer <= 0) g.waveTimer = g.wave === 1 ? 2 : 3;
+      g.waveTimer -= dt;
+      if (g.waveTimer <= 0) {
+        g.wave++;
+        g.waveTimer = 0;
+        if (g.wave === 2) {
+          spawnEnemy(g, 'chargeur', -5, 35, false);
+          spawnEnemy(g, 'chargeur', 5, 35, false);
+          spawnEnemy(g, 'chargeur', 0, 37, false);
+          spawnEnemy(g, 'soigneur', -4, 40, false);
+          spawnEnemy(g, 'soigneur', 6, 40, false);
+        } else spawnEnemy(g, 'boss', 0, 35, true);
+      }
+    }
+  },
+};
 
 // ---------------------------------------------------------------- créatures (aucune nouvelle : les .vox du bestiaire)
 export interface CompDef {
@@ -114,14 +211,41 @@ export const COMPS: CompDef[] = [
   { species: 'braizard', name: 'Braizard', hp: 170, speed: 5.4, range: 1.6, dmg: 26, rate: 0.7, ranged: false, spell: '', arrival: { radius: 2.3, dmg: 42, stun: 0, heal: 0 } },
   { species: 'givrelin', name: 'Givrelin', hp: 140, speed: 4.6, range: 8, dmg: 17, rate: 1.0, ranged: true, spell: '', arrival: { radius: 2.8, dmg: 18, stun: 0.8, heal: 0 } },
 ];
-export const LEADER = { species: 'calcinarque-legendaire', name: 'Calcinarque', hp: 320, speed: 5.2 };
-export const ENEMY_SPECIES = { chargeur: 'chevrok', soigneur: 'bourgeon', boss: 'magmadrake' } as const;
+/** Remplaçant de Braizard dans la réserve quand Braizard est le Meneur (PROTO-DONJON). */
+export const RAICUBE: CompDef = { species: 'raicube', name: 'Raicube', hp: 150, speed: 5, range: 6, dmg: 16, rate: 0.8, ranged: true, spell: '', arrival: { radius: 2.6, dmg: 30, stun: 0.5, heal: 0 } };
+/** Recrues possibles (PROTO-DONJON) : les ennemis vaincus qui demandent à rejoindre l'équipe. */
+export const RECRUITS: Record<string, CompDef> = {
+  chevrok: { species: 'chevrok', name: 'Chevrok', hp: 180, speed: 5, range: 1.6, dmg: 22, rate: 0.8, ranged: false, spell: '', arrival: { radius: 2.4, dmg: 30, stun: 0.4, heal: 0 } },
+  bourgeon: { species: 'bourgeon', name: 'Bourgeon', hp: 130, speed: 4.4, range: 7, dmg: 12, rate: 1.0, ranged: true, spell: '', arrival: { radius: 3, dmg: 6, stun: 0, heal: 45 } },
+  cailloc: { species: 'cailloc', name: 'Cailloc', hp: 260, speed: 3.8, range: 1.6, dmg: 16, rate: 1.1, ranged: false, spell: '', arrival: { radius: 2.4, dmg: 16, stun: 1.0, heal: 0 } },
+};
+
+export interface LeaderDef {
+  species: string;
+  name: string;
+  hp: number;
+  speed: number;
+  ranged: boolean;
+  /** Portée et dégâts de l'attaque automatique (schémas 1 et 2). */
+  range: number;
+  dmg: number;
+  rate: number;
+  spell1: string;
+}
+export const LEADERS: Record<LeaderId, LeaderDef> = {
+  calcinarque: { species: 'calcinarque-legendaire', name: 'Calcinarque', hp: 320, speed: 5.2, ranged: true, range: 7, dmg: 11, rate: 0.4, spell1: 'Salve' },
+  braizard: { species: 'braizard', name: 'Braizard', hp: 380, speed: 5.6, ranged: false, range: 1.8, dmg: 20, rate: 0.45, spell1: 'Flammèche' },
+};
+export const LEADER = { species: LEADERS.calcinarque.species, name: 'Calcinarque', hp: 320, speed: 5.2 };
+export type EnemyRole = 'chargeur' | 'soigneur' | 'blinde' | 'boss';
+export const ENEMY_SPECIES: Record<EnemyRole, string> = { chargeur: 'chevrok', soigneur: 'bourgeon', blinde: 'cailloc', boss: 'magmadrake' };
+/** Le compagnon qui brise le blindage (PROTO-DONJON). */
+export const ARMOR_BREAKER = 'crabastion';
 
 export const CD = { fire: 0.33, spell1: 6, spell2: 10, dodge: 1.5, focus: 0.5, recallA: 4, recallB: 2, comp1: 12, comp2: 14, enter: 0.6 };
 export const ELAN = { max: 4, cost: 2, refund: 1, regenPerSec: 1 / 7, perKill: 0.5, bondRange: 9 };
-const MAX_TIME = 360;
 
-export type Role = 'meneur' | 'compagnon' | 'chargeur' | 'soigneur' | 'boss';
+export type Role = 'meneur' | 'compagnon' | EnemyRole;
 export interface Unit {
   id: number;
   role: Role;
@@ -150,6 +274,14 @@ export interface Unit {
   returnT: number;
   reviveT: number;
   aggro: boolean;
+  /** Distance à laquelle un ennemi remarque l'équipe (il dort : court ; il erre : moyen). */
+  notice: number;
+  sleeping: boolean;
+  group: number;
+  home: Vec;
+  wander: Vec | null;
+  armor: boolean;
+  channel: boolean;
   moving: boolean;
   dash: { vx: number; vy: number; t: number } | null;
   flight: { fx: number; fy: number; tx: number; ty: number; t: number; dur: number; back: boolean } | null;
@@ -167,6 +299,7 @@ export interface Projectile {
   dmg: number;
   team: 'ally' | 'enemy';
   source: string;
+  by: string;
 }
 export type TeleKind = 'disc' | 'ring' | 'band';
 export interface Telegraph {
@@ -186,9 +319,11 @@ export interface Telegraph {
   team: 'ally' | 'enemy';
   source: string;
   owner: number;
+  /** D'où vient le coup (le bouclier du Soigneur le regarde). */
+  from?: Vec;
 }
 export interface GameEvent {
-  type: 'shot' | 'melee' | 'heal' | 'glow' | 'arrival' | 'phase' | 'ko' | 'impact' | 'dodge' | 'recall';
+  type: 'shot' | 'melee' | 'heal' | 'glow' | 'arrival' | 'phase' | 'ko' | 'impact' | 'dodge' | 'recall' | 'block' | 'break' | 'interrupt' | 'notice' | 'pickup';
   x: number;
   y: number;
   id?: number;
@@ -196,14 +331,28 @@ export interface GameEvent {
   color?: string;
 }
 
+export interface SimOptions {
+  level?: Level;
+  scheme?: Scheme;
+  leader?: LeaderId;
+  /** Chance qu'un ennemi vaincu demande à rejoindre l'équipe (0 à 1). */
+  recruitChance?: number;
+  recordEvents?: boolean;
+  /** Durée maximale d'une partie (s) : au-delà, défaite « temps écoulé » (garde-fou des robots). */
+  maxTime?: number;
+}
+
 export interface Game {
   version: Version;
+  scheme: Scheme;
+  leaderDef: LeaderDef;
+  level: Level;
   t: number;
   rng: () => number;
   nextId: number;
   units: Unit[];
   leader: Unit;
-  /** A : les deux compagnons ; B : la réserve de quatre (sur le terrain ou non). */
+  /** A : les deux compagnons ; B : la réserve (sur le terrain ou non). */
   comps: Unit[];
   projectiles: Projectile[];
   telegraphs: Telegraph[];
@@ -217,6 +366,11 @@ export interface Game {
   cds: Record<string, number>;
   focusId: number;
   focusT: number;
+  /** Schémas 1 et 2 : cible désignée du Meneur ; schéma 2 : point où aller. */
+  leaderTarget: number;
+  moveGoal: Vec | null;
+  /** Traînée du Meneur : l'équipe le suit en file. */
+  trail: Vec[];
   actions: number;
   actionsByKind: Record<string, number>;
   dmg: Record<string, number>;
@@ -224,6 +378,13 @@ export interface Game {
   wasFiring: boolean;
   events: GameEvent[];
   recordEvents: boolean;
+  recruitChance: number;
+  recruitQueue: string[];
+  /** Un ennemi vaincu demande à rejoindre l'équipe : la simulation attend la réponse. */
+  pendingRecruit: string | null;
+  recruits: string[];
+  interrupts: number;
+  maxTime: number;
 }
 
 export function mulberry32(seed: number): () => number {
@@ -264,6 +425,13 @@ function makeUnit(g: Game, role: Role, species: string, name: string, team: 'all
     returnT: 0,
     reviveT: 0,
     aggro: true,
+    notice: 15,
+    sleeping: false,
+    group: 0,
+    home: { x, y },
+    wander: null,
+    armor: false,
+    channel: false,
     moving: false,
     dash: null,
     flight: null,
@@ -274,9 +442,27 @@ function makeUnit(g: Game, role: Role, species: string, name: string, team: 'all
   return u;
 }
 
-export function newGame(version: Version, seed = 1, recordEvents = true): Game {
+export function makeComp(g: Game, d: CompDef, x: number, y: number): Unit {
+  const u = makeUnit(g, 'compagnon', d.species, d.name, 'ally', x, y, d.hp, d.speed);
+  u.comp = d;
+  if (g.version === 'B') u.inPlay = false;
+  return u;
+}
+
+/** Équipe de départ : A, les deux premiers ; B, la réserve de quatre (Raicube remplace Braizard s'il mène). */
+export function startingTeam(version: Version, leader: LeaderId): CompDef[] {
+  if (version === 'A') return COMPS.slice(0, 2);
+  return COMPS.map((c) => (leader === 'braizard' && c.species === 'braizard' ? RAICUBE : c));
+}
+
+export function newGame(version: Version, seed = 1, recordEventsOrOpts: boolean | SimOptions = true): Game {
+  const opts: SimOptions = typeof recordEventsOrOpts === 'boolean' ? { recordEvents: recordEventsOrOpts } : recordEventsOrOpts;
+  const leaderId = opts.leader ?? 'calcinarque';
   const g = {
     version,
+    scheme: opts.scheme ?? 3,
+    leaderDef: LEADERS[leaderId],
+    level: opts.level ?? SALLE,
     t: 0,
     rng: mulberry32(seed),
     nextId: 1,
@@ -294,33 +480,37 @@ export function newGame(version: Version, seed = 1, recordEvents = true): Game {
     cds: {},
     focusId: -1,
     focusT: 0,
+    leaderTarget: -1,
+    moveGoal: null,
+    trail: [],
     actions: 0,
     actionsByKind: {},
     dmg: {},
     dmgTaken: 0,
     wasFiring: false,
     events: [],
-    recordEvents,
+    recordEvents: opts.recordEvents ?? true,
+    recruitChance: opts.recruitChance ?? 0,
+    recruitQueue: [],
+    pendingRecruit: null,
+    recruits: [],
+    interrupts: 0,
+    maxTime: opts.maxTime ?? 360,
   } as unknown as Game;
-  g.leader = makeUnit(g, 'meneur', LEADER.species, LEADER.name, 'ally', 0, 3, LEADER.hp, LEADER.speed, 0.55);
-  const defs = version === 'A' ? COMPS.slice(0, 2) : COMPS;
-  defs.forEach((d, i) => {
-    const u = makeUnit(g, 'compagnon', d.species, d.name, 'ally', i === 0 ? -1.6 : 1.6, 2, d.hp, d.speed);
-    u.comp = d;
-    if (version === 'B') u.inPlay = false;
-    g.comps.push(u);
-  });
+  const L = g.leaderDef;
+  g.leader = makeUnit(g, 'meneur', L.species, L.name, 'ally', 0, 3, L.hp, L.speed, 0.55);
+  startingTeam(version, leaderId).forEach((d, i) => g.comps.push(makeComp(g, d, i === 0 ? -1.6 : 1.6, 2)));
   return g;
 }
 
 // ---------------------------------------------------------------- outils
 const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.y - b.y);
-const clampLen = (from: Vec, to: Vec, max: number): Vec => {
+export const clampLen = (from: Vec, to: Vec, max: number): Vec => {
   const d = dist(from, to);
   if (d <= max || d === 0) return { x: to.x, y: to.y };
   return { x: from.x + ((to.x - from.x) * max) / d, y: from.y + ((to.y - from.y) * max) / d };
 };
-function emit(g: Game, e: GameEvent) {
+export function emit(g: Game, e: GameEvent) {
   if (g.recordEvents) g.events.push(e);
 }
 function act(g: Game, kind: string) {
@@ -328,6 +518,8 @@ function act(g: Game, kind: string) {
   g.actionsByKind[kind] = (g.actionsByKind[kind] ?? 0) + 1;
 }
 const ready = (g: Game, k: string) => (g.cds[k] ?? 0) <= 0;
+/** Bonus de portée des tirs depuis une hauteur (plateforme de la salle). */
+const rangeMult = (g: Game, p: Vec) => (g.level.height(p) >= 1 ? 1.4 : 1);
 
 /** Unités qu'un ennemi peut viser (le Meneur, les compagnons présents et posés). */
 export function allyTargets(g: Game): Unit[] {
@@ -349,33 +541,6 @@ export function nearest<T extends Vec>(from: Vec, list: T[]): T | null {
   return best;
 }
 
-/** Navigation grossière : passe par le couloir, et par la rampe pour la plateforme. */
-export function navPoint(from: Vec, to: Vec): Vec {
-  const zone = (p: Vec) => (p.y < 10 ? 0 : p.y < 19 ? 1 : 2);
-  const zf = zone(from);
-  const zt = zone(to);
-  if (zf < zt) {
-    if (zf === 0) return Math.abs(from.x) > 1.1 ? { x: 0, y: 9.4 } : { x: 0, y: 11 };
-    return { x: 0, y: 19.8 };
-  }
-  if (zf > zt) {
-    if (zf === 2) return Math.abs(from.x) > 1.1 ? { x: 0, y: 19.8 } : { x: 0, y: 18 };
-    return { x: 0, y: 9.6 };
-  }
-  if (zf === 2) {
-    const fOn = onPlatform(from);
-    const tOn = onPlatform(to);
-    if (fOn && !tOn) return Math.abs(from.x + 8.25) > 1 && from.y > 24.3 ? { x: -8.25, y: 25 } : { x: -8.25, y: 21.2 };
-    if (!fOn && tOn) {
-      if (inRect(from.x, from.y, RAMP)) return { x: -8.25, y: 25.5 };
-      if (from.y > 22 && from.x > -6.3) return { x: -5.4, y: 21.2 };
-      if (Math.abs(from.x + 8.25) > 1) return { x: -8.25, y: 21.2 };
-      return { x: -8.25, y: 25.5 };
-    }
-  }
-  return to;
-}
-
 function moveUnit(u: Unit, dir: Vec, speed: number, dt: number) {
   const l = Math.hypot(dir.x, dir.y);
   if (l < 1e-6) {
@@ -387,65 +552,85 @@ function moveUnit(u: Unit, dir: Vec, speed: number, dt: number) {
   u.face = Math.atan2(dir.y, dir.x);
   u.moving = true;
 }
-function moveToward(u: Unit, target: Vec, dt: number, stopAt = 0) {
+function moveToward(g: Game, u: Unit, target: Vec, dt: number, stopAt = 0) {
   if (dist(u, target) <= stopAt) {
     u.moving = false;
     return;
   }
-  const p = navPoint(u, target);
+  const p = g.level.nav(g, u, target);
   moveUnit(u, { x: p.x - u.x, y: p.y - u.y }, u.speed * (u.stun > 0 ? 0 : 1), dt);
 }
 function faceTo(u: Unit, p: Vec) {
   u.face = Math.atan2(p.y - u.y, p.x - u.x);
 }
 
-function collide(u: Unit) {
-  for (const r of SOLIDS) {
-    const cx = Math.max(r[0], Math.min(u.x, r[2]));
-    const cy = Math.max(r[1], Math.min(u.y, r[3]));
-    const dx = u.x - cx;
-    const dy = u.y - cy;
-    const d = Math.hypot(dx, dy);
-    if (d < u.r) {
-      if (d > 1e-6) {
-        u.x = cx + (dx / d) * u.r;
-        u.y = cy + (dy / d) * u.r;
-      } else {
-        // centre dans le bloc : sortie par le bord le plus proche
-        const opts = [
-          [u.x - r[0], -1, 0],
-          [r[2] - u.x, 1, 0],
-          [u.y - r[1], 0, -1],
-          [r[3] - u.y, 0, 1],
-        ].sort((a, b) => a[0] - b[0])[0];
-        u.x += opts[1] * (opts[0] + u.r);
-        u.y += opts[2] * (opts[0] + u.r);
-      }
-    }
-  }
-}
-
 // ---------------------------------------------------------------- dégâts
-function damage(g: Game, target: Unit, amount: number, source: string) {
+/**
+ * `from` : d'où vient le coup (bouclier frontal du Soigneur) ; `by` : espèce de l'attaquant (blindage).
+ * Un coup sans `from` (arrivée d'une créature qui bondit) passe toujours le bouclier.
+ */
+export function damage(g: Game, target: Unit, amount: number, source: string, from?: Vec, by?: string) {
   if (!target.alive || amount <= 0) return;
   if (target.team === 'ally' && (target.invuln > 0 || target.flight)) return;
   let dmg = amount;
+  // bouclier frontal du Soigneur : seulement dans le donjon (la salle de PROTO-MENEUR reste telle quelle), et tant
+  // qu'il a un allié à protéger (seul, il ne bloque plus : pas de combat sans fin contre un Soigneur acculé)
+  if (target.role === 'soigneur' && from && g.level !== SALLE && enemies(g).some((o) => o.role !== 'soigneur' && o.aggro && dist(o, target) < 11)) {
+    let diff = Math.atan2(from.y - target.y, from.x - target.x) - target.face;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    if (Math.abs(diff) < 1.15) {
+      emit(g, { type: 'block', x: target.x, y: target.y, id: target.id });
+      return;
+    }
+  }
+  if (target.armor) {
+    if (by === ARMOR_BREAKER) {
+      target.armor = false;
+      emit(g, { type: 'break', x: target.x, y: target.y, id: target.id });
+    } else {
+      dmg *= 0.1;
+      emit(g, { type: 'block', x: target.x, y: target.y, id: target.id });
+    }
+  }
   if (target.guard > 0) dmg *= 0.5;
   dmg = Math.min(dmg, target.hp);
   target.hp -= dmg;
-  if (target.team === 'enemy') g.dmg[source] = (g.dmg[source] ?? 0) + dmg;
-  else g.dmgTaken += dmg;
+  if (target.team === 'enemy') {
+    g.dmg[source] = (g.dmg[source] ?? 0) + dmg;
+    if (!target.aggro) wakeGroup(g, target);
+  } else g.dmgTaken += dmg;
   if (target.hp <= 0.0001) kill(g, target);
 }
-function heal(g: Game, target: Unit, amount: number) {
+export function heal(g: Game, target: Unit, amount: number) {
   if (!target.alive) return;
   target.hp = Math.min(target.maxHp, target.hp + amount);
   emit(g, { type: 'heal', x: target.x, y: target.y, id: target.id });
+}
+/** Étourdit un ennemi ; s'il canalisait une attaque (boss), elle est interrompue. */
+function stunEnemy(g: Game, e: Unit, t: number) {
+  e.stun = Math.max(e.stun, t);
+  if (e.channel) {
+    e.channel = false;
+    e.windup = 0;
+    g.telegraphs = g.telegraphs.filter((x) => !(x.owner === e.id && x.source === 'Boss — Fournaise'));
+    e.stun = Math.max(e.stun, 1.5);
+    g.interrupts++;
+    emit(g, { type: 'interrupt', x: e.x, y: e.y, id: e.id, color: '#7FD7FF' });
+  }
+}
+export function wakeGroup(g: Game, u: Unit) {
+  for (const e of enemies(g))
+    if (!e.aggro && (e.id === u.id || (u.group && e.group === u.group))) {
+      e.aggro = true;
+      e.sleeping = false;
+      emit(g, { type: 'notice', x: e.x, y: e.y, id: e.id });
+    }
 }
 function kill(g: Game, u: Unit) {
   u.alive = false;
   u.hp = 0;
   u.windup = 0;
+  u.channel = false;
   emit(g, { type: 'ko', x: u.x, y: u.y, id: u.id });
   if (u.team === 'enemy') {
     g.telegraphs = g.telegraphs.filter((t) => t.owner !== u.id || t.team === 'ally');
@@ -453,8 +638,9 @@ function kill(g: Game, u: Unit) {
     if (u.role === 'boss') {
       g.result = 'victoire';
       g.endReason = 'Le boss est vaincu.';
-    }
+    } else if (g.recruitChance > 0 && RECRUITS[u.species] && g.rng() < g.recruitChance) g.recruitQueue.push(u.species);
     if (g.focusId === u.id) g.focusId = -1;
+    if (g.leaderTarget === u.id) g.leaderTarget = -1;
     return;
   }
   if (u.role === 'meneur') {
@@ -468,7 +654,7 @@ function kill(g: Game, u: Unit) {
 
 function shoot(g: Game, from: Unit, to: Vec, dmg: number, range: number, source: string, speed = 20, spread = 0) {
   const a = Math.atan2(to.y - from.y, to.x - from.x) + spread;
-  g.projectiles.push({ x: from.x, y: from.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: range, dmg, team: from.team, source });
+  g.projectiles.push({ x: from.x, y: from.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: range, dmg, team: from.team, source, by: from.species });
   emit(g, { type: 'shot', x: from.x, y: from.y, id: from.id });
 }
 
@@ -488,48 +674,27 @@ export function insideTelegraph(t: Telegraph, p: Vec, pad = 0): boolean {
   return along >= -0.5 - pad && along <= t.len + pad && Math.abs(across) <= t.w / 2 + pad;
 }
 
-// ---------------------------------------------------------------- vagues
-function spawnEnemy(g: Game, role: 'chargeur' | 'soigneur' | 'boss', x: number, y: number, aggro: boolean) {
-  const stats = role === 'chargeur' ? { hp: 190, speed: 3.3, r: 0.6 } : role === 'soigneur' ? { hp: 130, speed: 3.0, r: 0.5 } : { hp: 3200, speed: 2.4, r: 1.3 };
-  const name = role === 'chargeur' ? 'Chargeur' : role === 'soigneur' ? 'Soigneur' : 'Boss';
-  const u = makeUnit(g, role, ENEMY_SPECIES[role], name, 'enemy', x, y, stats.hp, stats.speed, stats.r);
+// ---------------------------------------------------------------- ennemis
+export function spawnEnemy(g: Game, role: EnemyRole, x: number, y: number, aggro: boolean, scale = 1): Unit {
+  const stats =
+    role === 'chargeur' ? { hp: 190, speed: 3.3, r: 0.6 } : role === 'soigneur' ? { hp: 130, speed: 3.0, r: 0.5 } : role === 'blinde' ? { hp: 220, speed: 2.6, r: 0.65 } : { hp: 3200, speed: 2.4, r: 1.3 };
+  const name = role === 'chargeur' ? 'Chargeur' : role === 'soigneur' ? 'Soigneur' : role === 'blinde' ? 'Blindé' : 'Boss';
+  const u = makeUnit(g, role, ENEMY_SPECIES[role], name, 'enemy', x, y, stats.hp * scale, stats.speed, stats.r);
   u.aggro = aggro;
+  u.armor = role === 'blinde';
   u.skillCd = role === 'chargeur' ? 1.5 + g.rng() * 2 : role === 'boss' ? 2.5 : 0;
   u.healCd = 2 + g.rng();
   u.atkCd = g.rng();
   emit(g, { type: 'arrival', x, y, id: u.id, color: '#9B5CFF' });
   return u;
 }
-function updateWaves(g: Game, dt: number) {
-  const alive = enemies(g).length;
-  if (g.wave === 0 && g.leader.y > 7) {
-    g.wave = 1;
-    spawnEnemy(g, 'chargeur', -1, 22, true);
-    spawnEnemy(g, 'chargeur', 1, 23.5, true);
-    spawnEnemy(g, 'soigneur', 0, 28, true);
-  } else if ((g.wave === 1 || g.wave === 2) && alive === 0) {
-    if (g.waveTimer <= 0) g.waveTimer = g.wave === 1 ? 2 : 3;
-    g.waveTimer -= dt;
-    if (g.waveTimer <= 0) {
-      g.wave++;
-      g.waveTimer = 0;
-      if (g.wave === 2) {
-        spawnEnemy(g, 'chargeur', -5, 35, false);
-        spawnEnemy(g, 'chargeur', 5, 35, false);
-        spawnEnemy(g, 'chargeur', 0, 37, false);
-        spawnEnemy(g, 'soigneur', -4, 40, false);
-        spawnEnemy(g, 'soigneur', 6, 40, false);
-      } else spawnEnemy(g, 'boss', 0, 35, true);
-    }
-  }
-}
 
 // ---------------------------------------------------------------- un pas de jeu
 export function step(g: Game, input: Input, dt = 1 / 60): void {
-  if (g.result) return;
+  if (g.result || g.pendingRecruit) return;
   g.t += dt;
   for (const k of Object.keys(g.cds)) g.cds[k] -= dt;
-  g.events.length = g.recordEvents ? g.events.length : 0;
+  if (!g.recordEvents) g.events.length = 0;
   playerActions(g, input, dt);
   for (const u of g.units) {
     if (!u.alive) continue;
@@ -539,66 +704,154 @@ export function step(g: Game, input: Input, dt = 1 / 60): void {
     u.taunt = Math.max(0, u.taunt - dt);
     u.atkCd -= dt;
   }
-  for (const c of g.comps) updateComp(g, c, dt);
+  g.comps.forEach((c, i) => updateComp(g, c, i, dt));
   for (const e of enemies(g)) updateEnemy(g, e, dt);
   updateProjectiles(g, dt);
   updateTelegraphs(g, dt);
   separate(g);
-  for (const u of g.units) if (u.alive && !u.flight) collide(u);
-  updateWaves(g, dt);
+  for (const u of g.units) if (u.alive && !u.flight) g.level.collide(u);
+  g.level.update(g, dt);
   if (g.version === 'B') g.elan = Math.min(ELAN.max, g.elan + ELAN.regenPerSec * dt);
-  if (!g.result && g.t >= MAX_TIME) {
+  if (!g.result && g.t >= g.maxTime) {
     g.result = 'défaite';
     g.endReason = 'Temps écoulé.';
+  }
+  // recrutement : après le combat (plus aucun ennemi réveillé près du Meneur)
+  if (g.recruitQueue.length && !enemies(g).some((e) => e.aggro && dist(e, g.leader) < 16)) {
+    g.pendingRecruit = g.recruitQueue[0];
+    g.recruitQueue = [];
   }
   g.units = g.units.filter((u) => u.alive || u.team === 'ally');
 }
 
+/** Réponse du joueur : `replace` = index du compagnon remplacé (A, ou B quand la réserve est pleine), −1 = refus. */
+export function resolveRecruit(g: Game, replace: number) {
+  const sp = g.pendingRecruit;
+  g.pendingRecruit = null;
+  if (!sp || replace < 0) return;
+  const d = RECRUITS[sp];
+  const L = g.leader;
+  const nu = makeComp(g, d, L.x - 1, L.y - 1);
+  nu.hp = d.hp * 0.6;
+  if (replace >= g.comps.length) g.comps.push(nu);
+  else {
+    const old = g.comps[replace];
+    old.alive = false;
+    old.inPlay = false;
+    old.reviveT = Infinity;
+    g.units = g.units.filter((u) => u !== old);
+    g.comps[replace] = nu;
+  }
+  g.recruits.push(d.name);
+  emit(g, { type: 'arrival', x: nu.x, y: nu.y, id: nu.id, color: '#FFE27A' });
+}
+export const RESERVE_MAX = 4;
+
+function leaderAttack(g: Game, L: Unit, target: Unit) {
+  const d = g.leaderDef;
+  faceTo(L, target);
+  if (L.atkCd > 0) return;
+  L.atkCd = d.rate;
+  if (d.ranged) shoot(g, L, target, d.dmg, d.range * rangeMult(g, L) + 2, `${d.name} — attaque`, 18);
+  else {
+    damage(g, target, d.dmg, `${d.name} — attaque`, L, d.species);
+    emit(g, { type: 'melee', x: target.x, y: target.y, id: L.id, to: target.id });
+  }
+}
+
 function playerActions(g: Game, input: Input, dt: number) {
   const L = g.leader;
+  const D = g.leaderDef;
+  const aim = input.aim;
+  // ordres des schémas 1 et 2
+  if (input.designate === -2) {
+    g.leaderTarget = -1;
+  } else if (input.designate >= 0 && enemies(g).some((e) => e.id === input.designate)) {
+    if (g.leaderTarget !== input.designate) act(g, 'désigner');
+    g.leaderTarget = input.designate;
+  }
+  if (input.moveTo) {
+    if (!g.moveGoal || dist(g.moveGoal, input.moveTo) > 1.5) act(g, 'aller');
+    g.moveGoal = { ...input.moveTo };
+    if (input.designate < 0) g.leaderTarget = -1;
+  }
+  const target = enemies(g).find((e) => e.id === g.leaderTarget) ?? null;
+  const range = D.range * (D.ranged ? rangeMult(g, L) : 1);
   // déplacement (ou esquive en cours)
   if (L.dash) {
     const sub = 3;
     for (let i = 0; i < sub; i++) {
       L.x += (L.dash.vx * dt) / sub;
       L.y += (L.dash.vy * dt) / sub;
-      collide(L);
+      g.level.collide(L);
     }
     L.dash.t -= dt;
     if (L.dash.t <= 0) L.dash = null;
+  } else if (g.scheme === 2) {
+    if (target && dist(L, target) > range + target.r) moveToward(g, L, target, dt);
+    else if (!target && g.moveGoal && dist(L, g.moveGoal) > 0.3) moveToward(g, L, g.moveGoal, dt);
+    else {
+      L.moving = false;
+      if (!target) g.moveGoal = null;
+    }
   } else {
     moveUnit(L, input.move, L.speed, dt);
-    if (!L.moving || input.fire) faceTo(L, input.aim);
+    if (g.scheme === 3 && (!L.moving || input.fire)) faceTo(L, aim);
   }
-  const aim = input.aim;
-  const range = 10 * rangeMult(L);
-  if (input.fire && !g.wasFiring) act(g, 'tir');
-  g.wasFiring = input.fire;
-  if (input.fire && L.atkCd <= 0) {
-    shoot(g, L, aim, 10, range, 'Calcinarque — tir');
-    L.atkCd = CD.fire;
+  if (L.moving) {
+    const last = g.trail[g.trail.length - 1];
+    if (!last || dist(last, L) > 0.35) {
+      g.trail.push({ x: L.x, y: L.y });
+      if (g.trail.length > 60) g.trail.shift();
+    }
   }
+  // attaque de base
+  if (g.scheme === 3) {
+    if (input.fire && !g.wasFiring) act(g, 'tir');
+    g.wasFiring = input.fire;
+    if (input.fire && L.atkCd <= 0) {
+      shoot(g, L, aim, 10, 10 * rangeMult(g, L), `${D.name} — tir`);
+      L.atkCd = CD.fire;
+    }
+  } else if (!L.dash) {
+    let t = target && dist(L, target) <= range + target.r + 0.2 ? target : null;
+    if (!t && g.scheme === 1) t = nearest(L, enemies(g).filter((e) => e.aggro && dist(L, e) <= range + e.r + 0.2));
+    if (t) leaderAttack(g, L, t);
+  }
+  // sorts du Meneur (vers le curseur)
   if (input.spell1 && ready(g, 'spell1')) {
     act(g, 'sort 1');
-    for (let i = -2; i <= 2; i++) shoot(g, L, aim, 14, range, 'Calcinarque — Salve', 20, i * 0.16);
+    if (D.ranged) for (let i = -2; i <= 2; i++) shoot(g, L, aim, 14, 10 * rangeMult(g, L), `${D.name} — ${D.spell1}`, 20, i * 0.16);
+    else {
+      // cône de flammes devant le Meneur
+      const a0 = Math.atan2(aim.y - L.y, aim.x - L.x);
+      L.face = a0;
+      for (const e of enemies(g)) {
+        const d = dist(e, L);
+        let diff = Math.atan2(e.y - L.y, e.x - L.x) - a0;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        if (d <= 3.8 + e.r && Math.abs(diff) < 0.9) damage(g, e, 40, `${D.name} — ${D.spell1}`, L, D.species);
+      }
+    }
     g.cds.spell1 = CD.spell1;
     emit(g, { type: 'glow', x: L.x, y: L.y, id: L.id, color: '#FF8A30' });
   }
   if (input.spell2 && ready(g, 'spell2')) {
     act(g, 'sort 2');
     const p = clampLen(L, aim, 9);
-    telegraph(g, { kind: 'disc', x: p.x, y: p.y, r: 2.6, r2: 0, angle: 0, len: 0, w: 0, dur: 0.5, dmg: 50, team: 'ally', source: 'Calcinarque — Brasier', owner: L.id });
+    telegraph(g, { kind: 'disc', x: p.x, y: p.y, r: 2.6, r2: 0, angle: 0, len: 0, w: 0, dur: 0.5, dmg: 50, team: 'ally', source: `${D.name} — Brasier`, owner: L.id, from: { x: L.x, y: L.y } });
     g.cds.spell2 = CD.spell2;
     emit(g, { type: 'glow', x: L.x, y: L.y, id: L.id, color: '#FF8A30' });
   }
   if (input.dodge && ready(g, 'dodge') && !L.dash) {
     act(g, 'esquive');
-    let d = input.move;
+    let d = g.scheme === 2 ? { x: aim.x - L.x, y: aim.y - L.y } : input.move;
     if (Math.hypot(d.x, d.y) < 0.1) d = { x: aim.x - L.x, y: aim.y - L.y };
     const l = Math.hypot(d.x, d.y) || 1;
     L.dash = { vx: (d.x / l) * 22, vy: (d.y / l) * 22, t: 0.2 };
     L.invuln = 0.35;
     g.cds.dodge = CD.dodge;
+    if (g.scheme === 2) g.moveGoal = null;
     emit(g, { type: 'dodge', x: L.x, y: L.y, id: L.id });
   }
   if (g.version === 'A') {
@@ -618,23 +871,29 @@ function playerActions(g: Game, input: Input, dt: number) {
       g.focusId = -1;
       g.cds.recall = CD.recallA;
     }
-    if (input.comp1 && ready(g, 'comp1') && g.comps[0].alive) {
+    const c0 = g.comps[0];
+    if (input.comp1 && ready(g, 'comp1') && c0?.alive) {
       act(g, 'sort 3');
-      const c = g.comps[0];
-      c.guard = 4;
-      for (const e of enemies(g)) if (dist(e, c) < 7) {
-        e.taunt = 4;
-        e.tauntBy = c.id;
-      }
+      if (c0.species === 'crabastion') {
+        // Carapace : moitié des dégâts, provocation, et un choc qui étourdit au contact (interrompt le boss)
+        c0.guard = 4;
+        for (const e of enemies(g)) {
+          if (dist(e, c0) < 7) {
+            e.taunt = 4;
+            e.tauntBy = c0.id;
+          }
+          if (dist(e, c0) < 3 + e.r) stunEnemy(g, e, 1.0);
+        }
+      } else for (const e of enemies(g)) if (dist(e, c0) < 3 + e.r) damage(g, e, 30, `${c0.name} — sort`, undefined, c0.species);
       g.cds.comp1 = CD.comp1;
-      emit(g, { type: 'glow', x: c.x, y: c.y, id: c.id, color: '#7FD7FF' });
+      emit(g, { type: 'glow', x: c0.x, y: c0.y, id: c0.id, color: '#7FD7FF' });
     }
-    if (input.comp2 && ready(g, 'comp2') && g.comps[1].alive) {
+    const c1 = g.comps[1];
+    if (input.comp2 && ready(g, 'comp2') && c1?.alive) {
       act(g, 'sort 4');
-      const c = g.comps[1];
-      for (const a of allyTargets(g)) if (dist(a, c) < 6) heal(g, a, 70);
+      for (const a of allyTargets(g)) if (dist(a, c1) < 6) heal(g, a, c1.species === 'amanitox' ? 70 : 40);
       g.cds.comp2 = CD.comp2;
-      emit(g, { type: 'glow', x: c.x, y: c.y, id: c.id, color: '#9CFF7A' });
+      emit(g, { type: 'glow', x: c1.x, y: c1.y, id: c1.id, color: '#9CFF7A' });
     }
     g.focusT -= dt;
     if (g.focusT <= 0) g.focusId = -1;
@@ -645,7 +904,7 @@ function playerActions(g: Game, input: Input, dt: number) {
     }
     const sel = g.comps[g.selected];
     const inPlay = g.comps.filter((c) => c.inPlay && c.alive);
-    if (input.enter && ready(g, 'enter') && sel.alive && !sel.inPlay && !sel.flight && inPlay.length < 2 && g.elan >= ELAN.cost) {
+    if (input.enter && ready(g, 'enter') && sel && sel.alive && !sel.inPlay && !sel.flight && inPlay.length < 2 && g.elan >= ELAN.cost) {
       act(g, 'entrée');
       const p = clampLen(L, aim, ELAN.bondRange);
       sel.x = L.x;
@@ -657,13 +916,13 @@ function playerActions(g: Game, input: Input, dt: number) {
       g.cds.enter = CD.enter;
     }
     if (input.recall && ready(g, 'recall')) {
-      const target = sel.inPlay && sel.alive && !sel.flight ? sel : inPlay.filter((c) => !c.flight).sort((a, b) => b.enteredAt - a.enteredAt)[0];
-      if (target) {
+      const target2 = sel && sel.inPlay && sel.alive && !sel.flight ? sel : inPlay.filter((c) => !c.flight).sort((a, b) => b.enteredAt - a.enteredAt)[0];
+      if (target2) {
         act(g, 'R rappel');
-        target.flight = { fx: target.x, fy: target.y, tx: L.x, ty: L.y, t: 0, dur: 0.4, back: true };
+        target2.flight = { fx: target2.x, fy: target2.y, tx: L.x, ty: L.y, t: 0, dur: 0.4, back: true };
         g.elan = Math.min(ELAN.max, g.elan + ELAN.refund);
         g.cds.recall = CD.recallB;
-        emit(g, { type: 'recall', x: target.x, y: target.y, id: target.id });
+        emit(g, { type: 'recall', x: target2.x, y: target2.y, id: target2.id });
       }
     }
   }
@@ -674,14 +933,22 @@ function landArrival(g: Game, c: Unit) {
   emit(g, { type: 'arrival', x: c.x, y: c.y, id: c.id, color: '#FFE27A' });
   for (const e of enemies(g))
     if (dist(e, c) <= a.radius + e.r) {
-      damage(g, e, a.dmg, `${c.name} — arrivée`);
-      if (a.stun) e.stun = Math.max(e.stun, a.stun);
-      e.aggro = true;
+      // le bond arrive de partout à la fois : il passe le bouclier du Soigneur
+      damage(g, e, a.dmg, `${c.name} — arrivée`, undefined, c.species);
+      if (a.stun) stunEnemy(g, e, a.stun);
+      if (!e.aggro) wakeGroup(g, e);
     }
   if (a.heal) for (const al of allyTargets(g)) if (dist(al, c) <= a.radius + 0.5) heal(g, al, a.heal);
 }
 
-function updateComp(g: Game, c: Unit, dt: number) {
+/** Point de la traînée du Meneur à suivre (l'équipe marche en file dans les couloirs). */
+function trailPoint(g: Game, rank: number): Vec {
+  const back = (rank + 1) * 4;
+  const i = g.trail.length - 1 - back;
+  return i >= 0 ? g.trail[i] : (g.trail[0] ?? g.leader);
+}
+
+function updateComp(g: Game, c: Unit, rank: number, dt: number) {
   const L = g.leader;
   if (!c.alive) {
     c.reviveT -= dt;
@@ -713,16 +980,21 @@ function updateComp(g: Game, c: Unit, dt: number) {
       c.flight = null;
       if (f.back) c.inPlay = false;
       else {
-        collide(c);
+        g.level.collide(c);
         landArrival(g, c);
       }
     }
     return;
   }
   if (c.stun > 0) return;
+  const follow = () => {
+    const p = trailPoint(g, rank);
+    if (dist(c, L) > 2.4 && dist(c, p) > 0.4) moveToward(g, c, p, dt);
+    else c.moving = false;
+  };
   if (c.returnT > 0) {
     c.returnT -= dt;
-    moveToward(c, L, dt, 1.8);
+    follow();
     return;
   }
   const d = c.comp!;
@@ -731,11 +1003,11 @@ function updateComp(g: Game, c: Unit, dt: number) {
   if (g.version === 'A' && g.focusId >= 0) target = enemies(g).find((e) => e.id === g.focusId) ?? null;
   if (!target && !leash) target = nearest(c, enemies(g).filter((e) => e.aggro && dist(e, c) < 9 && dist(e, L) < 12));
   if (!target) {
-    moveToward(c, L, dt, 2.6);
+    follow();
     return;
   }
-  const range = d.range * (d.ranged ? rangeMult(c) : 1) + target.r;
-  if (dist(c, target) > range) moveToward(c, target, dt);
+  const range = d.range * (d.ranged ? rangeMult(g, c) : 1) + target.r;
+  if (dist(c, target) > range) moveToward(g, c, target, dt);
   else {
     c.moving = false;
     faceTo(c, target);
@@ -743,7 +1015,7 @@ function updateComp(g: Game, c: Unit, dt: number) {
       c.atkCd = d.rate;
       if (d.ranged) shoot(g, c, target, d.dmg, range + 1.5, d.name, 16);
       else {
-        damage(g, target, d.dmg, d.name);
+        damage(g, target, d.dmg, d.name, c, c.species);
         emit(g, { type: 'melee', x: target.x, y: target.y, id: c.id, to: target.id });
       }
     }
@@ -763,8 +1035,15 @@ function updateEnemy(g: Game, e: Unit, dt: number) {
   const target = enemyTarget(g, e);
   if (!target) return;
   if (!e.aggro) {
-    if (dist(e, target) < 15) e.aggro = true;
-    else return;
+    if (dist(e, target) < e.notice) wakeGroup(g, e);
+    else {
+      // errer autour de chez soi (ou dormir)
+      if (!e.sleeping) {
+        if (!e.wander || dist(e, e.wander) < 0.5) e.wander = { x: e.home.x + (g.rng() - 0.5) * 5, y: e.home.y + (g.rng() - 0.5) * 5 };
+        moveUnit(e, { x: e.wander.x - e.x, y: e.wander.y - e.y }, e.speed * 0.35, dt);
+      } else e.moving = false;
+      return;
+    }
   }
   if (e.dash) {
     e.x += e.dash.vx * dt;
@@ -783,7 +1062,6 @@ function updateEnemy(g: Game, e: Unit, dt: number) {
       e.windup -= dt;
       e.moving = false;
       if (e.windup <= 0) {
-        // la charge part au moment de l'impact annoncé (les dégâts sont dans le télégraphe)
         const sp = 8.5 / 0.25;
         e.dash = { vx: Math.cos(e.face) * sp, vy: Math.sin(e.face) * sp, t: 0.25 };
       }
@@ -797,16 +1075,11 @@ function updateEnemy(g: Game, e: Unit, dt: number) {
       e.skillCd = 5 + g.rng() * 1.5;
       return;
     }
-    if (d > 1.3 + target.r) moveToward(e, target, dt);
-    else {
-      e.moving = false;
-      faceTo(e, target);
-      if (e.atkCd <= 0) {
-        e.atkCd = 1;
-        damage(g, target, 14, 'Chargeur');
-        emit(g, { type: 'melee', x: target.x, y: target.y, id: e.id, to: target.id });
-      }
-    }
+    meleeChase(g, e, target, d, dt, 14, 1, 'Chargeur');
+    return;
+  }
+  if (e.role === 'blinde') {
+    meleeChase(g, e, target, d, dt, 20, 1.3, 'Blindé');
     return;
   }
   if (e.role === 'soigneur') {
@@ -816,14 +1089,15 @@ function updateEnemy(g: Game, e: Unit, dt: number) {
         .filter((o) => o.hp < o.maxHp - 1 && dist(o, e) < 11)
         .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
       if (hurt) {
-        heal(g, hurt, 45);
+        heal(g, hurt, g.level === SALLE ? 45 : 30);
         emit(g, { type: 'heal', x: e.x, y: e.y, id: e.id, to: hurt.id, color: '#9CFF7A' });
         e.healCd = 3.5;
       } else e.healCd = 0.5;
     }
-    // reste en retrait
-    if (d < 8) moveUnit(e, { x: e.x - target.x, y: e.y - target.y }, e.speed, dt);
-    else if (d > 11) moveToward(e, target, dt);
+    // reste en retrait, bouclier tourné vers l'ennemi le plus proche
+    if (d < 8) {
+      moveUnit(e, { x: e.x - target.x, y: e.y - target.y }, e.speed, dt);
+    } else if (d > 11) moveToward(g, e, target, dt);
     else e.moving = false;
     faceTo(e, target);
     if (e.atkCd <= 0 && d < 11) {
@@ -843,12 +1117,21 @@ function updateEnemy(g: Game, e: Unit, dt: number) {
   if (e.windup > 0) {
     e.windup -= dt;
     e.moving = false;
+    if (e.windup <= 0) e.channel = false;
     return;
   }
   e.skillCd -= dt;
   if (e.skillCd <= 0) {
     const p2 = g.bossPhase === 2;
-    if (e.pattern % 2 === 0) {
+    const fournaise = g.level !== SALLE && e.pattern % 3 === 2;
+    if (fournaise) {
+      // Fournaise : canalisée 2,4 s puis trois vagues de feu sur toute la salle ; un étourdissement l'interrompt
+      for (let k = 0; k < 3; k++)
+        telegraph(g, { kind: 'disc', x: e.x, y: e.y, r: 14, r2: 0, angle: 0, len: 0, w: 0, dur: 2.4 + k * 0.5, dmg: 35, team: 'enemy', source: 'Boss — Fournaise', owner: e.id });
+      e.windup = 3.4;
+      e.channel = true;
+      emit(g, { type: 'glow', x: e.x, y: e.y, id: e.id, color: '#FF5A1F' });
+    } else if (e.pattern % 2 === 0) {
       if (p2) telegraph(g, { kind: 'ring', x: e.x, y: e.y, r: 2.6, r2: 8.5, angle: 0, len: 0, w: 0, dur: 1.4, dmg: 65, team: 'enemy', source: 'Boss — Onde', owner: e.id });
       else telegraph(g, { kind: 'disc', x: e.x, y: e.y, r: 4.8, r2: 0, angle: 0, len: 0, w: 0, dur: 1.5, dmg: 65, team: 'enemy', source: 'Boss — Onde', owner: e.id });
       e.windup = p2 ? 1.4 : 1.5;
@@ -862,13 +1145,17 @@ function updateEnemy(g: Game, e: Unit, dt: number) {
     e.skillCd = p2 ? 3.6 : 5;
     return;
   }
-  if (d > 2.2 + target.r) moveToward(e, target, dt);
+  meleeChase(g, e, target, d, dt, 22, 1.4, 'Boss', 2.2);
+}
+
+function meleeChase(g: Game, e: Unit, target: Unit, d: number, dt: number, dmg: number, rate: number, source: string, reach = 1.3) {
+  if (d > reach + target.r) moveToward(g, e, target, dt);
   else {
     e.moving = false;
     faceTo(e, target);
     if (e.atkCd <= 0) {
-      e.atkCd = 1.4;
-      damage(g, target, 22, 'Boss');
+      e.atkCd = rate;
+      damage(g, target, dmg, source, e, e.species);
       emit(g, { type: 'melee', x: target.x, y: target.y, id: e.id, to: target.id });
     }
   }
@@ -884,8 +1171,7 @@ function updateProjectiles(g: Game, dt: number) {
     const foes = p.team === 'ally' ? enemies(g) : allyTargets(g);
     const hit = foes.find((u) => Math.hypot(u.x - p.x, u.y - p.y) <= u.r + 0.25);
     if (hit) {
-      damage(g, hit, p.dmg, p.source);
-      if (hit.team === 'enemy') hit.aggro = true;
+      damage(g, hit, p.dmg, p.source, { x: p.x - p.vx, y: p.y - p.vy }, p.by);
       emit(g, { type: 'impact', x: p.x, y: p.y, id: hit.id });
       continue;
     }
@@ -903,7 +1189,7 @@ function updateTelegraphs(g: Game, dt: number) {
       continue;
     }
     const victims = t.team === 'enemy' ? allyTargets(g) : enemies(g);
-    for (const v of victims) if (insideTelegraph(t, v, v.r * 0.5)) damage(g, v, t.dmg, t.source);
+    for (const v of victims) if (insideTelegraph(t, v, v.r * 0.5)) damage(g, v, t.dmg, t.source, t.from, t.team === 'ally' ? g.leaderDef.species : undefined);
     emit(g, { type: 'impact', x: t.x, y: t.y, id: t.id, color: t.team === 'ally' ? '#FF8A30' : '#E5383B' });
   }
   g.telegraphs = keep;
@@ -945,6 +1231,8 @@ export interface Results {
   degats_subis: number;
   vague_atteinte: number;
   phase_boss: number;
+  recrues: string[];
+  interruptions: number;
 }
 export function results(g: Game): Results {
   const round = (n: number) => Math.round(n);
@@ -963,6 +1251,8 @@ export function results(g: Game): Results {
     degats_par_source: dmg,
     degats_subis: round(g.dmgTaken),
     vague_atteinte: g.wave,
-    phase_boss: g.wave === 3 ? g.bossPhase : 0,
+    phase_boss: g.units.some((u) => u.role === 'boss') || g.result === 'victoire' ? g.bossPhase : 0,
+    recrues: [...g.recruits],
+    interruptions: g.interrupts,
   };
 }
