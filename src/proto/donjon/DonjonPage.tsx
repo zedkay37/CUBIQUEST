@@ -200,6 +200,8 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             acc -= 1 / 60;
             if (level.stairsReached && !g.result) break;
           }
+          // un robot (outil) refuse les recrues pour ne pas bloquer la démonstration
+          if (g.pendingRecruit && robot) resolveRecruit(g, -1);
           if (g.pendingRecruit) setRecruit(g.pendingRecruit);
           if (level.stairsReached && !g.result) {
             const next = level.floorIndex + 1;
@@ -212,6 +214,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             setMapTick((t) => t + 1);
           }
         }
+        if (g.pendingRecruit && !robot) setRecruit((r) => r ?? g.pendingRecruit);
         view.render(g, aim, dt);
         env.update(g, dt, view.camera.position);
         hudT -= dt;

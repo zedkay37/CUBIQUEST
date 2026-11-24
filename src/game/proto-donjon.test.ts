@@ -57,3 +57,34 @@ test('PROTO-DONJON : aucune touche ne sert à deux choses, quels que soient les 
         assert.equal(new Set(keys).size, keys.length, `conflit : schéma ${scheme}, ${version}, ${leader} → ${keys.join(', ')}`);
       }
 });
+
+test('PROTO-DONJON : recrutement — la recrue remplace un compagnon (A) ou rejoint la réserve limitée (B)', async () => {
+  const { RESERVE_MAX, resolveRecruit } = await import('../proto/sim');
+  // A : une recrue prend la place du compagnon choisi
+  const a = newGame('A', 3, { recordEvents: false, recruitChance: 1 });
+  a.pendingRecruit = 'chevrok';
+  resolveRecruit(a, 1);
+  assert.deepEqual(a.comps.map((c) => c.name), ['Crabastion', 'Chevrok']);
+  assert.deepEqual(a.recruits, ['Chevrok']);
+  // B : la réserve grandit jusqu'à 4, ensuite il faut choisir qui laisser partir
+  const b = newGame('B', 3, { recordEvents: false, recruitChance: 1 });
+  assert.equal(b.comps.length, RESERVE_MAX);
+  b.pendingRecruit = 'cailloc';
+  resolveRecruit(b, 2);
+  assert.equal(b.comps.length, RESERVE_MAX);
+  assert.equal(b.comps[2].name, 'Cailloc');
+  // refus : rien ne change
+  b.pendingRecruit = 'bourgeon';
+  resolveRecruit(b, -1);
+  assert.equal(b.comps.length, RESERVE_MAX);
+  assert.equal(b.pendingRecruit, null);
+  // en jeu : avec 100 % de chance, un étage finit par proposer une recrue, et la partie attend la réponse
+  const g = newGame('A', 11, { recordEvents: false, scheme: 1, recruitChance: 1, maxTime: 300 });
+  const lvl = enterFloor(g, { seed: 11, density: 1, wake: false, floors: 3 }, 1);
+  const bot = makeDonjonBot('adaptatif');
+  while (!g.result && !lvl.stairsReached && !g.pendingRecruit) step(g, bot(g));
+  assert.ok(g.pendingRecruit, 'une recrue se présente');
+  const t = g.t;
+  step(g, bot(g));
+  assert.equal(g.t, t, 'la partie attend la réponse du joueur');
+});
