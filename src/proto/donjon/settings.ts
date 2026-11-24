@@ -7,7 +7,11 @@ import type { LeaderId, Scheme, Version } from '../sim';
 export type CamDist = 'proche' | 'moyenne' | 'eloignee';
 export type CamAngle = 'forte' | 'rasante';
 export type Density = 'faible' | 'normale' | 'forte';
+/** PROTO-MODELES : les modèles de jeu jouables dans le donjon (A et B inchangés). */
+export type Modele = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
+export const MODELES: Modele[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 export interface DonjonSettings {
+  modele: Modele;
   seed: number;
   scheme: Scheme;
   version: Version;
@@ -23,6 +27,7 @@ export interface DonjonSettings {
 }
 
 export const DEFAULTS: DonjonSettings = {
+  modele: 'A',
   seed: 1,
   scheme: 1,
   version: 'A',
@@ -40,7 +45,7 @@ export const DEFAULTS: DonjonSettings = {
 export const PRESET_EXPLORATION: Partial<DonjonSettings> = { scheme: 1, version: 'A', cam: 'moyenne', minimap: true, recruit: 0.1, wake: true };
 
 /** Réglages qui demandent de recommencer la descente (les autres s'appliquent en direct). */
-export const RESTART_KEYS: (keyof DonjonSettings)[] = ['seed', 'version', 'leader', 'density'];
+export const RESTART_KEYS: (keyof DonjonSettings)[] = ['modele', 'seed', 'version', 'leader', 'density'];
 
 const pick = <T>(v: string | null, list: readonly T[], def: T): T => (list.map(String).includes(v ?? '') ? list[list.map(String).indexOf(v!)] : def);
 
@@ -49,10 +54,13 @@ export function readSettings(search: string): DonjonSettings {
   let s: DonjonSettings = { ...DEFAULTS };
   if (p.get('preset') === 'exploration') s = { ...s, ...PRESET_EXPLORATION };
   const seed = Number(p.get('seed'));
+  // modèle : `modele=C` ; sans modèle, l'ancienne composition (`compo=A|B`) reste lue telle quelle
+  const modele = pick(p.get('modele'), MODELES, (pick(p.get('compo'), ['A', 'B'] as const, s.version) as Modele));
   return {
+    modele,
     seed: Number.isFinite(seed) && seed > 0 ? Math.floor(seed) : s.seed,
     scheme: pick(p.get('schema'), [1, 2, 3] as const, s.scheme),
-    version: pick(p.get('compo'), ['A', 'B'] as const, s.version),
+    version: modele === 'B' ? 'B' : 'A',
     leader: pick(p.get('meneur'), ['calcinarque', 'braizard'] as const, s.leader),
     cam: pick(p.get('cam'), ['proche', 'moyenne', 'eloignee'] as const, s.cam),
     angle: pick(p.get('angle'), ['forte', 'rasante'] as const, s.angle),
@@ -67,6 +75,7 @@ export function readSettings(search: string): DonjonSettings {
 export function settingsToQuery(s: DonjonSettings): string {
   const p = new URLSearchParams({
     proto: 'donjon',
+    modele: s.modele,
     seed: String(s.seed),
     schema: String(s.scheme),
     compo: s.version,
@@ -87,12 +96,22 @@ export const DENSITY_MULT: Record<Density, number> = { faible: 0.6, normale: 1, 
 /** Touches de chaque combinaison (vérifiées sans conflit : voir docs/proto/TOUCHES.md). */
 export function keysFor(s: DonjonSettings): [string, string][] {
   const out: [string, string][] = [];
+  if (s.modele === 'C') return keysForModel(s);
   if (s.scheme === 1) out.push(['ZQSD', 'bouger'], ['Clic gauche', 'désigner un ennemi (attaque automatique sinon)']);
   if (s.scheme === 2) out.push(['Clic gauche', 'aller au sol · maintenu sur un ennemi : l’attaquer']);
   if (s.scheme === 3) out.push(['ZQSD', 'bouger'], ['Clic gauche', 'tirer vers le curseur']);
   out.push(['1 · 2', 'sorts vers le curseur'], ['Espace', s.scheme === 2 ? 'esquive vers le curseur' : 'esquive']);
   if (s.version === 'A') out.push(['F', 'compagnons : la cible sous le curseur'], ['R', 'compagnons : revenez'], ['3 · 4', 'sorts des compagnons']);
   else out.push(['Molette', 'choisir une créature'], ['Clic droit', 'elle bondit au point visé (2 crans d’Élan)'], ['R', 'rappel (rend 1 cran)']);
+  out.push(['F1', 'réglages'], ['M', 'mini-carte']);
+  return out;
+}
+
+/** Touches des nouveaux modèles (PROTO-MODELES). */
+export function keysForModel(s: DonjonSettings): [string, string][] {
+  const out: [string, string][] = [];
+  if (s.modele === 'C')
+    out.push(['ZQSD', 'bouger (l’équipe se bat seule, faiblement)'], ['1 · 2 · 3 · 4', 'choisir une carte'], ['Clic gauche', 'viser et jouer la carte'], ['Clic droit', 'annuler la carte choisie']);
   out.push(['F1', 'réglages'], ['M', 'mini-carte']);
   return out;
 }

@@ -6,6 +6,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CD, ELAN, RECRUITS, RESERVE_MAX, type Game, type Input, type Results, emptyInput, enemies, newGame, resolveRecruit, results, step } from '../sim';
 import { ProtoView, loadProtoModels } from '../view';
+import { CARD } from '../cards';
+import { CardHand, DeckSwap } from '../CardHud';
+import { schemeFor, setupGame } from '../modeles';
 import { BOTS, type BotId } from '../bots';
 import { makeDonjonBot } from './dbots';
 import { Bar, Chip } from '../ProtoSalle';
@@ -18,6 +21,9 @@ import { Minimap } from './Minimap';
 export const FLOORS = 3;
 
 export interface DescentResults extends Results {
+  modele: string;
+  cartes_jouees?: Record<string, number>;
+  deck_final?: string[];
   etage_atteint: number;
   etages: number;
   reglages: DonjonSettings;
@@ -55,6 +61,9 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
   const gameRef = useRef<Game | null>(null);
   const levelRef = useRef<DonjonLevel | null>(null);
   const [mapTick, setMapTick] = useState(0);
+  const [cardSelected, setCardSelected] = useState(-1);
+  const [interlude, setInterlude] = useState<'deck' | null>(null);
+  const interludeRef = useRef(false);
   const panelRef = useRef(panel);
   panelRef.current = panel;
 
@@ -65,7 +74,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
     let env: DonjonEnv | null = null;
     const s0 = live.current;
     const opts = { seed: s0.seed, density: DENSITY_MULT[s0.density], wake: s0.wake, floors: FLOORS };
-    const g = newGame(s0.version, s0.seed, { scheme: s0.scheme, leader: s0.leader, recruitChance: s0.recruit, maxTime: 3600 });
+    const g = setupGame(s0);
     // `&etage=3` : commencer directement à un étage (outil de test ; le boss est au 3e)
     const startFloor = Math.min(FLOORS, Math.max(1, Number(new URLSearchParams(window.location.search).get('etage')) || 1));
     let level = enterFloor(g, opts, startFloor);
@@ -84,6 +93,10 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
     const mouse = { x: 0, y: 0 };
     let aim = { x: 0, y: 0 };
     let transition = 0;
+    // C : carte choisie (1 à 4) en attente d'un clic, et carte à jouer au prochain pas
+    let cardSel = -1;
+    let cardPlay: Input['card'] = null;
+    let swapDoneFor = 0;
     const onKey = (e: KeyboardEvent, down: boolean) => {
       if (e.code === 'F1') {
         e.preventDefault();
@@ -92,7 +105,16 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
       }
       if (panelRef.current) return;
       if (['Space', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyF', 'KeyR'].includes(e.code)) e.preventDefault();
-      if (down && !e.repeat) {
+      if (down && !e.repeat && g.cards) {
+        const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
+        if (i >= 0) {
+          const id = g.cards.hand[i];
+          if (id && CARD[id].target === 'aucune') cardPlay = { index: i, at: aim, target: -1 };
+          else cardSel = cardSel === i ? -1 : i;
+          setCardSelected(cardSel);
+        }
+        if (e.code === 'KeyM') onSettings({ ...live.current, minimap: !live.current.minimap });
+      } else if (down && !e.repeat) {
         const map: Record<string, keyof Input> = { Digit1: 'spell1', Digit2: 'spell2', Digit3: 'comp1', Digit4: 'comp2', Space: 'dodge', KeyF: 'focus', KeyR: 'recall' };
         if (map[e.code]) pressed[map[e.code]] = true;
         if (e.code === 'KeyM') onSettings({ ...live.current, minimap: !live.current.minimap });
@@ -112,7 +134,13 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
         lmb = true;
         lmbEdge = true;
       }
-      if (e.button === 2) rmb = true;
+      if (e.button === 2) {
+        rmb = true;
+        if (cardSel >= 0) {
+          cardSel = -1;
+          setCardSelected(-1);
+        }
+      }
     };
     const mu = (e: MouseEvent) => {
       if (e.button === 0) lmb = false;
@@ -168,7 +196,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
         const s = live.current;
         const dt = Math.min(0.1, (now - last) / 1000);
         last = now;
-        g.scheme = s.scheme;
+        g.scheme = schemeFor(s);
         g.recruitChance = s.recruit;
         level.opts.wake = s.wake;
         view.camOffset.set(...camOffset(s));
@@ -177,18 +205,26 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
         if (transition > 0) {
           transition -= dt;
           if (transition <= 0) setBanner(null);
-        } else if (!panelRef.current && !g.pendingRecruit) {
+        } else if (!panelRef.current && !g.pendingRecruit && !interludeRef.current) {
           acc += dt * s.speed;
           while (acc >= 1 / 60 && !g.result && !g.pendingRecruit) {
             const inp = emptyInput();
-            if (s.scheme !== 2) inp.move = { x: (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0), y: (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0) };
+            if (g.scheme !== 2) inp.move = { x: (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0), y: (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0) };
             inp.aim = aim;
             Object.assign(inp, pressed);
-            if (s.scheme === 3) inp.fire = lmb;
-            else if (lmbEdge || (s.scheme === 2 && lmb)) {
+            if (g.cards) {
+              if (lmbEdge && cardSel >= 0) {
+                cardPlay = { index: cardSel, at: aim, target: enemyAt(aim) };
+                cardSel = -1;
+                setCardSelected(-1);
+              }
+              inp.card = cardPlay;
+              cardPlay = null;
+            } else if (g.scheme === 3) inp.fire = lmb;
+            else if (lmbEdge || (g.scheme === 2 && lmb)) {
               const id = enemyAt(aim);
               if (id >= 0) inp.designate = id;
-              else if (s.scheme === 2) inp.moveTo = aim;
+              else if (g.scheme === 2) inp.moveTo = aim;
               else if (lmbEdge) inp.designate = -2;
             }
             lmbEdge = false;
@@ -204,7 +240,12 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
           // un robot (outil) refuse les recrues pour ne pas bloquer la démonstration
           if (g.pendingRecruit && robot) resolveRecruit(g, -1);
           if (g.pendingRecruit) setRecruit(g.pendingRecruit);
-          if (level.stairsReached && !g.result) {
+          // C : entre deux étages, échanger jusqu'à 2 cartes du deck (la partie attend)
+          if (level.stairsReached && !g.result && g.cards && swapDoneFor < level.floorIndex && !robot) {
+            swapDoneFor = level.floorIndex;
+            interludeRef.current = true;
+            setInterlude('deck');
+          } else if (level.stairsReached && !g.result) {
             const next = level.floorIndex + 1;
             setBanner(next >= FLOORS ? `Étage ${next} — le boss` : `Étage ${next}`);
             transition = 1.4;
@@ -244,7 +285,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
           setMapTick((t) => t + 1);
         }
         if (g.result) {
-          const r: DescentResults = { ...results(g), etage_atteint: level.floorIndex, etages: FLOORS, reglages: { ...live.current } };
+          const r: DescentResults = { ...results(g), modele: live.current.modele, cartes_jouees: g.cards ? { ...g.cards.played } : undefined, deck_final: g.cards?.all(), etage_atteint: level.floorIndex, etages: FLOORS, reglages: { ...live.current } };
           setTimeout(() => alive && onEnd(r), 900);
           return;
         }
@@ -315,7 +356,8 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             </div>
           )}
           {settings.minimap && levelRef.current && g && <Minimap level={levelRef.current} game={g} tick={mapTick} />}
-          <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-end gap-2 text-white">
+          {g?.cards && <CardHand g={g} selected={cardSelected} tick={hud.t} onSettings={() => setPanel(true)} />}
+          <div className={`pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 items-end gap-2 text-white ${g?.cards ? 'hidden' : 'flex'}`}>
             <Chip k="1" label={L?.spell1 ?? ''} cd={cd('spell1')} total={CD.spell1} />
             <Chip k="2" label="Brasier" cd={cd('spell2')} total={CD.spell2} />
             <Chip k="Esp." label="Esquive" cd={cd('dodge')} total={CD.dodge} />
@@ -346,6 +388,15 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             </button>
           </div>
         </>
+      )}
+      {interlude === 'deck' && g?.cards && (
+        <DeckSwap
+          cards={g.cards}
+          onDone={() => {
+            interludeRef.current = false;
+            setInterlude(null);
+          }}
+        />
       )}
       {recruit && g && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
@@ -411,7 +462,9 @@ export function DonjonPage() {
   const [result, setResult] = useState<DescentResults | null>(null);
   const [run, setRun] = useState(0);
   const [panel, setPanel] = useState(false);
-  const setSettings = useCallback((s: DonjonSettings) => {
+  const setSettings = useCallback((s0: DonjonSettings) => {
+    // la composition suit le modèle (B : la meute ; les autres modèles partent d'un trio)
+    const s: DonjonSettings = { ...s0, version: s0.modele === 'B' ? 'B' : 'A' };
     setSettingsRaw(s);
     window.history.replaceState(null, '', `${window.location.pathname}?${settingsToQuery(s)}`);
   }, []);

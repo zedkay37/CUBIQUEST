@@ -1,0 +1,101 @@
+/** PROTO-MODELES, modèle C : la main de cartes, le mana, et l'échange de cartes entre deux étages. */
+import { useState } from 'react';
+import { CARD, CARDS, MANA, type CardState } from './cards';
+import type { Game } from './sim';
+
+const WHO: Record<string, string> = { 'calcinarque-legendaire': 'Calcinarque', crabastion: 'Crabastion', amanitox: 'Amanitox', ordre: 'Ordre' };
+const COLOR: Record<string, string> = { 'calcinarque-legendaire': '#FF8A30', crabastion: '#5FB8E8', amanitox: '#8CD86A', ordre: '#E8D27A' };
+
+export function CardHand({ g, selected, onSettings }: { g: Game; selected: number; tick: number; onSettings: () => void }) {
+  const c = g.cards!;
+  return (
+    <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-white">
+      <div className="flex items-center gap-2 rounded bg-black/60 px-2 py-1 text-xs">
+        <span className="font-bold">Mana</span>
+        <div className="h-3 w-56 overflow-hidden rounded bg-black/60">
+          <div className="h-full bg-sky-400" style={{ width: `${(100 * c.mana) / MANA.max}%` }} />
+        </div>
+        <span className="w-8 font-mono">{Math.floor(c.mana)}</span>
+      </div>
+      <div className="flex items-end gap-2">
+        {c.hand.map((id, i) => {
+          if (!id) return <div key={i} className="h-28 w-28" />;
+          const d = CARD[id];
+          const ok = c.mana >= d.cost;
+          return (
+            <div
+              key={i}
+              className={`flex h-28 w-28 flex-col rounded-lg border-2 p-1.5 text-xs ${selected === i ? '-translate-y-2 border-amber-300 bg-slate-700' : 'border-white/20 bg-slate-900/90'} ${ok ? '' : 'opacity-50'}`}
+              style={{ boxShadow: `inset 0 3px 0 ${COLOR[d.who]}` }}
+            >
+              <div className="flex justify-between">
+                <span className="font-mono font-bold text-amber-300">{i + 1}</span>
+                <span className="rounded bg-sky-500 px-1 font-bold">{d.cost}</span>
+              </div>
+              <div className="mt-1 font-bold leading-tight">{d.name}</div>
+              <div className="text-[10px] text-white/60">{WHO[d.who]}</div>
+              <div className="mt-auto text-[10px] leading-tight text-white/75">{d.target === 'aucune' ? 'immédiat' : d.target === 'ennemi' ? 'clic : un ennemi' : 'clic : un point'}</div>
+            </div>
+          );
+        })}
+        <button type="button" onClick={onSettings} className="pointer-events-auto rounded-md border border-white/20 bg-slate-900/80 px-2 py-2 text-xs">
+          Réglages (F1)
+        </button>
+      </div>
+      <div className="text-[11px] text-white/60">Prochaine carte : {c.deck[0] ? CARD[c.deck[0]].name : '—'}</div>
+    </div>
+  );
+}
+
+/** Entre deux étages : échanger jusqu'à 2 cartes du deck contre d'autres de la même équipe. */
+export function DeckSwap({ cards, onDone }: { cards: CardState; onDone: () => void }) {
+  const [out, setOut] = useState<string | null>(null);
+  const [left, setLeft] = useState(2);
+  const [, force] = useState(0);
+  const deck = cards.all();
+  const pool = CARDS.filter((d) => !deck.includes(d.id));
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/75 p-4 text-white">
+      <div className="w-full max-w-3xl rounded-xl bg-slate-900 p-5 text-sm">
+        <h2 className="mb-1 text-xl font-bold">Avant l’étage suivant : ton deck</h2>
+        <div className="mb-3 text-white/60">Échanges restants : {left}. Clique une carte du deck, puis une carte de la réserve de l’équipe.</div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <div className="mb-1 font-bold">Deck (10)</div>
+            <div className="flex flex-wrap gap-1">
+              {deck.map((id, k) => (
+                <button key={id + k} type="button" disabled={left === 0} onClick={() => setOut(out === id ? null : id)} className={`rounded px-2 py-1 ${out === id ? 'bg-amber-300 text-slate-900' : 'bg-white/10 hover:bg-white/20'}`}>
+                  {CARD[id].name} ({CARD[id].cost})
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="mb-1 font-bold">Réserve de l’équipe</div>
+            <div className="flex flex-col gap-1">
+              {pool.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  disabled={!out || left === 0}
+                  onClick={() => {
+                    cards.swap(out!, d.id);
+                    setOut(null);
+                    setLeft(left - 1);
+                    force((n) => n + 1);
+                  }}
+                  className="rounded bg-white/10 px-2 py-1 text-left enabled:hover:bg-emerald-400/30 disabled:opacity-50"
+                >
+                  <b>{d.name}</b> ({d.cost}) — {d.text}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <button type="button" onClick={onDone} className="mt-4 rounded-lg bg-amber-300 px-4 py-2 font-bold text-slate-900">
+          Descendre
+        </button>
+      </div>
+    </div>
+  );
+}

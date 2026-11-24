@@ -29,7 +29,10 @@ const isPlancheGallery = galleryParam === 'planche';
 const protoParam = new URLSearchParams(window.location.search).get('proto');
 const isProto = protoParam === 'salle';
 // `?proto=donjon` : maquette PROTO-DONJON ; la version publiée sur /proto/ l'ouvre aussi sans paramètre
-const isDonjon = protoParam === 'donjon' || (import.meta.env.VITE_SAVE_SLOT === 'proto' && !protoParam && !galleryParam);
+const isDonjon = protoParam === 'donjon';
+// PROTO-MODELES : `?proto=accueil`, et `/proto/` sans paramètre, présentent tous les modèles
+const isAccueil = protoParam === 'accueil' || (import.meta.env.VITE_SAVE_SLOT === 'proto' && !protoParam && !galleryParam);
+const Accueil = lazy(() => import('./proto/Accueil.tsx').then((module) => ({default: module.Accueil})));
 const DonjonPage = lazy(() => import('./proto/donjon/DonjonPage.tsx').then((module) => ({default: module.DonjonPage})));
 const ProtoSalle = lazy(() => import('./proto/ProtoSalle.tsx').then((module) => ({default: module.ProtoSalle})));
 const PlancheGallery = lazy(() => import('./components/PlancheGallery.tsx').then((module) => ({default: module.PlancheGallery})));
@@ -58,7 +61,7 @@ setSculptModels(true);
 setArtDecor(true);
 // qualité Bas choisie (options ou ?quality=low) : versions simplifiées dès la première scène
 {
-  const q = new URLSearchParams(window.location.search).get('quality') ?? (isProto || isDonjon ? 'high' : loadSettings().quality);
+  const q = new URLSearchParams(window.location.search).get('quality') ?? (isProto || isDonjon || isAccueil ? 'high' : loadSettings().quality);
   if (q === 'low') {
     setDecorDetail('low');
     setSculptDetail('low');
@@ -80,7 +83,11 @@ const voxReady = Promise.all(
 );
 
 voxReady.then(() => createRoot(document.getElementById('root')!).render(
-  isDonjon ? (
+  isAccueil ? (
+    <Suspense fallback={null}>
+      <Accueil />
+    </Suspense>
+  ) : isDonjon ? (
     <Suspense fallback={null}>
       <DonjonPage />
     </Suspense>

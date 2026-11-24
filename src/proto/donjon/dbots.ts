@@ -7,6 +7,7 @@
  *   compagnon sur le Blindé, interrompt la Fournaise du boss ;
  * - esquive-seule : esquive parfaitement, mais n'utilise jamais les compagnons (ni F, R, 3, 4, ni entrée en B).
  */
+import { CARD } from '../cards';
 import { ARMOR_BREAKER, ELAN, type Game, type Input, type Unit, type Vec, emptyInput, enemies, insideTelegraph, nearest } from '../sim';
 import type { DonjonLevel } from './level';
 
@@ -64,6 +65,7 @@ export function makeDonjonBot(id: string): (g: Game) => Input {
       return inp;
     }
     inp.aim = { x: close.x, y: close.y };
+    if (g.cards) return cardBot(g, id, inp, foes, close);
 
     if (id === 'presse-tout') {
       inp.move = keepRange(g, close);
@@ -188,4 +190,52 @@ export function makeDonjonBot(id: string): (g: Game) => Input {
     }
     return inp;
   };
+}
+
+/**
+ * Modèle C (cartes). Presse-tout : joue la première carte payable sur l'ennemi le plus proche.
+ * Adaptatif : sort des zones à pied (pas d'esquive en C), garde ses cartes pour la bonne situation.
+ */
+function cardBot(g: Game, id: string, inp: Input, foes: Unit[], close: Unit): Input {
+  const L = g.leader;
+  const c = g.cards!;
+  inp.move = keepRange(g, close);
+  const play = (cardId: string, at: Vec, target = -1) => {
+    const i = c.hand.indexOf(cardId);
+    if (i >= 0 && c.canPlay(i)) {
+      inp.card = { index: i, at, target };
+      return true;
+    }
+    return false;
+  };
+  if (id === 'presse-tout') {
+    const i = c.hand.findIndex((_, k) => c.canPlay(k));
+    if (i >= 0) inp.card = { index: i, at: { x: close.x, y: close.y }, target: close.id };
+    return inp;
+  }
+  avoid(g, inp);
+  inp.dodge = false; // pas d'esquive dans ce modèle
+  const healer = foes.find((e) => e.role === 'soigneur');
+  const armored = foes.find((e) => e.armor);
+  const boss = foes.find((e) => e.role === 'boss');
+  const crab = g.comps.find((x) => x.species === 'crabastion' && x.alive);
+  if (boss?.channel) {
+    if (crab && Math.hypot(crab.x - boss.x, crab.y - boss.y) < 3 + boss.r && play('carapace', L)) return inp;
+    if (play('bond-crab', { x: boss.x, y: boss.y }) || play('pince', boss, boss.id)) return inp;
+  }
+  if (L.hp < L.maxHp * 0.7 && (play('spores', L) || play('proteger', L) || play('bond-amani', { x: L.x, y: L.y + 1 }))) return inp;
+  if (healer && (play('pince', healer, healer.id) || play('focus', healer, healer.id) || play('bond-crab', { x: healer.x - Math.cos(healer.face) * 1.5, y: healer.y - Math.sin(healer.face) * 1.5 }))) return inp;
+  if (armored && (play('pince', armored, armored.id) || play('bond-crab', armored))) return inp;
+  const cluster = foes.filter((e) => Math.hypot(e.x - close.x, e.y - close.y) < 3).length;
+  if (c.mana >= 4 && cluster >= 2 && (play('brasier', close) || play('nuage', close))) return inp;
+  if (c.mana >= 4) {
+    const k = c.hand.findIndex((h, i) => h && c.canPlay(i) && CARD[h].target !== 'aucune' && CARD[h].who !== 'ordre');
+    if (k >= 0) inp.card = { index: k, at: { x: close.x, y: close.y }, target: close.id };
+  }
+  // mana presque plein : ne pas bloquer la main, jouer la carte la plus utile du moment
+  if (!inp.card && c.mana >= 8) {
+    const k = c.hand.findIndex((h, i) => h && c.canPlay(i) && h !== 'repli');
+    if (k >= 0) inp.card = { index: k, at: { x: close.x, y: close.y }, target: close.id };
+  }
+  return inp;
 }

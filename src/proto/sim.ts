@@ -37,6 +37,8 @@ export interface Input {
   designate: number;
   /** Schéma 2 : point du sol où aller (null : aucun nouvel ordre). */
   moveTo: Vec | null;
+  /** PROTO-MODELES (C) : carte jouée (index dans la main), avec son point visé et sa cible. */
+  card: { index: number; at: Vec; target: number } | null;
 }
 export const emptyInput = (): Input => ({
   move: { x: 0, y: 0 },
@@ -53,6 +55,7 @@ export const emptyInput = (): Input => ({
   enter: false,
   designate: -1,
   moveTo: null,
+  card: null,
 });
 
 // ---------------------------------------------------------------- le terrain
@@ -288,6 +291,9 @@ export interface Unit {
   comp?: CompDef;
   pattern: number;
   enteredAt: number;
+  /** Ordre « tenir ce point » (regroupement, pause tactique) : la créature y va et s'y bat. */
+  holdAt: Vec | null;
+  holdT: number;
 }
 
 export interface Projectile {
@@ -340,6 +346,10 @@ export interface SimOptions {
   recordEvents?: boolean;
   /** Durée maximale d'une partie (s) : au-delà, défaite « temps écoulé » (garde-fou des robots). */
   maxTime?: number;
+  /** PROTO-MODELES : modèle de jeu (A, B : inchangés ; C, D, E, F, G : nouveaux). */
+  mode?: string;
+  /** Équipe imposée (sinon celle de la composition). */
+  team?: CompDef[];
 }
 
 export interface Game {
@@ -385,6 +395,11 @@ export interface Game {
   recruits: string[];
   interrupts: number;
   maxTime: number;
+  mode: string;
+  /** Puissance des attaques de base (le chef d'orchestre a des attaques faibles). */
+  baseMult: { leader: number; comps: number };
+  /** C : la main, le deck, le mana (voir cards.ts). */
+  cards: import('./cards').CardState | null;
 }
 
 export function mulberry32(seed: number): () => number {
@@ -437,6 +452,8 @@ function makeUnit(g: Game, role: Role, species: string, name: string, team: 'all
     flight: null,
     pattern: 0,
     enteredAt: 0,
+    holdAt: null,
+    holdT: 0,
   };
   g.units.push(u);
   return u;
@@ -496,10 +513,13 @@ export function newGame(version: Version, seed = 1, recordEventsOrOpts: boolean 
     recruits: [],
     interrupts: 0,
     maxTime: opts.maxTime ?? 360,
+    mode: opts.mode ?? version,
+    baseMult: { leader: 1, comps: 1 },
+    cards: null,
   } as unknown as Game;
   const L = g.leaderDef;
   g.leader = makeUnit(g, 'meneur', L.species, L.name, 'ally', 0, 3, L.hp, L.speed, 0.55);
-  startingTeam(version, leaderId).forEach((d, i) => g.comps.push(makeComp(g, d, i === 0 ? -1.6 : 1.6, 2)));
+  (opts.team ?? startingTeam(version, leaderId)).forEach((d, i) => g.comps.push(makeComp(g, d, i === 0 ? -1.6 : 1.6, 2)));
   return g;
 }
 
@@ -611,7 +631,7 @@ export function heal(g: Game, target: Unit, amount: number) {
   emit(g, { type: 'heal', x: target.x, y: target.y, id: target.id });
 }
 /** Étourdit un ennemi ; s'il canalisait une attaque (boss), elle est interrompue. */
-function stunEnemy(g: Game, e: Unit, t: number) {
+export function stunEnemy(g: Game, e: Unit, t: number) {
   e.stun = Math.max(e.stun, t);
   if (e.channel) {
     e.channel = false;
@@ -656,13 +676,13 @@ function kill(g: Game, u: Unit) {
   if (g.version === 'B') u.inPlay = false;
 }
 
-function shoot(g: Game, from: Unit, to: Vec, dmg: number, range: number, source: string, speed = 20, spread = 0) {
+export function shoot(g: Game, from: Unit, to: Vec, dmg: number, range: number, source: string, speed = 20, spread = 0) {
   const a = Math.atan2(to.y - from.y, to.x - from.x) + spread;
   g.projectiles.push({ x: from.x, y: from.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: range, dmg, team: from.team, source, by: from.species });
   emit(g, { type: 'shot', x: from.x, y: from.y, id: from.id });
 }
 
-function telegraph(g: Game, t: Omit<Telegraph, 'id' | 't'>) {
+export function telegraph(g: Game, t: Omit<Telegraph, 'id' | 't'>) {
   const tg = { ...t, id: g.nextId++, t: 0 };
   g.telegraphs.push(tg);
   return tg;
@@ -756,9 +776,10 @@ function leaderAttack(g: Game, L: Unit, target: Unit) {
   faceTo(L, target);
   if (L.atkCd > 0) return;
   L.atkCd = d.rate;
-  if (d.ranged) shoot(g, L, target, d.dmg, d.range * rangeMult(g, L) + 2, `${d.name} — attaque`, 18);
+  const dmg = d.dmg * g.baseMult.leader;
+  if (d.ranged) shoot(g, L, target, dmg, d.range * rangeMult(g, L) + 2, `${d.name} — attaque`, 18);
   else {
-    damage(g, target, d.dmg, `${d.name} — attaque`, L, d.species);
+    damage(g, target, dmg, `${d.name} — attaque`, L, d.species);
     emit(g, { type: 'melee', x: target.x, y: target.y, id: L.id, to: target.id });
   }
 }
@@ -821,6 +842,12 @@ function playerActions(g: Game, input: Input, dt: number) {
     let t = target && dist(L, target) <= range + target.r + 0.2 ? target : null;
     if (!t && g.scheme === 1) t = nearest(L, enemies(g).filter((e) => e.aggro && dist(L, e) <= range + e.r + 0.2));
     if (t) leaderAttack(g, L, t);
+  }
+  // C, le chef d'orchestre : tout passe par les cartes (aucun sort ni esquive au clavier)
+  if (g.cards) {
+    g.cards.update(g, dt);
+    if (input.card) g.cards.play(g, input.card.index, input.card.at, input.card.target);
+    return;
   }
   // sorts du Meneur (vers le curseur)
   if (input.spell1 && ready(g, 'spell1')) {
@@ -932,7 +959,14 @@ function playerActions(g: Game, input: Input, dt: number) {
   }
 }
 
-function landArrival(g: Game, c: Unit) {
+/** Une créature bondit d'elle-même jusqu'au point visé (aucun objet lancé) ; effet de zone à l'arrivée. */
+export function startBond(g: Game, c: Unit, p: Vec, dur = 0.55) {
+  c.holdT = 0;
+  c.returnT = 0;
+  c.flight = { fx: c.x, fy: c.y, tx: p.x, ty: p.y, t: 0, dur, back: false };
+}
+
+export function landArrival(g: Game, c: Unit) {
   const a = c.comp!.arrival;
   emit(g, { type: 'arrival', x: c.x, y: c.y, id: c.id, color: '#FFE27A' });
   for (const e of enemies(g))
@@ -1001,6 +1035,23 @@ function updateComp(g: Game, c: Unit, rank: number, dt: number) {
     follow();
     return;
   }
+  // tenir un point (regroupement, ordre donné en pause) : y aller, puis ne frapper que ce qui est à portée
+  if (c.holdT > 0 && c.holdAt) {
+    c.holdT -= dt;
+    if (dist(c, c.holdAt) > 0.6) {
+      moveToward(g, c, c.holdAt, dt);
+      return;
+    }
+    c.moving = false;
+    const near = nearest(c, enemies(g).filter((e) => e.aggro && dist(e, c) <= c.comp!.range + e.r + 0.2));
+    if (near && c.atkCd <= 0) {
+      c.atkCd = c.comp!.rate;
+      faceTo(c, near);
+      if (c.comp!.ranged) shoot(g, c, near, c.comp!.dmg * g.baseMult.comps, c.comp!.range + 2, c.name, 16);
+      else damage(g, near, c.comp!.dmg * g.baseMult.comps, c.name, c, c.species);
+    }
+    return;
+  }
   const d = c.comp!;
   const leash = dist(c, L) > 14;
   let target: Unit | null = null;
@@ -1017,9 +1068,10 @@ function updateComp(g: Game, c: Unit, rank: number, dt: number) {
     faceTo(c, target);
     if (c.atkCd <= 0) {
       c.atkCd = d.rate;
-      if (d.ranged) shoot(g, c, target, d.dmg, range + 1.5, d.name, 16);
+      const cd2 = d.dmg * g.baseMult.comps;
+      if (d.ranged) shoot(g, c, target, cd2, range + 1.5, d.name, 16);
       else {
-        damage(g, target, d.dmg, d.name, c, c.species);
+        damage(g, target, cd2, d.name, c, c.species);
         emit(g, { type: 'melee', x: target.x, y: target.y, id: c.id, to: target.id });
       }
     }
