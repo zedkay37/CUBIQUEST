@@ -43,10 +43,16 @@ export function pince(stage: 1 | 3): Model {
   const pw = fin ? 3.2 : 1.8; // épaisseur de la pince (elle grossit beaucoup : signature)
   const px = rx * 0.55;
   const pFront = cy - ry - (fin ? 4.6 : 3.4);
-  m.capsule([rx * 0.6, cy - ry * 0.6, sz], [px + 1.6, cy - ry - 0.8, sz - 0.6], pw * 0.6, pw * 0.55, BODY, true); // bras
-  m.ellipsoid([px + 1.4, pFront + pw * 1.2, sz - 0.4], [pw, pw * 1.3, pw * 0.9], BODY, true); // paume
-  m.capsule([px + 1.8, pFront + pw * 0.8, sz + pw * 0.2], [px + 1.0, pFront - pw * 0.2, sz + pw * 0.1], pw * 0.55, pw * 0.35, BODY, true); // doigt fixe
-  m.capsule([px + 1.0, pFront + pw * 0.8, sz - pw * 0.55], [px + 0.6, pFront - pw * 0.1, sz - pw * 0.4], pw * 0.45, pw * 0.3, BONE, true); // doigt mobile
+  // une pince par côté ; Crabloc (farceur, porte du lot 5) lève la pince gauche pour saluer (asymétrie)
+  const claw = (s: 1 | -1, lift: number) => {
+    const X = (o: number) => cx + s * o;
+    m.capsule([X(rx * 0.6), cy - ry * 0.6, sz], [X(px + 1.6), cy - ry - 0.8, sz - 0.6 + lift * 0.6], pw * 0.6, pw * 0.55, BODY); // bras
+    m.ellipsoid([X(px + 1.4), pFront + pw * 1.2, sz - 0.4 + lift], [pw, pw * 1.3, pw * 0.9], BODY); // paume
+    m.capsule([X(px + 1.8), pFront + pw * 0.8, sz + pw * 0.2 + lift], [X(px + 1.0), pFront - pw * 0.2, sz + pw * 0.1 + lift * 1.3], pw * 0.55, pw * 0.35, BODY); // doigt fixe
+    m.capsule([X(px + 1.0), pFront + pw * 0.8, sz - pw * 0.55 + lift], [X(px + 0.6), pFront - pw * 0.1, sz - pw * 0.4 + lift * 0.6], pw * 0.45, pw * 0.3, BONE); // doigt mobile (pince entrouverte)
+  };
+  claw(1, fin ? 0 : 2.6);
+  claw(-1, 0);
   // --- yeux sur pédoncules, au-dessus de l'avant de la carapace
   const ey = Math.floor(cy - ry * 0.75);
   const et = Math.round(sz + rz + (fin ? 1.5 : 2.6));
@@ -54,6 +60,19 @@ export function pince(stage: 1 | 3): Model {
   m.box(1, 3, ey - 1, ey + 2, et - 1, et + 1, BODY, true); // tête de l'œil
   m.box(1, 3, ey - 1, ey, et - 1, et + 1, EYE, true); // œil 2 × 2, face à l'avant
   if (fin) m.box(1, 3, ey - 2, ey + 1, et + 1, et + 2, BODY, true); // arcade qui surplombe (forme finale)
+  if (!fin) {
+    // bouche lisible (porte du lot 5) : grand sourire de farceur sur l'avant de la carapace, coins relevés
+    const c = Math.trunc(cx);
+    const mz = Math.round(sz - 0.6);
+    let my = 0;
+    for (let yi = 0; yi < m.l; yi++)
+      if (m.get(c, yi, mz) !== 0) {
+        my = yi;
+        break;
+      }
+    m.box(c - 2, c + 2, my, my + 1, mz, mz + 1, DARK);
+    m.box(2, 3, my, my + 2, mz + 1, mz + 2, DARK, true); // coins relevés
+  }
 
   // --- forme finale : aiguilles de roche en GROUPES sur la carapace (éboulis), jamais une rangée
   if (fin)

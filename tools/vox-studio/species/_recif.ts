@@ -9,7 +9,7 @@
  * Lueur turquoise des abysses (langue de matière « eau » validée le 23/11/2026).
  */
 import { EYE, Model } from '../voxlib';
-import { BODY, BONE, CRUST, DARK, finish, shade } from './_commun';
+import { ALGUE, BODY, BONE, CRUST, DARK, finish, shade } from './_commun';
 
 type Stage = 1 | 2 | 3;
 
@@ -47,6 +47,19 @@ export function reef(stage: Stage): Model {
   m.box(0, 4, hy, hy + 3, ez, ez + 2, BODY, true); // visage, sous le bouclier
   m.box(1, 3, hy, hy + 1, ez, ez + 2, EYE, true); // yeux 2 × 2 sous le bouclier
   m.box(c - 2, c + 2, hy, hy + 3, ez - 2, ez - 1, DARK); // bouche
+  if (stage === 1) {
+    // placide (porte du lot 5) : sourire tranquille, lèvre du bas, et un brin d'algue qu'il mâchonne (asymétrie)
+    m.box(2, 3, hy, hy + 1, ez - 1, ez, DARK, true); // coins relevés
+    m.box(c - 2, c + 2, hy - 1, hy, ez - 3, ez - 2, BODY); // lèvre du bas, en avant
+    m.capsule([cx + 1.6, hy - 0.4, ez - 1.6], [cx + 2.8, hy - 1.2, ez - 4.2], 0.75, 0.6, ALGUE);
+    // balanes de nacre sur le dôme, posées au hasard (détail de matière)
+    for (const [dx, dy, dz] of [
+      [1.8, -1.0, 1.0],
+      [-2.2, 2.0, 0.95],
+      [0.6, 3.5, 0.85],
+    ])
+      m.ellipsoid([cx + dx, bodyY + dy, domeZ + rz * dz * 1.15], [0.9, 0.9, 0.8], BONE);
+  }
   if (stage > 1) m.box(2, 3, hy, hy + 1, ez - 3, ez - 1, BONE, true); // défenses de nacre qui descendent
   if (stage === 3) m.box(c - 2, c + 2, hy, hy + 2, ez - 2, ez - 1, 240); // gorge lumineuse des abysses
 

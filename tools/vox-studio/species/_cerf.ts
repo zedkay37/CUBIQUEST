@@ -81,7 +81,13 @@ export function cerf(stage: 1 | 2 | 3): Model {
   m.box(1, 3, front + 1, front + 2, ez, ez + 2, EYE, true);
   m.box(1, 3, front + 2, front + 4, ez - 1, ez + 2, BODY, true, true); // tempes : les yeux sont posés sur la tête, pas en saillie
   if (stage > 1) m.box(1, 3, front, front + 3, ez + 2, ez + 3, BODY, true); // arcade
-  m.capsule([hr * 0.7, hy + 0.8, hz + hr * 0.55], [hr * 0.7 + 1.4, hy + 2.4, hz + hr * 0.4], 0.9, 0.7, BODY, true); // oreilles
+  if (stage === 1) {
+    // timide (porte du lot 5) : une oreille dressée, l'autre tombante (asymétrie), petite bouche serrée
+    m.capsule([cx + hr * 0.7, hy + 0.8, hz + hr * 0.55], [cx + hr * 0.7 + 1.4, hy + 2.4, hz + hr * 0.4], 0.9, 0.7, BODY);
+    m.capsule([cx - hr * 0.7, hy + 0.8, hz + hr * 0.4], [cx - hr * 0.7 - 1.2, hy + 1.8, hz - hr * 0.6], 0.9, 0.7, BODY); // oreille tombante
+    m.box(c - 1, c + 1, front - 2, front - 1, ez - 3, ez - 2, DARK); // bouche
+    m.box(c - 1, c + 1, front - 1, front, ez - 3, ez - 2, DARK);
+  } else m.capsule([hr * 0.7, hy + 0.8, hz + hr * 0.55], [hr * 0.7 + 1.4, hy + 2.4, hz + hr * 0.4], 0.9, 0.7, BODY, true); // oreilles
 
   // --- bois de glace balayés vers l'arrière (lames), qui grandissent ; meule (base) marquée
   const by = hy + 1.1; // en arrière des yeux, pour qu'on ne les confonde pas avec la glace

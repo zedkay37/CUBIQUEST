@@ -112,7 +112,7 @@ export function serpent(stage: 1 | 2 | 3): Model {
   });
   // bandes de cuivre sur le dos du S (une bande sur trois tronçons) : détail de matière vu d'en haut
   m.each((i, _x, y, _z, xi, yi, zi) => {
-    if (m.v[i] === CRUST && m.get(xi, yi, zi + 1) === 0 && Math.floor(y) % 4 === 0 && y > 8) m.v[i] = COPPER;
+    if (m.v[i] === CRUST && m.get(xi, yi, zi + 1) === 0 && Math.floor(y) % 5 < 2 && y > 8) m.v[i] = COPPER; // bandes larges (porte du lot 5)
   });
   // lueur : points du dos en groupes (pointillé) ; nageoires et collerette : bords lumineux
   m.each((i, x, y, _z, xi, yi, zi) => {
@@ -121,6 +121,13 @@ export function serpent(stage: 1 | 2 | 3): Model {
     const inGroup = Math.floor(y) % 5 < 2;
     if (inGroup && grp % (stage === 1 ? 3 : 2) === (stage === 1 ? 0 : 1) && Math.abs(x - cx) < 6) m.v[i] = 241;
   });
+  // éclairs visibles d'en haut (porte du lot 5) : traits obliques cyan sur le dos, entre les bandes de cuivre
+  m.each((i, x, y, _z, xi, yi, zi) => {
+    if (m.v[i] !== CRUST || m.get(xi, yi, zi + 1) !== 0 || y < 8) return;
+    if ((Math.floor(y) + Math.floor(Math.abs(x - cx))) % (stage === 1 ? 7 : 5) === 0) m.v[i] = 241;
+  });
+  // zigzag sur le crâne
+  m.crack([[0.5, hy - hr * 0.6, hz + hr * 0.75], [hr * 0.45, hy - hr * 0.1, hz + hr * 0.8], [0.5, hy + hr * 0.4, hz + hr * 0.75]], 242, 0.75, [BODY, CRUST]);
   m.each((i, _x, _y, _z, xi, yi, zi) => {
     if (m.v[i] === COPPER && m.get(xi, yi, zi + 1) === 0 && zi > r0 * 2.2) m.v[i] = stage === 3 ? 242 : 241; // crêtes des nageoires
   });

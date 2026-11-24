@@ -6,7 +6,7 @@ import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { writeVoxBytes, type Model, type Palette } from '../voxlib';
 
-for (const f of ['mycelin-a', 'amanitox-a', 'mycelin-b', 'amanitox-b']) {
+for (const f of ['mycelin-a', 'amanitox-a']) {
   const s = (await import(pathToFileURL(`${process.cwd()}/tools/vox-studio/brouillons/${f}.ts`).href)) as { ID: string; PALETTE: Palette; build: () => Model };
   writeFileSync(`tools/vox-studio/brouillons/${s.ID}.vox`, writeVoxBytes(s.build(), s.PALETTE));
   console.log(`écrit tools/vox-studio/brouillons/${s.ID}.vox`);

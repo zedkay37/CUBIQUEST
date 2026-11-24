@@ -77,6 +77,8 @@ export function elementPalette(body: [string, string, string, string], glow: [st
  * 23/11 après le lot 2 : le basalte brun se fondait dans le sol brun du volcan.
  */
 export const FEU = elementPalette(['#0D0B0D', '#1B1718', '#3B322D', '#D2BFA6'], ['#FF3D00', '#FF6A00', '#FFB300'], '#FFD02A');
+/** Algue (indice propre, porte du lot 5) : le brin que mâchonne Aquabloc. */
+export const ALGUE = 5;
 export const EAU = elementPalette(['#1C2A36', '#2F4C5E', '#5E8597', '#E3DCCB'], ['#00C2A8', '#3DF2D0', '#B8FFF0'], '#9DFFEA');
 /**
  * Eau, variante glace (lignée Givrelin) : même ardoise bleue et même lueur, os remplacé par une glace bleutée.

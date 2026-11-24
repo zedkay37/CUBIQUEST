@@ -131,9 +131,26 @@ export function scarabee(stage: 1 | 2 | 3): Model {
     m.each((i, x, y, z, _xi, _yi, zi) => {
       if (legDrawn[i] || ![BODY, CRUST, DARK].includes(m.v[i])) return;
       if (Math.abs(Math.abs(x - cx) - 3.75 * k) > 1.6 * k || y > cy - 0.8 * k || z > tz - 0.6 * k || z < tz - 3.6 * k) return;
-      const ring = zi % 4;
+      const ring = zi % 5;
       m.v[i] = ring === 0 ? 241 : COPPER;
     });
+  // porte du lot 5 (contraste à la Cime) : mante de cuivre sur les épaules (bande large, vue d'en haut)
+  m.each((i, _x, y, z, xi, yi, zi) => {
+    if (m.v[i] === CRUST && m.get(xi, yi, zi + 1) === 0 && z > tz + 0.6 * k && z < tz + 2.4 * k && y > cy - 2.0 * k && y < cy + 1.0 * k) m.v[i] = COPPER;
+  });
+  // éclairs visibles d'en haut : un zigzag sur chaque élytre, un sur le crâne
+  m.crack(
+    [
+      [1.2 * k, cy - 1.0 * k, legH + 6.4 * k],
+      [2.4 * k, cy + 0.0 * k, legH + 6.2 * k],
+      [1.3 * k, cy + 1.0 * k, legH + 6.0 * k],
+      [2.5 * k, cy + 2.2 * k, legH + 5.2 * k],
+    ],
+    241,
+    stage === 1 ? 0.55 : 0.7,
+    [COPPER, COPPER_DARK],
+  );
+  m.crack([[0.5, hy - hr * 0.5, hz + hr * 0.85], [hr * 0.45, hy - hr * 0.1, hz + hr * 0.95], [0.5, hy + hr * 0.35, hz + hr * 0.9]], 242, stage === 1 ? 0.55 : 0.7, [BODY, CRUST]);
   // filaments lumineux : bouts d'antennes
   const tipZ = az + (stage === 1 ? 2.2 : stage === 2 ? 2.0 : 3.2);
   m.each((i, _x, _y, z) => {

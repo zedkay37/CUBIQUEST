@@ -137,3 +137,15 @@ Traits proposés à partir de la fiche de chaque créature dans le jeu (`dexNote
 | Tempestrix | serpentin dressé (cobra), collerette de nageoires | **orageux, imposant** : arcade lourde, gueule entrouverte | collerette à nervures, ventre de quartz |
 
 Langue « électrique » (validée le 23/11) : ardoise `#1E2230` `#3A4157`, cuivre `#B87333`, quartz `#E8E4D8`, arc `#2D7BFF` `#6FC3FF` `#E6F7FF`.
+
+## Porte du lot 5 (24/11/2026)
+
+- **Mycélin → Amanitox : « porteur de vesse »** (esquisse B choisie). Bipède lourdaud, dos voûté sous une vesse-de-loup craquelée qui s'ouvre par un pore lumineux ; jambes très courtes (petits pas), bras posés sur le ventre.
+  - Mycélin : **placide et douillet** (grosse tête ronde, yeux mi-clos, petite bouche tranquille, petit nez rond).
+  - Amanitox : **vénérable et lourdaud** (paupières lourdes, babine, sourcils et barbe de mycélium, petites vesses en grappe sur une épaule, mousse sur les pieds).
+- **Personnalité reprise** :
+  - Aquabloc (placide) : sourire, lèvre du bas, brin d'algue mâchonné, balanes sur le dôme.
+  - Crabloc (farceur) : grand sourire aux coins relevés, pince gauche levée pour saluer.
+  - Givrelin (timide) : petite bouche serrée, une oreille tombante.
+- **Électrique** : bandes de cuivre plus larges (mante d'épaules des scarabées, bandes des serpents), éclairs cyan visibles d'en haut (zigzags sur les élytres et le crâne, traits obliques sur le dos des serpents).
+- **Serpents** : le chargeur les fait onduler (créatures sans pattes seulement).
