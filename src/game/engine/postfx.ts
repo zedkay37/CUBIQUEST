@@ -35,17 +35,24 @@ export function nextAutoLevel(level: QualityLevel, lowFpsFor: number): QualityLe
 }
 
 /** Étalonnage léger par biome : saturation et teinte multipliée (1 = neutre). */
-export const BIOME_GRADE: Record<BiomeId | 'camp', { saturation: number; tint: [number, number, number] }> = {
+export const BIOME_GRADE: Record<
+  BiomeId | 'camp',
+  { saturation: number; tint: [number, number, number]; /** halo propre au biome (défaut : BLOOM_DEFAULT) */ bloom?: { strength: number; threshold: number } }
+> = {
   // sprint Art : Prairie et camp un peu plus chauds et saturés, avec le nouveau décor
   camp: { saturation: 1.1, tint: [1.04, 1.01, 0.95] },
   meadow: { saturation: 1.1, tint: [1.03, 1.02, 0.94] },
   shore: { saturation: 1.05, tint: [0.97, 1.0, 1.04] },
   volcano: { saturation: 1.1, tint: [1.05, 0.98, 0.93] },
   sanctuary: { saturation: 1.04, tint: [0.99, 0.98, 1.05] },
-  tundra: { saturation: 0.96, tint: [0.97, 1.0, 1.05] },
+  // lot 3b du bestiaire : la neige blanche dépassait le seuil du halo, qui noyait toute l'arène dans un voile blanc
+  tundra: { saturation: 0.96, tint: [0.97, 1.0, 1.05], bloom: { strength: 0.3, threshold: 0.99 } },
   stormpeak: { saturation: 0.98, tint: [0.98, 0.98, 1.04] },
   canyon: { saturation: 1.07, tint: [1.05, 0.99, 0.94] },
 };
+
+/** Halo par défaut : seuil haut, seules les surfaces lumineuses brillent. */
+export const BLOOM_DEFAULT = { strength: 0.45, threshold: 0.86 };
 
 const GradeShader = {
   uniforms: {
@@ -107,7 +114,7 @@ export function setupPostFx(self: VoxelEngine, width: number, height: number): v
   outline.hiddenEdgeColor.set('#141925');
   composer.addPass(outline);
   // halo : seuil haut, seules les surfaces lumineuses (flammes, foudre, cristaux, cubes, projectiles) brillent
-  const bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.45, 0.4, 0.86);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(width, height), BLOOM_DEFAULT.strength, 0.4, BLOOM_DEFAULT.threshold);
   composer.addPass(bloom);
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
@@ -172,6 +179,9 @@ export function setGrade(self: VoxelEngine, key: BiomeId | 'camp'): void {
   const g = BIOME_GRADE[key] ?? BIOME_GRADE.camp;
   fx.grade.uniforms.saturation.value = g.saturation;
   (fx.grade.uniforms.tint.value as THREE.Vector3).set(...g.tint);
+  const bloom = g.bloom ?? BLOOM_DEFAULT;
+  fx.bloom.strength = bloom.strength;
+  fx.bloom.threshold = bloom.threshold;
 }
 
 /** Rend une image : directement en Bas, par le pipeline sinon ; l'Automatique surveille la cadence. */

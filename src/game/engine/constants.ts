@@ -91,13 +91,22 @@ export const BOLT_POOL_SIZE = 6;
 /** Ambiance particulaire par biome. */
 export const WEATHER_PROFILES: Record<
   BiomeId,
-  { kind: WeatherKind; count: number; colors: string[]; /** vent latéral ajouté aux particules qui dérivent */ wind?: number }
+  {
+    kind: WeatherKind;
+    count: number;
+    colors: string[];
+    /** vent latéral ajouté aux particules qui dérivent */
+    wind?: number;
+    /** particules dessinées (les autres sont simulées sans être montrées : mêmes tirages aléatoires, golden identique) */
+    shown?: number;
+  }
 > = {
   meadow: { kind: 'drift', count: 54, colors: ['#FEF08A', '#BBF7D0', '#FDE68A'] }, // pollen
   shore: { kind: 'rain', count: 54, colors: ['#E0F2FE', '#7DD3FC', '#BAE6FD'] }, // embruns
   volcano: { kind: 'rise', count: 54, colors: ['#FB923C', '#FDE047', '#EF4444'] }, // braises
   sanctuary: { kind: 'float', count: 54, colors: ['#E9D5FF', '#67E8F9', '#C084FC'] }, // éclats astraux
-  tundra: { kind: 'snow', count: 96, colors: ['#FFFFFF', '#E0F2FE', '#F8FAFC'] }, // neige
+  // neige allégée (lot 3b du bestiaire) : 56 flocons montrés sur 96 simulés, pour que les créatures se lisent
+  tundra: { kind: 'snow', count: 96, shown: 56, colors: ['#FFFFFF', '#E0F2FE', '#F8FAFC'] },
   stormpeak: { kind: 'rain', count: 96, colors: ['#CBD5E1', '#94A3B8', '#E2E8F0'] }, // pluie battante
   canyon: { kind: 'drift', count: 80, colors: ['#F2D6A2', '#E8B873', '#FBE8C4'], wind: 3.4 }, // sable porté par le vent
 };

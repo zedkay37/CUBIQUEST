@@ -23,7 +23,7 @@ export function configureWeather(self: VoxelEngine, biomeId: BiomeId): void {
   const kind = profile.kind;
   self.weatherKind = kind;
   self.weatherCount = profile.count;
-  self.weatherMesh.count = profile.count;
+  self.weatherMesh.count = profile.shown ?? profile.count;
   self.weatherMotes = [];
   const stormy = biomeId === 'stormpeak';
 
