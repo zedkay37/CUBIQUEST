@@ -97,6 +97,7 @@ interface UnitView {
   /** PROTO-DONJON : bouclier frontal du Soigneur, blindage du Blindé. */
   shield: THREE.Mesh | null;
   armor: THREE.Mesh | null;
+  species: string;
 }
 interface TeleView {
   group: THREE.Group;
@@ -220,7 +221,12 @@ export class ProtoView {
 
   private unitView(u: Unit): UnitView {
     let v = this.units.get(u.id);
-    if (v) return v;
+    if (v && v.species === u.species) return v;
+    // E, le relais : la créature sur le terrain change d'espèce, on reconstruit son modèle
+    if (v) {
+      this.scene.remove(v.root);
+      this.units.delete(u.id);
+    }
     const model = buildAnyStyle('F', u.species);
     const body = new THREE.Group();
     body.add(model.root);
@@ -270,7 +276,7 @@ export class ProtoView {
       armor.position.y = 0.05;
       root.add(armor);
     }
-    v = { root, body, model, ring, barBg, bar, glow: 0, hitT: 0, lastHp: u.hp, shield, armor };
+    v = { root, body, model, ring, barBg, bar, glow: 0, hitT: 0, lastHp: u.hp, shield, armor, species: u.species };
     this.units.set(u.id, v);
     return v;
   }
@@ -405,6 +411,8 @@ export class ProtoView {
       const phaseGlow = u.role === 'boss' && g.bossPhase === 2 ? 0.8 + Math.sin(this.time * 4) * 0.2 : 0;
       v.model.setNight(Math.max(v.glow, phaseGlow));
       (v.ring.material as THREE.MeshBasicMaterial).opacity = u.invuln > 0 ? 0.3 : 0.95;
+      // E : un ennemi mouillé a l'anneau bleu (l'éclair le frappera plus fort)
+      if (u.team === 'enemy') (v.ring.material as THREE.MeshBasicMaterial).color.set(u.wetT > 0 ? '#3FA9F5' : RING_COLORS.enemy);
       v.bar.scale.set(1.1 * Math.max(0, u.hp / u.maxHp), 0.1, 1);
       const showBar = u.role !== 'boss';
       v.bar.visible = v.barBg.visible = showBar;

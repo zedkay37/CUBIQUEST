@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CD, ELAN, RECRUITS, RESERVE_MAX, type Game, type Input, type Results, emptyInput, enemies, newGame, resolveRecruit, results, step } from '../sim';
 import { ProtoView, loadProtoModels } from '../view';
 import { CARD } from '../cards';
-import { CardHand, DeckSwap } from '../CardHud';
+import { CardHand, DeckSwap, RelayHud } from '../CardHud';
 import { schemeFor, setupGame } from '../modeles';
 import { BOTS, type BotId } from '../bots';
 import { makeDonjonBot } from './dbots';
@@ -97,6 +97,8 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
     let cardSel = -1;
     let cardPlay: Input['card'] = null;
     let swapDoneFor = 0;
+    // E : place à faire entrer au prochain pas
+    let swapTo = -1;
     const onKey = (e: KeyboardEvent, down: boolean) => {
       if (e.code === 'F1') {
         e.preventDefault();
@@ -114,6 +116,8 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
           setCardSelected(cardSel);
         }
         if (e.code === 'KeyM') onSettings({ ...live.current, minimap: !live.current.minimap });
+      } else if (down && !e.repeat && g.relay && ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) {
+        swapTo = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
       } else if (down && !e.repeat) {
         const map: Record<string, keyof Input> = { Digit1: 'spell1', Digit2: 'spell2', Digit3: 'comp1', Digit4: 'comp2', Space: 'dodge', KeyF: 'focus', KeyR: 'recall' };
         if (map[e.code]) pressed[map[e.code]] = true;
@@ -230,6 +234,8 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             lmbEdge = false;
             inp.select = wheel;
             inp.enter = rmb;
+            inp.swapTo = swapTo;
+            swapTo = -1;
             for (const k of Object.keys(pressed)) delete pressed[k as keyof Input];
             wheel = 0;
             rmb = false;
@@ -355,13 +361,19 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
               </div>
             </div>
           )}
+          {g?.relay && <RelayHud g={g} tick={hud.t} />}
           {settings.minimap && levelRef.current && g && <Minimap level={levelRef.current} game={g} tick={mapTick} />}
           {g?.cards && <CardHand g={g} selected={cardSelected} tick={hud.t} onSettings={() => setPanel(true)} />}
           <div className={`pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 items-end gap-2 text-white ${g?.cards ? 'hidden' : 'flex'}`}>
-            <Chip k="1" label={L?.spell1 ?? ''} cd={cd('spell1')} total={CD.spell1} />
-            <Chip k="2" label="Brasier" cd={cd('spell2')} total={CD.spell2} />
+            {settings.modele !== 'E' && <Chip k="1" label={L?.spell1 ?? ''} cd={cd('spell1')} total={CD.spell1} />}
+            {settings.modele !== 'E' && <Chip k="2" label="Brasier" cd={cd('spell2')} total={CD.spell2} />}
             <Chip k="Esp." label="Esquive" cd={cd('dodge')} total={CD.dodge} />
-            {settings.modele === 'D' ? (
+            {settings.modele === 'E' ? (
+              <>
+                <Chip k="Clic dr." label={g?.relay ? g.relay.team[g.relay.active].spell : ''} cd={cd('spell1')} total={8} />
+                <Chip k="1 à 4" label="Échange" cd={cd('swap')} total={2} />
+              </>
+            ) : settings.modele === 'D' ? (
               <>
                 <Chip k="3" label="Trait" cd={cd('spell3')} total={4} />
                 <Chip k="4" label="Onde de feu" cd={cd('spell4')} total={12} />

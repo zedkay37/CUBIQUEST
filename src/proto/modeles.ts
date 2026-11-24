@@ -4,6 +4,7 @@
  * A et B restent ceux de PROTO-DONJON, inchangés.
  */
 import { CardState, DEFAULT_DECK } from './cards';
+import { RelayState } from './relay';
 import { type Game, newGame } from './sim';
 import type { DonjonSettings, Modele } from './donjon/settings';
 
@@ -19,6 +20,7 @@ export const MODEL_INFO: ModelInfo[] = [
   { id: 'A', name: 'A · Le trio', phrase: 'Tu diriges le Meneur ; deux compagnons le suivent et obéissent à tes ordres.', keys: 'ZQSD, clic gauche (cible), 1 · 2, Espace, F, R, 3 · 4', href: '?proto=donjon&modele=A' },
   { id: 'B', name: 'B · La meute', phrase: 'Tu diriges le Meneur et fais bondir les créatures de ta réserve là où il faut.', keys: 'ZQSD, clic gauche, 1 · 2, Espace, molette, clic droit, R', href: '?proto=donjon&modele=B' },
   { id: 'D', name: 'D · Le héros et ses suiveurs', phrase: 'Tu diriges une seule créature avec 4 compétences ; deux petits suiveurs t’aident seuls, sans ordre.', keys: 'ZQSD, clic gauche (cible), 1 à 4, Espace', href: '?proto=donjon&modele=D' },
+  { id: 'E', name: 'E · Le relais', phrase: 'Une seule créature sur le terrain ; tu l’échanges au bon moment pour enchaîner effets de sortie et d’entrée.', keys: 'ZQSD, clic gauche (cible), 1 à 4 (échanger), clic droit (sort), Espace', href: '?proto=donjon&modele=E' },
   { id: 'C', name: 'C · Le chef d’orchestre', phrase: 'Tu explores ; l’équipe se bat seule, faiblement ; tout ce qui compte se joue avec une main de cartes.', keys: 'ZQSD, 1 à 4 (carte), clic gauche (viser), clic droit (annuler)', href: '?proto=donjon&modele=C' },
 ];
 
@@ -30,6 +32,12 @@ export function setupGame(s: DonjonSettings, maxTime = 3600): Game {
     // le chef d'orchestre : attaques de base faibles, tout le reste passe par les cartes
     g.baseMult = { leader: 0.5, comps: 0.75 };
     g.cards = new CardState(DEFAULT_DECK, g.rng);
+    return g;
+  }
+  if (s.modele === 'E') {
+    // le relais : une seule créature sur le terrain, trois qui attendent leur tour
+    const g = newGame('A', s.seed, { ...base, leader: 'calcinarque', mode: 'E', team: [] });
+    g.relay = new RelayState();
     return g;
   }
   if (s.modele === 'D') {

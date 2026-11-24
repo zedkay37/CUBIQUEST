@@ -99,3 +99,31 @@ export function DeckSwap({ cards, onDone }: { cards: CardState; onDone: () => vo
     </div>
   );
 }
+
+/** E : les quatre places du relais (PV, qui est sur le terrain, effets d'entrée et de sortie). */
+export function RelayHud({ g }: { g: Game; tick: number }) {
+  const r = g.relay!;
+  return (
+    <div className="pointer-events-none absolute bottom-20 left-1/2 flex -translate-x-1/2 gap-2 text-white">
+      {r.team.map((m, i) => {
+        const on = i === r.active;
+        const hp = on ? g.leader.hp : m.hp;
+        return (
+          <div key={m.def.species} className={`w-40 rounded-lg border-2 p-1.5 text-[11px] ${on ? 'border-amber-300 bg-slate-700' : 'border-white/15 bg-slate-900/85'} ${m.alive ? '' : 'opacity-40'}`}>
+            <div className="flex justify-between font-bold">
+              <span>
+                <span className="font-mono text-amber-300">{i + 1}</span> {m.def.name}
+              </span>
+              <span>{on ? 'sur le terrain' : m.alive ? '' : 'K.O.'}</span>
+            </div>
+            <div className="my-1 h-2 overflow-hidden rounded bg-black/60">
+              <div className="h-full bg-emerald-400" style={{ width: `${(100 * hp) / m.def.hp}%` }} />
+            </div>
+            <div className="text-white/70">Entrée : {m.enter}</div>
+            <div className="text-white/70">Sortie : {m.exit}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

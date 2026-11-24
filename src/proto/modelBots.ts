@@ -26,6 +26,38 @@ function heroBot(bot: string) {
   };
 }
 
+/** E : le relais. Presse-tout : échange et sort dès que prêts. Adaptatif : esquive parfaite, échange pour un effet utile. */
+function relayBot(bot: string) {
+  const base = makeDonjonBot(bot === 'presse-tout' ? 'presse-tout' : 'esquive-seule');
+  return (g: Game): Input => {
+    const inp = base(g);
+    const r = g.relay!;
+    inp.focus = inp.recall = inp.comp1 = inp.comp2 = inp.spell1 = inp.spell2 = false;
+    const foes = near(g, 12);
+    inp.enter = false;
+    if (!foes.length) return inp;
+    const idx = (sp: string) => r.team.findIndex((m) => m.def.species === sp && m.alive);
+    if (bot === 'presse-tout') {
+      inp.enter = true;
+      if (ready(g, 'swap')) inp.swapTo = (r.active + 1) % 4;
+      return inp;
+    }
+    const sp = g.leader.species;
+    const close = near(g, 3.2);
+    const boss = foes.find((e) => e.role === 'boss');
+    inp.enter = ready(g, 'spell1') && (sp === 'raicube' || sp === 'calcinarque-legendaire' || close.length > 0 || g.leader.hp < g.leader.maxHp * 0.5);
+    if (!ready(g, 'swap')) return inp;
+    const wet = foes.filter((e) => e.wetT > 0).length;
+    if (boss?.channel && close.includes(boss) && sp !== 'crabastion') inp.swapTo = idx('crabastion') >= 0 ? idx('crabastion') : idx('amanitox');
+    else if (g.leader.hp < g.leader.maxHp * 0.3) inp.swapTo = r.team.map((m, k) => (k !== r.active && m.alive ? k : -1)).filter((k) => k >= 0).sort((a, b) => r.team[b].hp / r.team[b].def.hp - r.team[a].hp / r.team[a].def.hp)[0] ?? -1;
+    else if (sp === 'crabastion' && close.length >= 2) inp.swapTo = idx('raicube');
+    else if (wet >= 2 && sp !== 'raicube') inp.swapTo = idx('raicube');
+    else if (close.length >= 2 && sp !== 'crabastion') inp.swapTo = idx('crabastion');
+    return inp;
+  };
+}
+
 export const MODEL_BOTS: Partial<Record<Modele, (bot: string) => (g: Game) => Input>> = {
   D: heroBot,
+  E: relayBot,
 };

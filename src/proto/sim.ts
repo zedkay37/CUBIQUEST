@@ -39,6 +39,8 @@ export interface Input {
   moveTo: Vec | null;
   /** PROTO-MODELES (C) : carte jouée (index dans la main), avec son point visé et sa cible. */
   card: { index: number; at: Vec; target: number } | null;
+  /** E : place de l'équipe à faire entrer (0 à 3 ; −1 : aucune). */
+  swapTo: number;
 }
 export const emptyInput = (): Input => ({
   move: { x: 0, y: 0 },
@@ -56,6 +58,7 @@ export const emptyInput = (): Input => ({
   designate: -1,
   moveTo: null,
   card: null,
+  swapTo: -1,
 });
 
 // ---------------------------------------------------------------- le terrain
@@ -296,6 +299,8 @@ export interface Unit {
   holdT: number;
   /** Taille d'affichage (D : petits suiveurs). */
   size: number;
+  /** E : mouillé (l'éclair frappe plus fort). */
+  wetT: number;
 }
 
 export interface Projectile {
@@ -402,6 +407,8 @@ export interface Game {
   baseMult: { leader: number; comps: number };
   /** C : la main, le deck, le mana (voir cards.ts). */
   cards: import('./cards').CardState | null;
+  /** E : le relais (voir relay.ts). */
+  relay: import('./relay').RelayState | null;
 }
 
 export function mulberry32(seed: number): () => number {
@@ -457,6 +464,7 @@ function makeUnit(g: Game, role: Role, species: string, name: string, team: 'all
     holdAt: null,
     holdT: 0,
     size: 1,
+    wetT: 0,
   };
   g.units.push(u);
   return u;
@@ -519,6 +527,7 @@ export function newGame(version: Version, seed = 1, recordEventsOrOpts: boolean 
     mode: opts.mode ?? version,
     baseMult: { leader: 1, comps: 1 },
     cards: null,
+    relay: null,
   } as unknown as Game;
   const L = g.leaderDef;
   g.leader = makeUnit(g, 'meneur', L.species, L.name, 'ally', 0, 3, L.hp, L.speed, 0.55);
@@ -671,6 +680,7 @@ function kill(g: Game, u: Unit) {
     return;
   }
   if (u.role === 'meneur') {
+    if (g.relay && g.relay.onLeaderDown(g)) return;
     g.result = 'défaite';
     g.endReason = 'Le Meneur est tombé.';
     return;
@@ -729,6 +739,7 @@ export function step(g: Game, input: Input, dt = 1 / 60): void {
     u.guard = Math.max(0, u.guard - dt);
     u.stun = Math.max(0, u.stun - dt);
     u.taunt = Math.max(0, u.taunt - dt);
+    u.wetT = Math.max(0, u.wetT - dt);
     u.atkCd -= dt;
   }
   g.comps.forEach((c, i) => updateComp(g, c, i, dt));
@@ -846,6 +857,12 @@ function playerActions(g: Game, input: Input, dt: number) {
     if (!t && g.scheme === 1) t = nearest(L, enemies(g).filter((e) => e.aggro && dist(L, e) <= range + e.r + 0.2));
     if (t) leaderAttack(g, L, t);
   }
+  // E, le relais : 1 à 4 font entrer une créature ; clic droit : le sort de celle qui est sur le terrain
+  if (g.relay) {
+    g.relay.update(g, dt);
+    if (input.swapTo >= 0) g.relay.swap(g, input.swapTo);
+    if (input.enter) g.relay.spell(g, aim);
+  }
   // C, le chef d'orchestre : tout passe par les cartes (aucun sort ni esquive au clavier)
   if (g.cards) {
     g.cards.update(g, dt);
@@ -888,6 +905,7 @@ function playerActions(g: Game, input: Input, dt: number) {
     if (g.scheme === 2) g.moveGoal = null;
     emit(g, { type: 'dodge', x: L.x, y: L.y, id: L.id });
   }
+  if (g.relay) return;
   // D, le héros et ses suiveurs : 3 et 4 sont deux compétences de plus du Meneur ; aucun ordre aux suiveurs
   if (g.mode === 'D') {
     if (input.comp1 && ready(g, 'spell3')) {
