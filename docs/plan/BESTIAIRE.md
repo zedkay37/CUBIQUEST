@@ -91,3 +91,10 @@ Il n'y a pas de lot « ennemis et boss » séparé : ce sont les mêmes modèles
 **Décisions du joueur (23/11)** : gradation par stade de la fiche validée ; couleurs des éléments validées ; la roche passe d'une lueur ambre à une lueur froide. Entre jade et cristal froid, j'ai choisi le **cristal froid** (blanc bleuté peu saturé) : un jade (vert) serait trop proche du turquoise de l'eau et du vert-jaune de la plante. Magmadrake est de la **roche** dans le jeu (pas du feu) : son plan de corps (colosse voûté) est déjà distinct de Cendrox (quadrupède prédateur) ; ses veines de magma deviendront du cristal froid, à confirmer au lot roche.
 
 **Lignée « Calcinarque »** = Braizard → Cendrox (validé le 23/11). Braizard part du Coureur de Cendres, adouci pour un stade 1 ; Cendrox reprend le Calcinarque légendaire de référence.
+
+## Lot 4 (plante), 24/11/2026 — à valider
+
+- **Bourgéon → Feuilloc → Bourgéoliath : « sanglier-souche »** (quadrupède trapu en coin, garrot haut, tête basse, groin, défenses de bois). Remplace « quadrupède trapu, bourgeon sur le dos → arbre sur le dos », trop proche de créatures connues (bulbe ou arbre sur le dos). Signature : oreilles-feuilles et selle de mousse → boucliers de feuilles aux épaules → racines aux pattes, arceaux de racines et pousses en groupes, grandes défenses.
+- **Mycélin → Amanitox** : essai « porteur de polypores » (bipède, champignons en étagères) refusé après 3 essais ; le jeu garde l'ancien modèle. Brouillon : `tools/vox-studio/brouillons/`.
+- **Langue « plante » ajustée** : corps en écorce brun sombre `#1A1712` `#3A2F23` `#5C4B36` (bois `#C9B48A`), mousse `#4A6B2A` et feuilles `#2E8040` en touches, lueur des spores inchangée, yeux ambre `#FFB02E`. Raison : le vert mousse validé se fondait dans l'herbe de la Prairie vue d'en haut (§4.5).
+- **Lot 3b** : la lignée glace a un indice de givre (`#93BDD0`) et des sabots sombres (`#141C24`).

@@ -109,3 +109,57 @@ export function finish(m: Model, legs: Mask): Model {
   m.crop();
   return m;
 }
+
+/**
+ * Plante (lot 4) : écorce brun sombre (corps), mousse et feuilles en indices propres, bois clair, lueur des spores
+ * validée le 23/11. Écart à la langue validée (corps vert mousse) : le vert se fondait dans l'herbe de la Prairie vue
+ * d'en haut (même leçon que le feu au lot 2, §4.5) ; la mousse et les feuilles gardent le vert, en touches.
+ */
+export const MOSS = 5;
+export const LEAF = 6;
+export const PLANTE = {
+  ...elementPalette(['#1A1712', '#3A2F23', '#5C4B36', '#C9B48A'], ['#5BE33B', '#A8F05A', '#EFFFB0'], '#FFB02E'),
+  [MOSS]: hexrgb('#4A6B2A'),
+  [LEAF]: hexrgb('#2E8040'),
+};
+/** Champignon (lot 4) : même écorce, étagères de polypore en bandes (brun, ocre, crème), même lueur des spores. */
+export const SHELF_DARK = 5;
+export const SHELF_MID = 6;
+export const SHELF_EDGE = 7;
+export const CHAMPI = {
+  ...elementPalette(['#1A1712', '#3A2F23', '#5C4B36', '#C9B48A'], ['#5BE33B', '#A8F05A', '#EFFFB0'], '#FFB02E'),
+  [SHELF_DARK]: hexrgb('#5A3B22'),
+  [SHELF_MID]: hexrgb('#B07A3A'),
+  [SHELF_EDGE]: hexrgb('#E8D3A0'),
+};
+
+/** Taches sur le DESSUS (voisin du haut vide) autour de centres (décalage latéral, y, rayon), hors pattes. */
+export function topPatches(m: Model, spots: [number, number, number][], minZ: number, legs: Mask, color: number, from = [BODY, CRUST, DARK]): void {
+  m.each((i, x, y, _z, xi, yi, zi) => {
+    if (legs[i] || zi < minZ || !from.includes(m.v[i]) || m.get(xi, yi, zi + 1) !== 0) return;
+    const lat = Math.abs(x - m.cx);
+    if (spots.some(([sl, sy, r]) => (lat - sl) ** 2 + (y - sy) ** 2 <= r * r)) m.v[i] = color;
+  });
+}
+
+/**
+ * Yeux 2 × 2 posés sur le DEVANT de la tête : pour chaque colonne (décalage latéral eo et eo + 1, hauteurs ez et
+ * ez + 1), le premier voxel plein en partant de l'avant (y < yMax) devient un œil. Ils ne flottent jamais devant la tête.
+ */
+export function placeEyes(m: Model, eo: number, ez: number, yMax: number, eye = 248): void {
+  const c = Math.trunc(m.cx);
+  for (const xi of [c + eo, c + eo + 1, c - eo - 1, c - eo - 2])
+    for (const zi of [ez, ez + 1])
+      for (let yi = 0; yi < Math.min(yMax, m.l); yi++)
+        if (m.get(xi, yi, zi) !== 0) {
+          m.v[m.idx(xi, yi, zi)] = eye;
+          break;
+        }
+}
+
+/** Mémorise ce qui est vide, pour savoir ensuite ce qu'une suite de primitives a dessiné (pattes). */
+export function drawnSince(m: Model, before: Uint8Array): Mask {
+  const out = new Uint8Array(m.v.length);
+  for (let i = 0; i < m.v.length; i++) out[i] = before[i] === 0 && m.v[i] !== 0 ? 1 : 0;
+  return out;
+}
