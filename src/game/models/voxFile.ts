@@ -20,6 +20,10 @@ export interface VoxModel {
   palette: string[];
 }
 
+/** Blocs de fichier par unité de forme (même valeur que VOX_RES de creatures.ts). */
+export const VOX_UNIT = 14;
+/** Ondulation des créatures sans pattes : nombre de tranches, et longueur (en blocs) du cou fixe derrière les yeux. */
+export const VOX_SNAKE = { slices: 6, neck: 9 };
 export const VOX_ROLES = { glow: [240, 247], eye: 248, eyeShine: 249, legL: [250, 252], legR: [253, 255] } as const;
 
 const hex2 = (n: number) => n.toString(16).padStart(2, '0');
@@ -163,6 +167,34 @@ export function voxToSculptDef(model: VoxModel): SculptDef {
     split = true;
     for (const v of voxels) if (v.group === side) v.group = side + (v.z > cut ? 'F' : 'H');
   }
+  // BESTIAIRE (lot 5b) : une créature SANS pattes (serpent) ondule. L'arrière du corps est coupé en tranches, de
+  // l'avant vers la queue ; le moteur les fait onduler (cas « serpentine » de engine/actors.ts, pièces annexes dans
+  // l'ordre). L'avant (tête, cou, yeux) reste fixe pour que les yeux ne se détachent pas. Toute créature qui a des
+  // pattes est construite exactement comme avant.
+  const extras: { group: string; pivot: [number, number, number] }[] = [];
+  if (!voxels.some((v) => v.group.startsWith('leg'))) {
+    const body = voxels.filter((v) => v.group === 'body');
+    const eyeZ = Math.min(...voxels.filter((v) => v.group.startsWith('eye')).map((v) => v.z));
+    const zMin = Math.min(...body.map((v) => v.z));
+    const zCut = Number.isFinite(eyeZ) ? eyeZ - VOX_SNAKE.neck : Infinity; // tout ce qui est derrière le cou
+    const span = zCut - zMin;
+    if (span > VOX_SNAKE.slices * 2) {
+      const step = span / VOX_SNAKE.slices;
+      for (let k = 0; k < VOX_SNAKE.slices; k++) {
+        const hi = zCut - k * step;
+        const g = 'seg' + k;
+        let ySum = 0;
+        let n = 0;
+        for (const v of body)
+          if (v.z < hi && v.z >= hi - step) {
+            v.group = g;
+            ySum += v.y;
+            n++;
+          }
+        if (n) extras.push({ group: g, pivot: [0, ySum / n / VOX_UNIT, hi / VOX_UNIT] });
+      }
+    }
+  }
   const groups = new Set(voxels.map((v) => v.group));
   // ordre des pattes : le moteur fait avancer les pattes de rang pair ensemble, et les impaires à l'opposé
   // (engine/actors.ts) ; avant gauche + arrière droite, puis avant droite + arrière gauche = trot en diagonale
@@ -172,6 +204,7 @@ export function voxToSculptDef(model: VoxModel): SculptDef {
     voxels,
     legs: legs.filter((g) => groups.has(g)),
     eyes: ['eyeL', 'eyeR'].filter((g) => groups.has(g)),
+    ...(extras.length ? { extras } : {}),
   };
 }
 

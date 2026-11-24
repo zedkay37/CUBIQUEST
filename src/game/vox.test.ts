@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseVox, voxToSculptDef, writeVox, registerVoxModel, getVoxDef, shiftVoxBody } from './models/voxFile';
+import { parseVox, voxToSculptDef, writeVox, registerVoxModel, getVoxDef, shiftVoxBody, VOX_SNAKE } from './models/voxFile';
 import { buildSculptRig } from './models/voxelSculpt';
 import { buildExampleVox } from '../../tools/voxExemple';
 
@@ -114,4 +114,24 @@ test('Vox (BESTIAIRE) : variante de couleur : le corps et les pattes changent de
     assert.equal(w.rgb, body ? '#00ff00' : v.rgb, `indice ${v.pi}`);
   });
   assert.ok(def.voxels!.some((v) => v.pi! >= 240 && v.pi! <= 247) && def.voxels!.some((v) => v.pi === 248));
+});
+
+// BESTIAIRE lot 5b : une créature sans pattes ondule (tranches animées), les autres ne changent pas
+test('Vox (BESTIAIRE) : un serpent sans pattes est coupé en tranches qui ondulent ; une créature à pattes ne change pas', () => {
+  const load = (id: string) => {
+    const b = readFileSync(`src/assets/vox/${id}.vox`);
+    return parseVox(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer);
+  };
+  for (const id of ['crepitil', 'serpeclair', 'tempestrix']) {
+    const def = voxToSculptDef(load(id));
+    assert.equal(def.legs?.length, 0, id);
+    assert.equal(def.extras?.length, VOX_SNAKE.slices, id);
+    assert.ok(def.voxels!.some((v) => v.group === 'body'), `${id} : la tête et le cou restent fixes`);
+    assert.equal(def.eyes?.length, 2, id);
+  }
+  for (const id of ['cendrox', 'aquabloc', 'pyrocube', 'crabloc', 'givrelin', 'voltik']) {
+    const def = voxToSculptDef(load(id));
+    assert.equal(def.extras, undefined, id);
+    assert.ok(def.voxels!.every((v) => !v.group.startsWith('seg')), id);
+  }
 });
