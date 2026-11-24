@@ -96,14 +96,14 @@ function Choice({ onPick }: { onPick: (v: Version) => void }) {
   );
 }
 
-function Bar({ v, max, color, w = 'w-48' }: { v: number; max: number; color: string; w?: string }) {
+export function Bar({ v, max, color, w = 'w-48' }: { v: number; max: number; color: string; w?: string }) {
   return (
     <div className={`h-3 ${w} overflow-hidden rounded bg-black/60`}>
       <div className="h-full" style={{ width: `${Math.max(0, (100 * v) / max)}%`, background: color }} />
     </div>
   );
 }
-function Chip({ k, label, cd, total }: { k: string; label: string; cd: number; total: number }) {
+export function Chip({ k, label, cd, total }: { k: string; label: string; cd: number; total: number }) {
   const ready = cd <= 0;
   return (
     <div className={`relative w-20 overflow-hidden rounded-md border px-1 py-1 text-center text-xs ${ready ? 'border-amber-300 bg-slate-800' : 'border-white/10 bg-slate-900/80 text-white/50'}`}>

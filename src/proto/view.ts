@@ -23,6 +23,9 @@ const SPECIES_FILES: { id: string; ref: boolean; scaleOf: string; glow: number }
   { id: 'chevrok', ref: false, scaleOf: 'chevrok', glow: 0.3 },
   { id: 'bourgeon', ref: false, scaleOf: 'bourgeon', glow: 0.3 },
   { id: 'magmadrake', ref: false, scaleOf: 'magmadrake', glow: 0.35 },
+  // PROTO-DONJON : le Blindé, le remplaçant de Braizard dans la réserve
+  { id: 'cailloc', ref: false, scaleOf: 'cailloc', glow: 0.3 },
+  { id: 'raicube', ref: false, scaleOf: 'raicube', glow: 0.4 },
 ];
 /** Taille d'affichage dans la maquette (la salle est plus serrée que les combats du jeu). */
 const SIZE: Record<string, number> = { 'calcinarque-legendaire': 0.55, magmadrake: 0.85 };
@@ -35,10 +38,10 @@ export async function loadProtoModels(): Promise<void> {
 const toW = (p: Vec, h = 0) => new THREE.Vector3(p.x, h, -p.y);
 const RING_COLORS = { meneur: '#FFD02A', ally: '#3BD16F', enemy: '#9B5CFF' };
 
-function toon(color: string): THREE.MeshToonMaterial {
+export function toon(color: string): THREE.MeshToonMaterial {
   return new THREE.MeshToonMaterial({ color, gradientMap: getToonGradient() });
 }
-function outlined(geo: THREE.BufferGeometry, color: string): THREE.Group {
+export function outlined(geo: THREE.BufferGeometry, color: string): THREE.Group {
   const g = new THREE.Group();
   const m = new THREE.Mesh(geo, toon(color));
   m.castShadow = true;
@@ -46,14 +49,14 @@ function outlined(geo: THREE.BufferGeometry, color: string): THREE.Group {
   g.add(m, new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: '#0B0B10' })));
   return g;
 }
-function boxAt(r: [number, number, number, number], h: number, color: string, y0 = 0): THREE.Group {
+export function boxAt(r: [number, number, number, number], h: number, color: string, y0 = 0): THREE.Group {
   const g = outlined(new THREE.BoxGeometry(r[2] - r[0], h, r[3] - r[1]), color);
   g.position.set((r[0] + r[2]) / 2, y0 + h / 2, -(r[1] + r[3]) / 2);
   return g;
 }
 
 let hatch: THREE.CanvasTexture | null = null;
-function hatchTexture(): THREE.CanvasTexture {
+export function hatchTexture(): THREE.CanvasTexture {
   if (hatch) return hatch;
   const c = document.createElement('canvas');
   c.width = c.height = 64;
@@ -72,7 +75,7 @@ function hatchTexture(): THREE.CanvasTexture {
   hatch.wrapS = hatch.wrapT = THREE.RepeatWrapping;
   return hatch;
 }
-function iconSprite(draw: (x: CanvasRenderingContext2D) => void): THREE.Sprite {
+export function iconSprite(draw: (x: CanvasRenderingContext2D) => void): THREE.Sprite {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   draw(c.getContext('2d')!);
@@ -117,16 +120,29 @@ export class ProtoView {
   private raycaster = new THREE.Raycaster();
   private ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   private time = 0;
+  sun: THREE.DirectionalLight;
+  hemi: THREE.HemisphereLight;
+  /** Position de la caméra par rapport au Meneur (réglable : proche, moyenne, éloignée ; plongée). */
+  camOffset = new THREE.Vector3(0, 17, 11);
+  /** Brouillard du donjon : une unité hors des zones vues n'est pas dessinée. */
+  visibleFn: ((u: Unit) => boolean) | null = null;
+  /** Le soleil suit le Meneur (grands étages : l'ombre reste nette autour de lui). */
+  followSun = false;
 
-  constructor(private host: HTMLElement) {
+  constructor(
+    private host: HTMLElement,
+    opts: { salle?: boolean } = {},
+  ) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     host.appendChild(this.renderer.domElement);
     this.scene.background = new THREE.Color('#BFD9E8');
-    this.scene.add(new THREE.HemisphereLight('#EAF4FF', '#6A6458', 1.5));
+    this.hemi = new THREE.HemisphereLight('#EAF4FF', '#6A6458', 1.5);
+    this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight('#FFF3E0', 2.0);
+    this.sun = sun;
     sun.position.set(-8, 20, 6);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -134,7 +150,7 @@ export class ProtoView {
     sun.target.position.set(0, 0, -20);
     this.scene.add(sun, sun.target);
     sun.shadow.camera.updateProjectionMatrix();
-    this.buildRoom();
+    if (opts.salle !== false) this.buildRoom();
     // flashes : 4 lumières ponctuelles réutilisées (lueurs des moments forts)
     for (let i = 0; i < 4; i++) {
       const light = new THREE.PointLight('#FF8A30', 0, 9, 1.6);
@@ -327,7 +343,7 @@ export class ProtoView {
     // unités
     const seen = new Set<number>();
     for (const u of g.units) {
-      const visible = u.alive && (u.inPlay || u.flight !== null);
+      const visible = u.alive && (u.inPlay || u.flight !== null) && (!this.visibleFn || this.visibleFn(u));
       if (!visible) {
         const v = this.units.get(u.id);
         if (v) v.root.visible = false;
@@ -421,9 +437,13 @@ export class ProtoView {
     this.bondCircle.position.copy(toW(L, heightAt(L)));
     // caméra : suit le Meneur, vue plongeante
     const target = toW(L, heightAt(L));
-    const want = target.clone().add(new THREE.Vector3(0, 17, 11));
+    const want = target.clone().add(this.camOffset);
     this.camera.position.lerp(want, Math.min(1, dt * 6));
     this.camera.lookAt(target.x, target.y, target.z - 2);
+    if (this.followSun) {
+      this.sun.position.set(target.x - 8, 20, target.z + 6);
+      this.sun.target.position.copy(target);
+    }
     this.renderer.render(this.scene, this.camera);
   }
 
