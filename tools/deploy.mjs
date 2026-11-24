@@ -7,7 +7,9 @@
  *
  * - `next` : BASE_PATH=/CUBIQUEST/next/, VITE_SAVE_SLOT=next (sauvegarde séparée), bandeau « version en test ».
  *   Seul le dossier `next/` de gh-pages est remplacé.
- * - `root` : BASE_PATH=/CUBIQUEST/. Tout est remplacé SAUF `next/`.
+ * - `proto` : BASE_PATH=/CUBIQUEST/proto/, VITE_SAVE_SLOT=proto (sprint PROTO-MENEUR, maquette `?proto=salle`).
+ *   Seul le dossier `proto/` de gh-pages est remplacé.
+ * - `root` : BASE_PATH=/CUBIQUEST/. Tout est remplacé SAUF `next/` et `proto/`.
  * - Le site est construit dans un dossier temporaire et `gh-pages` est mis à jour dans un `git worktree`
  *   temporaire : l'arbre de travail et la branche courante ne sont jamais modifiés.
  * - N'active pas GitHub Pages et ne touche à aucun réglage du dépôt (rôle du propriétaire).
@@ -23,8 +25,8 @@ const PAGES_BRANCH = 'gh-pages';
 const args = process.argv.slice(2);
 const target = args[args.indexOf('--target') + 1];
 const dryRun = args.includes('--dry-run');
-if (!args.includes('--target') || (target !== 'next' && target !== 'root')) {
-  console.error('Usage : npm run deploy:pages -- --target next|root [--dry-run]');
+if (!args.includes('--target') || (target !== 'next' && target !== 'proto' && target !== 'root')) {
+  console.error('Usage : npm run deploy:pages -- --target next|proto|root [--dry-run]');
   process.exit(1);
 }
 
@@ -49,9 +51,10 @@ let worktreeAdded = false;
 
 try {
   // 1. Construction dans un dossier temporaire
-  const env = { ...process.env, BASE_PATH: target === 'next' ? `${REPO_BASE}next/` : REPO_BASE };
+  const env = { ...process.env, BASE_PATH: target === 'root' ? REPO_BASE : `${REPO_BASE}${target}/` };
   delete env.VITE_SAVE_SLOT;
   delete env.VITE_TEST_BRANCH;
+  if (target === 'proto') env.VITE_SAVE_SLOT = 'proto';
   if (target === 'next') {
     env.VITE_SAVE_SLOT = 'next';
     env.VITE_TEST_BRANCH = branch;
@@ -76,9 +79,12 @@ try {
 
   // 3. Remplacement du contenu ciblé
   const keep = new Set(['.git']);
-  if (target === 'root') keep.add('next');
-  const dest = target === 'next' ? path.join(worktree, 'next') : worktree;
-  if (target === 'next') fs.rmSync(dest, { recursive: true, force: true });
+  if (target === 'root') {
+    keep.add('next');
+    keep.add('proto');
+  }
+  const dest = target === 'root' ? worktree : path.join(worktree, target);
+  if (target !== 'root') fs.rmSync(dest, { recursive: true, force: true });
   else for (const name of fs.readdirSync(worktree)) if (!keep.has(name)) fs.rmSync(path.join(worktree, name), { recursive: true, force: true });
   fs.mkdirSync(dest, { recursive: true });
   fs.cpSync(outDir, dest, { recursive: true });
