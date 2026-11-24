@@ -72,6 +72,17 @@ export function pince(stage: 1 | 3): Model {
       }
     m.box(c - 2, c + 2, my, my + 1, mz, mz + 1, DARK);
     m.box(2, 3, my, my + 2, mz + 1, mz + 2, DARK, true); // coins relevés
+  } else {
+    // harmonisation : Crabastion, placide et protecteur : grande bouche droite, calme
+    const c = Math.trunc(cx);
+    const mz = Math.round(sz - 0.8);
+    let my = 0;
+    for (let yi = 0; yi < m.l; yi++)
+      if (m.get(c, yi, mz) !== 0) {
+        my = yi;
+        break;
+      }
+    m.box(c - 3, c + 3, my, my + 1, mz, mz + 1, DARK);
   }
 
   // --- forme finale : aiguilles de roche en GROUPES sur la carapace (éboulis), jamais une rangée

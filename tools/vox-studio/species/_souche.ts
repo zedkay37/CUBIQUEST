@@ -83,7 +83,7 @@ export function souche(stage: 1 | 2 | 3): Model {
   // yeux 2 × 2 sur le devant du crâne, au-dessus du groin ; arcade d'écorce dès le stade 2
   const eo = Math.max(1, Math.round(hr * 0.42));
   const ez = Math.round(hzC + 0.3 * kz);
-  placeEyes(m, eo, ez, Math.ceil(hyC), EYE);
+  placeEyes(m, eo, stage === 3 ? ez - 1 : ez, Math.ceil(hyC), EYE, stage === 3 ? 3 : 2); // harmonisation : grands yeux pour Bourgéoliath
   if (stage > 1) m.box(eo - 1, eo + 2, Math.floor(hyC - hr * 0.98), Math.floor(hyC - hr * 0.5), ez + 2, ez + 3, BODY, true); // arcade
 
   // --- queue courte, touffe de feuilles (rien de lumineux au bout)

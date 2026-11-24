@@ -87,7 +87,12 @@ export function cerf(stage: 1 | 2 | 3): Model {
     m.capsule([cx - hr * 0.7, hy + 0.8, hz + hr * 0.4], [cx - hr * 0.7 - 1.2, hy + 1.8, hz - hr * 0.6], 0.9, 0.7, BODY); // oreille tombante
     m.box(c - 1, c + 1, front - 2, front - 1, ez - 3, ez - 2, DARK); // bouche
     m.box(c - 1, c + 1, front - 1, front, ez - 3, ez - 2, DARK);
-  } else m.capsule([hr * 0.7, hy + 0.8, hz + hr * 0.55], [hr * 0.7 + 1.4, hy + 2.4, hz + hr * 0.4], 0.9, 0.7, BODY, true); // oreilles
+  } else {
+    m.capsule([hr * 0.7, hy + 0.8, hz + hr * 0.55], [hr * 0.7 + 1.4, hy + 2.4, hz + hr * 0.4], 0.9, 0.7, BODY, true); // oreilles
+    // harmonisation : bouche (Ramurgel sérieux : ligne droite ; Auroramure sereine : coins à peine relevés)
+    m.box(c - 1, c + 1, front - 2, front, ez - 3, ez - 2, DARK);
+    if (stage === 3) m.box(1, 2, front - 1, front, ez - 2, ez - 1, DARK, true);
+  }
 
   // --- bois de glace balayés vers l'arrière (lames), qui grandissent ; meule (base) marquée
   const by = hy + 1.1; // en arrière des yeux, pour qu'on ne les confonde pas avec la glace

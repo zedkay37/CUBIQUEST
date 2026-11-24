@@ -60,7 +60,9 @@ test('vox:build (BESTIAIRE) : les .vox du dépôt sont ceux que donnent les scri
     const bytes = writeVoxBytes(s.build(), s.PALETTE);
     const disk = new Uint8Array(readFileSync(`src/assets/vox/${s.ID}.vox`));
     assert.ok(bytes.length === disk.length && bytes.every((b, i) => b === disk[i]), `${s.ID} : src/assets/vox à régénérer (npm run vox:build)`);
-    assert.deepEqual(checkVox(Buffer.from(disk)), [], s.ID);
+    // plafond de lueur de 10 % pour une créature qui sert de boss, comme `npm run vox:check`
+    const { STAGES } = await import('./catalog');
+    assert.deepEqual(checkVox(Buffer.from(disk), { boss: STAGES.some((st) => st.bossSpeciesId === s.ID) }), [], s.ID);
   }
 });
 

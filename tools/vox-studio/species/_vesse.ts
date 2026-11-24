@@ -73,7 +73,7 @@ export function vesse(stage: 1 | 3): Model {
   // yeux mi-clos : paupière lourde au-dessus (en surplomb à la forme finale seulement, pour que le stade 1 se lise)
   const eo = Math.max(1, Math.round(hr * 0.36));
   const ez = Math.round(hzC + hr * 0.1);
-  placeEyes(m, eo, ez, Math.ceil(hyC), EYE);
+  placeEyes(m, eo, fin ? ez - 1 : ez, Math.ceil(hyC), EYE, fin ? 3 : 2); // harmonisation : grands yeux pour Amanitox
   let ey = m.l;
   m.each((i, _x, _y, _z, _xi, yi) => {
     if (m.v[i] === EYE) ey = Math.min(ey, yi);

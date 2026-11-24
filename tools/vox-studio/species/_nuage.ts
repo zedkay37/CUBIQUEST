@@ -12,7 +12,7 @@
  *   coin, deux bras de nuage, éclairs violets dans le ventre sombre, petits nuages satellites (ses mirages).
  */
 import { EYE, Model } from '../voxlib';
-import { BODY, BONE, CRUST, DARK, OBSIDIENNE, eyeRow, finish, mouth, shade, topLine } from './_commun';
+import { BODY, BONE, CRUST, DARK, OBSIDIENNE, eyeRow, finish, mouth, placeEyes, shade, topLine } from './_commun';
 
 export function nuage(stage: 1 | 3): Model {
   const fin = stage === 3;
@@ -35,13 +35,8 @@ export function nuage(stage: 1 | 3): Model {
   const fz = (fin ? 6.6 : 7.0) * k;
   const eo = Math.max(1, Math.round(1.1 * k));
   const ez = Math.round(fz);
-  for (const xi of [c + eo, c + eo + 1, c - eo - 1, c - eo - 2])
-    for (const zi of [ez, ez + 1])
-      for (let yi = 0; yi < m.l; yi++)
-        if (m.get(xi, yi, zi) !== 0) {
-          m.v[m.idx(xi, yi, zi)] = EYE;
-          break;
-        }
+  // harmonisation : grands yeux (3 × 3) pour Cumulord ; le haut de l'œil reste à la même hauteur
+  placeEyes(m, eo, fin ? ez - 1 : ez, m.l, EYE, fin ? 3 : 2);
   const ey = eyeRow(m);
   const mz = Math.round(fz - 1.6 * k);
   if (fin) {

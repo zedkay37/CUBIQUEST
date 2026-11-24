@@ -174,10 +174,15 @@ export function topPatches(m: Model, spots: [number, number, number][], minZ: nu
  * Yeux 2 × 2 posés sur le DEVANT de la tête : pour chaque colonne (décalage latéral eo et eo + 1, hauteurs ez et
  * ez + 1), le premier voxel plein en partant de l'avant (y < yMax) devient un œil. Ils ne flottent jamais devant la tête.
  */
-export function placeEyes(m: Model, eo: number, ez: number, yMax: number, eye = 248): void {
+export function placeEyes(m: Model, eo: number, ez: number, yMax: number, eye = 248, size = 2): void {
   const c = Math.trunc(m.cx);
-  for (const xi of [c + eo, c + eo + 1, c - eo - 1, c - eo - 2])
-    for (const zi of [ez, ez + 1])
+  // harmonisation : yeux de 3 × 3 permis sur les grosses créatures (accord du joueur), 2 × 2 par défaut
+  const cols: number[] = [];
+  for (let j = 0; j < size; j++) cols.push(c + eo + j, c - eo - 1 - j);
+  const rows: number[] = [];
+  for (let j = 0; j < size; j++) rows.push(ez + j);
+  for (const xi of cols)
+    for (const zi of rows)
       for (let yi = 0; yi < Math.min(yMax, m.l); yi++)
         if (m.get(xi, yi, zi) !== 0) {
           m.v[m.idx(xi, yi, zi)] = eye;
@@ -219,8 +224,8 @@ export const PLAQUE = 8;
  * claires en grandes masses (PLAQUE), lueur de cristal en lignes.
  */
 export const ROCHE = {
-  ...elementPalette(['#404147', '#55565D', '#65666C', '#CFC6B4'], ['#6E9CD8', '#A9C8EE', '#DCEBFF'], '#FFC24A'),
-  [PLAQUE]: hexrgb('#A6A194'),
+  ...elementPalette(['#353843', '#4A4E5A', '#5A5F6C', '#C4C6CC'], ['#6E9CD8', '#A9C8EE', '#DCEBFF'], '#FFC24A'),
+  [PLAQUE]: hexrgb('#9097A6'), // harmonisation : plaques gris froid (le beige chauffait trop au volcan)
   [LICHEN]: hexrgb('#8A9A4E'),
   [GLACE_PLEINE]: hexrgb('#A9C9EA'),
   [AMBRE]: hexrgb('#D08A36'),

@@ -14,7 +14,7 @@
  *   large (pas sur la tête), longue traîne.
  */
 import { EYE, Model } from '../voxlib';
-import { BODY, BONE, CRUST, DARK, OBSIDIENNE, eyeRow, finish, mouth, shade, topLine } from './_commun';
+import { BODY, BONE, CRUST, DARK, OBSIDIENNE, eyeRow, finish, mouth, placeEyes, shade, topLine } from './_commun';
 
 export function flotteur(stage: 1 | 2 | 3): Model {
   const k = stage === 1 ? 1.35 : stage === 2 ? 1.6 : 1.9;
@@ -38,13 +38,7 @@ export function flotteur(stage: 1 | 2 | 3): Model {
   // yeux 2 × 2 sur la face avant, sous la plaque du front
   const eo = Math.max(1, Math.round(hr * 0.36));
   const ez = Math.round(hz + hr * 0.05);
-  for (const xi of [c + eo, c + eo + 1, c - eo - 1, c - eo - 2])
-    for (const zi of [ez, ez + 1])
-      for (let yi = 0; yi < m.l; yi++)
-        if (m.get(xi, yi, zi) !== 0) {
-          m.v[m.idx(xi, yi, zi)] = EYE;
-          break;
-        }
+  placeEyes(m, eo, stage === 3 ? ez - 1 : ez, m.l, EYE, stage === 3 ? 3 : 2); // harmonisation : grands yeux pour Aetherion
   const ey = eyeRow(m);
   if (stage === 3) m.box(eo, eo + 2, ey - 1, ey, ez + 1, ez + 2, BODY, true); // paupières mi-closes (sage)
   const mz = Math.round(hz - hr * 0.45);

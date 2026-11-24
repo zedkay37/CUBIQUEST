@@ -135,7 +135,11 @@ export function gargouille(stage: 1 | 2 | 3): Model {
   topLine(m, [[0.5, cy - 0.8 * k], [0.5, cy + 0.8 * k]], 0.45 + 0.2 * stage, stage === 1 ? 241 : 242, [DARK, BODY, CRUST], Math.round(tz));
   if (stage > 1) topLine(m, [[0.5, cy + 1.8 * k], [0.5, cy + 3.2 * k]], 0.45 + 0.2 * stage, 241, [DARK, BODY, CRUST], Math.round(legH + 2 * k));
   if (fin) {
-    m.crack([[0.5, cy - 3.2 * k, tz - 1.0 * k], [0.5, cy - 3.2 * k, tz - 0.2 * k]], 242, 1.0, body); // cœur de cristal
+    m.crack([[0.5, cy - 3.2 * k, tz - 1.0 * k], [0.5, cy - 3.2 * k, tz - 0.2 * k]], 242, 1.4, body); // cœur de cristal (harmonisation : plus gros)
+    // harmonisation : créature-étalon, couleur forte vue d'en haut (veines des épaules, de la collerette et des ailes)
+    topLine(m, [[1.0 * k, cy - 1.8 * k], [2.8 * k, cy - 0.8 * k], [3.4 * k, cy + 0.8 * k]], 0.9, 241, body, Math.round(tz));
+    topLine(m, [[0.5, hy + 1.4 * k], [2.4 * k, hy + 0.9 * k], [3.2 * k, hy + 0.2 * k]], 0.8, 241, [PLAQUE, BODY, CRUST], Math.round(hz));
+    topLine(m, [[sh[0], sh[1] + 0.6 * k], [wr[0], wr[1] + 0.6 * k], [tip[0], tip[1] - 1.0 * k]], 0.6, 242, [BODY, CRUST, DARK], Math.round(tz + 2 * k));
     m.crack([[0.5, cy - 3.2 * k, tz - 0.6 * k], [1.6 * k, cy - 2.9 * k, tz + 0.6 * k], [2.6 * k, cy - 2.0 * k, tz + 1.4 * k]], 241, 0.7, body); // veines du poitrail
     m.crack([[0.5, cy - 3.2 * k, tz - 0.6 * k], [1.4 * k, cy - 3.0 * k, tz - 2.0 * k], [2.4 * k, cy - 2.6 * k, legH + 2.0 * k]], 241, 0.7, body);
     topLine(m, [[0.5, cy + 4.2 * k], [0.5, cy + 6.0 * k]], 0.45 + 0.2 * stage, 241, [DARK, BODY, CRUST], 1); // queue

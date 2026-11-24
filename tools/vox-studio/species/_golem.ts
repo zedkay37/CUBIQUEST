@@ -39,7 +39,7 @@ export function golem(stage: 1 | 2 | 3): Model {
   m.ellipsoid([cx, hy - hr * 0.7, hz - hr * 0.45], [hr * 0.7, hr * 0.4, hr * 0.42], BODY); // mâchoire carrée
   const eo = Math.max(1, Math.round(hr * 0.42));
   const ez = Math.round(hz + hr * 0.05);
-  placeEyes(m, eo, ez, Math.ceil(hy), EYE);
+  placeEyes(m, eo, stage === 3 ? ez - 1 : ez, Math.ceil(hy), EYE, stage === 3 ? 3 : 2); // harmonisation : grands yeux pour Glaciatitan
   const ey = eyeRow(m);
   if (stage === 1) {
     m.box(eo, eo + 1, ey - 1, ey + 2, ez + 2, ez + 3, BODY, true); // sourcils froncés : bas à l'intérieur…

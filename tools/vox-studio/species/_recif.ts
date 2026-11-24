@@ -62,6 +62,17 @@ export function reef(stage: Stage): Model {
   }
   if (stage > 1) m.box(2, 3, hy, hy + 1, ez - 3, ez - 1, BONE, true); // défenses de nacre qui descendent
   if (stage === 3) m.box(c - 2, c + 2, hy, hy + 2, ez - 2, ez - 1, 240); // gorge lumineuse des abysses
+  // harmonisation : bouche lisible et caractère (Corallix téméraire : sourire crâne ; Abyssocube grognon : coins
+  // tombants, lèvre du bas en avant, un croc de nacre qui dépasse d'un seul côté)
+  if (stage === 2) {
+    m.box(2, 3, hy, hy + 1, ez - 1, ez, DARK, true); // coins relevés
+    m.box(c - 2, c + 2, hy - 1, hy, ez - 3, ez - 2, BODY); // lèvre du bas
+  }
+  if (stage === 3) {
+    m.box(2, 3, hy, hy + 1, ez - 3, ez - 2, DARK, true); // coins tombants
+    m.box(c - 2, c + 2, hy - 1, hy, ez - 3, ez - 2, BODY); // lèvre du bas, boudeuse
+    m.box(c + 1, c + 2, hy - 1, hy, ez - 2, ez, BONE); // un croc qui dépasse
+  }
 
   // --- pattes : piliers épais ; à la forme finale, coudes sortis et avant-bras massifs
   const fy = bodyY - ry * 0.55;
