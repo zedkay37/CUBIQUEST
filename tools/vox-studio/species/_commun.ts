@@ -204,3 +204,43 @@ export const ELEC = {
   [COPPER]: hexrgb('#B87333'),
   [COPPER_DARK]: hexrgb('#7A4A22'),
 };
+
+/**
+ * Roche (lot 6) : granit gris, os clair, lueur de cristal froid (validés le 23/11). Indices propres : lichen (détail de
+ * matière), glace et cristal pleins (non lumineux), ambre (cornes de Mouflambre). Yeux ambre : ils ressortent sur le gris.
+ */
+export const LICHEN = 5;
+export const GLACE_PLEINE = 6;
+export const AMBRE = 7;
+export const ROCHE = {
+  ...elementPalette(['#26262A', '#4A4A50', '#7C7A76', '#CFC6B4'], ['#6E9CD8', '#A9C8EE', '#DCEBFF'], '#FFC24A'),
+  [LICHEN]: hexrgb('#8A9A4E'),
+  [GLACE_PLEINE]: hexrgb('#A9C9EA'),
+  [AMBRE]: hexrgb('#D08A36'),
+};
+
+/** Bouche : une ligne sombre sur le devant (premier voxel plein en partant de l'avant, au centre), coins réglables. */
+export function mouth(m: Model, z: number, half: number, corners: 'haut' | 'bas' | 'plat', color = DARK): number {
+  const c = Math.trunc(m.cx);
+  let y = 0;
+  for (let yi = 0; yi < m.l; yi++)
+    if (m.get(c, yi, z) !== 0) {
+      y = yi;
+      break;
+    }
+  for (let x = c - half; x < c + half; x++) m.v[m.idx(x, y, z)] = color;
+  if (corners !== 'plat') {
+    const dz = corners === 'haut' ? 1 : -1;
+    for (const x of [c - half - 1, c + half]) if (x >= 0 && x < m.w && m.get(x, y + 1, z + dz) !== 0) m.v[m.idx(x, y + 1, z + dz)] = color;
+  }
+  return y;
+}
+
+/** Première rangée (y) des yeux posés par placeEyes. */
+export function eyeRow(m: Model): number {
+  let ey = m.l;
+  m.each((i, _x, _y, _z, _xi, yi) => {
+    if (m.v[i] === 248) ey = Math.min(ey, yi);
+  });
+  return ey;
+}

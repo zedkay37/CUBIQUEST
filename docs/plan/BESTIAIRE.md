@@ -149,3 +149,16 @@ Langue « électrique » (validée le 23/11) : ardoise `#1E2230` `#3A4157`, cuiv
   - Givrelin (timide) : petite bouche serrée, une oreille tombante.
 - **Électrique** : bandes de cuivre plus larges (mante d'épaules des scarabées, bandes des serpents), éclairs cyan visibles d'en haut (zigzags sur les élytres et le crâne, traits obliques sur le dos des serpents).
 - **Serpents** : le chargeur les fait onduler (créatures sans pattes seulement).
+
+## Lot 6 (roche), 24/11/2026 — à valider
+
+Trois plans de corps, aucun à quatre pattes (§4.8) :
+
+| Lignée | Plan de corps | Traits (évolution) | Signature |
+|---|---|---|---|
+| Cailloc → Granitox → Magmadrake | **volant replié** « gargouille » : accroupie, penchée, ailes de pierre repliées très haut sur le dos, bras ballants | brave petit gardien (crocs du bas, menton en avant) → impassible (mâchoire carrée, paupières lourdes, épaules en remparts) → hautain (tête haute, cornes balayées, une ébréchée) | fissure de cristal au front → veines aux épaules → poitrail en V et bords d'ailes |
+| Chevrok → Mouflambre → Bélithan | **bipède sauteur** « bondisseur des mesas » : grosses cuisses, longs pieds à plat, queue en trépied, tête de bélier | casse-cou (sourire, oreilles dressées) → chaleureux (toison, yeux mi-clos, bras croisés, cornes d'ambre) → fier-à-bras (buste bombé, sourire en coin, corne ébréchée) | virgules de cornes → cornes d'ambre striées → spirales aux sillons de cristal |
+| Givrock → Cryolithe → Glaciatitan | **trapu dressé** « golem de banquise » : dos droit, jambes en piliers, bras énormes, petite tête entre les épaules | frileux et grognon (poings joints, sourcils froncés, bouche tombante) → méfiant (un poing levé, arcade lourde, stalactites) → solennel (yeux mi-clos, barbe de glaçons, glacier sur les épaules) | givre sur le crâne → stalactites en groupes → glacier aux pics lumineux |
+
+Langue « roche » : granit et os validés ; **lueur de cristal un peu moins blanche** (`#6E9CD8` `#A9C8EE` `#DCEBFF` au lieu de `#9FB8D8` `#CFE0F2` `#F4F8FF`) : au volcan, le blanc pur faisait un halo qui noyait le modèle. Yeux ambre `#FFC24A`. Indices propres : lichen `#8A9A4E`, glace pleine `#A9C9EA`, ambre `#D08A36`.
+Magmadrake (roche dans le jeu) : ses « veines de magma » deviennent des veines de cristal froid (décision du 23/11).
