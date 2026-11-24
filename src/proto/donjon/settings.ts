@@ -8,8 +8,8 @@ export type CamDist = 'proche' | 'moyenne' | 'eloignee';
 export type CamAngle = 'forte' | 'rasante';
 export type Density = 'faible' | 'normale' | 'forte';
 /** PROTO-MODELES : les modèles de jeu jouables dans le donjon (A et B inchangés). */
-export type Modele = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
-export const MODELES: Modele[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+export type Modele = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+export const MODELES: Modele[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 export interface DonjonSettings {
   modele: Modele;
   seed: number;
@@ -110,6 +110,7 @@ export function keysFor(s: DonjonSettings): [string, string][] {
 /** Touches des nouveaux modèles (PROTO-MODELES). */
 export function keysForModel(s: DonjonSettings): [string, string][] {
   const out: [string, string][] = [];
+  if (s.modele === 'H') out.push(['ZQSD', 'déplacer la caméra'], ['1 · 2 · 3 · 4', 'choisir une carte-créature'], ['Clic gauche', 'la poser (zone autorisée)'], ['Clic droit', 'annuler la carte choisie']);
   if (s.modele === 'G') out.push(['ZQSD', 'bouger'], ['Clic gauche', 'désigner un ennemi (attaque automatique sinon)'], ['1 · 2', 'sorts du Meneur'], ['Espace', 'esquive'], ['F', 'jeton : focus sous le curseur'], ['R', 'jeton : repli'], ['E', 'jeton : ultime']);
   if (s.modele === 'F')
     out.push(['ZQSD', 'bouger'], ['Clic gauche', 'désigner un ennemi · en pause : choisir une créature, puis le sol (aller) ou un ennemi (attaquer)'], ['1 · 2', 'sorts du Meneur · en pause : sort de la créature choisie'], ['Maj', 'esquive'], ['Espace', 'figer / relancer le temps'], ['F', 'compagnons : la cible sous le curseur'], ['R', 'compagnons : revenez'], ['3 · 4', 'sorts des compagnons']);

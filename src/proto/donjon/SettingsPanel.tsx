@@ -8,7 +8,7 @@ import type { DonjonSettings } from './settings';
 type Opt<K extends keyof DonjonSettings> = { key: K; label: string; values: [DonjonSettings[K], string][] };
 const OPTIONS: Opt<keyof DonjonSettings>[] = [
   { key: 'scheme', label: 'Schéma de contrôle', values: [[1, '1 · Auto-attaque + ordres'], [2, '2 · Clic souris'], [3, '3 · Tir (ancien)']] },
-  { key: 'modele', label: 'Modèle de jeu', values: [['A', 'A · le trio'], ['B', 'B · la meute'], ['C', 'C · le chef d’orchestre'], ['D', 'D · le héros'], ['E', 'E · le relais'], ['F', 'F · la pause tactique'], ['G', 'G · les instincts']] },
+  { key: 'modele', label: 'Modèle de jeu', values: [['A', 'A · le trio'], ['B', 'B · la meute'], ['C', 'C · le chef d’orchestre'], ['D', 'D · le héros'], ['E', 'E · le relais'], ['F', 'F · la pause tactique'], ['G', 'G · les instincts'], ['H', 'H · la conquête']] },
   { key: 'leader', label: 'Meneur', values: [['calcinarque', 'Calcinarque (à distance)'], ['braizard', 'Braizard (corps à corps)']] },
   { key: 'cam', label: 'Caméra', values: [['proche', 'proche'], ['moyenne', 'moyenne'], ['eloignee', 'éloignée']] },
   { key: 'angle', label: 'Angle', values: [['forte', 'plongée forte'], ['rasante', 'plus rasante']] },

@@ -43,8 +43,10 @@ export class DonjonLevel implements Level {
   constructor(
     public opts: DonjonOptions,
     public floorIndex: number,
+    /** H, la conquête : une carte faite à la main à la place d'un étage généré. */
+    floorOverride?: Floor,
   ) {
-    this.floor = generateFloor(opts.seed, floorIndex, { boss: floorIndex >= opts.floors });
+    this.floor = floorOverride ?? generateFloor(opts.seed, floorIndex, { boss: floorIndex >= opts.floors });
     // décor : posé ici (pur) pour que la simulation connaisse les grands éléments qui bloquent
     this.decor = planDecor(this.floor, opts.seed);
     this.seen = new Uint8Array(this.floor.w * this.floor.h);

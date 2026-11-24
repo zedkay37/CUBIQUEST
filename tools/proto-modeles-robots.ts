@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import { results, step, type Results } from '../src/proto/sim';
 import { makeDonjonBot } from '../src/proto/donjon/dbots';
 import { enterFloor } from '../src/proto/donjon/level';
+import { enterConquest } from '../src/proto/conquest';
 import { DEFAULTS, type DonjonSettings, type Modele } from '../src/proto/donjon/settings';
 import { MODEL_INFO, setupGame } from '../src/proto/modeles';
 import { MODEL_BOTS } from '../src/proto/modelBots';
@@ -27,7 +28,7 @@ export function descend(modele: Modele, bot: string, seed: number): Descent {
   const g = setupGame(s, 900);
   g.recordEvents = false;
   const opts = { seed, density: 1, wake: false, floors: FLOORS };
-  let lvl = enterFloor(g, opts, 1);
+  let lvl = modele === 'H' ? enterConquest(g, opts) : enterFloor(g, opts, 1);
   const brain = MODEL_BOTS[modele]?.(bot) ?? makeDonjonBot(bot);
   while (!g.result) {
     step(g, brain(g));
@@ -40,7 +41,7 @@ export function descend(modele: Modele, bot: string, seed: number): Descent {
 if (process.argv[1]?.includes('proto-modeles-robots')) {
   const rows: string[] = [];
   const alerts: string[] = [];
-  const models = MODEL_INFO.filter((m) => m.id !== 'H' && (!only || only.includes(m.id)));
+  const models = MODEL_INFO.filter((m) => !only || only.includes(m.id));
   for (const m of models) {
     const wins: Record<string, number> = {};
     for (const bot of ['presse-tout', 'adaptatif']) {

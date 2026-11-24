@@ -180,3 +180,42 @@ export function InstinctEditor({ g, onDone }: { g: Game; onDone: () => void }) {
     </div>
   );
 }
+
+/** H : la main de cartes-créatures, l'Élan, les avant-postes et la prochaine vague. */
+export function ConquestHud({ g, selected, onSettings }: { g: Game; selected: number; tick: number; onSettings: () => void }) {
+  const c = g.conquest!;
+  return (
+    <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-white">
+      <div className="flex items-center gap-3 rounded bg-black/60 px-2 py-1 text-xs">
+        <span className="font-bold">Élan</span>
+        <div className="h-3 w-48 overflow-hidden rounded bg-black/60">
+          <div className="h-full bg-amber-300" style={{ width: `${(100 * c.elan) / 10}%` }} />
+        </div>
+        <span className="w-6 font-mono">{Math.floor(c.elan)}</span>
+        <span>Avant-postes : {c.outposts()} / 3</span>
+        <span>Prochaine vague : {Math.ceil(c.waveT)} s</span>
+        <span>Base : {Math.round(g.leader.hp)}</span>
+      </div>
+      <div className="flex items-end gap-2">
+        {c.hand.map((card, i) =>
+          card ? (
+            <div key={i} className={`flex h-24 w-28 flex-col rounded-lg border-2 p-1.5 text-xs ${selected === i ? '-translate-y-2 border-amber-300 bg-slate-700' : 'border-white/20 bg-slate-900/90'} ${c.elan >= card.cost ? '' : 'opacity-50'}`}>
+              <div className="flex justify-between">
+                <span className="font-mono font-bold text-amber-300">{i + 1}</span>
+                <span className="rounded bg-amber-400 px-1 font-bold text-slate-900">{card.cost}</span>
+              </div>
+              <div className="mt-1 font-bold">{card.def.name}</div>
+              <div className="text-[10px] text-white/60">{card.role === 'tank' ? 'encaisse' : card.role === 'soin' ? 'soigne' : card.role === 'tir' ? 'tire de loin' : 'frappe fort'}</div>
+              <div className="mt-auto text-[10px] text-white/70">clic : la poser</div>
+            </div>
+          ) : (
+            <div key={i} className="h-24 w-28" />
+          ),
+        )}
+        <button type="button" onClick={onSettings} className="pointer-events-auto rounded-md border border-white/20 bg-slate-900/80 px-2 py-2 text-xs">
+          Réglages (F1)
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -2,7 +2,7 @@
  * PROTO-MODELES : robots propres à chaque modèle (sinon ceux du donjon, qui savent déjà jouer A, B et C).
  * Chaque entrée renvoie le robot « presse-tout » ou « adaptatif » du modèle.
  */
-import { type Game, type Input, enemies } from './sim';
+import { type Game, type Input, emptyInput, enemies } from './sim';
 import type { Modele } from './donjon/settings';
 import { makeDonjonBot } from './donjon/dbots';
 
@@ -84,7 +84,36 @@ function instinctBot(bot: string) {
   };
 }
 
+/** H : la conquête. Presse-tout : pose dès qu'il peut, route après route. Adaptatif : renforce la route la plus menacée, le tank d'abord, et pose depuis les avant-postes pris. */
+function conquestBot(bot: string) {
+  let lane = 0;
+  return (g: Game): Input => {
+    const inp = emptyInput();
+    const c = g.conquest!;
+    const lanes = [7.5, 22, 36.5];
+    if (bot === 'presse-tout') {
+      const i = c.hand.findIndex((h) => h && c.elan >= h.cost);
+      if (i >= 0) {
+        inp.card = { index: i, at: { x: lanes[lane % 3], y: 12 }, target: -1 };
+        lane++;
+      }
+      return inp;
+    }
+    if (c.elan < 6) return inp;
+    const threat = lanes.map((x) => enemies(g).filter((e) => Math.abs(e.x - x) < 7 && e.y < 58).reduce((s, e) => s + (e.y < 20 ? 3 : 1), 0));
+    const k = threat.indexOf(Math.max(...threat));
+    const mine = g.comps.filter((u) => u.alive && Math.abs(u.x - lanes[k]) < 7).length;
+    const want = mine === 0 || threat[k] > mine ? ['tank', 'frappe', 'tir', 'soin'] : ['soin', 'tir', 'frappe', 'tank'];
+    const i = want.map((r) => c.hand.findIndex((h) => h && h.role === r && c.elan >= h.cost)).find((x) => x >= 0) ?? -1;
+    if (i < 0) return inp;
+    const at = c.owner[k] === 'ally' ? { x: lanes[k], y: 37 } : { x: lanes[k], y: 13 };
+    inp.card = { index: i, at, target: -1 };
+    return inp;
+  };
+}
+
 export const MODEL_BOTS: Partial<Record<Modele, (bot: string) => (g: Game) => Input>> = {
+  H: conquestBot,
   D: heroBot,
   E: relayBot,
   G: instinctBot,

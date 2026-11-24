@@ -28,7 +28,7 @@ const SPECIES_FILES: { id: string; ref: boolean; scaleOf: string; glow: number }
   { id: 'raicube', ref: false, scaleOf: 'raicube', glow: 0.4 },
 ];
 /** Taille d'affichage dans la maquette (la salle est plus serrée que les combats du jeu). */
-const SIZE: Record<string, number> = { 'calcinarque-legendaire': 0.55, magmadrake: 0.85 };
+const SIZE: Record<string, number> = { 'calcinarque-legendaire': 0.55, magmadrake: 0.85, base: 1 };
 
 export async function loadProtoModels(): Promise<void> {
   const subjects = await Promise.all(SPECIES_FILES.map((s) => loadVoxSubject({ id: s.id, label: s.id, file: s.id, ref: s.ref, scaleOf: s.scaleOf, glow: s.glow })));
@@ -134,6 +134,22 @@ export class ProtoView {
   visibleFn: ((u: Unit) => boolean) | null = null;
   /** Le soleil suit le Meneur (grands étages : l'ombre reste nette autour de lui). */
   followSun = false;
+  /** H : la caméra suit ce point (déplacé au clavier) au lieu du Meneur. */
+  camFocus: Vec | null = null;
+  /** H : cercles au sol (avant-postes, zone de pose). */
+  private markers = new THREE.Group();
+  setMarkers(list: { p: Vec; r: number; color: string; rect?: [number, number, number, number] }[]) {
+    if (!this.markers.parent) this.scene.add(this.markers);
+    for (const c of [...this.markers.children]) this.markers.remove(c);
+    for (const m of list) {
+      const pts: THREE.Vector3[] = [];
+      if (m.rect) for (const [x, y] of [[m.rect[0], m.rect[1]], [m.rect[2], m.rect[1]], [m.rect[2], m.rect[3]], [m.rect[0], m.rect[3]], [m.rect[0], m.rect[1]]]) pts.push(new THREE.Vector3(x, 0.08, -y));
+      else for (let i = 0; i <= 48; i++) pts.push(new THREE.Vector3(m.p.x + Math.cos((i / 48) * Math.PI * 2) * m.r, 0.08, -(m.p.y + Math.sin((i / 48) * Math.PI * 2) * m.r)));
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: m.color, dashSize: 0.6, gapSize: 0.35 }));
+      line.computeLineDistances();
+      this.markers.add(line);
+    }
+  }
 
   constructor(
     private host: HTMLElement,
@@ -227,7 +243,8 @@ export class ProtoView {
       this.scene.remove(v.root);
       this.units.delete(u.id);
     }
-    const model = buildAnyStyle('F', u.species);
+    // H : la base n'est pas une créature — une tour de pierre et de cristal
+    const model = u.species === 'base' ? baseTower() : buildAnyStyle('F', u.species);
     const body = new THREE.Group();
     body.add(model.root);
     model.root.scale.multiplyScalar((SIZE[u.species] ?? 0.62) * u.size);
@@ -493,7 +510,7 @@ export class ProtoView {
     this.bondCircle.visible = g.version === 'B' && Boolean(sel && sel.alive && !sel.inPlay);
     this.bondCircle.position.copy(toW(L, heightAt(L)));
     // caméra : suit le Meneur, vue plongeante
-    const target = toW(L, heightAt(L));
+    const target = this.camFocus ? toW(this.camFocus, 0) : toW(L, heightAt(L));
     const want = target.clone().add(this.camOffset);
     this.camera.position.lerp(want, Math.min(1, dt * 6));
     this.camera.lookAt(target.x, target.y, target.z - 2);
@@ -526,4 +543,22 @@ export class ProtoView {
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
+}
+
+/** H : la base du joueur (pas une créature) — socle, tour, cristal lumineux. */
+function baseTower(): StyledModel {
+  const root = new THREE.Group();
+  const stone = toon('#8C887C');
+  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, y: number) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.y = y;
+    m.castShadow = true;
+    root.add(m);
+    return m;
+  };
+  add(new THREE.BoxGeometry(2.6, 0.5, 2.6), stone, 0.25);
+  add(new THREE.BoxGeometry(1.6, 2, 1.6), toon('#9A958A'), 1.5);
+  const crystalMat = new THREE.MeshToonMaterial({ color: '#7FD7FF', emissive: '#2A6A9A', gradientMap: getToonGradient() });
+  const crystal = add(new THREE.OctahedronGeometry(0.7), crystalMat, 3.2);
+  return { root, setNight: (n: number) => (crystalMat.emissiveIntensity = 1 + n * 2), animate: (t: number) => (crystal.rotation.y = t) };
 }

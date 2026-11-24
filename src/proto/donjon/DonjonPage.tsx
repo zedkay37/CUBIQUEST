@@ -7,10 +7,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CD, ELAN, RECRUITS, RESERVE_MAX, type Game, type Input, type Results, emptyInput, enemies, newGame, resolveRecruit, results, step } from '../sim';
 import { ProtoView, loadProtoModels } from '../view';
 import { CARD } from '../cards';
-import { CardHand, DeckSwap, InstinctEditor, RelayHud } from '../CardHud';
+import { CardHand, ConquestHud, DeckSwap, InstinctEditor, RelayHud } from '../CardHud';
+import { OUTPOSTS, enterConquest } from '../conquest';
 import { schemeFor, setupGame } from '../modeles';
 import { BOTS, type BotId } from '../bots';
 import { makeDonjonBot } from './dbots';
+import { MODEL_BOTS } from '../modelBots';
 import { Bar, Chip } from '../ProtoSalle';
 import { DonjonEnv } from './env';
 import { DonjonLevel, enterFloor } from './level';
@@ -80,12 +82,12 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
     const g = setupGame(s0);
     // `&etage=3` : commencer directement à un étage (outil de test ; le boss est au 3e)
     const startFloor = Math.min(FLOORS, Math.max(1, Number(new URLSearchParams(window.location.search).get('etage')) || 1));
-    let level = enterFloor(g, opts, startFloor);
+    let level = s0.modele === 'H' ? enterConquest(g, opts) : enterFloor(g, opts, startFloor);
     gameRef.current = g;
     levelRef.current = level;
     (window as unknown as { __donjon: unknown }).__donjon = { g, get level() { return level; } };
     const robotId = new URLSearchParams(window.location.search).get('robot') as BotId | null;
-    const robot = robotId && (BOTS as string[]).concat('esquive-seule').includes(robotId) ? makeDonjonBot(robotId) : null;
+    const robot = robotId && (BOTS as string[]).concat('esquive-seule').includes(robotId) ? (MODEL_BOTS[s0.modele]?.(robotId) ?? makeDonjonBot(robotId)) : null;
 
     const keys = new Set<string>();
     const pressed: Partial<Record<keyof Input, boolean>> = {};
@@ -170,10 +172,10 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
         if (tac.paused) return;
       }
       if (['Space', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyF', 'KeyR'].includes(e.code)) e.preventDefault();
-      if (down && !e.repeat && g.cards) {
+      if (down && !e.repeat && (g.cards || g.conquest)) {
         const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
         if (i >= 0) {
-          const id = g.cards.hand[i];
+          const id = g.cards?.hand[i];
           if (id && CARD[id].target === 'aucune') cardPlay = { index: i, at: aim, target: -1 };
           else cardSel = cardSel === i ? -1 : i;
           setCardSelected(cardSel);
@@ -280,6 +282,15 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
         g.recruitChance = s.recruit;
         level.opts.wake = s.wake;
         view.camOffset.set(...camOffset(s));
+        if (g.conquest) {
+          // H : ZQSD déplace la caméra sur la carte (aucune créature dirigée)
+          const f = view.camFocus ?? { x: 22, y: 12 };
+          const sp = 16 * dt;
+          f.x = Math.min(42, Math.max(2, f.x + ((keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0)) * sp));
+          f.y = Math.min(70, Math.max(4, f.y + ((keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0)) * sp));
+          view.camFocus = f;
+          view.camOffset.multiplyScalar(1.5); // vue plus large : trois routes à surveiller
+        }
         const pick = view.pick(mouse.x, mouse.y, 0);
         if (pick) aim = pick;
         if (transition > 0) {
@@ -292,7 +303,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             if (g.scheme !== 2) inp.move = { x: (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0), y: (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0) };
             inp.aim = aim;
             Object.assign(inp, pressed);
-            if (g.cards) {
+            if (g.cards || g.conquest) {
               if (lmbEdge && cardSel >= 0) {
                 cardPlay = { index: cardSel, at: aim, target: enemyAt(aim) };
                 cardSel = -1;
@@ -398,6 +409,13 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             awake: level.patrols,
           });
         }
+        if (mapT <= 0 && g.conquest) {
+          const c = g.conquest;
+          view.setMarkers([
+            { p: { x: 0, y: 0 }, r: 0, color: '#FFD02A', rect: [1, 1, 43, 14] },
+            ...OUTPOSTS.map((o, k) => ({ p: o, r: c.owner[k] === 'ally' ? 7 : 3, color: c.owner[k] === 'ally' ? '#3BD16F' : c.owner[k] === 'enemy' ? '#9B5CFF' : '#FFFFFF' })),
+          ]);
+        }
         if (mapT <= 0) {
           mapT = 0.2;
           setMapTick((t) => t + 1);
@@ -452,11 +470,11 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
         <>
           <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1 rounded-lg bg-black/55 p-2 text-xs text-white">
             <div className="font-bold">
-              Étage {hud.floor} / {FLOORS} · {Math.floor(hud.t)} s · graine {settings.seed}
+              {g?.conquest ? 'La conquête' : `Étage ${hud.floor} / ${FLOORS}`} · {Math.floor(hud.t)} s · graine {settings.seed}
               {hud.awake > 0 && <span className="text-rose-300"> · le donjon s’éveille ({hud.awake})</span>}
             </div>
-            <div className="flex items-center gap-2"><span className="w-24">{L?.name}</span><Bar v={hud.hp} max={hud.maxHp} color="#FFD02A" /></div>
-            {hud.comps.map((c, i) => (
+            <div className="flex items-center gap-2"><span className="w-24">{g?.leader.name}</span><Bar v={hud.hp} max={hud.maxHp} color="#FFD02A" /></div>
+            {!g?.conquest && hud.comps.map((c, i) => (
               <div key={c.name + i} className={`flex items-center gap-2 ${version === 'B' && i === hud.selected ? 'rounded bg-amber-300/25' : ''}`}>
                 <span className="w-24">{version === 'B' && i === hud.selected ? '▶ ' : ''}{c.name}</span>
                 <Bar v={c.alive ? c.hp : 0} max={c.max} color="#3BD16F" w="w-32" />
@@ -474,9 +492,10 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             </div>
           )}
           {g?.relay && <RelayHud g={g} tick={hud.t} />}
+          {g?.conquest && <ConquestHud g={g} selected={cardSelected} tick={hud.t} onSettings={() => setPanel(true)} />}
           {settings.minimap && levelRef.current && g && <Minimap level={levelRef.current} game={g} tick={mapTick} />}
           {g?.cards && <CardHand g={g} selected={cardSelected} tick={hud.t} onSettings={() => setPanel(true)} />}
-          <div className={`pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 items-end gap-2 text-white ${g?.cards ? 'hidden' : 'flex'}`}>
+          <div className={`pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 items-end gap-2 text-white ${g?.cards || g?.conquest ? 'hidden' : 'flex'}`}>
             {settings.modele !== 'E' && <Chip k="1" label={L?.spell1 ?? ''} cd={cd('spell1')} total={CD.spell1} />}
             {settings.modele !== 'E' && <Chip k="2" label="Brasier" cd={cd('spell2')} total={CD.spell2} />}
             <Chip k={settings.modele === 'F' ? 'Maj' : 'Esp.'} label="Esquive" cd={cd('dodge')} total={CD.dodge} />

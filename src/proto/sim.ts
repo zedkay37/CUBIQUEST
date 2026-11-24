@@ -11,6 +11,7 @@
  * Schémas de contrôle : 1 auto-attaque + ordres, 2 clic souris (aller / attaquer), 3 tir à la souris (ancien).
  */
 import { instinct, useToken } from './instincts';
+import { conquestAI } from './conquest';
 
 export type Version = 'A' | 'B';
 export type Scheme = 1 | 2 | 3;
@@ -421,6 +422,8 @@ export interface Game {
   /** G : règles des compagnons (par espèce) et jetons d'ordre restants à cet étage. */
   instincts: Record<string, import('./instincts').Rule[]> | null;
   tokens: number;
+  /** H : la conquête (voir conquest.ts). */
+  conquest: import('./conquest').ConquestState | null;
 }
 
 export function mulberry32(seed: number): () => number {
@@ -544,6 +547,7 @@ export function newGame(version: Version, seed = 1, recordEventsOrOpts: boolean 
     leaderChase: false,
     instincts: null,
     tokens: 0,
+    conquest: null,
   } as unknown as Game;
   const L = g.leaderDef;
   g.leader = makeUnit(g, 'meneur', L.species, L.name, 'ally', 0, 3, L.hp, L.speed, 0.55);
@@ -701,7 +705,8 @@ function kill(g: Game, u: Unit) {
     g.endReason = 'Le Meneur est tombé.';
     return;
   }
-  u.reviveT = 12;
+  // H : une créature posée qui tombe ne revient pas (il faut en reposer)
+  u.reviveT = g.conquest ? Infinity : 12;
   if (g.version === 'B') u.inPlay = false;
 }
 
@@ -880,6 +885,11 @@ function playerActions(g: Game, input: Input, dt: number) {
     let t = target && dist(L, target) <= range + target.r + 0.2 ? target : null;
     if (!t && g.scheme === 1) t = nearest(L, enemies(g).filter((e) => e.aggro && dist(L, e) <= range + e.r + 0.2));
     if (t) leaderAttack(g, L, t);
+  }
+  // H, la conquête : la base ne fait que tirer ; le joueur pose des créatures (cartes)
+  if (g.conquest) {
+    if (input.card) g.conquest.play(g, input.card.index, input.card.at);
+    return;
   }
   // E, le relais : 1 à 4 font entrer une créature ; clic droit : le sort de celle qui est sur le terrain
   if (g.relay) {
@@ -1096,6 +1106,23 @@ function updateComp(g: Game, c: Unit, rank: number, dt: number) {
     return;
   }
   if (c.stun > 0) return;
+  if (g.conquest) {
+    conquestAI(
+      g,
+      c,
+      dt,
+      (u, to, d, stop = 0) => moveToward(g, u, to, d, stop),
+      (u, t) => {
+        u.moving = false;
+        faceTo(u, t);
+        if (u.atkCd > 0) return;
+        u.atkCd = u.comp!.rate;
+        if (u.comp!.ranged) shoot(g, u, t, u.comp!.dmg, u.comp!.range + 2, u.name, 16);
+        else damage(g, t, u.comp!.dmg, u.name, u, u.species);
+      },
+    );
+    return;
+  }
   const follow = () => {
     const p = trailPoint(g, rank);
     if (dist(c, L) > 2.4 && dist(c, p) > 0.4) moveToward(g, c, p, dt);
@@ -1285,6 +1312,11 @@ function updateEnemy(g: Game, e: Unit, dt: number) {
     e.windup -= dt;
     e.moving = false;
     if (e.windup <= 0) e.channel = false;
+    return;
+  }
+  // H : le boss garde sa base (il ne descend pas les routes)
+  if (g.conquest && dist(e, e.home) > 8 && dist(target, e.home) > 10) {
+    moveToward(g, e, e.home, dt);
     return;
   }
   e.skillCd -= dt;
