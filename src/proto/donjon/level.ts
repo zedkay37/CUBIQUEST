@@ -5,6 +5,7 @@
  */
 import { type Game, type Level, type Unit, type Vec, type EnemyRole, ELAN, emit, enemies, heal, pushOut, spawnEnemy } from '../sim';
 import { type Floor, T_WATER, generateFloor, isSolid } from './gen';
+import { type DecorItem, planDecor } from './decorPlan';
 
 export type ItemKind = 'soin' | 'elan' | 'tresor';
 export interface Item {
@@ -35,6 +36,7 @@ export class DonjonLevel implements Level {
   patrols = 0;
   /** Compteur qui change quand le brouillard bouge (le rendu ne recalcule qu'alors). */
   seenVersion = 0;
+  decor: { items: DecorItem[]; lights: Vec[] };
   private paths = new Map<number, { goal: number; path: number[]; t: number }>();
 
   constructor(
@@ -42,6 +44,8 @@ export class DonjonLevel implements Level {
     public floorIndex: number,
   ) {
     this.floor = generateFloor(opts.seed, floorIndex, { boss: floorIndex >= opts.floors });
+    // décor : posé ici (pur) pour que la simulation connaisse les grands éléments qui bloquent
+    this.decor = planDecor(this.floor, opts.seed);
     this.seen = new Uint8Array(this.floor.w * this.floor.h);
   }
 

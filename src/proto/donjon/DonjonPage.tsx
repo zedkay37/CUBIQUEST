@@ -167,7 +167,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
       view = new ProtoView(el, { salle: false });
       view.followSun = true;
       view.visibleFn = (u) => u.team === 'ally' || level.isSeen(u);
-      env = new DonjonEnv(view.scene, level);
+      env = new DonjonEnv(view.scene, level, view);
       setLoading(false);
       setBanner(startFloor >= FLOORS ? `Étage ${startFloor} — le boss` : `Étage ${startFloor}`);
       transition = 1.4;
@@ -221,7 +221,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             env.dispose();
             level = enterFloor(g, { ...opts, wake: s.wake }, next);
             levelRef.current = level;
-            env = new DonjonEnv(view.scene, level);
+            env = new DonjonEnv(view.scene, level, view);
             setMapTick((t) => t + 1);
           }
         }

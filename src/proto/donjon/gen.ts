@@ -16,7 +16,8 @@ export const T_PILLAR = 3;
 export const T_WATER = 4;
 export const T_ROCK = 5;
 export const T_DOOR = 6; // sol, marqué « seuil » (pour le décor)
-export const isSolid = (t: number) => t === T_VOID || t === T_WALL || t === T_PILLAR || t === T_ROCK;
+export const T_DECOR = 7; // sol occupé par un grand élément de décor (obstacle fixe)
+export const isSolid = (t: number) => t === T_VOID || t === T_WALL || t === T_PILLAR || t === T_ROCK || t === T_DECOR;
 
 export type RoomKind = 'depart' | 'petite' | 'grande' | 'en-L' | 'piliers' | 'eau' | 'etroite' | 'tresor' | 'nid' | 'escalier' | 'boss';
 interface Template {

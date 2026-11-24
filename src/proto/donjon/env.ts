@@ -81,6 +81,7 @@ export class DonjonEnv {
   constructor(
     private scene: THREE.Scene,
     private level: DonjonLevel,
+    private lights?: { hemi: THREE.HemisphereLight; sun: THREE.DirectionalLight },
   ) {
     const f = level.floor;
     this.seenData = new Uint8Array(f.w * f.h * 4).fill(255);
@@ -261,7 +262,7 @@ export class DonjonEnv {
     }
 
     // décor (phase 2) : kit en voxels, riche au bord, dégagé au centre
-    const decor = buildDecor(f, this.shared, (m, fade) => patchEnv(m, this.shared, fade));
+    const decor = buildDecor(f, this.shared, (m, fade) => patchEnv(m, this.shared, fade), this.level.decor.items);
     this.group.add(decor.group);
     this.decorCount = decor.count;
     this.torchSpots = decor.lights;
@@ -272,7 +273,16 @@ export class DonjonEnv {
       this.group.add(l);
     }
     this.scene.background = new THREE.Color(pal.bg);
-    this.scene.fog = new THREE.Fog(pal.bg, 26, 48);
+    // brume légère au loin ; la grotte est sombre, éclairée surtout par ses cristaux et ses torches
+    this.scene.fog = new THREE.Fog(f.biome === 'grotte' ? '#0A0814' : '#1E2A1C', 24, 46);
+    if (this.lights) {
+      const cave = f.biome === 'grotte';
+      this.lights.hemi.color.set(cave ? '#8A7FC0' : '#FFF1D6');
+      this.lights.hemi.groundColor.set(cave ? '#2A2238' : '#5A5240');
+      this.lights.hemi.intensity = cave ? 0.75 : 1.45;
+      this.lights.sun.color.set(cave ? '#B8A8FF' : '#FFE0B0');
+      this.lights.sun.intensity = cave ? 0.45 : 2.1;
+    }
   }
 
   private itemMesh(it: Item): THREE.Object3D {
@@ -340,7 +350,7 @@ export class DonjonEnv {
       .slice(0, 6);
     this.torches.forEach((l, i) => {
       const p = near[i];
-      l.intensity = p ? 9 + Math.sin(this.time * 9 + i * 1.7) * 1.5 : 0;
+      l.intensity = p ? (this.level.floor.biome === 'grotte' ? 14 : 9) + Math.sin(this.time * 9 + i * 1.7) * 1.5 : 0;
       if (p) l.position.set(p.x, 1.7, -p.y);
     });
   }
