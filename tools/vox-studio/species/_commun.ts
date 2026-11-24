@@ -78,8 +78,16 @@ export function elementPalette(body: [string, string, string, string], glow: [st
  */
 export const FEU = elementPalette(['#0D0B0D', '#1B1718', '#3B322D', '#D2BFA6'], ['#FF3D00', '#FF6A00', '#FFB300'], '#FFD02A');
 export const EAU = elementPalette(['#1C2A36', '#2F4C5E', '#5E8597', '#E3DCCB'], ['#00C2A8', '#3DF2D0', '#B8FFF0'], '#9DFFEA');
-/** Eau, variante glace (lignée Givrelin) : même ardoise bleue et même lueur, os remplacé par une glace bleutée. */
-export const GLACE = elementPalette(['#1C2A36', '#2F4C5E', '#5E8597', '#BFE6F5'], ['#00C2A8', '#3DF2D0', '#B8FFF0'], '#9DFFEA');
+/**
+ * Eau, variante glace (lignée Givrelin) : même ardoise bleue et même lueur, os remplacé par une glace bleutée.
+ * Lot 3b : sur les pattes, l'indice « os » (252 / 255) sert aux sabots, sombres pour se détacher de la neige.
+ */
+export const GLACE = {
+  ...elementPalette(['#1C2A36', '#2F4C5E', '#5E8597', '#BFE6F5'], ['#00C2A8', '#3DF2D0', '#B8FFF0'], '#9DFFEA'),
+  5: hexrgb('#93BDD0'), // givre du dos (GIVRE, _cerf.ts)
+  252: hexrgb('#141C24'),
+  255: hexrgb('#141C24'),
+};
 
 /** Passes de couleur : dessus clair (croûte), dessous sombre. Ce contraste fait la lisibilité. */
 export function shade(m: Model, from = [BODY]): void {
