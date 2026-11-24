@@ -106,8 +106,29 @@ export function finish(m: Model, legs: Mask): Model {
     [BONE, [252, 255]],
   ]);
   for (let i = 0; i < legs.length; i++) if (legs[i] && isGlow(m.v[i])) throw new Error('lueur sur une patte');
-  m.crop();
+  cropSymmetric(m);
   return m;
+}
+
+/**
+ * Recadrage dont la boîte reste centrée sur le plan de symétrie en X (porte du lot 4 : un corps peut être
+ * asymétrique, mais les yeux et les pattes doivent rester en miroir dans la boîte du fichier, que le jeu centre).
+ * Sur un modèle symétrique, donne exactement le même résultat que crop().
+ */
+export function cropSymmetric(m: Model): void {
+  const { lo, hi } = m.bbox();
+  const x0 = Math.min(lo[0], m.w - 1 - hi[0]);
+  const x1 = Math.max(hi[0], m.w - 1 - lo[0]);
+  const w = x1 - x0 + 1;
+  const l = hi[1] - lo[1] + 1;
+  const h = hi[2] - lo[2] + 1;
+  const v = new Uint8Array(w * l * h);
+  for (let x = 0; x < w; x++) for (let y = 0; y < l; y++) for (let z = 0; z < h; z++) v[(x * l + y) * h + z] = m.v[m.idx(x + x0, y + lo[1], z + lo[2])];
+  m.w = w;
+  m.l = l;
+  m.h = h;
+  m.v = v;
+  m.cx = w / 2;
 }
 
 /**
@@ -168,3 +189,16 @@ export function drawnSince(m: Model, before: Uint8Array): Mask {
   for (let i = 0; i < m.v.length; i++) out[i] = before[i] === 0 && m.v[i] !== 0 ? 1 : 0;
   return out;
 }
+
+/**
+ * Électrique (lot 5) : ardoise, cuivre, quartz, arc bleu-blanc (validés le 23/11). Le cuivre est réservé aux élytres,
+ * aux spires et aux écailles (indice COPPER) : le dessus du corps reste une ardoise plus claire, pour que le cuivre
+ * se lise comme une matière, pas comme une couche partout. Yeux jaune d'orage.
+ */
+export const COPPER = 5;
+export const COPPER_DARK = 6;
+export const ELEC = {
+  ...elementPalette(['#1E2230', '#3A4157', '#5A6584', '#E8E4D8'], ['#2D7BFF', '#6FC3FF', '#E6F7FF'], '#FFE14A'),
+  [COPPER]: hexrgb('#B87333'),
+  [COPPER_DARK]: hexrgb('#7A4A22'),
+};
