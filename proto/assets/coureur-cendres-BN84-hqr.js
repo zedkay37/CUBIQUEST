@@ -1,0 +1,1 @@
+var e=`/CUBIQUEST/proto/assets/ailebraise-wyverne-DfooDh9_.vox`,t=`/CUBIQUEST/proto/assets/calcinarque-legendaire-CCniX6RS.vox`,n=`/CUBIQUEST/proto/assets/coureur-cendres-Cq2p45N8.vox`;export{t as n,e as r,n as t};
