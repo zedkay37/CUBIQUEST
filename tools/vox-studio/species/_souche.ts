@@ -15,7 +15,26 @@
  * Langue « plante » : écorce brun sombre, mousse et feuilles vertes en touches, bois clair, spores vert-jaune.
  */
 import { EYE, Model } from '../voxlib';
-import { BODY, BONE, CRUST, DARK, LEAF, MOSS, drawnSince, finish, placeEyes, shade, topLava, topPatches } from './_commun';
+import { BODY, BONE, CRUST, DARK, LEAF, LEAF_CLAIR, LEAF_SOMBRE, MOSS, drawnSince, finish, placeEyes, shade, topLava, topPatches } from './_commun';
+
+/**
+ * Bouclier de feuilles (porte du lot 4) : plusieurs feuilles superposées en écailles, de trois verts, chacune avec une
+ * pointe qui retombe vers l'arrière : le bord est découpé, jamais une plaque plate. Feuilles du haut posées par-dessus.
+ * (lat, y, z) = centre du bouclier ; ry, rz = demi-taille ; n = nombre de feuilles.
+ */
+function leafShield(m: Model, lat: number, y: number, z: number, ry: number, rz: number, n: number): void {
+  const tones = [LEAF_SOMBRE, LEAF, LEAF_CLAIR];
+  // du bas vers le haut, de l'arrière vers l'avant : chaque feuille recouvre en partie la précédente
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    const ly = y + ry * (0.45 - 0.9 * ((i * 0.618) % 1)); // positions décalées (pas une grille)
+    const lz = z - rz * 0.55 + rz * 1.1 * t;
+    const lx = lat + 0.35 * (i % 2); // une feuille sur deux un peu plus en dehors : le bord fait des marches
+    const c = tones[i % 3];
+    m.ellipsoid([lx, ly, lz], [0.85, ry * 0.42, rz * 0.42], c, true);
+    m.capsule([lx + 0.2, ly + ry * 0.25, lz - rz * 0.2], [lx + 0.3, ly + ry * 0.55, lz - rz * 0.55], 0.75, 0.55, c, true); // pointe
+  }
+}
 
 export function souche(stage: 1 | 2 | 3): Model {
   const k = stage === 1 ? 1 : stage === 2 ? 1.28 : 1.6;
@@ -72,8 +91,8 @@ export function souche(stage: 1 | 2 | 3): Model {
   m.ellipsoid([cx, yH + 4.0 * ky, legH + 3.8 * kz], [1.0, 1.0, 1.0], LEAF);
 
   // --- boucliers de feuilles (stade 2 et plus) : posés sur l'épaule ; nervure lumineuse plus bas
-  if (stage > 1) m.ellipsoid([rxS - 0.2, yS - 0.2 * ky, zS + 0.6 * kz], [1.0, 2.4 * ky, 1.9 * kz], LEAF, true);
-  if (stage === 3) m.ellipsoid([rxS * 0.8, yH - 0.4 * ky, legH + 2.8 * kz], [1.0, 1.9 * ky, 1.5 * kz], LEAF, true); // hanches
+  if (stage > 1) leafShield(m, rxS - 0.2, yS - 0.2 * ky, zS + 0.6 * kz, 2.4 * ky, 1.9 * kz, stage === 2 ? 4 : 5);
+  if (stage === 3) leafShield(m, rxS * 0.8, yH - 0.4 * ky, legH + 2.8 * kz, 1.9 * ky, 1.5 * kz, 3); // hanches
   // --- forme finale : arceaux de racines et pousses en GROUPES sur le garrot et la croupe (pas d'arbre)
   const zTop = zS + 3.9 * kz; // dessus de la bosse
   if (stage === 3) {
@@ -112,8 +131,8 @@ export function souche(stage: 1 | 2 | 3): Model {
   shade(m);
   const body = [DARK, BODY, CRUST];
   // nervures lumineuses des feuilles (boucliers), pointes des pousses
-  if (stage > 1) m.crack([[rxS + 0.7, yS - 2.0 * ky, zS + 1.2 * kz], [rxS + 0.7, yS + 1.6 * ky, zS + 0.4 * kz]], 241, 0.7, [LEAF]);
-  if (stage === 3) m.crack([[rxS * 0.8 + 0.9, yH - 1.8 * ky, legH + 3.2 * kz], [rxS * 0.8 + 0.9, yH + 1.0 * ky, legH + 2.6 * kz]], 241, 0.7, [LEAF]);
+  if (stage > 1) m.crack([[rxS + 0.7, yS - 2.0 * ky, zS + 1.2 * kz], [rxS + 0.7, yS + 1.6 * ky, zS + 0.4 * kz]], 241, 0.7, [LEAF, LEAF_CLAIR, LEAF_SOMBRE]);
+  if (stage === 3) m.crack([[rxS * 0.8 + 0.9, yH - 1.8 * ky, legH + 3.2 * kz], [rxS * 0.8 + 0.9, yH + 1.0 * ky, legH + 2.6 * kz]], 241, 0.7, [LEAF, LEAF_CLAIR, LEAF_SOMBRE]);
   if (stage === 3)
     m.each((i, _x, _y, z) => {
       if (m.v[i] === LEAF && !legDrawn[i] && z > zTop + 0.6) m.v[i] = 242;

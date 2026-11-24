@@ -117,10 +117,15 @@ export function finish(m: Model, legs: Mask): Model {
  */
 export const MOSS = 5;
 export const LEAF = 6;
+/** Porte du lot 4 : deux autres verts pour les boucliers de feuilles superposées. */
+export const LEAF_CLAIR = 7;
+export const LEAF_SOMBRE = 8;
 export const PLANTE = {
   ...elementPalette(['#1A1712', '#3A2F23', '#5C4B36', '#C9B48A'], ['#5BE33B', '#A8F05A', '#EFFFB0'], '#FFB02E'),
   [MOSS]: hexrgb('#4A6B2A'),
   [LEAF]: hexrgb('#2E8040'),
+  [LEAF_CLAIR]: hexrgb('#5AA83C'),
+  [LEAF_SOMBRE]: hexrgb('#1E5A2E'),
 };
 /** Champignon (lot 4) : même écorce, étagères de polypore en bandes (brun, ocre, crème), même lueur des spores. */
 export const SHELF_DARK = 5;
