@@ -21,6 +21,7 @@ export const MODEL_INFO: ModelInfo[] = [
   { id: 'B', name: 'B · La meute', phrase: 'Tu diriges le Meneur et fais bondir les créatures de ta réserve là où il faut.', keys: 'ZQSD, clic gauche, 1 · 2, Espace, molette, clic droit, R', href: '?proto=donjon&modele=B' },
   { id: 'D', name: 'D · Le héros et ses suiveurs', phrase: 'Tu diriges une seule créature avec 4 compétences ; deux petits suiveurs t’aident seuls, sans ordre.', keys: 'ZQSD, clic gauche (cible), 1 à 4, Espace', href: '?proto=donjon&modele=D' },
   { id: 'E', name: 'E · Le relais', phrase: 'Une seule créature sur le terrain ; tu l’échanges au bon moment pour enchaîner effets de sortie et d’entrée.', keys: 'ZQSD, clic gauche (cible), 1 à 4 (échanger), clic droit (sort), Espace', href: '?proto=donjon&modele=E' },
+  { id: 'F', name: 'F · La pause tactique', phrase: 'Le trio, mais Espace fige le temps : tu cliques une créature et lui donnes un ordre (aller, attaquer, sort), affiché en flèche.', keys: 'ZQSD, clic gauche, 1 · 2, Maj (esquive), Espace (pause), F, R, 3 · 4', href: '?proto=donjon&modele=F' },
   { id: 'C', name: 'C · Le chef d’orchestre', phrase: 'Tu explores ; l’équipe se bat seule, faiblement ; tout ce qui compte se joue avec une main de cartes.', keys: 'ZQSD, 1 à 4 (carte), clic gauche (viser), clic droit (annuler)', href: '?proto=donjon&modele=C' },
 ];
 
@@ -34,6 +35,7 @@ export function setupGame(s: DonjonSettings, maxTime = 3600): Game {
     g.cards = new CardState(DEFAULT_DECK, g.rng);
     return g;
   }
+  if (s.modele === 'F') return newGame('A', s.seed, { ...base, mode: 'F' });
   if (s.modele === 'E') {
     // le relais : une seule créature sur le terrain, trois qui attendent leur tour
     const g = newGame('A', s.seed, { ...base, leader: 'calcinarque', mode: 'E', team: [] });

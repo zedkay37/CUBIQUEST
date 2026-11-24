@@ -301,6 +301,8 @@ export interface Unit {
   size: number;
   /** E : mouillé (l'éclair frappe plus fort). */
   wetT: number;
+  /** F : ennemi désigné par un ordre donné en pause (−1 : aucun). */
+  orderTarget: number;
 }
 
 export interface Projectile {
@@ -409,6 +411,8 @@ export interface Game {
   cards: import('./cards').CardState | null;
   /** E : le relais (voir relay.ts). */
   relay: import('./relay').RelayState | null;
+  /** F : le Meneur poursuit la cible donnée par un ordre. */
+  leaderChase: boolean;
 }
 
 export function mulberry32(seed: number): () => number {
@@ -465,6 +469,7 @@ function makeUnit(g: Game, role: Role, species: string, name: string, team: 'all
     holdT: 0,
     size: 1,
     wetT: 0,
+    orderTarget: -1,
   };
   g.units.push(u);
   return u;
@@ -528,6 +533,7 @@ export function newGame(version: Version, seed = 1, recordEventsOrOpts: boolean 
     baseMult: { leader: 1, comps: 1 },
     cards: null,
     relay: null,
+    leaderChase: false,
   } as unknown as Game;
   const L = g.leaderDef;
   g.leader = makeUnit(g, 'meneur', L.species, L.name, 'ally', 0, 3, L.hp, L.speed, 0.55);
@@ -826,6 +832,14 @@ function playerActions(g: Game, input: Input, dt: number) {
     }
     L.dash.t -= dt;
     if (L.dash.t <= 0) L.dash = null;
+  } else if (g.mode === 'F' && Math.hypot(input.move.x, input.move.y) < 0.1 && (g.moveGoal || (target && g.leaderChase))) {
+    // F : ordre donné en pause au Meneur (aller ici, attaquer celui-là) ; ZQSD reprend la main
+    if (target && g.leaderChase && dist(L, target) > range + target.r) moveToward(g, L, target, dt);
+    else if (!target && g.moveGoal && dist(L, g.moveGoal) > 0.3) moveToward(g, L, g.moveGoal, dt);
+    else {
+      L.moving = false;
+      if (!target) g.moveGoal = null;
+    }
   } else if (g.scheme === 2) {
     if (target && dist(L, target) > range + target.r) moveToward(g, L, target, dt);
     else if (!target && g.moveGoal && dist(L, g.moveGoal) > 0.3) moveToward(g, L, g.moveGoal, dt);
@@ -1115,9 +1129,13 @@ function updateComp(g: Game, c: Unit, rank: number, dt: number) {
       } else c.skillCd = 0.5;
     }
   }
-  const leash = dist(c, L) > 14;
+  const leash = dist(c, L) > 14 && c.orderTarget < 0;
   let target: Unit | null = null;
-  if (g.version === 'A' && g.focusId >= 0) target = enemies(g).find((e) => e.id === g.focusId) ?? null;
+  if (c.orderTarget >= 0) {
+    target = enemies(g).find((e) => e.id === c.orderTarget) ?? null;
+    if (!target) c.orderTarget = -1;
+  }
+  if (!target && g.version === 'A' && g.focusId >= 0) target = enemies(g).find((e) => e.id === g.focusId) ?? null;
   if (!target && !leash) target = nearest(c, enemies(g).filter((e) => e.aggro && dist(e, c) < 9 && dist(e, L) < 12));
   if (!target) {
     follow();

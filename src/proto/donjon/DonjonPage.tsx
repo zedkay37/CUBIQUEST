@@ -63,6 +63,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
   const [mapTick, setMapTick] = useState(0);
   const [cardSelected, setCardSelected] = useState(-1);
   const [interlude, setInterlude] = useState<'deck' | null>(null);
+  const [tactical, setTactical] = useState<string | null>(null);
   const interludeRef = useRef(false);
   const panelRef = useRef(panel);
   panelRef.current = panel;
@@ -99,6 +100,46 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
     let swapDoneFor = 0;
     // E : place à faire entrer au prochain pas
     let swapTo = -1;
+    // F, la pause tactique : temps figé, créature choisie, ordres donnés (appliqués à la reprise)
+    type Order = { kind: 'move'; p: { x: number; y: number } } | { kind: 'attack'; id: number } | { kind: 'spell'; n: 1 | 2; p: { x: number; y: number } };
+    const tac = { paused: false, sel: -1, orders: new Map<number, Order>() };
+    let leaderSpell: { n: 1 | 2; p: { x: number; y: number } } | null = null;
+    const resume = () => {
+      for (const [id, o] of tac.orders) {
+        if (id === g.leader.id) {
+          if (o.kind === 'move') Object.assign(g, { moveGoal: o.p, leaderTarget: -1, leaderChase: false });
+          else if (o.kind === 'attack') Object.assign(g, { leaderTarget: o.id, leaderChase: true, moveGoal: null });
+          else leaderSpell = { n: o.n, p: o.p };
+          continue;
+        }
+        const k = g.comps.findIndex((c) => c.id === id);
+        const c = g.comps[k];
+        if (!c) continue;
+        if (o.kind === 'move') Object.assign(c, { holdAt: o.p, holdT: 8, orderTarget: -1, returnT: 0 });
+        else if (o.kind === 'attack') Object.assign(c, { orderTarget: o.id, holdT: 0, returnT: 0 });
+        else pressed[k === 0 ? 'comp1' : 'comp2'] = true;
+      }
+      tac.orders.clear();
+      tac.sel = -1;
+      tac.paused = false;
+      setTactical(null);
+    };
+    const allyAt = (p: { x: number; y: number }) => {
+      let best = -1;
+      let bd = 1.4;
+      for (const u of [g.leader, ...g.comps]) {
+        const d = Math.hypot(u.x - p.x, u.y - p.y);
+        if (u.alive && d < bd) {
+          bd = d;
+          best = u.id;
+        }
+      }
+      return best;
+    };
+    const tacText = () => {
+      const u = [g.leader, ...g.comps].find((x) => x.id === tac.sel);
+      return u ? `${u.name} choisi : clic au sol (aller), sur un ennemi (attaquer), 1 ou 2 (sort). Espace : reprendre.` : 'Temps figé. Clique une de tes créatures pour lui donner un ordre. Espace : reprendre.';
+    };
     const onKey = (e: KeyboardEvent, down: boolean) => {
       if (e.code === 'F1') {
         e.preventDefault();
@@ -106,6 +147,26 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
         return;
       }
       if (panelRef.current) return;
+      if (g.mode === 'F') {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          if (down && !e.repeat) {
+            if (tac.paused) resume();
+            else {
+              tac.paused = true;
+              setTactical(tacText());
+            }
+          }
+          return;
+        }
+        if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && down && !e.repeat) pressed.dodge = true;
+        if (tac.paused && down && !e.repeat && (e.code === 'Digit1' || e.code === 'Digit2') && tac.sel >= 0) {
+          tac.orders.set(tac.sel, { kind: 'spell', n: e.code === 'Digit1' ? 1 : 2, p: { ...aim } });
+          setTactical(tacText());
+          return;
+        }
+        if (tac.paused) return;
+      }
       if (['Space', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyF', 'KeyR'].includes(e.code)) e.preventDefault();
       if (down && !e.repeat && g.cards) {
         const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
@@ -134,6 +195,14 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
       mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
     };
     const md = (e: MouseEvent) => {
+      if (tac.paused && e.button === 0) {
+        const ally = allyAt(aim);
+        const foe = enemyAt(aim);
+        if (ally >= 0 && tac.sel !== ally) tac.sel = ally;
+        else if (tac.sel >= 0) tac.orders.set(tac.sel, foe >= 0 ? { kind: 'attack', id: foe } : { kind: 'move', p: { ...aim } });
+        setTactical(tacText());
+        return;
+      }
       if (e.button === 0) {
         lmb = true;
         lmbEdge = true;
@@ -209,7 +278,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
         if (transition > 0) {
           transition -= dt;
           if (transition <= 0) setBanner(null);
-        } else if (!panelRef.current && !g.pendingRecruit && !interludeRef.current) {
+        } else if (!panelRef.current && !g.pendingRecruit && !interludeRef.current && !tac.paused) {
           acc += dt * s.speed;
           while (acc >= 1 / 60 && !g.result && !g.pendingRecruit) {
             const inp = emptyInput();
@@ -236,6 +305,15 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             inp.enter = rmb;
             inp.swapTo = swapTo;
             swapTo = -1;
+            if (g.mode === 'F') {
+              if (inp.move.x || inp.move.y) Object.assign(g, { leaderChase: false, moveGoal: null });
+              if (leaderSpell) {
+                inp.aim = leaderSpell.p;
+                if (leaderSpell.n === 1) inp.spell1 = true;
+                else inp.spell2 = true;
+                leaderSpell = null;
+              }
+            }
             for (const k of Object.keys(pressed)) delete pressed[k as keyof Input];
             wheel = 0;
             rmb = false;
@@ -264,6 +342,28 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
         }
         if (g.pendingRecruit && !robot) setRecruit((r) => r ?? g.pendingRecruit);
         view.render(g, aim, dt);
+        if (g.mode === 'F') {
+          // flèches : ordres en attente (pause) et ordres en cours
+          const arrows: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }[] = [];
+          const unit = (id: number) => [g.leader, ...g.comps, ...enemies(g)].find((u) => u.id === id);
+          for (const [id, o] of tac.orders) {
+            const u = unit(id);
+            const to = o.kind === 'attack' ? unit(o.id) : o.p;
+            if (u && to) arrows.push({ from: u, to, color: o.kind === 'attack' ? '#FF6B5A' : o.kind === 'spell' ? '#FFB347' : '#FFE27A' });
+          }
+          for (const c of g.comps) {
+            if (tac.orders.has(c.id) || !c.alive) continue;
+            const t = c.orderTarget >= 0 ? unit(c.orderTarget) : null;
+            if (t) arrows.push({ from: c, to: t, color: '#FF6B5A' });
+            else if (c.holdT > 0 && c.holdAt) arrows.push({ from: c, to: c.holdAt, color: '#FFE27A' });
+          }
+          if (!tac.orders.has(g.leader.id)) {
+            const t = g.leaderChase ? unit(g.leaderTarget) : null;
+            if (t) arrows.push({ from: g.leader, to: t, color: '#FF6B5A' });
+            else if (g.moveGoal) arrows.push({ from: g.leader, to: g.moveGoal, color: '#FFE27A' });
+          }
+          view.setArrows(arrows);
+        }
         env.update(g, dt, view.camera.position);
         hudT -= dt;
         mapT -= dt;
@@ -367,7 +467,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
           <div className={`pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 items-end gap-2 text-white ${g?.cards ? 'hidden' : 'flex'}`}>
             {settings.modele !== 'E' && <Chip k="1" label={L?.spell1 ?? ''} cd={cd('spell1')} total={CD.spell1} />}
             {settings.modele !== 'E' && <Chip k="2" label="Brasier" cd={cd('spell2')} total={CD.spell2} />}
-            <Chip k="Esp." label="Esquive" cd={cd('dodge')} total={CD.dodge} />
+            <Chip k={settings.modele === 'F' ? 'Maj' : 'Esp.'} label="Esquive" cd={cd('dodge')} total={CD.dodge} />
             {settings.modele === 'E' ? (
               <>
                 <Chip k="Clic dr." label={g?.relay ? g.relay.team[g.relay.active].spell : ''} cd={cd('spell1')} total={8} />
@@ -405,6 +505,12 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             </button>
           </div>
         </>
+      )}
+      {tactical && (
+        <div className="pointer-events-none absolute left-1/2 top-16 -translate-x-1/2 rounded-lg border-2 border-sky-300 bg-slate-900/85 px-4 py-2 text-center text-sm text-white">
+          <div className="text-lg font-bold text-sky-300">Pause tactique</div>
+          {tactical}
+        </div>
       )}
       {interlude === 'deck' && g?.cards && (
         <DeckSwap

@@ -504,6 +504,24 @@ export class ProtoView {
     this.renderer.render(this.scene, this.camera);
   }
 
+  /** F, la pause tactique : flèches des ordres (de la créature vers le point ou l'ennemi visé). */
+  private arrows = new THREE.Group();
+  setArrows(list: { from: Vec; to: Vec; color: string }[]) {
+    if (!this.arrows.parent) this.scene.add(this.arrows);
+    for (const c of [...this.arrows.children]) {
+      this.arrows.remove(c);
+      (c as THREE.ArrowHelper).dispose?.();
+    }
+    for (const a of list) {
+      const from = toW(a.from, 0.35);
+      const to = toW(a.to, 0.35);
+      const dir = to.clone().sub(from);
+      const len = dir.length();
+      if (len < 0.3) continue;
+      this.arrows.add(new THREE.ArrowHelper(dir.normalize(), from, len, a.color, Math.min(0.8, len * 0.3), 0.5));
+    }
+  }
+
   dispose() {
     this.renderer.dispose();
     this.renderer.domElement.remove();
