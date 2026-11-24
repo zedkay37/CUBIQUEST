@@ -29,6 +29,9 @@ export const MODEL_INFO: ModelInfo[] = [
   { id: 'C', name: 'C · Le chef d’orchestre', phrase: 'Tu explores ; l’équipe se bat seule, faiblement ; tout ce qui compte se joue avec une main de cartes.', keys: 'ZQSD, 1 à 4 (carte), clic gauche (viser), clic droit (annuler)', href: '?proto=donjon&modele=C' },
 ];
 
+// ordre d'affichage : A, B, C, D… (les modèles ont été ajoutés un par phase)
+MODEL_INFO.sort((a, b) => a.id.localeCompare(b.id));
+
 /** Crée la partie d'un modèle (le terrain est posé ensuite par l'appelant). */
 export function setupGame(s: DonjonSettings, maxTime = 3600): Game {
   const base = { scheme: s.scheme, leader: s.leader, recruitChance: s.recruit, maxTime };

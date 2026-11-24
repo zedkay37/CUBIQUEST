@@ -104,6 +104,9 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
     let swapDoneFor = 0;
     // E : place à faire entrer au prochain pas
     let swapTo = -1;
+    const vitrineP = new URLSearchParams(window.location.search).get('vitrine');
+    const vitrine = vitrineP === '1' || vitrineP === 'charge';
+    let vitrineT = 0;
     // F, la pause tactique : temps figé, créature choisie, ordres donnés (appliqués à la reprise)
     type Order = { kind: 'move'; p: { x: number; y: number } } | { kind: 'attack'; id: number } | { kind: 'spell'; n: 1 | 2; p: { x: number; y: number } };
     const tac = { paused: false, sel: -1, orders: new Map<number, Order>() };
@@ -361,6 +364,21 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             levelRef.current = level;
             env = new DonjonEnv(view.scene, level, view);
             setMapTick((t) => t + 1);
+          }
+        }
+        // `&vitrine=1` (outil) : les effets de chaque élément, montrés en boucle devant le Meneur, pour les comparer
+        if (vitrine) {
+          vitrineT -= dt;
+          if (vitrineT <= 0) {
+            vitrineT = vitrineP === 'charge' ? 0.2 : 1.6; // « charge » : beaucoup de sorts à l'écran (mesure)
+            const L = g.leader;
+            const sources = ['Calcinarque — Brasier', 'Crabastion — Vague', 'Amanitox — Nuage', 'Boss — Pluie', 'Raicube — Foudre', 'Givrelin'];
+            sources.forEach((by, k) => {
+              const p = { x: L.x - 3 + k * 1.2, y: L.y + 2.2 };
+              g.events.push({ type: 'impact', x: p.x, y: p.y, id: -1, color: '#FFFFFF', by, a: 1.6 });
+              g.events.push({ type: 'shot', x: p.x, y: p.y - 2, id: L.id, by: ['calcinarque-legendaire', 'crabastion', 'amanitox', 'cailloc', 'raicube', 'givrelin'][k], a: Math.PI / 2 });
+            });
+            g.events.push({ type: 'glow', x: L.x, y: L.y, id: L.id, color: '#FF8A30' });
           }
         }
         if (g.pendingRecruit && !robot) setRecruit((r) => r ?? g.pendingRecruit);

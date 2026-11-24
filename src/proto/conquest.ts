@@ -68,16 +68,16 @@ export interface CreatureCard {
 /** Le deck de 6 (fonction : sim.ts et ce fichier s'importent l'un l'autre, rien ne doit être lu au chargement). */
 export function conquestDeck(): CreatureCard[] {
   return [
-    { def: COMPS[0], cost: 4, role: 'tank' },
-    { def: COMPS[1], cost: 3, role: 'soin' },
+    { def: COMPS[0], cost: 3, role: 'tank' },
+    { def: COMPS[1], cost: 2, role: 'soin' },
     { def: COMPS[2], cost: 3, role: 'frappe' },
-    { def: COMPS[3], cost: 3, role: 'tir' },
+    { def: COMPS[3], cost: 2, role: 'tir' },
     { def: RECRUITS.chevrok, cost: 2, role: 'frappe' },
     { def: RECRUITS.cailloc, cost: 3, role: 'tank' },
   ];
 }
-export const ELAN_H = { max: 10, start: 6, base: 0.38, perOutpost: 0.12 };
-export const WAVE_EVERY = 22;
+export const ELAN_H = { max: 10, start: 6, base: 0.5, perOutpost: 0.15 };
+export const WAVE_EVERY = 25;
 
 export class ConquestState {
   deck: CreatureCard[];
@@ -107,7 +107,7 @@ export class ConquestState {
   play(g: Game, i: number, at: Vec): boolean {
     const c = this.hand[i];
     // au plus 12 créatures sur le terrain (lisibilité, et coût des chemins)
-    if (g.comps.filter((u) => u.alive && u.inPlay).length >= 12) return false;
+    if (g.comps.filter((u) => u.alive && u.inPlay).length >= 14) return false;
     if (!c || this.elan < c.cost || !this.allowed(at) || (g.level as DonjonLevel).solidAt(at.x, at.y)) return false;
     this.elan -= c.cost;
     const u = makeComp(g, c.def, BASE.x, BASE.y + 1);
@@ -142,10 +142,10 @@ export class ConquestState {
     if (this.waveT <= 0) {
       this.waveT = WAVE_EVERY;
       this.waves++;
-      const n = 2 + Math.min(2, Math.floor(this.waves / 3));
+      const n = 2 + Math.min(1, Math.floor(this.waves / 4));
       OUTPOSTS.forEach((o, k) => {
         for (let j = 0; j < n; j++) {
-          const e = spawnEnemy(g, j === 2 && this.waves % 2 === 0 ? 'soigneur' : j === 3 ? 'blinde' : 'chargeur', o.x + (j - 1) * 1.2, 60 + (j % 2), true, 0.45 + this.waves * 0.03);
+          const e = spawnEnemy(g, j === 2 && this.waves % 3 === 0 ? 'soigneur' : 'chargeur', o.x + (j - 1) * 1.2, 60 + (j % 2), true, 0.4 + this.waves * 0.025);
           e.notice = 99;
           e.group = 7000 + this.waves * 10 + k;
         }
@@ -186,7 +186,10 @@ export function conquestAI(g: Game, c: Unit, dt: number, moveToward: (u: Unit, t
   const o = OUTPOSTS[k];
   const st = g.conquest!;
   const group = g.comps.filter((u) => u.alive && u.inPlay && !u.flight && Math.hypot(u.x - o.x, u.y - o.y) < 6).length;
-  if (c.y < 58 && (st.owner[k] !== 'ally' || group < 3)) moveToward(c, o, dt, 1.5);
+  // une fois l'assaut lancé (à 4 sur l'avant-poste), la créature ne revient plus en arrière (pattern = 1)
+  if (c.pattern === 0 && st.owner[k] === 'ally' && group >= 4)
+    for (const u of g.comps) if (u.alive && Math.hypot(u.x - o.x, u.y - o.y) < 6) u.pattern = 1;
+  if (c.pattern === 0 && c.y < 58) moveToward(c, o, dt, 1.5);
   else moveToward(c, BOSS_AT, dt, 2);
 }
 
@@ -202,7 +205,7 @@ export class ConquestLevel extends DonjonLevel {
     Object.assign(L, { x: BASE.x, y: BASE.y, speed: 0, maxHp: 2000, hp: 2000, r: 1.2, species: 'base', name: 'Base' });
     g.baseMult.leader = 1.6;
     g.trail = [{ ...BASE }];
-    const b = spawnEnemy(g, 'boss', BOSS_AT.x, BOSS_AT.y, true, 0.8);
+    const b = spawnEnemy(g, 'boss', BOSS_AT.x, BOSS_AT.y, true, 0.45);
     b.notice = 10;
     b.home = { ...BOSS_AT };
     g.events.length = 0;

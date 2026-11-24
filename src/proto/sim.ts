@@ -350,6 +350,10 @@ export interface GameEvent {
   id?: number;
   to?: number;
   color?: string;
+  /** PROTO-MODELES phase 8 : qui frappe (espèce) ou quel sort (source), pour choisir la forme de l'effet. */
+  by?: string;
+  /** Angle du tir, ou rayon de la zone. */
+  a?: number;
 }
 
 export interface SimOptions {
@@ -655,7 +659,7 @@ export function damage(g: Game, target: Unit, amount: number, source: string, fr
 }
 /** Le bouclier du Soigneur est levé (donjon seulement, tant qu'il a un allié à protéger). */
 export function shieldActive(g: Game, u: Unit): boolean {
-  return u.role === 'soigneur' && u.alive && g.level !== SALLE && enemies(g).some((o) => o.role !== 'soigneur' && o.aggro && dist(o, u) < 11);
+  return u.role === 'soigneur' && u.alive && g.level !== SALLE && !g.conquest && enemies(g).some((o) => o.role !== 'soigneur' && o.aggro && dist(o, u) < 11);
 }
 export function heal(g: Game, target: Unit, amount: number) {
   if (!target.alive) return;
@@ -713,7 +717,7 @@ function kill(g: Game, u: Unit) {
 export function shoot(g: Game, from: Unit, to: Vec, dmg: number, range: number, source: string, speed = 20, spread = 0) {
   const a = Math.atan2(to.y - from.y, to.x - from.x) + spread;
   g.projectiles.push({ x: from.x, y: from.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: range, dmg, team: from.team, source, by: from.species });
-  emit(g, { type: 'shot', x: from.x, y: from.y, id: from.id });
+  emit(g, { type: 'shot', x: from.x, y: from.y, id: from.id, by: from.species, a });
 }
 
 export function telegraph(g: Game, t: Omit<Telegraph, 'id' | 't'>) {
@@ -1371,7 +1375,7 @@ function updateProjectiles(g: Game, dt: number) {
     const hit = foes.find((u) => Math.hypot(u.x - p.x, u.y - p.y) <= u.r + 0.25);
     if (hit) {
       damage(g, hit, p.dmg, p.source, { x: p.x - p.vx, y: p.y - p.vy }, p.by);
-      emit(g, { type: 'impact', x: p.x, y: p.y, id: hit.id });
+      emit(g, { type: 'impact', x: p.x, y: p.y, id: hit.id, by: p.by });
       continue;
     }
     if (p.left > 0) keep.push(p);
@@ -1389,7 +1393,7 @@ function updateTelegraphs(g: Game, dt: number) {
     }
     const victims = t.team === 'enemy' ? allyTargets(g) : enemies(g);
     for (const v of victims) if (insideTelegraph(t, v, v.r * 0.5)) damage(g, v, t.dmg, t.source, t.from, t.team === 'ally' ? g.leaderDef.species : undefined);
-    emit(g, { type: 'impact', x: t.x, y: t.y, id: t.id, color: t.team === 'ally' ? '#FF8A30' : '#E5383B' });
+    emit(g, { type: 'impact', x: t.x, y: t.y, id: t.id, color: t.team === 'ally' ? '#FF8A30' : '#E5383B', by: t.source, a: t.kind === 'ring' ? t.r2 : t.kind === 'band' ? t.w : t.r });
   }
   g.telegraphs = keep;
 }

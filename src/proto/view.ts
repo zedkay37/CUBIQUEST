@@ -9,6 +9,7 @@
  */
 import * as THREE from 'three';
 import { DANGER } from '../game/styleGuide';
+import { Vfx, elemOf, projectileMesh } from './vfx';
 import { registerSubjects, buildAnyStyle } from '../components/styles/allStyles';
 import { getToonGradient, type StyledModel } from '../components/styles/magmaStyles';
 import { loadVoxSubject } from '../components/styles/voxSubjects';
@@ -98,6 +99,12 @@ interface UnitView {
   shield: THREE.Mesh | null;
   armor: THREE.Mesh | null;
   species: string;
+  /** Phase 8 : préparation (se ramasser), élan (vers l'avant), recul d'un coup reçu. */
+  prepT: number;
+  lungeT: number;
+  lungeA: number;
+  kickT: number;
+  kickA: number;
 }
 interface TeleView {
   group: THREE.Group;
@@ -115,7 +122,10 @@ export class ProtoView {
   camera = new THREE.PerspectiveCamera(48, 1, 0.1, 200);
   private units = new Map<number, UnitView>();
   private teles = new Map<number, TeleView>();
-  private shots: THREE.Mesh[] = [];
+  private shotPools = new Map<string, THREE.Object3D[]>();
+  vfx: Vfx;
+  /** `&effets=0` : animations des sorts coupées (comparaison de fluidité). */
+  vfxOn = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search).get('effets') !== '0';
   private flashes: Flash[] = [];
   private waves: { mesh: THREE.Mesh; t: number }[] = [];
   private beams: { line: THREE.Line; t: number }[] = [];
@@ -194,6 +204,7 @@ export class ProtoView {
     this.bondCircle = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: '#FFE27A', dashSize: 0.5, gapSize: 0.4, transparent: true, opacity: 0.7 }));
     this.bondCircle.computeLineDistances();
     this.scene.add(this.bondCircle);
+    this.vfx = new Vfx(this.scene);
     this.resize();
   }
 
@@ -293,7 +304,7 @@ export class ProtoView {
       armor.position.y = 0.05;
       root.add(armor);
     }
-    v = { root, body, model, ring, barBg, bar, glow: 0, hitT: 0, lastHp: u.hp, shield, armor, species: u.species };
+    v = { root, body, model, ring, barBg, bar, glow: 0, hitT: 0, lastHp: u.hp, shield, armor, species: u.species, prepT: 0, lungeT: 0, lungeA: 0, kickT: 0, kickA: 0 };
     this.units.set(u.id, v);
     return v;
   }
@@ -364,6 +375,37 @@ export class ProtoView {
     // événements : lueurs ponctuelles, ondes, rayons de soin
     for (const e of g.events.splice(0)) {
       const u = g.units.find((x) => x.id === e.id);
+      // phase 8 : préparation, lancer, impact (formes propres à l'élément)
+      if (!this.vfxOn) {
+        /* effets coupés */
+      } else if (e.type === 'glow' && u) {
+        this.unitView(u).prepT = 0.28;
+        this.vfx.prepare(toW(u, heightAt(u)), elemOf(u.species));
+      } else if (e.type === 'shot' && u) {
+        const v = this.unitView(u);
+        v.lungeT = 0.16;
+        v.lungeA = e.a ?? u.face;
+        this.vfx.launch(toW(u, heightAt(u)), e.a ?? u.face, elemOf(e.by));
+      } else if (e.type === 'melee') {
+        const att = g.units.find((x) => x.id === e.id);
+        const tgt = g.units.find((x) => x.id === e.to);
+        if (att) {
+          const v = this.unitView(att);
+          v.lungeT = 0.16;
+          v.lungeA = Math.atan2(e.y - att.y, e.x - att.x);
+        }
+        if (tgt && att) {
+          const v = this.unitView(tgt);
+          v.kickT = 0.15;
+          v.kickA = Math.atan2(tgt.y - att.y, tgt.x - att.x);
+        }
+        this.vfx.impact(toW(e, heightAt(e)), elemOf(att?.species));
+      } else if (e.type === 'impact' && !e.color && u) {
+        const v = this.unitView(u);
+        v.kickT = 0.15;
+        v.kickA = Math.atan2(u.y - e.y, u.x - e.x) || u.face + Math.PI;
+        this.vfx.impact(toW(e, heightAt(e)), elemOf(e.by));
+      }
       if (e.type === 'glow') {
         if (u) this.unitView(u).glow = 1;
         this.flash(e, e.color ?? '#FF8A30', 25);
@@ -377,6 +419,7 @@ export class ProtoView {
         this.flash(e, '#FF5A1F', 80, 2);
         this.wave(e, '#FF5A1F', 9);
       } else if (e.type === 'impact' && e.color) {
+        if (this.vfxOn) this.vfx.impact(toW(e, heightAt(e)), elemOf(e.by), Math.min(6, e.a ?? 2));
         this.wave(e, e.color, 2.2);
         if (e.color !== DANGER) this.flash(e, e.color, 30);
       } else if (e.type === 'heal' && e.to !== undefined) {
@@ -409,21 +452,36 @@ export class ProtoView {
       const v = this.unitView(u);
       v.root.visible = true;
       let h = heightAt(u);
+      let stretch = 1;
       if (u.flight) {
         const k = Math.min(1, u.flight.t / u.flight.dur);
         h += Math.sin(Math.PI * k) * 2.6; // le bond : la créature saute d'elle-même
+        // écrasement au départ, étirement en l'air puis à l'arrivée
+        stretch = k < 0.15 ? 0.7 + k * 2 : k > 0.85 ? 1.25 - (k - 0.85) * 1.5 : 1.15;
       }
       v.root.position.copy(toW(u, h));
+      // élan (vers l'avant) et recul (coup reçu)
+      v.lungeT = Math.max(0, v.lungeT - dt);
+      v.kickT = Math.max(0, v.kickT - dt);
+      const lunge = Math.sin((v.lungeT / 0.16) * Math.PI) * 0.22;
+      const kick = (v.kickT / 0.15) * 0.18;
+      v.root.position.x += Math.cos(v.lungeA) * lunge + Math.cos(v.kickA) * kick;
+      v.root.position.z -= Math.sin(v.lungeA) * lunge + Math.sin(v.kickA) * kick;
       v.body.rotation.y = Math.atan2(Math.cos(u.face), -Math.sin(u.face));
-      const bob = u.moving ? Math.abs(Math.sin(this.time * 9 + u.id)) * 0.12 : Math.sin(this.time * 2 + u.id) * 0.02;
+      // marche : petits sauts et balancement ; repos : respiration
+      const bob = u.moving ? Math.abs(Math.sin(this.time * 9 + u.id)) * 0.12 : 0;
       v.body.position.y = bob;
+      const breath = u.moving ? 1 : 1 + Math.sin(this.time * 2.2 + u.id) * 0.035;
       if (u.hp < v.lastHp - 0.5) v.hitT = 0.15;
       v.lastHp = u.hp;
       v.hitT = Math.max(0, v.hitT - dt);
+      v.prepT = Math.max(0, v.prepT - dt);
+      const prep = v.prepT > 0 ? 0.82 + (1 - v.prepT / 0.28) * 0.18 : 1; // il se ramasse avant le sort
       const sq = 1 + v.hitT * 1.2;
-      v.body.scale.set(sq, 1 / sq, sq);
+      const sy = (breath * prep * stretch) / sq;
+      v.body.scale.set(sq / Math.sqrt(sy), sy, sq / Math.sqrt(sy));
       if (u.windup > 0) v.body.rotation.z = Math.sin(this.time * 40) * 0.05; // il se prépare : tremble
-      else v.body.rotation.z = 0;
+      else v.body.rotation.z = u.moving ? Math.sin(this.time * 9 + u.id) * 0.07 : 0;
       v.glow = Math.max(0, v.glow - dt * 1.6);
       const phaseGlow = u.role === 'boss' && g.bossPhase === 2 ? 0.8 + Math.sin(this.time * 4) * 0.2 : 0;
       v.model.setNight(Math.max(v.glow, phaseGlow));
@@ -455,20 +513,25 @@ export class ProtoView {
         this.scene.remove(v.group);
         this.teles.delete(id);
       }
-    // projectiles (pool)
-    while (this.shots.length < g.projectiles.length) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.5), new THREE.MeshBasicMaterial({ color: '#FFB347' }));
-      this.scene.add(m);
-      this.shots.push(m);
-    }
-    this.shots.forEach((m, i) => {
-      const p = g.projectiles[i];
-      m.visible = Boolean(p);
-      if (!p) return;
+    // projectiles : une réserve par élément (la forme dit l'élément : flamme, goutte, graine, roc, éclair, éclat)
+    const used = new Map<string, number>();
+    for (const p of g.projectiles) {
+      const el = elemOf(p.by);
+      const pool = this.shotPools.get(el) ?? [];
+      this.shotPools.set(el, pool);
+      const k = used.get(el) ?? 0;
+      used.set(el, k + 1);
+      if (!pool[k]) {
+        pool[k] = projectileMesh(el);
+        this.scene.add(pool[k]);
+      }
+      const m = pool[k];
+      m.visible = true;
       m.position.copy(toW(p, heightAt(p) + 0.9));
-      m.rotation.y = Math.atan2(p.vx, -p.vy);
-      (m.material as THREE.MeshBasicMaterial).color.set(p.team === 'ally' ? '#FFB347' : '#C07BFF');
-    });
+      m.rotation.set(0, Math.atan2(p.vx, -p.vy), el === 'elec' || el === 'roche' ? this.time * 12 : 0);
+    }
+    for (const [el, pool] of this.shotPools) pool.forEach((m, k) => (m.visible = k < (used.get(el) ?? 0)));
+    this.vfx.update(dt);
     // effets passagers
     for (const f of this.flashes) {
       f.t = Math.max(0, f.t - dt);

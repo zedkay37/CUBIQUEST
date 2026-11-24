@@ -29,7 +29,7 @@ export function Accueil() {
           ))}
         </div>
         <div className="mt-6 text-sm text-white/50">
-          Ancienne maquette (une salle, sprint PROTO-MENEUR) : <a className="underline" href={`${base}?proto=salle`}>la salle</a>.
+          Les animations des sorts, élément par élément : <a className="underline" href={`${base}?proto=donjon&modele=A&vitrine=1`}>la vitrine des effets</a> (ajouter <code>&amp;effets=0</code> à n’importe quelle adresse pour les couper). Ancienne maquette (une salle, sprint PROTO-MENEUR) : <a className="underline" href={`${base}?proto=salle`}>la salle</a>.
         </div>
       </div>
     </div>
