@@ -17,6 +17,10 @@ export interface StyleInfo {
 
 export const ALL_STYLES: StyleInfo[] = [...STYLE_LIST.map((s) => ({ ...s, risk: 'Sprint STYLES' })), ...STYLE2_LIST];
 export const SUBJECTS: Record<SubjectId, StyleSubject> = { magmadrake: MAGMADRAKE, calcinarque: CALCINARQUE };
+/** STYLES4 : ajoute les créatures lues dans les `.vox` (chargées une fois par la page). */
+export function registerSubjects(list: StyleSubject[]): void {
+  for (const s of list) SUBJECTS[s.id] = s;
+}
 
 /** Une variante d'une créature : le style est construit avec la finesse relative et la palette de la créature. */
 export function buildAnyStyle(id: AnyStyleId, subject: SubjectId = 'magmadrake'): StyledModel {

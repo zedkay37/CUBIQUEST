@@ -6,9 +6,11 @@ import { buildBiomeEnvironment } from '../game/models/biomes';
 import { setDecorNight } from '../game/models/meadowDecor';
 import { setCreatureNight, setCreatureRim } from '../game/models/voxelSculpt';
 import { withSaveSlot } from '../game/saveSlot';
-import { ALL_STYLES, SUBJECTS, buildAnyStyle, type AnyStyleId } from './styles/allStyles';
+import { ALL_STYLES, SUBJECTS, buildAnyStyle, registerSubjects, type AnyStyleId } from './styles/allStyles';
 import type { LightContext, PostPass, StyledModel } from './styles/magmaStyles';
+import { getHaloTexture } from './styles/magmaStyles2';
 import type { SubjectId } from './styles/subject';
+import { VOX_SUBJECTS_SPEC, loadVoxSubjects } from './styles/voxSubjects';
 
 /**
  * `?gallery=styles` (sprints STYLES, STYLES2 et STYLES3, outil de développement) : Magmadrake et Calcinarque
@@ -19,6 +21,12 @@ import type { SubjectId } from './styles/subject';
  * Paramètres pour les captures : `&creature=calcinarque`, `&view=jeu`, `&tone=aucun|neutre`, `&sat=1`, `&aa=2`,
  * `&cam=proche`, `&nuit=1`, `&angle=face|profil`, `&silhouette=1`,
  * `&compare=magmadrake:C,calcinarque:O` (ou des lettres : créature choisie), `&focus=O` (ou `calcinarque:O`).
+ *
+ * STYLES4 : les créatures par défaut sont nos vrais `.vox` (Calcinarque légendaire, Amanitox, Crabastion, Braizard ;
+ * voxSubjects.ts), les anciens modèles restent en fin de liste. `&tous=1` : les vingt styles (sinon la présélection
+ * A, D, E, F, H, I). `&volcan=1` : éclairage « nuit volcanique » (l'ancien style O), applicable à tous les styles.
+ * `&planche=1` : planche 4 créatures × 6 styles. `&banc=D` : mesure des images par seconde du style D avec six
+ * créatures à l'écran (résultat dans `window.__banc`, lu par tools/styles-banc.mjs).
  */
 type View = 'vitrine' | 'jeu';
 type Tone = 'actuel' | 'aucun' | 'neutre';
@@ -39,14 +47,28 @@ interface Settings {
   silhouette: boolean;
   compare: [Cell, Cell] | null;
   focus: Cell | null;
+  /** STYLES4 : les vingt styles (sinon la présélection) */
+  all: boolean;
+  /** STYLES4 : éclairage « nuit volcanique » */
+  volcan: boolean;
+  /** STYLES4 : planche 4 créatures × 6 styles */
+  planche: boolean;
 }
 
 const IDS = ALL_STYLES.map((s) => s.id);
-const SUBJECT_IDS: SubjectId[] = ['magmadrake', 'calcinarque'];
+/** STYLES4 : nos `.vox` d'abord, les anciens modèles construits par le code ensuite. */
+const VOX_IDS: SubjectId[] = VOX_SUBJECTS_SPEC.map((s) => s.id);
+const SUBJECT_IDS: SubjectId[] = [...VOX_IDS, 'magmadrake', 'calcinarque'];
+/** Présélection (filtre par défaut) : A référence, D biseauté, E sculpté lisse, F toon, H haute définition, I hybride. */
+const SHORTLIST: AnyStyleId[] = ['A', 'D', 'E', 'F', 'H', 'I'];
+const BANC = params0().get('banc');
+function params0() {
+  return new URLSearchParams(window.location.search);
+}
 const isId = (x: unknown): x is AnyStyleId => typeof x === 'string' && IDS.includes(x as AnyStyleId);
 const isSubject = (x: unknown): x is SubjectId => typeof x === 'string' && SUBJECT_IDS.includes(x as SubjectId);
 const params = new URLSearchParams(window.location.search);
-const creatureParam: SubjectId = isSubject(params.get('creature')) ? (params.get('creature') as SubjectId) : 'magmadrake';
+const creatureParam: SubjectId = isSubject(params.get('creature')) ? (params.get('creature') as SubjectId) : VOX_IDS[0];
 /** « O » (créature choisie) ou « calcinarque:O ». */
 function parseCell(raw: string, fallback: SubjectId): Cell | null {
   const [a, b] = raw.split(':');
@@ -69,6 +91,9 @@ const INITIAL: Settings = {
   silhouette: params.get('silhouette') === '1',
   compare: compareParam.length >= 2 ? [compareParam[0], compareParam[1]] : compareParam.length === 1 ? [{ s: creatureParam, id: 'A' }, compareParam[0]] : null,
   focus: parseCell(params.get('focus') ?? '', creatureParam),
+  all: params.get('tous') === '1',
+  volcan: params.get('volcan') === '1',
+  planche: params.get('planche') === '1',
 };
 
 /** Caméra de combat du jeu (engine/camera.ts) : 42°, en haut et en arrière, visée un peu au-dessus du sol. */
@@ -80,7 +105,7 @@ const SHOWCASE_TARGET = new THREE.Vector3(0, 2.15, 0);
 
 const favKey = (s: SubjectId) => withSaveSlot(s === 'magmadrake' ? 'cubiquest-styles-favoris' : `cubiquest-styles-favoris-${s}`);
 function loadFavorites(): Record<SubjectId, AnyStyleId[]> {
-  const out = { magmadrake: [], calcinarque: [] } as Record<SubjectId, AnyStyleId[]>;
+  const out = {} as Record<SubjectId, AnyStyleId[]>;
   for (const s of SUBJECT_IDS) {
     try {
       const raw: unknown = JSON.parse(localStorage.getItem(favKey(s)) ?? '[]');
@@ -110,7 +135,13 @@ interface Measure {
 const MIN_CELL = 230;
 function layoutFor(s: Settings, width: number, height: number): { list: Cell[]; cols: number; cellW: number; cellH: number } {
   if (s.focus) return { list: [s.focus], cols: 1, cellW: width, cellH: height };
-  const list: Cell[] = s.compare ? [...s.compare] : IDS.map((id) => ({ s: s.creature, id }));
+  if (s.planche) {
+    // une ligne par créature, une colonne par style de la présélection
+    const cellW = Math.floor(width / SHORTLIST.length);
+    return { list: VOX_IDS.flatMap((sub) => SHORTLIST.map((id) => ({ s: sub, id }))), cols: SHORTLIST.length, cellW, cellH: Math.floor(cellW * 0.92) };
+  }
+  const shown = s.all ? IDS : SHORTLIST;
+  const list: Cell[] = s.compare ? [...s.compare] : shown.map((id) => ({ s: s.creature, id }));
   const cols = s.compare ? (width >= 2 * MIN_CELL ? 2 : 1) : Math.max(1, Math.min(5, Math.floor(width / MIN_CELL)));
   const cellW = Math.floor(width / cols);
   return { list, cols, cellW, cellH: Math.floor(cellW * 0.75) };
@@ -137,6 +168,8 @@ void main() {
 }
 
 const cellKey = (c: Cell) => `${c.s}:${c.id}`;
+/** Nom d'une créature, même avant le chargement des `.vox`. */
+const labelOf = (sub: SubjectId) => SUBJECTS[sub]?.label ?? VOX_SUBJECTS_SPEC.find((x) => x.id === sub)?.label ?? sub;
 const styleInfo = (id: AnyStyleId) => ALL_STYLES.find((s) => s.id === id)!;
 
 export function StylesGallery() {
@@ -154,10 +187,22 @@ export function StylesGallery() {
   const drag = useRef<{ x: number; yaw: number } | null>(null);
 
   useEffect(() => saveFavorites(favorites), [favorites]);
+  // STYLES4 : les `.vox` sont chargés avant le premier rendu
+  const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [banc, setBanc] = useState('');
+  useEffect(() => {
+    loadVoxSubjects()
+      .then((list) => {
+        registerSubjects(list);
+        setReady(true);
+      })
+      .catch((e: unknown) => setLoadError(String(e)));
+  }, []);
 
   useEffect(() => {
     const el = host.current;
-    if (!el) return;
+    if (!el || !ready) return;
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
@@ -202,12 +247,102 @@ export function StylesGallery() {
         m.root.visible = false;
         const content = m.root.children[0];
         content.userData.baseScale = content.scale.clone();
+        m.root.userData.volcan = volcanRig(c.s);
+        m.root.add(m.root.userData.volcan as THREE.Group);
         models.set(cellKey(c), m);
         scene.add(m.root);
       }
       return m;
     };
+    /**
+     * STYLES4 : éclairage « nuit volcanique » (l'ancien style O, applicable à tous les styles) : la scène s'assombrit
+     * et la lueur de la créature devient une vraie source de lumière (lumière ponctuelle, halo, reflet au sol), de la
+     * couleur de sa lueur, posée au centre de ses parties lumineuses.
+     */
+    function volcanRig(sub: SubjectId): THREE.Group {
+      const subject = SUBJECTS[sub];
+      const lit = subject.voxelsAt(14).filter((v) => v.color === 'accent');
+      const g = new THREE.Group();
+      g.visible = false;
+      if (!lit.length) return g;
+      const avg = (k: 'x' | 'y' | 'z') => (lit.reduce((a, v) => a + v[k], 0) / lit.length / 14) * subject.scale;
+      const color = subject.palette.accent;
+      const light = new THREE.PointLight(color, 9, 7 * subject.frame, 1.4);
+      light.position.set(avg('x'), avg('y'), avg('z'));
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: getHaloTexture(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+      halo.position.set(avg('x'), avg('y') * 0.6, avg('z'));
+      halo.scale.setScalar(2.6 * subject.frame);
+      const floor = new THREE.Mesh(
+        new THREE.CircleGeometry(1.6 * subject.frame, 32),
+        new THREE.MeshBasicMaterial({ map: getHaloTexture(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8 }),
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = 0.03;
+      g.add(light, halo, floor);
+      return g;
+    }
     const camera = new THREE.PerspectiveCamera(42, 4 / 3, 0.1, 300);
+
+    // STYLES4 : banc de mesure (`&banc=D`) : six créatures dans la vue du combat, pendant 12 s, plein cadre
+    if (BANC) {
+      const id = BANC as AnyStyleId;
+      const subs = [...VOX_IDS, VOX_IDS[0], VOX_IDS[1]];
+      const ms = subs.map((sub, i) => {
+        const m = buildAnyStyle(id, sub);
+        m.root.position.set(((i % 3) - 1) * 4.6, 0, (Math.floor(i / 3) - 0.5) * 5.0);
+        m.root.rotation.y = 0.6;
+        scene.add(m.root);
+        return m;
+      });
+      const w0 = el.clientWidth || 1280;
+      const h0 = Math.round(w0 * 0.5625);
+      renderer.setSize(w0, h0, false);
+      renderer.domElement.style.height = `${h0}px`;
+      renderer.setPixelRatio(1);
+      renderer.setScissorTest(false);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 0.94;
+      key.position.set(16, 26, 14);
+      rim.position.set(-14, 12, -16);
+      scene.environmentIntensity = 0.42;
+      scene.fog = new THREE.Fog(BIOMES.meadow.fogHex, 34, 110);
+      scene.background = new THREE.Color(BIOMES.meadow.skyHex);
+      camera.aspect = w0 / h0;
+      camera.position.copy(GAME_CAM.pos);
+      camera.lookAt(GAME_CAM.target);
+      camera.updateProjectionMatrix();
+      const times: number[] = [];
+      const t0 = performance.now();
+      let last = t0;
+      let rafB = 0;
+      const tick = () => {
+        rafB = requestAnimationFrame(tick);
+        const now = performance.now();
+        const t = (now - t0) / 1000;
+        for (const m of ms) m.animate?.(t);
+        renderer.info.reset();
+        renderer.clear();
+        for (const m of ms) m.before?.(ctx);
+        renderer.render(scene, camera);
+        for (const m of ms) m.after?.(ctx);
+        if (t > 2) times.push(now - last);
+        last = now;
+        if (t > 14 && !(window as unknown as { __banc?: unknown }).__banc) {
+          const sorted = [...times].sort((a, b) => a - b);
+          const avg = times.reduce((a, b) => a + b, 0) / times.length;
+          const p95 = sorted[Math.floor(sorted.length * 0.95)];
+          const result = { style: id, fps: Math.round(1000 / avg), fps5: Math.round(1000 / p95), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, frames: times.length };
+          (window as unknown as { __banc?: unknown }).__banc = result;
+          setBanc(JSON.stringify(result));
+        }
+      };
+      tick();
+      return () => {
+        cancelAnimationFrame(rafB);
+        renderer.dispose();
+        renderer.domElement.remove();
+      };
+    }
     const fog = new THREE.Fog(BIOMES.meadow.fogHex, 34, 110);
     const black = new THREE.MeshBasicMaterial({ color: '#000000' });
 
@@ -269,12 +404,19 @@ export function StylesGallery() {
         rim.position.set(-5, 4, -6).multiplyScalar(2);
         scene.environmentIntensity = s.night ? 0.08 : 0.5;
       }
-      const night = s.night ? 1 : 0;
+      // nuit volcanique : la scène s'assombrit (comme l'ancien style O) ; la lueur des créatures éclaire
+      if (s.volcan && !s.silhouette) {
+        hemi.intensity *= 0.3;
+        key.intensity *= 0.25;
+        rim.intensity *= 0.4;
+        scene.environmentIntensity *= 0.3;
+      }
+      const night = s.night || s.volcan ? 1 : 0;
       setDecorNight(night);
       env.group.visible = inGame;
       scene.fog = inGame ? fog : null;
       fog.color.set(s.night ? '#121936' : BIOMES.meadow.fogHex);
-      scene.background = new THREE.Color(s.silhouette ? '#FFFFFF' : inGame ? (s.night ? '#0A0F24' : BIOMES.meadow.skyHex) : s.night ? '#14172A' : '#3A3F4B');
+      scene.background = new THREE.Color(s.silhouette ? '#FFFFFF' : s.volcan ? (inGame ? '#120A0A' : '#180E0C') : inGame ? (s.night ? '#0A0F24' : BIOMES.meadow.skyHex) : s.night ? '#14172A' : '#3A3F4B');
       scene.overrideMaterial = s.silhouette ? black : null;
       env.animate?.(t);
       // Vitrine : cadrage de la plus grande créature affichée, pour que les tailles restent comparables
@@ -299,8 +441,17 @@ export function StylesGallery() {
         const i = all ? k : (cursor + k) % list.length;
         const c = list[i];
         const model = modelFor(c);
+        // planche, vue Vitrine : chaque ligne est cadrée sur sa créature (elles n'ont pas la même taille)
+        if (s.planche && !inGame) {
+          // frame ≈ hauteur de la créature / 2,6 : on vise le milieu de la créature, de un peu au-dessus
+          const f = SUBJECTS[c.s].frame;
+          camera.position.set(0, 1.1 + 1.6 * f, 9.6 * f);
+          camera.lookAt(0, 1.2 * f, 0);
+          camera.updateProjectionMatrix();
+        }
         models.forEach((m) => (m.root.visible = false));
         model.root.visible = true;
+        (model.root.userData.volcan as THREE.Group).visible = s.volcan && !s.silhouette;
         model.root.rotation.y = spin + (s.focus && s.angle !== 'tourne' ? yaw.current : 0);
         // ombres au sol cachées pour les silhouettes
         model.root.children.forEach((ch) => {
@@ -360,7 +511,10 @@ export function StylesGallery() {
       }
       cursor = (cursor + perFrame) % Math.max(1, list.length);
       frame += 1;
-      if (frame % 30 === 1) setMeasures({ ...latest });
+      if (frame % 30 === 1) {
+        setMeasures({ ...latest });
+        (window as unknown as { __mesures?: unknown }).__mesures = { ...latest };
+      }
     };
     loop();
     // largeur suivie par un observateur : la grille se recompose quand la fenêtre change ou que la page est zoomée
@@ -376,12 +530,15 @@ export function StylesGallery() {
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, []);
+  }, [ready]);
 
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings((s) => ({ ...s, [k]: v }));
   const btn = (on: boolean) => `voxel-btn min-h-[44px] rounded-lg border-2 px-3 text-sm font-semibold ${on ? 'block-btn-primary' : 'block-btn-secondary'}`;
   const toggleFav = (c: Cell) =>
-    setFavorites((f) => ({ ...f, [c.s]: f[c.s].includes(c.id) ? f[c.s].filter((x) => x !== c.id) : [...f[c.s], c.id] }));
+    setFavorites((f) => {
+      const cur = f[c.s] ?? [];
+      return { ...f, [c.s]: cur.includes(c.id) ? cur.filter((x) => x !== c.id) : [...cur, c.id] };
+    });
   const move = (sub: SubjectId, i: number, d: -1 | 1) =>
     setFavorites((f) => {
       const j = i + d;
@@ -397,8 +554,9 @@ export function StylesGallery() {
     if (settings.sat) opts.push('saturation +20 %');
     if (settings.aa) opts.push('anticrénelage renforcé');
     if (settings.night) opts.push('nuit');
+    if (settings.volcan) opts.push('nuit volcanique');
     opts.push(settings.view === 'jeu' ? 'vue en jeu' : 'vue vitrine');
-    const favs = SUBJECT_IDS.map((sub) => `${SUBJECTS[sub].label} : ${favorites[sub].length ? favorites[sub].join(', ') : 'aucun'}`).join(' ; ');
+    const favs = SUBJECT_IDS.map((sub) => `${labelOf(sub)} : ${favorites[sub].length ? favorites[sub].join(', ') : 'aucun'}`).join(' ; ');
     return `Favoris — ${favs} — ${opts.join(', ')}`;
   };
   const copyChoice = async () => {
@@ -426,13 +584,15 @@ export function StylesGallery() {
   const layout = layoutFor(settings, w, Math.max(200, (typeof window !== 'undefined' ? window.innerHeight : 800) - 70));
   const rows = Math.ceil(layout.list.length / layout.cols);
   const compact = !settings.compare && !settings.focus;
-  const creatureLabel = SUBJECTS[settings.creature].label;
+  const creatureLabel = labelOf(settings.creature);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#0F1420] px-4 py-6 text-[#FAF7F0] sm:px-8">
       <div className="mx-auto max-w-7xl">
         <p className="text-xs font-bold uppercase tracking-wider text-[#F4B942]">Outil de développement · exploration</p>
-        <h1 className="font-display text-3xl font-bold">{creatureLabel} en vingt styles</h1>
+        <h1 className="font-display text-3xl font-bold">{settings.planche ? 'Planche : 4 créatures × 6 styles' : `${creatureLabel} : ${settings.all ? 'les vingt styles' : 'présélection'}`}</h1>
+        {!ready && <p className="mt-2 text-sm text-[#F4B942]">{loadError ? `Chargement impossible : ${loadError}` : 'Chargement des modèles .vox…'}</p>}
+        {BANC && <p className="mt-2 font-mono text-sm text-[#86EFAC]">{banc ? `Mesure : ${banc}` : `Mesure du style ${BANC} avec six créatures (14 s)…`}</p>}
         <p className="mt-1 text-sm text-[#CBD5E1]">
           Même créature, même posture, mêmes proportions : seul le style change. Les réglages n'agissent que sur cette page.{' '}
           <a className="underline" href="?gallery=art">
@@ -444,7 +604,7 @@ export function StylesGallery() {
           <span className="text-sm text-[#CBD5E1]">Créature</span>
           {SUBJECT_IDS.map((sub) => (
             <button key={sub} type="button" className={btn(settings.creature === sub)} onClick={() => setSettings((st) => ({ ...st, creature: sub, focus: st.focus ? { s: sub, id: st.focus.id } : null }))}>
-              {SUBJECTS[sub].label}
+              {labelOf(sub)}
             </button>
           ))}
         </div>
@@ -474,6 +634,9 @@ export function StylesGallery() {
           <button type="button" className={btn(settings.night)} onClick={() => set('night', !settings.night)}>
             {settings.night ? 'Nuit' : 'Jour'}
           </button>
+          <button type="button" className={btn(settings.volcan)} onClick={() => set('volcan', !settings.volcan)}>
+            {settings.volcan ? 'Nuit volcanique' : 'Éclairage : jour'}
+          </button>
           <span className="mx-1 self-center text-[#64748B]">|</span>
           <button type="button" className={btn(settings.angle === 'face')} onClick={() => set('angle', settings.angle === 'face' ? 'tourne' : 'face')}>
             {settings.angle === 'face' ? 'Reprendre la rotation' : 'Vue de face'}
@@ -487,11 +650,20 @@ export function StylesGallery() {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button type="button" className={btn(!settings.all)} onClick={() => set('all', false)}>
+            Présélection (A D E F H I)
+          </button>
+          <button type="button" className={btn(settings.all)} onClick={() => set('all', true)}>
+            Tous
+          </button>
+          <button type="button" className={btn(settings.planche)} onClick={() => setSettings((st) => ({ ...st, planche: !st.planche, compare: null, focus: null }))}>
+            Planche 4 × 6
+          </button>
           <button type="button" className={btn(Boolean(settings.compare))} onClick={() => set('compare', settings.compare ? null : cmp)}>
-            {settings.compare ? 'Les vingt' : 'Comparer deux styles'}
+            {settings.compare ? 'Retour à la grille' : 'Comparer deux styles'}
           </button>
           <button type="button" className={btn(showRanking)} onClick={() => setShowRanking((v) => !v)}>
-            ★ Mon classement ({favorites.magmadrake.length + favorites.calcinarque.length})
+            ★ Mon classement ({SUBJECT_IDS.reduce((n, sub) => n + (favorites[sub]?.length ?? 0), 0)})
           </button>
           <button type="button" className={btn(false)} onClick={() => void copyChoice()}>
             Copier mon choix
@@ -505,14 +677,14 @@ export function StylesGallery() {
               <span className="text-sm text-[#CBD5E1]">Choisir pour</span>
               {([0, 1] as const).map((side) => (
                 <button key={side} type="button" className={btn(pickSide === side)} onClick={() => setPickSide(side)}>
-                  {side === 0 ? 'Gauche' : 'Droite'} : {SUBJECTS[cmp[side].s].label} {cmp[side].id}
+                  {side === 0 ? 'Gauche' : 'Droite'} : {labelOf(cmp[side].s)} {cmp[side].id}
                 </button>
               ))}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {SUBJECT_IDS.map((sub) => (
                 <button key={sub} type="button" className={btn(cmp[pickSide].s === sub)} onClick={() => setSide(pickSide, { s: sub, id: cmp[pickSide].id })}>
-                  {SUBJECTS[sub].label}
+                  {labelOf(sub)}
                 </button>
               ))}
               <span className="mx-1 self-center text-[#64748B]">|</span>
@@ -529,7 +701,7 @@ export function StylesGallery() {
           <div className="mt-3 grid gap-3 rounded-lg border-2 border-[#F4B942]/60 p-3 md:grid-cols-2">
             {SUBJECT_IDS.map((sub) => (
               <div key={sub}>
-                <p className="text-sm font-bold">Mon classement : {SUBJECTS[sub].label}</p>
+                <p className="text-sm font-bold">Mon classement : {labelOf(sub)}</p>
                 {favorites[sub].length === 0 && <p className="mt-1 text-sm text-[#CBD5E1]">Aucune étoile : touche ☆ sur une case pour l'ajouter.</p>}
                 <ol className="mt-2 space-y-1">
                   {favorites[sub].map((id, i) => (
@@ -563,7 +735,7 @@ export function StylesGallery() {
                 ✕ Fermer
               </button>
               <span className="text-sm">
-                {SUBJECTS[settings.focus.s].label} · {settings.focus.id} · {styleInfo(settings.focus.id).name} — glisser pour faire pivoter
+                {labelOf(settings.focus.s)} · {settings.focus.id} · {styleInfo(settings.focus.id).name} — glisser pour faire pivoter
               </span>
             </div>
           )}
@@ -590,12 +762,12 @@ export function StylesGallery() {
               {layout.list.map((c, i) => {
                 const info = styleInfo(c.id);
                 const m = measures[cellKey(c)];
-                const fav = favorites[c.s].includes(c.id);
-                const mixed = Boolean(settings.compare) || Boolean(settings.focus);
+                const fav = (favorites[c.s] ?? []).includes(c.id);
+                const mixed = Boolean(settings.compare) || Boolean(settings.focus) || settings.planche;
                 return (
                   <div key={`${cellKey(c)}-${i}`} className="relative min-w-0 border border-[#0F1420]/60 p-1.5">
                     <p className={`inline-block max-w-full truncate rounded bg-[#0F1420]/80 px-2 py-0.5 font-bold ${compact ? 'text-xs' : 'text-sm'}`}>
-                      {mixed ? `${SUBJECTS[c.s].label} · ` : ''}
+                      {mixed ? `${labelOf(c.s)} · ` : ''}
                       {info.id} · {info.name}
                     </p>
                     {!compact && <p className="mt-1 max-w-[20rem] rounded bg-[#0F1420]/70 px-2 py-0.5 text-xs text-[#CBD5E1]">{info.note}</p>}
@@ -603,7 +775,7 @@ export function StylesGallery() {
                       {info.risk}
                       {m ? ` · ${m.calls} appels · ${m.triangles.toLocaleString('fr-FR')} tri.` : ''}
                     </p>
-                    {!settings.focus && (
+                    {!settings.focus && !settings.planche && (
                       <div className="pointer-events-auto absolute bottom-1 right-1 flex gap-1">
                         <button type="button" className={`${btn(fav)} min-w-[44px] px-2`} onClick={() => toggleFav(c)} aria-pressed={fav} aria-label={`Favori ${c.id}`}>
                           {fav ? '★' : '☆'}

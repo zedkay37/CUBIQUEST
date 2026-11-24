@@ -202,6 +202,8 @@ function styleC(): StyledModel {
 // ---------------------------------------------------------------- D : voxel biseauté
 
 export function colorOf(v: Voxel): string {
+  // STYLES4 : un bloc venu d'un `.vox` garde sa couleur exacte
+  if (v.rgb) return v.rgb;
   return subj().palette[v.color as ColorKey] ?? subj().palette.primary;
 }
 

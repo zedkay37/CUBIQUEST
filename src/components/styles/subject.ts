@@ -8,7 +8,8 @@ import { SPECIES } from '../../game/catalog';
 import { SCULPT_DEFS } from '../../game/models/sculptDefs';
 import { voxelize, type ColorKey, type SculptDef, type SculptPalette, type Voxel } from '../../game/models/voxelSculpt';
 
-export type SubjectId = 'magmadrake' | 'calcinarque';
+/** STYLES4 : aussi les créatures lues dans les `.vox` (voxSubjects.ts), d'où une chaîne libre. */
+export type SubjectId = string;
 
 /** Ce qu'il faut pour construire une variante (le type complet est dans magmaStyles.ts, évite un cercle d'import). */
 export interface SubjectModel {

@@ -285,7 +285,7 @@ function styleN(): StyledModel {
 // ---------------------------------------------------------------- O : nuit volcanique
 
 let haloTex: THREE.CanvasTexture | null = null;
-function getHaloTexture(): THREE.CanvasTexture {
+export function getHaloTexture(): THREE.CanvasTexture {
   if (haloTex) return haloTex;
   const c = document.createElement('canvas');
   c.width = 128;
