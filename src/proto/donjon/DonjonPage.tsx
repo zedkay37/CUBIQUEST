@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CD, ELAN, RECRUITS, RESERVE_MAX, type Game, type Input, type Results, emptyInput, enemies, newGame, resolveRecruit, results, step } from '../sim';
 import { ProtoView, loadProtoModels } from '../view';
 import { CARD } from '../cards';
-import { CardHand, DeckSwap, RelayHud } from '../CardHud';
+import { CardHand, DeckSwap, InstinctEditor, RelayHud } from '../CardHud';
 import { schemeFor, setupGame } from '../modeles';
 import { BOTS, type BotId } from '../bots';
 import { makeDonjonBot } from './dbots';
@@ -24,6 +24,8 @@ export interface DescentResults extends Results {
   modele: string;
   cartes_jouees?: Record<string, number>;
   deck_final?: string[];
+  regles?: unknown;
+  echanges?: number;
   etage_atteint: number;
   etages: number;
   reglages: DonjonSettings;
@@ -62,7 +64,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
   const levelRef = useRef<DonjonLevel | null>(null);
   const [mapTick, setMapTick] = useState(0);
   const [cardSelected, setCardSelected] = useState(-1);
-  const [interlude, setInterlude] = useState<'deck' | null>(null);
+  const [interlude, setInterlude] = useState<'deck' | 'rules' | null>(null);
   const [tactical, setTactical] = useState<string | null>(null);
   const interludeRef = useRef(false);
   const panelRef = useRef(panel);
@@ -180,7 +182,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
       } else if (down && !e.repeat && g.relay && ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) {
         swapTo = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
       } else if (down && !e.repeat) {
-        const map: Record<string, keyof Input> = { Digit1: 'spell1', Digit2: 'spell2', Digit3: 'comp1', Digit4: 'comp2', Space: 'dodge', KeyF: 'focus', KeyR: 'recall' };
+        const map: Record<string, keyof Input> = { Digit1: 'spell1', Digit2: 'spell2', Digit3: 'comp1', Digit4: 'comp2', Space: 'dodge', KeyF: 'focus', KeyR: 'recall', KeyE: 'ultimate' };
         if (map[e.code]) pressed[map[e.code]] = true;
         if (e.code === 'KeyM') onSettings({ ...live.current, minimap: !live.current.minimap });
       }
@@ -258,6 +260,11 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
       view.visibleFn = (u) => u.team === 'ally' || level.isSeen(u);
       env = new DonjonEnv(view.scene, level, view);
       setLoading(false);
+      if (g.instincts && !robot) {
+        // G : les règles se choisissent avant la descente
+        interludeRef.current = true;
+        setInterlude('rules');
+      }
       setBanner(startFloor >= FLOORS ? `Étage ${startFloor} — le boss` : `Étage ${startFloor}`);
       transition = 1.4;
       let last = performance.now();
@@ -325,7 +332,12 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
           if (g.pendingRecruit && robot) resolveRecruit(g, -1);
           if (g.pendingRecruit) setRecruit(g.pendingRecruit);
           // C : entre deux étages, échanger jusqu'à 2 cartes du deck (la partie attend)
-          if (level.stairsReached && !g.result && g.cards && swapDoneFor < level.floorIndex && !robot) {
+          if (level.stairsReached && !g.result && g.instincts && swapDoneFor < level.floorIndex && !robot) {
+            // G : entre deux étages, on peut changer les règles des compagnons
+            swapDoneFor = level.floorIndex;
+            interludeRef.current = true;
+            setInterlude('rules');
+          } else if (level.stairsReached && !g.result && g.cards && swapDoneFor < level.floorIndex && !robot) {
             swapDoneFor = level.floorIndex;
             interludeRef.current = true;
             setInterlude('deck');
@@ -391,7 +403,7 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
           setMapTick((t) => t + 1);
         }
         if (g.result) {
-          const r: DescentResults = { ...results(g), modele: live.current.modele, cartes_jouees: g.cards ? { ...g.cards.played } : undefined, deck_final: g.cards?.all(), etage_atteint: level.floorIndex, etages: FLOORS, reglages: { ...live.current } };
+          const r: DescentResults = { ...results(g), modele: live.current.modele, cartes_jouees: g.cards ? { ...g.cards.played } : undefined, regles: g.instincts ?? undefined, echanges: g.relay?.swaps, deck_final: g.cards?.all(), etage_atteint: level.floorIndex, etages: FLOORS, reglages: { ...live.current } };
           setTimeout(() => alive && onEnd(r), 900);
           return;
         }
@@ -468,7 +480,12 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
             {settings.modele !== 'E' && <Chip k="1" label={L?.spell1 ?? ''} cd={cd('spell1')} total={CD.spell1} />}
             {settings.modele !== 'E' && <Chip k="2" label="Brasier" cd={cd('spell2')} total={CD.spell2} />}
             <Chip k={settings.modele === 'F' ? 'Maj' : 'Esp.'} label="Esquive" cd={cd('dodge')} total={CD.dodge} />
-            {settings.modele === 'E' ? (
+            {settings.modele === 'G' ? (
+              <div className="rounded-md bg-slate-900/80 px-2 py-1 text-center text-xs">
+                <div className="font-bold">Jetons d’ordre : {g?.tokens ?? 0} / 3</div>
+                <div className="text-white/70">F focus · R repli · E ultime</div>
+              </div>
+            ) : settings.modele === 'E' ? (
               <>
                 <Chip k="Clic dr." label={g?.relay ? g.relay.team[g.relay.active].spell : ''} cd={cd('spell1')} total={8} />
                 <Chip k="1 à 4" label="Échange" cd={cd('swap')} total={2} />
@@ -511,6 +528,15 @@ function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: Donj
           <div className="text-lg font-bold text-sky-300">Pause tactique</div>
           {tactical}
         </div>
+      )}
+      {interlude === 'rules' && g?.instincts && (
+        <InstinctEditor
+          g={g}
+          onDone={() => {
+            interludeRef.current = false;
+            setInterlude(null);
+          }}
+        />
       )}
       {interlude === 'deck' && g?.cards && (
         <DeckSwap

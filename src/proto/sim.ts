@@ -10,6 +10,8 @@
  * (aucun objet lancé), R la rappelle.
  * Schémas de contrôle : 1 auto-attaque + ordres, 2 clic souris (aller / attaquer), 3 tir à la souris (ancien).
  */
+import { instinct, useToken } from './instincts';
+
 export type Version = 'A' | 'B';
 export type Scheme = 1 | 2 | 3;
 export type LeaderId = 'calcinarque' | 'braizard';
@@ -41,6 +43,8 @@ export interface Input {
   card: { index: number; at: Vec; target: number } | null;
   /** E : place de l'équipe à faire entrer (0 à 3 ; −1 : aucune). */
   swapTo: number;
+  /** G : jeton « ultime ». */
+  ultimate: boolean;
 }
 export const emptyInput = (): Input => ({
   move: { x: 0, y: 0 },
@@ -59,6 +63,7 @@ export const emptyInput = (): Input => ({
   moveTo: null,
   card: null,
   swapTo: -1,
+  ultimate: false,
 });
 
 // ---------------------------------------------------------------- le terrain
@@ -413,6 +418,9 @@ export interface Game {
   relay: import('./relay').RelayState | null;
   /** F : le Meneur poursuit la cible donnée par un ordre. */
   leaderChase: boolean;
+  /** G : règles des compagnons (par espèce) et jetons d'ordre restants à cet étage. */
+  instincts: Record<string, import('./instincts').Rule[]> | null;
+  tokens: number;
 }
 
 export function mulberry32(seed: number): () => number {
@@ -534,6 +542,8 @@ export function newGame(version: Version, seed = 1, recordEventsOrOpts: boolean 
     cards: null,
     relay: null,
     leaderChase: false,
+    instincts: null,
+    tokens: 0,
   } as unknown as Game;
   const L = g.leaderDef;
   g.leader = makeUnit(g, 'meneur', L.species, L.name, 'ally', 0, 3, L.hp, L.speed, 0.55);
@@ -920,6 +930,15 @@ function playerActions(g: Game, input: Input, dt: number) {
     emit(g, { type: 'dodge', x: L.x, y: L.y, id: L.id });
   }
   if (g.relay) return;
+  // G, les instincts : les compagnons suivent leurs règles ; le joueur n'a que 3 jetons d'ordre par étage
+  if (g.mode === 'G') {
+    if (input.focus) useToken(g, 'focus', aim);
+    if (input.recall) useToken(g, 'repli', aim);
+    if (input.ultimate) useToken(g, 'ultime', aim);
+    g.focusT -= dt;
+    if (g.focusT <= 0) g.focusId = -1;
+    return;
+  }
   // D, le héros et ses suiveurs : 3 et 4 sont deux compétences de plus du Meneur ; aucun ordre aux suiveurs
   if (g.mode === 'D') {
     if (input.comp1 && ready(g, 'spell3')) {
@@ -1129,6 +1148,17 @@ function updateComp(g: Game, c: Unit, rank: number, dt: number) {
       } else c.skillCd = 0.5;
     }
   }
+  // G : la première règle vraie décide (une cible, ou un point où aller) ; un jeton focus passe devant
+  let instinctT: Unit | null = null;
+  if (g.mode === 'G' && g.focusId < 0) {
+    const r = instinct(g, c, dt);
+    if (r?.goTo) {
+      if (dist(c, r.goTo) > 1.6) moveToward(g, c, r.goTo, dt);
+      else c.moving = false;
+      return;
+    }
+    instinctT = r?.target ?? null;
+  }
   const leash = dist(c, L) > 14 && c.orderTarget < 0;
   let target: Unit | null = null;
   if (c.orderTarget >= 0) {
@@ -1136,6 +1166,7 @@ function updateComp(g: Game, c: Unit, rank: number, dt: number) {
     if (!target) c.orderTarget = -1;
   }
   if (!target && g.version === 'A' && g.focusId >= 0) target = enemies(g).find((e) => e.id === g.focusId) ?? null;
+  if (!target && instinctT) target = instinctT;
   if (!target && !leash) target = nearest(c, enemies(g).filter((e) => e.aggro && dist(e, c) < 9 && dist(e, L) < 12));
   if (!target) {
     follow();

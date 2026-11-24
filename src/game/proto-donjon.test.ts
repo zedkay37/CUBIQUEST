@@ -50,10 +50,11 @@ test('PROTO-DONJON : un étage joué par un robot est reproductible et se termin
 
 test('PROTO-DONJON : aucune touche ne sert à deux choses, quels que soient les réglages', async () => {
   const { DEFAULTS, keysFor } = await import('../proto/donjon/settings');
+  for (const modele of ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const)
   for (const scheme of [1, 2, 3] as const)
     for (const version of ['A', 'B'] as const)
       for (const leader of ['calcinarque', 'braizard'] as const) {
-        const keys = keysFor({ ...DEFAULTS, scheme, version, leader }).flatMap(([k]) => k.split(' · '));
+        const keys = keysFor({ ...DEFAULTS, modele, scheme, version, leader }).flatMap(([k]) => k.split(' · '));
         assert.equal(new Set(keys).size, keys.length, `conflit : schéma ${scheme}, ${version}, ${leader} → ${keys.join(', ')}`);
       }
 });

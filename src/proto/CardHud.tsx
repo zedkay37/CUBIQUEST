@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { CARD, CARDS, MANA, type CardState } from './cards';
 import type { Game } from './sim';
+import { ACTIONS, CONDITIONS, type Rule } from './instincts';
 
 const WHO: Record<string, string> = { 'calcinarque-legendaire': 'Calcinarque', crabastion: 'Crabastion', amanitox: 'Amanitox', ordre: 'Ordre' };
 const COLOR: Record<string, string> = { 'calcinarque-legendaire': '#FF8A30', crabastion: '#5FB8E8', amanitox: '#8CD86A', ordre: '#E8D27A' };
@@ -124,6 +125,58 @@ export function RelayHud({ g }: { g: Game; tick: number }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** G : les règles « si… alors… » de chaque compagnon (avant la descente et entre deux étages). */
+export function InstinctEditor({ g, onDone }: { g: Game; onDone: () => void }) {
+  const [, force] = useState(0);
+  const rules = g.instincts!;
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/75 p-4 text-white">
+      <div className="w-full max-w-3xl rounded-xl bg-slate-900 p-5 text-sm">
+        <h2 className="mb-1 text-xl font-bold">Les instincts de la meute</h2>
+        <div className="mb-3 text-white/60">Deux règles par compagnon. En combat, la première règle vraie décide. Tu gardes 3 jetons d’ordre par étage (F focus, R repli, E ultime).</div>
+        {Object.entries(rules).map(([sp, list]) => (
+          <div key={sp} className="mb-3 rounded-lg bg-white/5 p-3">
+            <div className="mb-2 font-bold">{WHO[sp] ?? sp}</div>
+            {list.map((r, k) => (
+              <div key={k} className="mb-1 flex flex-wrap items-center gap-2">
+                <span className="text-white/60">Règle {k + 1} : si</span>
+                <select
+                  value={r.cond}
+                  onChange={(e) => {
+                    r.cond = e.target.value as Rule['cond'];
+                    force((n) => n + 1);
+                  }}
+                  className="rounded bg-slate-700 px-2 py-1"
+                >
+                  {CONDITIONS.map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+                <span className="text-white/60">alors</span>
+                <select
+                  value={r.act}
+                  onChange={(e) => {
+                    r.act = e.target.value as Rule['act'];
+                    force((n) => n + 1);
+                  }}
+                  className="rounded bg-slate-700 px-2 py-1"
+                >
+                  {ACTIONS.map((a) => (
+                    <option key={a.id} value={a.id}>{a.label}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        ))}
+        <button type="button" onClick={onDone} className="mt-2 rounded-lg bg-amber-300 px-4 py-2 font-bold text-slate-900">
+          Descendre
+        </button>
+      </div>
     </div>
   );
 }

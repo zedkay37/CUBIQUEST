@@ -6,6 +6,7 @@
 import { type Game, type Level, type Unit, type Vec, type EnemyRole, ELAN, emit, enemies, heal, pushOut, spawnEnemy } from '../sim';
 import { type Floor, T_WATER, generateFloor, isSolid } from './gen';
 import { type DecorItem, planDecor } from './decorPlan';
+import { TOKENS_PER_FLOOR } from '../instincts';
 
 export type ItemKind = 'soin' | 'elan' | 'tresor';
 export interface Item {
@@ -348,6 +349,7 @@ export function enterFloor(g: Game, opts: DonjonOptions, floorIndex: number): Do
   g.recruitQueue = [];
   g.level = lvl;
   g.wave = floorIndex;
+  if (g.instincts) g.tokens = TOKENS_PER_FLOOR;
   lvl.populate(g);
   return lvl;
 }

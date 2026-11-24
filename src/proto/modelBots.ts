@@ -57,7 +57,35 @@ function relayBot(bot: string) {
   };
 }
 
+/** G : les instincts. Presse-tout : dépense ses jetons tout de suite. Adaptatif : esquive parfaite, jetons gardés pour le bon moment. */
+function instinctBot(bot: string) {
+  const base = makeDonjonBot(bot === 'presse-tout' ? 'presse-tout' : 'esquive-seule');
+  let focused = -1;
+  return (g: Game): Input => {
+    const inp = base(g);
+    inp.comp1 = inp.comp2 = false;
+    const foes = near(g, 12);
+    if (bot === 'presse-tout') {
+      inp.ultimate = foes.length > 0;
+      return inp;
+    }
+    inp.focus = inp.recall = false;
+    if (!foes.length || g.tokens <= 0) return inp;
+    const boss = foes.find((e) => e.role === 'boss');
+    const healer = foes.find((e) => e.role === 'soigneur');
+    if (boss?.channel && near(g, 7).includes(boss)) inp.ultimate = true;
+    else if (near(g, 5).length >= 3 && g.tokens >= 2) inp.ultimate = true;
+    else if (healer && focused !== healer.id && g.tokens >= 2) {
+      inp.focus = true;
+      inp.aim = { x: healer.x, y: healer.y };
+      focused = healer.id;
+    } else if (g.comps.some((c) => c.alive && c.hp < c.maxHp * 0.25) && g.tokens >= 2) inp.recall = true;
+    return inp;
+  };
+}
+
 export const MODEL_BOTS: Partial<Record<Modele, (bot: string) => (g: Game) => Input>> = {
   D: heroBot,
   E: relayBot,
+  G: instinctBot,
 };
