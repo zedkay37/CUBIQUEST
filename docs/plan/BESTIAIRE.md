@@ -162,3 +162,16 @@ Trois plans de corps, aucun à quatre pattes (§4.8) :
 
 Langue « roche » : granit et os validés ; **lueur de cristal un peu moins blanche** (`#6E9CD8` `#A9C8EE` `#DCEBFF` au lieu de `#9FB8D8` `#CFE0F2` `#F4F8FF`) : au volcan, le blanc pur faisait un halo qui noyait le modèle. Yeux ambre `#FFC24A`. Indices propres : lichen `#8A9A4E`, glace pleine `#A9C9EA`, ambre `#D08A36`.
 Magmadrake (roche dans le jeu) : ses « veines de magma » deviennent des veines de cristal froid (décision du 23/11).
+
+## Lot 6b (porte du lot 6)
+
+Roche refaite : granit d'une teinte (`#404147` `#55565D` `#65666C`), plaques claires en grandes masses (`#A6A194`), lueur en lignes. Gargouilles aux ailes dressées ; Magmadrake pièce maîtresse ; sauteurs droits, cornes visibles, pieds courts, toison compacte ; golems : Givrock se serre dans ses bras, Cryolithe lève un sourcil, Glaciatitan a les yeux mi-clos.
+
+## Lot 7 (psychique), 24/11/2026 — à valider
+
+| Lignée | Plan de corps | Traits (évolution) | Signature |
+|---|---|---|---|
+| Psycube → Lunabloc → Aetherion | **flotteur** « veilleur de pierre de lune » : goutte renversée, tête ronde, nageoires-mains, traîne de cristal, sans pattes (le moteur le fait planer) | méticuleux et curieux (cailloux rangés d'un côté) → vaniteux (menton levé, sourire de travers) → sage et distant (yeux mi-clos) | cailloux en orbite → croissant d'obsidienne dans le dos et satellites cubiques → éclats géométriques en trois groupes |
+| Nimbulle → Cumulord | **gelée posée** « gelée de nuage » : amas de boules de nuage, large et bas, dessous d'orage | distrait et rêveur (une paupière tombante, bouche en « o », bruine d'un côté) → majestueux et malicieux (sourcils d'orage, sourire en coin, bras de nuage, nuages satellites) | bulle intérieure → éclairs violets dans le ventre |
+
+Langue « psychique » ajustée : corps **pierre de lune gris clair** (`#6F6C7E` `#ABA8B8` `#D8D6E0`) au lieu de l'obsidienne violette (le violet sombre se fondait dans le sol du Sanctuaire, et un corps lavande éteignait la lueur violette) ; **obsidienne `#231E36` en grandes plaques** (front, épaulières, croissant) ; lueur violette validée inchangée ; yeux jaunes. Nuage : `#6E6696` `#BDB6D8` `#E4E0F2`, yeux sombres.

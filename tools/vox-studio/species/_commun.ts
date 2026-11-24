@@ -306,3 +306,19 @@ export function topLine(m: Model, pts: [number, number][], width: number, color:
     }
   });
 }
+
+/**
+ * Psychique (lot 7) : pierre de lune claire (corps) et obsidienne (grandes plaques sombres), lueur violette validée le
+ * 23/11. Écart à la langue validée (corps obsidienne violette) : le violet sombre se fondait dans le sol du Sanctuaire
+ * (même leçon que le feu, §4.5) ; l'obsidienne reste en grandes masses. Nuage (lignée Nimbulle) : plus pâle, dessous
+ * d'orage sombre.
+ */
+export const OBSIDIENNE = 5;
+export const PSY = {
+  ...elementPalette(['#6F6C7E', '#ABA8B8', '#D8D6E0', '#F4F1FB'], ['#7B2FFF', '#B07CFF', '#EBD9FF'], '#FFD84A'),
+  [OBSIDIENNE]: hexrgb('#231E36'),
+};
+export const NUAGE = {
+  ...elementPalette(['#6E6696', '#BDB6D8', '#E4E0F2', '#FFFFFF'], ['#7B2FFF', '#B07CFF', '#EBD9FF'], '#3A2E66'),
+  [OBSIDIENNE]: hexrgb('#4A4270'),
+};
