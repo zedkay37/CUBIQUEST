@@ -14,7 +14,7 @@
  * Détails de matière : strates de granit, glace pleine dans les fissures, glaçons, lichen gelé, doigts d'os.
  */
 import { EYE, Model } from '../voxlib';
-import { BODY, BONE, CRUST, DARK, GLACE_PLEINE, LICHEN, drawnSince, eyeRow, finish, mouth, placeEyes, shade, topLava, topPatches } from './_commun';
+import { BODY, BONE, CRUST, DARK, GLACE_PLEINE, PLAQUE, drawnSince, eyeRow, finish, mouth, placeEyes, shade, topLine } from './_commun';
 
 export function golem(stage: 1 | 2 | 3): Model {
   const k = stage === 1 ? 1.3 : stage === 2 ? 1.6 : 1.9;
@@ -29,8 +29,10 @@ export function golem(stage: 1 | 2 | 3): Model {
   m.ellipsoid([cx, cy, legH + 2.2 * k], [3.2 * k, 2.4 * k, 2.4 * k], BODY); // bassin
   m.ellipsoid([cx, cy, tz], [3.6 * k, 2.6 * k, 2.8 * k], BODY); // torse
   m.ellipsoid([3.4 * k, cy, tz + (1.4 + shrug) * k], [2.0 * k, 2.2 * k, 1.8 * k], BODY, true); // épaules de roche
+  m.ellipsoid([3.5 * k, cy - 0.2 * k, tz + (2.4 + shrug) * k], [1.7 * k, 1.9 * k, 0.9 * k], PLAQUE, true); // dalles claires des épaules
+  m.ellipsoid([cx, cy - 2.0 * k, legH + 2.4 * k], [2.4 * k, 0.9 * k, 1.4 * k], PLAQUE); // dalle du ventre
   // --- petite tête enfoncée entre les épaules
-  const hr = (stage === 1 ? 2.2 : 1.9) * k;
+  const hr = (stage === 1 ? 2.6 : 2.0) * k; // visage lisible
   const hy = cy - 1.2 * k;
   const hz = tz + 2.6 * k;
   m.ellipsoid([cx, hy, hz], [hr, hr * 0.9, hr * 0.85], BODY);
@@ -42,7 +44,12 @@ export function golem(stage: 1 | 2 | 3): Model {
   if (stage === 1) {
     m.box(eo, eo + 1, ey - 1, ey + 2, ez + 2, ez + 3, BODY, true); // sourcils froncés : bas à l'intérieur…
     m.box(eo + 1, eo + 2, ey - 1, ey + 2, ez + 3, ez + 4, BODY, true); // …haut à l'extérieur
-  } else m.box(eo - 1, eo + 2, ey - 1, ey + 2, ez + 2, ez + 3, BODY, true); // arcade lourde
+  } else if (stage === 2) {
+    // méfiant : un sourcil levé (asymétrie), l'autre bas et froncé
+    const c = Math.trunc(cx);
+    m.box(c + eo, c + eo + 2, ey - 1, ey + 2, ez + 3, ez + 4, PLAQUE);
+    m.box(c - eo - 2, c - eo, ey - 1, ey + 2, ez + 2, ez + 3, PLAQUE);
+  } else m.box(eo - 1, eo + 2, ey - 1, ey + 2, ez + 2, ez + 3, PLAQUE, true); // arcade lourde
   if (stage === 3) m.box(eo, eo + 2, ey, ey + 1, ez + 1, ez + 2, BODY, true); // paupières mi-closes (calme)
   const mz = Math.round(hz - hr * 0.55);
   const my = mouth(m, mz, stage === 3 ? 2 : 1, stage === 1 ? 'bas' : 'plat');
@@ -50,10 +57,13 @@ export function golem(stage: 1 | 2 | 3): Model {
   // --- bras énormes : épaule, avant-bras épais, poings / mains
   const ax = (stage === 1 ? 4.4 : 3.5) * k;
   if (stage === 1) {
-    // poings joints devant lui (il se réchauffe)
-    m.capsule([ax, cy, tz + 0.6 * k], [ax - 0.4, cy - 2.2 * k, tz - 1.6 * k], 1.5 * k, 1.3 * k, BODY, true);
-    m.capsule([ax - 0.4, cy - 2.2 * k, tz - 1.6 * k], [1.4 * k, cy - 3.2 * k, tz - 1.4 * k], 1.3 * k, 1.2 * k, BODY, true);
-    m.ellipsoid([1.2 * k, cy - 3.4 * k, tz - 1.4 * k], [1.4 * k, 1.3 * k, 1.3 * k], BODY, true); // poings qui se touchent
+    // frileux : il se serre dans ses bras (bras croisés sur le torse, mains sous les aisselles), épaules remontées
+    m.capsule([ax, cy, tz + 0.8 * k], [ax - 0.2, cy - 1.8 * k, tz - 1.4 * k], 1.5 * k, 1.35 * k, BODY, true); // bras
+    m.capsule([cx + (ax - 0.2), cy - 1.8 * k, tz - 1.4 * k], [cx - 2.6 * k, cy - 2.6 * k, tz - 0.2 * k], 1.3 * k, 1.2 * k, BODY); // avant-bras droit, par-dessus
+    m.capsule([cx - (ax - 0.2), cy - 1.8 * k, tz - 1.8 * k], [cx + 2.6 * k, cy - 2.4 * k, tz - 0.9 * k], 1.25 * k, 1.15 * k, BODY); // avant-bras gauche, dessous
+    m.ellipsoid([cx - 2.8 * k, cy - 2.4 * k, tz + 0.1 * k], [1.0 * k, 1.0 * k, 1.0 * k], BODY); // main sous l'aisselle
+    m.ellipsoid([cx + 2.8 * k, cy - 2.2 * k, tz - 0.7 * k], [1.0 * k, 1.0 * k, 1.0 * k], BODY);
+    m.ellipsoid([cx, cy - 3.0 * k, tz - 0.9 * k], [2.6 * k, 0.9 * k, 0.9 * k], PLAQUE); // dalle des avant-bras croisés
   } else {
     for (const s of [1, -1]) {
       const raised = stage === 2 && s === 1; // Cryolithe lève un poing (méfiant)
@@ -93,28 +103,24 @@ export function golem(stage: 1 | 2 | 3): Model {
 
   // --- jambes courtes en piliers, pieds larges
   const before = m.v.slice();
-  const lat = 2.2 * k;
+  const lat = 2.5 * k;
   const lr = 1.6 * k;
   m.capsule([lat, cy, legH + 1.4 * k], [lat + 0.2, cy, 1.4], lr * 1.1, lr, BODY, true);
-  const fx0 = Math.floor(lat + 0.2 - lr - 0.3);
-  const fx1 = Math.ceil(lat + 0.2 + lr + 0.3);
+  const fx0 = Math.floor(lat + 0.2 - lr * 0.8);
+  const fx1 = Math.ceil(lat + 0.2 + lr * 0.8);
   const fy0 = Math.floor(cy - 1.8 * k);
   m.box(fx0, fx1, fy0, Math.ceil(cy + 1.4 * k), 0, 2, BODY, true);
   m.box(fx0, fx1, fy0 - 1, fy0, 0, 1, BONE, true); // orteils d'os
   const legDrawn = drawnSince(m, before);
 
   shade(m);
-  // strates du granit (flancs)
-  m.each((i, _x, _y, _z, xi, yi, zi) => {
-    if (m.v[i] === BODY && !legDrawn[i] && zi % 3 === 0 && m.get(xi, yi, zi + 1) !== 0) m.v[i] = CRUST;
-  });
-  const body = [DARK, BODY, CRUST];
+  const body = [DARK, BODY, CRUST, PLAQUE];
   // glace dans les fissures du torse (veine pleine, cœur de cristal lumineux), visible de face et d'en haut
   m.crack([[0.5, cy - 2.4 * k, tz + 1.6 * k], [1.4 * k, cy - 2.2 * k, tz], [0.8 * k, cy - 2.0 * k, legH + 2.2 * k]], GLACE_PLEINE, 0.9, body);
   m.crack([[0.5, cy - 2.4 * k, tz + 1.2 * k], [1.2 * k, cy - 2.2 * k, tz + 0.2 * k]], 241, 0.7, [GLACE_PLEINE]);
-  // la lueur court dans la glace du dessus (givre, stalactites, glacier) : pointes lumineuses
+  // la lueur court dans la glace : bords supérieurs des glaçons et du glacier (lignes, pas de points au hasard)
   m.each((i, _x, _y, _z, xi, yi, zi) => {
-    if (m.v[i] === GLACE_PLEINE && m.get(xi, yi, zi + 1) === 0 && (xi + yi + zi) % (stage === 1 ? 4 : 3) === 0) m.v[i] = 241;
+    if (m.v[i] === GLACE_PLEINE && m.get(xi, yi, zi + 1) === 0 && m.get(xi, yi + 1, zi) === 0) m.v[i] = 241;
   });
   const legs = m.mask((_x, _y, z) => z < legH - 0.2);
   for (let i = 0; i < legs.length; i++) legs[i] = legs[i] && legDrawn[i] ? 1 : 0;
@@ -123,8 +129,8 @@ export function golem(stage: 1 | 2 | 3): Model {
   m.each((i, _x, _y, _z, xi, yi, zi) => {
     if (sym[i] && !sym[m.idx(m.w - 1 - xi, yi, zi)]) legs[i] = 0;
   });
-  topPatches(m, [[1.0, cy + 1.2 * k, 0.8 + 0.3 * stage]], Math.round(tz), legs, LICHEN); // lichen gelé
-  const out = finish(m, legs);
-  topLava(out, stage === 1 ? 0.03 : stage === 2 ? 0.05 : 0.06, Math.round(tz), 'pointillé');
-  return out;
+  // veines de glace vues d'en haut : des épaules vers la nuque (en deux tronçons)
+  topLine(m, [[3.2 * k, cy - 0.6 * k], [1.4 * k, cy + 0.4 * k]], 0.45 + 0.2 * stage, 241, body, Math.round(tz), legs);
+  if (stage > 1) topLine(m, [[0.5, cy + 0.6 * k], [0.5, cy + 1.8 * k]], 0.45 + 0.2 * stage, 241, body, Math.round(tz), legs);
+  return finish(m, legs);
 }

@@ -212,8 +212,15 @@ export const ELEC = {
 export const LICHEN = 5;
 export const GLACE_PLEINE = 6;
 export const AMBRE = 7;
+/** Plaques et crêtes de pierre claire (porte du lot 6 : de grandes masses de couleur, pas des points). */
+export const PLAQUE = 8;
+/**
+ * Porte du lot 6 : granit d'une teinte principale (dessous, corps et dessus rapprochés : plus de « gravats »), plaques
+ * claires en grandes masses (PLAQUE), lueur de cristal en lignes.
+ */
 export const ROCHE = {
-  ...elementPalette(['#26262A', '#4A4A50', '#7C7A76', '#CFC6B4'], ['#6E9CD8', '#A9C8EE', '#DCEBFF'], '#FFC24A'),
+  ...elementPalette(['#404147', '#55565D', '#65666C', '#CFC6B4'], ['#6E9CD8', '#A9C8EE', '#DCEBFF'], '#FFC24A'),
+  [PLAQUE]: hexrgb('#A6A194'),
   [LICHEN]: hexrgb('#8A9A4E'),
   [GLACE_PLEINE]: hexrgb('#A9C9EA'),
   [AMBRE]: hexrgb('#D08A36'),
@@ -243,4 +250,59 @@ export function eyeRow(m: Model): number {
     if (m.v[i] === 248) ey = Math.min(ey, yi);
   });
   return ey;
+}
+
+/**
+ * Voile plane triangulaire (membrane d'aile repliée) entre trois points, d'épaisseur `thick` ; avec `mirror`, x est un
+ * décalage latéral (les deux côtés). Rien que des triangles pleins : une silhouette nette, de profil comme d'en haut.
+ */
+export function membrane(m: Model, a: [number, number, number], b: [number, number, number], c: [number, number, number], thick: number, color: number, mirror = true): void {
+  const sides = mirror ? [1, -1] : [0];
+  for (const s of sides) {
+    const P = (p: [number, number, number]): [number, number, number] => [s === 0 ? p[0] : m.cx + s * p[0], p[1], p[2]];
+    const A = P(a);
+    const B = P(b);
+    const C = P(c);
+    const u = [B[0] - A[0], B[1] - A[1], B[2] - A[2]];
+    const v = [C[0] - A[0], C[1] - A[1], C[2] - A[2]];
+    const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    const nl = Math.hypot(n[0], n[1], n[2]) || 1;
+    const uu = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
+    const vv = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+    const uv = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+    const den = uv * uv - uu * vv;
+    m.each((i, x, y, z) => {
+      const w = [x - A[0], y - A[1], z - A[2]];
+      if (Math.abs((w[0] * n[0] + w[1] * n[1] + w[2] * n[2]) / nl) > thick / 2) return;
+      const wu = w[0] * u[0] + w[1] * u[1] + w[2] * u[2];
+      const wv = w[0] * v[0] + w[1] * v[1] + w[2] * v[2];
+      const sP = (uv * wv - vv * wu) / den;
+      const tP = (uv * wu - uu * wv) / den;
+      if (sP >= -0.02 && tP >= -0.02 && sP + tP <= 1.02) m.v[i] = color;
+    });
+  }
+}
+
+/**
+ * Ligne lumineuse vue d'en haut (porte du lot 6 : la lueur en lignes, jamais en points) : peint les voxels du DESSUS
+ * (voisin du haut vide) proches d'une polyligne (décalage latéral, y), des deux côtés, au-dessus de minZ.
+ */
+export function topLine(m: Model, pts: [number, number][], width: number, color: number, from: number[], minZ = 0, legs?: Mask): void {
+  m.each((i, x, y, _z, xi, yi, zi) => {
+    if (zi < minZ || (legs && legs[i]) || !from.includes(m.v[i]) || m.get(xi, yi, zi + 1) !== 0) return;
+    const lat = Math.abs(x - m.cx);
+    for (let j = 0; j + 1 < pts.length; j++) {
+      const [ax, ay] = pts[j];
+      const [bx, by] = pts[j + 1];
+      const dx = bx - ax;
+      const dy = by - ay;
+      const L2 = dx * dx + dy * dy || 1e-9;
+      let t = ((lat - ax) * dx + (y - ay) * dy) / L2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      if (Math.hypot(lat - ax - t * dx, y - ay - t * dy) <= width) {
+        m.v[i] = color;
+        return;
+      }
+    }
+  });
 }

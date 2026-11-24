@@ -15,7 +15,7 @@
  * lumineux. Détails de matière : sabots d'os fendus, toison, lichen des mesas, strates du granit.
  */
 import { EYE, Model } from '../voxlib';
-import { AMBRE, BODY, BONE, CRUST, DARK, LICHEN, drawnSince, eyeRow, finish, mouth, placeEyes, shade, topLava, topPatches } from './_commun';
+import { AMBRE, BODY, BONE, CRUST, DARK, PLAQUE, drawnSince, eyeRow, finish, mouth, placeEyes, shade, topLine } from './_commun';
 
 export function bondisseur(stage: 1 | 2 | 3): Model {
   const k = stage === 1 ? 1.35 : stage === 2 ? 1.55 : 1.95;
@@ -23,7 +23,7 @@ export function bondisseur(stage: 1 | 2 | 3): Model {
   const cx = m.cx;
   const cy = m.l * 0.5;
   const legH = 3.4 * k; // hanches
-  const lean = stage === 1 ? 0.6 : stage === 3 ? 0.4 : 0; // penché en avant (prêt à bondir / coup de front)
+  const lean = 0; // porte du lot 6 : buste DROIT (ne plus ressembler aux gargouilles) // penché en avant (prêt à bondir / coup de front)
 
   // --- bassin, buste droit (ou penché), poitrail
   m.ellipsoid([cx, cy + 0.8 * k, legH + 1.6 * k], [2.8 * k, 2.6 * k, 2.2 * k], BODY); // bassin
@@ -32,14 +32,11 @@ export function bondisseur(stage: 1 | 2 | 3): Model {
   m.ellipsoid([cx, cy - (0.9 + lean) * k, tz - 1.2 * k], [2.2 * k, 1.5 * k, 2.0 * k * (stage === 3 ? 1.15 : 1)], BODY); // poitrail
   m.ellipsoid([2.2 * k, cy - lean * k, tz + 0.2 * k], [1.3 * k, 1.4 * k, 1.2 * k], BODY, true); // épaules
   // toison (Mouflambre, puis Bélithan) : bourrelets clairs sur le poitrail et les épaules
-  if (stage > 1)
-    for (const [lx, dy, dz, r] of [
-      [0, -1.6, -0.6, 1.6],
-      [1.4, -1.3, 0.4, 1.3],
-      [2.4, -0.6, 0.9, 1.2],
-      [0.8, -1.8, -1.9, 1.2],
-    ] as const)
-      m.ellipsoid([lx > 0 ? lx * k : cx, cy + (dy - lean) * k, tz + dz * k], [r * k, r * 0.8 * k, r * 0.8 * k], BONE, lx > 0);
+  // toison COMPACTE (porte du lot 6) : une seule masse claire sur le poitrail et le haut des épaules
+  if (stage > 1) {
+    m.ellipsoid([cx, cy - 1.3 * k, tz - 0.3 * k], [2.3 * k, 1.3 * k, 1.9 * k], PLAQUE);
+    m.ellipsoid([1.8 * k, cy - 0.6 * k, tz + 0.8 * k], [1.2 * k, 1.2 * k, 0.9 * k], PLAQUE, true);
+  }
 
   // --- tête de bélier
   const hr = (stage === 1 ? 2.3 : 2.1) * k;
@@ -64,8 +61,8 @@ export function bondisseur(stage: 1 | 2 | 3): Model {
 
   // --- cornes enroulées : un arc qui part en arrière puis s'enroule vers l'avant, sur le côté de la tête
   const hornC = stage === 2 ? AMBRE : BONE;
-  const R = (stage === 1 ? 1.3 : stage === 2 ? 1.8 : 2.2) * k; // rayon de l'enroulement
-  const th = (stage === 1 ? 0.75 : stage === 2 ? 0.8 : 0.9) * k; // épaisseur
+  const R = (stage === 1 ? 1.5 : stage === 2 ? 2.0 : 2.5) * k; // rayon de l'enroulement
+  const th = (stage === 1 ? 0.6 : stage === 2 ? 0.65 : 0.75) * k; // tube fin : le creux de l'enroulement se voit // épaisseur
   const turns = stage === 1 ? 0.55 : stage === 2 ? 0.85 : 1.05;
   const preHorns = m.v.slice();
   for (const s of [1, -1]) {
@@ -99,18 +96,18 @@ export function bondisseur(stage: 1 | 2 | 3): Model {
     m.box(Math.floor(ax), Math.ceil(ax + 1.2), Math.floor(cy - (2.9 + lean) * k), Math.floor(cy - (2.3 + lean) * k), Math.floor(tz - 2.2 * k), Math.ceil(tz - 1.4 * k), BONE, true); // sabots des mains
   }
   // --- queue épaisse posée au sol (trépied)
-  m.capsule([cx, cy + 2.6 * k, legH + 1.6 * k], [cx, cy + 5.8 * k, 1.0 * k], 1.4 * k, 1.0 * k, BODY);
+  m.capsule([cx, cy + 2.4 * k, legH + 1.6 * k], [cx, cy + 4.6 * k, 1.0 * k], 1.2 * k, 0.9 * k, BODY); // queue courte
 
   // --- jambes de sauteur : grosse cuisse, jarret haut, long pied à plat, sabot d'os fendu
   const before = m.v.slice();
   const lat = 2.4 * k;
   const lr = 1.5 * k;
-  m.ellipsoid([lat, cy + 1.0 * k, legH + 0.6 * k], [lr * 1.1, lr * 1.6, lr * 1.3], BODY, true); // cuisse
+  m.ellipsoid([lat, cy + 1.0 * k, legH + 0.6 * k], [lr * 1.3, lr * 1.75, lr * 1.5], BODY, true); // cuisse puissante
   m.capsule([lat, cy + 1.6 * k, legH * 0.6], [lat + 0.2, cy + 2.4 * k, 1.4], lr * 0.85, lr * 0.7, BODY, true); // jarret, vers l'arrière
   const fx0 = Math.floor(lat + 0.2 - lr * 0.8);
   const fx1 = Math.ceil(lat + 0.2 + lr * 0.8);
-  const fy0 = Math.floor(cy - 2.2 * k);
-  m.box(fx0, fx1, fy0, Math.ceil(cy + 3.0 * k), 0, 2, BODY, true); // long pied à plat
+  const fy0 = Math.floor(cy - 1.0 * k);
+  m.box(fx0, fx1, fy0, Math.ceil(cy + 2.0 * k), 0, 2, BODY, true); // pied court (plus de « skis »)
   m.box(fx0, fx1, fy0 - 1, fy0 + 1, 0, 2, BONE, true); // sabot d'os
   const fc = Math.trunc(lat + 0.2);
   m.box(fc, fc + 1, fy0 - 1, fy0, 0, 2, 0, true); // fente du sabot
@@ -121,15 +118,19 @@ export function bondisseur(stage: 1 | 2 | 3): Model {
   // stries des cornes (cornes d'ambre striées, sillons de cristal lumineux à la forme finale)
   m.each((i, _x, y, z) => {
     if (!hornMask[i] || m.v[i] !== hornC) return;
-    if (Math.floor(Math.hypot(y - hy, z - hz) * 1.3) % (stage === 3 ? 4 : 3) === 0) m.v[i] = stage === 3 ? 241 : stage === 2 ? CRUST : BONE;
+    const ring = Math.floor(Math.hypot(y - hy, z - hz) * 1.3);
+    if (stage === 3 && ring % 6 === 0) m.v[i] = 241; // sillons de cristal
+    else if (stage === 2 && ring % 6 === 0) m.v[i] = 241;
+    else if (stage === 2 && ring % 3 === 0) m.v[i] = CRUST; // stries de l'ambre
   });
   // fissure de cristal au front (petite), puis sur l'encolure
   m.crack([[0.5, hy - hr * 0.7, hz + hr * 0.45], [0.5, hy, hz + hr * 0.85]], 241, 0.7, body);
   if (stage > 1) m.crack([[1.0 * k, cy - (0.8 + lean) * k, tz + 1.4 * k], [2.2 * k, cy - lean * k, tz + 1.0 * k]], 241, 0.7, body);
   const legs = m.mask((_x, _y, z) => z < legH * 0.9);
   for (let i = 0; i < legs.length; i++) legs[i] = legs[i] && legDrawn[i] ? 1 : 0;
-  topPatches(m, [[1.6, cy + 1.8 * k, 0.9 + 0.3 * stage]], Math.round(legH + 1.5 * k), legs, LICHEN); // lichen des mesas
-  const out = finish(m, legs);
-  topLava(out, stage === 1 ? 0.03 : stage === 2 ? 0.045 : 0.06, Math.round(tz - 1), 'pointillé');
-  return out;
+  // lueur en lignes vues d'en haut : crête du crâne et ligne du dos (deux tronçons)
+  topLine(m, [[0.5, hy - hr * 0.5], [0.5, hy + hr * 0.7]], 0.45 + 0.2 * stage, 241, body, Math.round(hz));
+  topLine(m, [[0.5, cy - 0.2 * k], [0.5, cy + 1.2 * k]], 0.45 + 0.2 * stage, 241, body, Math.round(legH + 2 * k), legs);
+  if (stage > 1) topLine(m, [[0.5, cy + 1.8 * k], [0.5, cy + 3.4 * k]], 0.45 + 0.2 * stage, stage === 3 ? 242 : 241, body, 2, legs);
+  return finish(m, legs);
 }
