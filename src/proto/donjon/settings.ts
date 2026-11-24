@@ -83,3 +83,16 @@ export function settingsToQuery(s: DonjonSettings): string {
 }
 
 export const DENSITY_MULT: Record<Density, number> = { faible: 0.6, normale: 1, forte: 1.5 };
+
+/** Touches de chaque combinaison (vérifiées sans conflit : voir docs/proto/TOUCHES.md). */
+export function keysFor(s: DonjonSettings): [string, string][] {
+  const out: [string, string][] = [];
+  if (s.scheme === 1) out.push(['ZQSD', 'bouger'], ['Clic gauche', 'désigner un ennemi (attaque automatique sinon)']);
+  if (s.scheme === 2) out.push(['Clic gauche', 'aller au sol · maintenu sur un ennemi : l’attaquer']);
+  if (s.scheme === 3) out.push(['ZQSD', 'bouger'], ['Clic gauche', 'tirer vers le curseur']);
+  out.push(['1 · 2', 'sorts vers le curseur'], ['Espace', s.scheme === 2 ? 'esquive vers le curseur' : 'esquive']);
+  if (s.version === 'A') out.push(['F', 'compagnons : la cible sous le curseur'], ['R', 'compagnons : revenez'], ['3 · 4', 'sorts des compagnons']);
+  else out.push(['Molette', 'choisir une créature'], ['Clic droit', 'elle bondit au point visé (2 crans d’Élan)'], ['R', 'rappel (rend 1 cran)']);
+  out.push(['F1', 'réglages'], ['M', 'mini-carte']);
+  return out;
+}

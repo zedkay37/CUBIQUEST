@@ -11,7 +11,7 @@ import { makeDonjonBot } from './dbots';
 import { Bar, Chip } from '../ProtoSalle';
 import { DonjonEnv } from './env';
 import { DonjonLevel, enterFloor } from './level';
-import { DENSITY_MULT, PRESET_EXPLORATION, RESTART_KEYS, type DonjonSettings, readSettings, settingsToQuery } from './settings';
+import { DENSITY_MULT, PRESET_EXPLORATION, RESTART_KEYS, type DonjonSettings, keysFor, readSettings, settingsToQuery } from './settings';
 import { SettingsPanel } from './SettingsPanel';
 import { Minimap } from './Minimap';
 
@@ -42,19 +42,6 @@ const CAM: Record<string, number> = { proche: 0.72, moyenne: 1, eloignee: 1.35 }
 function camOffset(s: DonjonSettings): [number, number, number] {
   const k = CAM[s.cam];
   return s.angle === 'forte' ? [0, 17 * k, 11 * k] : [0, 10.5 * k, 15 * k];
-}
-
-/** Touches de chaque combinaison (vérifiées sans conflit : voir docs/proto/TOUCHES.md). */
-export function keysFor(s: DonjonSettings): [string, string][] {
-  const out: [string, string][] = [];
-  if (s.scheme === 1) out.push(['ZQSD', 'bouger'], ['Clic gauche', 'désigner un ennemi (attaque automatique sinon)']);
-  if (s.scheme === 2) out.push(['Clic gauche', 'aller au sol · maintenu sur un ennemi : l’attaquer']);
-  if (s.scheme === 3) out.push(['ZQSD', 'bouger'], ['Clic gauche', 'tirer vers le curseur']);
-  out.push(['1 · 2', 'sorts vers le curseur'], ['Espace', s.scheme === 2 ? 'esquive vers le curseur' : 'esquive']);
-  if (s.version === 'A') out.push(['F', 'compagnons : la cible sous le curseur'], ['R', 'compagnons : revenez'], ['3 · 4', 'sorts des compagnons']);
-  else out.push(['Molette', 'choisir une créature'], ['Clic droit', 'elle bondit au point visé (2 crans d’Élan)'], ['R', 'rappel (rend 1 cran)']);
-  out.push(['F1', 'réglages'], ['M', 'mini-carte']);
-  return out;
 }
 
 function Play({ settings, onEnd, onSettings, panel, setPanel }: { settings: DonjonSettings; onEnd: (r: DescentResults) => void; onSettings: (s: DonjonSettings) => void; panel: boolean; setPanel: (v: boolean) => void }) {

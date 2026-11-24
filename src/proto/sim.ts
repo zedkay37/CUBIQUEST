@@ -575,7 +575,7 @@ export function damage(g: Game, target: Unit, amount: number, source: string, fr
   let dmg = amount;
   // bouclier frontal du Soigneur : seulement dans le donjon (la salle de PROTO-MENEUR reste telle quelle), et tant
   // qu'il a un allié à protéger (seul, il ne bloque plus : pas de combat sans fin contre un Soigneur acculé)
-  if (target.role === 'soigneur' && from && g.level !== SALLE && enemies(g).some((o) => o.role !== 'soigneur' && o.aggro && dist(o, target) < 11)) {
+  if (from && shieldActive(g, target)) {
     let diff = Math.atan2(from.y - target.y, from.x - target.x) - target.face;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     if (Math.abs(diff) < 1.15) {
@@ -600,6 +600,10 @@ export function damage(g: Game, target: Unit, amount: number, source: string, fr
     if (!target.aggro) wakeGroup(g, target);
   } else g.dmgTaken += dmg;
   if (target.hp <= 0.0001) kill(g, target);
+}
+/** Le bouclier du Soigneur est levé (donjon seulement, tant qu'il a un allié à protéger). */
+export function shieldActive(g: Game, u: Unit): boolean {
+  return u.role === 'soigneur' && u.alive && g.level !== SALLE && enemies(g).some((o) => o.role !== 'soigneur' && o.aggro && dist(o, u) < 11);
 }
 export function heal(g: Game, target: Unit, amount: number) {
   if (!target.alive) return;

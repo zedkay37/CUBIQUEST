@@ -12,7 +12,7 @@ import { DANGER } from '../game/styleGuide';
 import { registerSubjects, buildAnyStyle } from '../components/styles/allStyles';
 import { getToonGradient, type StyledModel } from '../components/styles/magmaStyles';
 import { loadVoxSubject } from '../components/styles/voxSubjects';
-import { type Game, type Telegraph, type Unit, type Vec, ELAN, PLATFORM, PLATFORM_H, RAMP, ROOM, heightAt } from './sim';
+import { type Game, type Telegraph, type Unit, type Vec, shieldActive, ELAN, PLATFORM, PLATFORM_H, RAMP, ROOM, heightAt } from './sim';
 
 const SPECIES_FILES: { id: string; ref: boolean; scaleOf: string; glow: number }[] = [
   { id: 'calcinarque-legendaire', ref: true, scaleOf: 'cendrox', glow: 0.45 },
@@ -94,6 +94,9 @@ interface UnitView {
   glow: number;
   hitT: number;
   lastHp: number;
+  /** PROTO-DONJON : bouclier frontal du Soigneur, blindage du Blindé. */
+  shield: THREE.Mesh | null;
+  armor: THREE.Mesh | null;
 }
 interface TeleView {
   group: THREE.Group;
@@ -116,6 +119,8 @@ export class ProtoView {
   private waves: { mesh: THREE.Mesh; t: number }[] = [];
   private beams: { line: THREE.Line; t: number }[] = [];
   private reticle: THREE.Mesh;
+  private targetRing: THREE.Mesh;
+  private goalRing: THREE.Mesh;
   private bondCircle: THREE.Line;
   private raycaster = new THREE.Raycaster();
   private ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -161,6 +166,12 @@ export class ProtoView {
     this.reticle.rotation.x = -Math.PI / 2;
     this.reticle.renderOrder = 9;
     this.scene.add(this.reticle);
+    this.targetRing = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 4, 1), new THREE.MeshBasicMaterial({ color: '#FFD02A', transparent: true, opacity: 0.95, depthTest: false }));
+    this.targetRing.rotation.x = -Math.PI / 2;
+    this.targetRing.renderOrder = 9;
+    this.goalRing = new THREE.Mesh(new THREE.RingGeometry(0.25, 0.4, 16), new THREE.MeshBasicMaterial({ color: '#FFD02A', transparent: true, opacity: 0.8, depthTest: false }));
+    this.goalRing.rotation.x = -Math.PI / 2;
+    this.scene.add(this.targetRing, this.goalRing);
     const pts: THREE.Vector3[] = [];
     for (let i = 0; i <= 64; i++) pts.push(new THREE.Vector3(Math.cos((i / 64) * Math.PI * 2) * ELAN.bondRange, 0.05, Math.sin((i / 64) * Math.PI * 2) * ELAN.bondRange));
     this.bondCircle = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: '#FFE27A', dashSize: 0.5, gapSize: 0.4, transparent: true, opacity: 0.7 }));
@@ -245,7 +256,21 @@ export class ProtoView {
       root.add(icon);
     }
     this.scene.add(root);
-    v = { root, body, model, ring, barBg, bar, glow: 0, hitT: 0, lastHp: u.hp };
+    let shield: THREE.Mesh | null = null;
+    let armor: THREE.Mesh | null = null;
+    if (u.role === 'soigneur') {
+      // bouclier : un arc translucide devant lui (il tourne avec le corps)
+      shield = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 1.3, 20, 1, true, -1.15, 2.3), new THREE.MeshBasicMaterial({ color: '#7FE3FF', transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }));
+      shield.position.y = 0.65;
+      body.add(shield);
+    }
+    if (u.armor) {
+      armor = new THREE.Mesh(new THREE.RingGeometry(u.r + 0.35, u.r + 0.55, 6), new THREE.MeshBasicMaterial({ color: '#C9CED6', transparent: true, opacity: 0.95, depthWrite: false }));
+      armor.rotation.x = -Math.PI / 2;
+      armor.position.y = 0.05;
+      root.add(armor);
+    }
+    v = { root, body, model, ring, barBg, bar, glow: 0, hitT: 0, lastHp: u.hp, shield, armor };
     this.units.set(u.id, v);
     return v;
   }
@@ -339,6 +364,14 @@ export class ProtoView {
           this.beams.push({ line, t: 0.4 });
         }
       } else if (e.type === 'dodge') this.wave(e, '#FFFFFF', 1.2);
+      else if (e.type === 'block') this.wave(e, '#E8F6FF', 0.8);
+      else if (e.type === 'break') {
+        this.wave(e, '#FFB347', 2.4);
+        this.flash(e, '#FFB347', 30);
+      } else if (e.type === 'interrupt') {
+        this.wave(e, '#7FD7FF', 6);
+        this.flash(e, '#7FD7FF', 60, 2);
+      } else if (e.type === 'pickup') this.wave(e, e.color ?? '#FFE27A', 1.4);
     }
     // unités
     const seen = new Set<number>();
@@ -429,6 +462,22 @@ export class ProtoView {
       if (b.t <= 0) this.scene.remove(b.line);
       return b.t > 0;
     });
+    // cible désignée (schémas 1 et 2) et point où aller (schéma 2)
+    const tgt = g.units.find((u) => u.id === g.leaderTarget && u.alive);
+    this.targetRing.visible = Boolean(tgt);
+    if (tgt) {
+      this.targetRing.position.copy(toW(tgt, heightAt(tgt) + 0.06));
+      this.targetRing.scale.setScalar(tgt.r + 0.6);
+      this.targetRing.rotation.z = this.time * 2;
+    }
+    this.goalRing.visible = Boolean(g.moveGoal) && !tgt;
+    if (g.moveGoal) this.goalRing.position.copy(toW(g.moveGoal, 0.06));
+    for (const u of g.units) {
+      const v = this.units.get(u.id);
+      if (!v) continue;
+      if (v.shield) v.shield.visible = shieldActive(g, u);
+      if (v.armor) v.armor.visible = u.armor;
+    }
     // viseur et portée du bond (B)
     const L = g.leader;
     this.reticle.position.copy(toW(aim, heightAt(aim) + 0.06));
