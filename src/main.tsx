@@ -25,6 +25,9 @@ const isArtGallery = galleryParam === 'art';
 const isStylesGallery = galleryParam === 'styles';
 // `?gallery=planche` : planche d'une créature ou d'un lot rendue par le jeu (sprint BESTIAIRE, outil)
 const isPlancheGallery = galleryParam === 'planche';
+// `?proto=salle` : maquette du sprint PROTO-MENEUR (page isolée ; ne lit ni n'écrit la sauvegarde ni les options du jeu)
+const isProto = new URLSearchParams(window.location.search).get('proto') === 'salle';
+const ProtoSalle = lazy(() => import('./proto/ProtoSalle.tsx').then((module) => ({default: module.ProtoSalle})));
 const PlancheGallery = lazy(() => import('./components/PlancheGallery.tsx').then((module) => ({default: module.PlancheGallery})));
 const StylesGallery = lazy(() => import('./components/StylesGallery.tsx').then((module) => ({default: module.StylesGallery})));
 const ArtGallery = lazy(() => import('./components/ArtGallery.tsx').then((module) => ({default: module.ArtGallery})));
@@ -51,7 +54,7 @@ setSculptModels(true);
 setArtDecor(true);
 // qualité Bas choisie (options ou ?quality=low) : versions simplifiées dès la première scène
 {
-  const q = new URLSearchParams(window.location.search).get('quality') ?? loadSettings().quality;
+  const q = new URLSearchParams(window.location.search).get('quality') ?? (isProto ? 'high' : loadSettings().quality);
   if (q === 'low') {
     setDecorDetail('low');
     setSculptDetail('low');
@@ -73,7 +76,11 @@ const voxReady = Promise.all(
 );
 
 voxReady.then(() => createRoot(document.getElementById('root')!).render(
-  isPlancheGallery ? (
+  isProto ? (
+    <Suspense fallback={null}>
+      <ProtoSalle />
+    </Suspense>
+  ) : isPlancheGallery ? (
     <Suspense fallback={null}>
       <PlancheGallery />
     </Suspense>

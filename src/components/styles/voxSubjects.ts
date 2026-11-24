@@ -130,3 +130,11 @@ export function loadVoxSubjects(): Promise<StyleSubject[]> {
   );
   return cache;
 }
+
+/** PROTO-MENEUR : charge n'importe quel `.vox` du jeu (ou une référence) comme sujet de style, à la demande. */
+export async function loadVoxSubject(spec: (typeof VOX_SUBJECTS_SPEC)[number]): Promise<StyleSubject> {
+  const pool = spec.ref ? REF_VOX : GAME_VOX;
+  const url = Object.entries(pool).find(([p]) => p.endsWith(`/${spec.file}.vox`))?.[1];
+  if (!url) throw new Error(`fichier introuvable : ${spec.file}.vox`);
+  return subjectFrom(spec, await (await fetch(url)).arrayBuffer());
+}
