@@ -239,8 +239,8 @@ export class BancState {
     return nearest(u, foes);
   }
   /** Où se tenir quand rien n'est à portée : sa ligne (avant : vers le boss ; arrière : en retrait). */
-  slot(g: Game, u: Unit): Vec {
-    const a = this.anchorFor(g);
+  slot(g: Game, u: Unit, at?: Vec): Vec {
+    const a = at ?? this.anchorFor(g);
     const i = SPECIES.indexOf(u.species as Sp);
     const front = this.cfg.ligne[u.species as Sp] === 'avant';
     return { x: a.x + (i - 1) * 2, y: a.y + (front ? 2.2 : -2) };
@@ -455,8 +455,9 @@ export function newBanc(cfg: BancConfig, seed: number, recordEvents = true): Gam
   Object.assign(L, { species: first, name: NAMES[first], comp: D[first], hp: D[first].hp, maxHp: D[first].hp, speed: D[first].speed });
   const lvl = new BancLevel(seed);
   g.level = lvl;
+  // départ identique dans toutes les variantes : chacun sur sa ligne, autour du même point
   for (const u of st.team(g)) {
-    const s = st.slot(g, u);
+    const s = st.slot(g, u, { x: 15, y: 8 });
     u.x = s.x;
     u.y = s.y - 1;
   }
