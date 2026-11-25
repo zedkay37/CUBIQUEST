@@ -10,7 +10,7 @@ import { ProtoView, loadProtoModels } from '../view';
 import { DonjonEnv } from '../donjon/env';
 import { ARENA_CENTER, BOSS, DEFAULT_CONFIG, NAMES, ROLE, SKILL, SPECIES, type BancConfig, type Ligne, type Priorite, type Sp, type Trial, type Variante, newBanc, trialResults } from './banc';
 
-const BANC_STORAGE_KEY = { essais: 'cubiquest_proto_banc_essais', prediction: 'cubiquest_proto_banc_prediction', criteres: 'cubiquest_proto_banc_criteres', rotation: 'cubiquest_proto_banc_rotation' };
+const BANC_STORAGE_KEY = { essais: 'cubiquest_proto_banc_essais', prediction: 'cubiquest_proto_banc_prediction', rotation: 'cubiquest_proto_banc_rotation' };
 const load = <T,>(k: string, d: T): T => {
   try {
     const v = localStorage.getItem(k);
@@ -27,8 +27,19 @@ const save = (k: string, v: unknown) => {
   }
 };
 
-/** Les 10 critères de la synthèse : leurs intitulés ne sont pas dans la fiche, le joueur les saisit une fois. */
-const DEFAULT_CRITERES = Array.from({ length: 10 }, (_, i) => `Critère ${i + 1}`);
+/** Les 10 critères de la synthèse (fixés par le joueur), notés de 1 à 5 après chaque essai. */
+const CRITERES = [
+  'Ai-je pris des décisions réellement importantes ?',
+  'Ai-je compris pourquoi j’ai gagné ou perdu ?',
+  'Chaque créature a-t-elle joué un rôle significatif ?',
+  'Ai-je eu envie d’expérimenter une autre composition ?',
+  'Ai-je eu envie de recommencer immédiatement ?',
+  'Les commandes étaient-elles naturelles et agréables ?',
+  'Me suis-je amusé indépendamment des récompenses ?',
+  'Ai-je ressenti la personnalité tactique de chaque créature ?',
+  'Ai-je ressenti une frustration liée aux commandes plutôt qu’à mes propres erreurs ?',
+  'Ai-je envie de maîtriser davantage ce système ?',
+];
 export interface Essai extends Trial {
   date: string;
   pauses: number[];
@@ -46,7 +57,7 @@ const PRIOS: [Priorite, string][] = [['proche', 'la plus proche'], ['invocations
 
 function Home({ onStart }: { onStart: (v: Variante, hidden: boolean) => void }) {
   const [pred, setPred] = useState(() => load<string>(BANC_STORAGE_KEY.prediction, ''));
-  const [crit, setCrit] = useState(() => load<string[]>(BANC_STORAGE_KEY.criteres, DEFAULT_CRITERES));
+  const crit = CRITERES;
   const essais = load<Essai[]>(BANC_STORAGE_KEY.essais, []);
   const urlV = new URLSearchParams(window.location.search).get('variante');
   const download = (name: string, text: string, type: string) => {
@@ -113,24 +124,7 @@ function Home({ onStart }: { onStart: (v: Variante, hidden: boolean) => void }) 
             <button type="button" onClick={() => download('banc-controle.csv', csv(), 'text/csv')} className="rounded bg-white/10 px-3 py-1 hover:bg-white/20">Exporter (CSV)</button>
           </div>
         </div>
-        <details className="mt-4 rounded-lg bg-white/5 p-3 text-sm">
-          <summary className="cursor-pointer font-bold">Les 10 critères de la grille (à saisir une fois)</summary>
-          <div className="mt-2 grid gap-1 md:grid-cols-2">
-            {crit.map((c, i) => (
-              <input
-                key={i}
-                value={c}
-                onChange={(e) => {
-                  const n = [...crit];
-                  n[i] = e.target.value;
-                  setCrit(n);
-                  save(BANC_STORAGE_KEY.criteres, n);
-                }}
-                className="rounded bg-slate-800 px-2 py-1"
-              />
-            ))}
-          </div>
-        </details>
+
       </div>
     </div>
   );
@@ -390,12 +384,12 @@ function why(t: Trial): string[] {
   if (parts[0]) out.push(`${parts[0][0]} a fait ${parts[0][1]} % des dégâts${parts[0][1] > 60 ? ' (effet héros : plus de 60 %)' : ''}.`);
   const worst = Object.entries(t.degats_subis).sort((a, b) => b[1] - a[1])[0];
   if (worst) out.push(`${worst[0]} a le plus encaissé (${worst[1]}).`);
-  if (t.issue === 'défaite' && t.boss_pv_restants) out.push(`Il restait ${t.boss_pv_restants} PV au Gardien (${Math.round((100 * t.boss_pv_restants) / 2200)} %).`);
+  if (t.issue === 'défaite' && t.boss_pv_restants) out.push(`Il restait ${t.boss_pv_restants} PV au Gardien (${Math.round((100 * t.boss_pv_restants) / BOSS.hp)} %).`);
   return out;
 }
 
 function End({ t, pauses, hidden, onSaved }: { t: Trial; pauses: number[]; hidden: boolean; onSaved: () => void }) {
-  const crit = load<string[]>(BANC_STORAGE_KEY.criteres, DEFAULT_CRITERES);
+  const crit = CRITERES;
   const [notes, setNotes] = useState<number[]>(crit.map(() => 0));
   const [agace, setAgace] = useState('');
   const [frus, setFrus] = useState(false);
@@ -422,7 +416,7 @@ function End({ t, pauses, hidden, onSaved }: { t: Trial; pauses: number[]; hidde
         <div className="grid gap-1 text-sm">
           {crit.map((c, i) => (
             <div key={i} className="flex items-center gap-2">
-              <span className="w-64 text-white/80">{c}</span>
+              <span className="flex-1 text-white/80">{c}</span>
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} type="button" disabled={saved} onClick={() => setNotes(notes.map((x, k) => (k === i ? n : x)))} className={`h-7 w-7 rounded ${notes[i] === n ? 'bg-amber-300 font-bold text-slate-900' : 'bg-white/10'}`}>
                   {n}

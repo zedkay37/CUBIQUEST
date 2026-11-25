@@ -49,7 +49,9 @@ export const DEFAULT_CONFIG: BancConfig = {
   priorite: { magmadrake: 'proche', crabastion: 'boss', raicube: 'invocations' },
 };
 
-export const BOSS = { hp: 2200, summonEvery: 11, bigEvery: 15, bigFirst: 9, bigCast: 2.5, bigDmg: 130, vuln: 6, vulnMult: 1.6, zoneEvery: 6, zoneDmg: 55 };
+/** Temps de réaction de l'IA face à une zone au sol (s), le même dans toutes les variantes. */
+export const REACTION = 0.5;
+export const BOSS = { hp: 2000, summonEvery: 11, bigEvery: 15, bigFirst: 9, bigCast: 2.5, bigDmg: 130, vuln: 6, vulnMult: 1.6, zoneEvery: 6, zoneDmg: 55 };
 const W = 30;
 const H = 26;
 export const BOSS_HOME: Vec = { x: 15, y: 19 };
@@ -247,7 +249,8 @@ export class BancState {
   }
   /** Décision d'une créature : sortir d'une zone, aller vers sa cible ou sa place, frapper. Renvoie l'entrée voulue. */
   decide(g: Game, u: Unit): { move: Vec; target: Unit | null } {
-    const zone = g.telegraphs.find((t) => t.team === 'enemy' && t.source !== 'Gardien — Effondrement' && insideTelegraph(t, u, 0.6));
+    // temps de réaction de l'IA : elle ne sort d'une zone au sol qu'une demi-seconde après son annonce
+    const zone = g.telegraphs.find((t) => t.team === 'enemy' && t.source !== 'Gardien — Effondrement' && t.t >= REACTION && insideTelegraph(t, u, 0.6));
     if (zone) return { move: { x: u.x - zone.x || 0.1, y: u.y - zone.y }, target: null };
     const t = this.targetFor(g, u);
     const def = u.comp!;
@@ -353,7 +356,8 @@ export class BancState {
       c.moving = true;
     } else c.moving = false;
     if (target) this.attack(g, c, target);
-    if (this.cfg.variante === '0') this.autoSkill(g, c);
+    // compagnons non contrôlés : compétence automatique en 0, B et C (le joueur peut la forcer en B et C) ; A reste manuel
+    if (this.cfg.variante !== 'A') this.autoSkill(g, c);
     return true;
   }
 

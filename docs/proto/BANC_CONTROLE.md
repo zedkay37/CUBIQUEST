@@ -27,12 +27,12 @@
 | 2 | Crabastion | Choc | 10 s | étourdit autour de lui, attire les coups ; **seule façon d'interrompre l'Effondrement** |
 | 3 | Raicube | Filet d'éclairs | 8 s | immobilise 2 s les invocations au point visé (25) |
 
-- **Le boss, le Gardien de basalte** (visuel : Cendrox), 2 200 PV :
+- **Le boss, le Gardien de basalte** (visuel : Cendrox), 2 000 PV :
   1. **Invocations** : 3 petites créatures toutes les 11 s ; elles vont sur la créature la plus fragile.
   2. **Effondrement** : toute l'arène, annoncé 2,5 s, 130 dégâts à chaque créature. Toutes les 15 s, la première à 9 s. Interrompu par le Choc, il ouvre 6 s de vulnérabilité (dégâts × 1,6).
   3. **Faille** : une zone annoncée 1,5 s sous chaque créature, toutes les 6 s ; il faut en sortir.
 - **Le reste** :
-  - l'IA des créatures non contrôlées : elles sortent des zones, et Crabastion file au contact pendant l'Effondrement ;
+  - l'IA des créatures non contrôlées : elles sortent des zones avec un temps de réaction de 0,5 s après l'annonce, et Crabastion file au contact pendant l'Effondrement ;
   - une seule salle sans brouillard, une caméra fixe, les mêmes effets.
 - **Pause tactique** (Espace) dans toutes les variantes : scène désaturée. Chaque pause est enregistrée, avec son moment.
 
@@ -50,11 +50,14 @@ Chaque essai s'enregistre dans le navigateur (`cubiquest_proto_banc_essais`), av
 
 ## Écarts et choix à connaître
 
-- **Les 10 critères de la synthèse GPT ne sont pas dans la fiche.** La grille a 10 lignes « Critère 1 » à « Critère 10 », notées de 1 à 5 ; leurs intitulés se saisissent une fois sur l'accueil du banc. Il y a aussi une case « une frustration venait des commandes », pour la règle d'exclusion.
+- **La grille** reprend les 10 critères de la synthèse, notés de 1 à 5, et le champ « Qu'est-ce qui m'a agacé ? ». La case « une frustration venait des commandes » sert à la règle d'exclusion.
 - **La règle d'exclusion est calculée sur l'accueil** à partir de 5 essais par variante : une créature au-dessus de 60 % des dégâts en moyenne, ou une frustration de commande dans au moins 2 essais.
 - **Créature contrôlée qui tombe** (B et C) : on prend automatiquement la suivante encore debout (sinon l'essai s'arrêterait).
-- **B et C** : les compétences des compagnons ne partent que si le joueur les déclenche. Seule la variante 0 les lance automatiquement.
+- **Compétences automatiques** :
+  - en 0, toutes partent automatiquement ;
+  - en B et C, celles des compagnons non contrôlés partent automatiquement (mêmes règles qu'en 0), et le joueur peut les forcer avec 1, 2 ou 3 ;
+  - en A, toutes restent manuelles.
 - **F (cible commune)** : disponible en A, B et C.
 - **En A**, ZQSD déplace le point de ralliement du groupe ; chaque créature garde sa ligne autour de lui.
-- **Réglage de départ** : l'IA seule (variante 0, placement par défaut) perd de peu (il reste environ 60 PV au Gardien). Une seule interruption manquée ou réussie fait basculer l'issue, d'où un réglage « difficile » sans victoire assurée.
+- **Réglage** : l'IA seule (variante 0, placement par défaut) gagne 45 essais sur 120, environ 4 sur 10 (graines 1–40, 101–140, 201–240). Dans ses défaites, il reste en moyenne 135 à 162 PV au Gardien.
 - **Le Gardien de basalte** est un essai : il n'est pas ajouté au jeu.
