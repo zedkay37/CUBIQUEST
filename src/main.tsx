@@ -30,8 +30,11 @@ const protoParam = new URLSearchParams(window.location.search).get('proto');
 const isProto = protoParam === 'salle';
 // `?proto=donjon` : maquette PROTO-DONJON ; la version publiée sur /proto/ l'ouvre aussi sans paramètre
 const isDonjon = protoParam === 'donjon';
+// `?banc=controle` : banc d'essai n° 1, le geste de combat (src/proto/banc/)
+const isBanc = new URLSearchParams(window.location.search).get('banc') === 'controle';
+const BancPage = lazy(() => import('./proto/banc/BancPage.tsx').then((module) => ({default: module.BancPage})));
 // PROTO-MODELES : `?proto=accueil`, et `/proto/` sans paramètre, présentent tous les modèles
-const isAccueil = protoParam === 'accueil' || (import.meta.env.VITE_SAVE_SLOT === 'proto' && !protoParam && !galleryParam);
+const isAccueil = protoParam === 'accueil' || (import.meta.env.VITE_SAVE_SLOT === 'proto' && !protoParam && !galleryParam && !isBanc);
 const Accueil = lazy(() => import('./proto/Accueil.tsx').then((module) => ({default: module.Accueil})));
 const DonjonPage = lazy(() => import('./proto/donjon/DonjonPage.tsx').then((module) => ({default: module.DonjonPage})));
 const ProtoSalle = lazy(() => import('./proto/ProtoSalle.tsx').then((module) => ({default: module.ProtoSalle})));
@@ -61,7 +64,7 @@ setSculptModels(true);
 setArtDecor(true);
 // qualité Bas choisie (options ou ?quality=low) : versions simplifiées dès la première scène
 {
-  const q = new URLSearchParams(window.location.search).get('quality') ?? (isProto || isDonjon || isAccueil ? 'high' : loadSettings().quality);
+  const q = new URLSearchParams(window.location.search).get('quality') ?? (isProto || isDonjon || isAccueil || isBanc ? 'high' : loadSettings().quality);
   if (q === 'low') {
     setDecorDetail('low');
     setSculptDetail('low');
@@ -83,7 +86,11 @@ const voxReady = Promise.all(
 );
 
 voxReady.then(() => createRoot(document.getElementById('root')!).render(
-  isAccueil ? (
+  isBanc ? (
+    <Suspense fallback={null}>
+      <BancPage />
+    </Suspense>
+  ) : isAccueil ? (
     <Suspense fallback={null}>
       <Accueil />
     </Suspense>

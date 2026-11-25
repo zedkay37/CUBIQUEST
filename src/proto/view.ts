@@ -27,9 +27,11 @@ const SPECIES_FILES: { id: string; ref: boolean; scaleOf: string; glow: number }
   // PROTO-DONJON : le Blindé, le remplaçant de Braizard dans la réserve
   { id: 'cailloc', ref: false, scaleOf: 'cailloc', glow: 0.3 },
   { id: 'raicube', ref: false, scaleOf: 'raicube', glow: 0.4 },
+  // banc d'essai n° 1 : le Gardien de basalte a le visuel de Cendrox
+  { id: 'cendrox', ref: false, scaleOf: 'cendrox', glow: 0.4 },
 ];
 /** Taille d'affichage dans la maquette (la salle est plus serrée que les combats du jeu). */
-const SIZE: Record<string, number> = { 'calcinarque-legendaire': 0.55, magmadrake: 0.85, base: 1 };
+const SIZE: Record<string, number> = { 'calcinarque-legendaire': 0.55, magmadrake: 0.85, base: 1, cendrox: 0.95 };
 
 export async function loadProtoModels(): Promise<void> {
   const subjects = await Promise.all(SPECIES_FILES.map((s) => loadVoxSubject({ id: s.id, label: s.id, file: s.id, ref: s.ref, scaleOf: s.scaleOf, glow: s.glow })));

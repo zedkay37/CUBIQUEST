@@ -46,6 +46,10 @@ export interface Input {
   swapTo: number;
   /** G : jeton « ultime ». */
   ultimate: boolean;
+  /** Banc n° 1 : compétence de la créature 0, 1 ou 2 (−1 : aucune) ; changement de créature (−1 : aucun, −2 : la suivante) ; déplacement du groupe (A). */
+  bancSkill: number;
+  bancSwitch: number;
+  bancGroup: Vec;
 }
 export const emptyInput = (): Input => ({
   move: { x: 0, y: 0 },
@@ -65,6 +69,9 @@ export const emptyInput = (): Input => ({
   card: null,
   swapTo: -1,
   ultimate: false,
+  bancSkill: -1,
+  bancSwitch: -1,
+  bancGroup: { x: 0, y: 0 },
 });
 
 // ---------------------------------------------------------------- le terrain
@@ -428,6 +435,8 @@ export interface Game {
   tokens: number;
   /** H : la conquête (voir conquest.ts). */
   conquest: import('./conquest').ConquestState | null;
+  /** Banc d'essai n° 1, le geste de combat (voir banc/banc.ts). */
+  banc: import('./banc/banc').BancState | null;
 }
 
 export function mulberry32(seed: number): () => number {
@@ -552,6 +561,7 @@ export function newGame(version: Version, seed = 1, recordEventsOrOpts: boolean 
     instincts: null,
     tokens: 0,
     conquest: null,
+    banc: null,
   } as unknown as Game;
   const L = g.leaderDef;
   g.leader = makeUnit(g, 'meneur', L.species, L.name, 'ally', 0, 3, L.hp, L.speed, 0.55);
@@ -649,6 +659,7 @@ export function damage(g: Game, target: Unit, amount: number, source: string, fr
     }
   }
   if (target.guard > 0) dmg *= 0.5;
+  if (g.banc) dmg = g.banc.onDamage(g, target, dmg, source);
   dmg = Math.min(dmg, target.hp);
   target.hp -= dmg;
   if (target.team === 'enemy') {
@@ -705,6 +716,7 @@ function kill(g: Game, u: Unit) {
   }
   if (u.role === 'meneur') {
     if (g.relay && g.relay.onLeaderDown(g)) return;
+    if (g.banc && g.banc.onLeaderDown(g)) return;
     g.result = 'défaite';
     g.endReason = 'Le Meneur est tombé.';
     return;
@@ -885,11 +897,13 @@ function playerActions(g: Game, input: Input, dt: number) {
       shoot(g, L, aim, 10, 10 * rangeMult(g, L), `${D.name} — tir`);
       L.atkCd = CD.fire;
     }
-  } else if (!L.dash) {
+  } else if (!L.dash && !g.banc) {
     let t = target && dist(L, target) <= range + target.r + 0.2 ? target : null;
     if (!t && g.scheme === 1) t = nearest(L, enemies(g).filter((e) => e.aggro && dist(L, e) <= range + e.r + 0.2));
     if (t) leaderAttack(g, L, t);
   }
+  // Banc n° 1 : compétences, cible commune, changement de créature (banc/banc.ts)
+  if (g.banc && g.banc.player(g, input, dt)) return;
   // H, la conquête : la base ne fait que tirer ; le joueur pose des créatures (cartes)
   if (g.conquest) {
     if (input.card) g.conquest.play(g, input.card.index, input.card.at);
@@ -1073,6 +1087,10 @@ function trailPoint(g: Game, rank: number): Vec {
 
 function updateComp(g: Game, c: Unit, rank: number, dt: number) {
   const L = g.leader;
+  if (g.banc) {
+    g.banc.comp(g, c, dt);
+    return;
+  }
   if (!c.alive) {
     c.reviveT -= dt;
     if (c.reviveT <= 0) {
@@ -1230,6 +1248,7 @@ function enemyTarget(g: Game, e: Unit): Unit | null {
 }
 
 function updateEnemy(g: Game, e: Unit, dt: number) {
+  if (g.banc && g.banc.enemy(g, e, dt)) return;
   const target = enemyTarget(g, e);
   if (!target) return;
   if (!e.aggro) {
@@ -1305,7 +1324,7 @@ function updateEnemy(g: Game, e: Unit, dt: number) {
     return;
   }
   // boss
-  if (g.bossPhase === 1 && e.hp <= e.maxHp * 0.5) {
+  if (g.bossPhase === 1 && e.hp <= e.maxHp * 0.5 && !g.banc) {
     g.bossPhase = 2;
     emit(g, { type: 'phase', x: e.x, y: e.y, id: e.id, color: '#FF5A1F' });
     spawnEnemy(g, 'chargeur', e.x - 4, e.y + 2, true);

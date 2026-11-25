@@ -13,6 +13,10 @@ export function Accueil() {
         <p className="mt-2 text-white/70">
           Mêmes créatures, même donjon, même moteur. Essaie chaque modèle quelques minutes. Dans tous les modèles, F1 ouvre les réglages (vitesse, caméra, densité, graine), et l’écran de fin propose « Copier les résultats ».
         </p>
+        <a href={`${base}?banc=controle`} className="mt-4 block rounded-xl border-2 border-emerald-400 bg-slate-800 p-4 hover:bg-slate-700">
+          <div className="text-xl font-bold">Banc d’essai n° 1 : le geste de combat</div>
+          <div className="text-sm text-white/80">Quatre variantes de contrôle (0, A, B, C) contre le Gardien de basalte, même équipe, même arène ; grille après chaque essai, export JSON / CSV.</div>
+        </a>
         <div className="mt-6 grid gap-3 md:grid-cols-2">
           {MODEL_INFO.map((m) => (
             <div key={m.id} className="flex flex-col rounded-xl border border-white/15 bg-slate-800 p-4">
