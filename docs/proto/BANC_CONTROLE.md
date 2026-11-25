@@ -26,8 +26,11 @@
 | 1 | Magmadrake | Éruption | 9 s | zone de feu au point visé (70) |
 | 2 | Crabastion | Choc | 10 s | étourdit autour de lui, attire les coups ; **seule façon d'interrompre l'Effondrement** |
 | 3 | Raicube | Filet d'éclairs | 8 s | immobilise 2 s les invocations au point visé (25) |
+| 4 | Magmadrake | Coulée | 12 s | quatre poches de magma qui éclatent l'une après l'autre en ligne vers le point visé (40 chacune) |
+| 5 | Crabastion | Rempart | 14 s | les alliés à moins de 6 m encaissent moitié moins pendant 3,5 s |
+| 6 | Raicube | Chaîne | 10 s | un éclair qui saute d'un ennemi à l'autre, 4 au plus (30 chacun) |
 
-- **Le boss, le Gardien de basalte** (visuel : Cendrox), 2 000 PV :
+- **Le boss, le Gardien de basalte** (visuel : Cendrox), 3 600 PV :
   1. **Invocations** : 3 petites créatures toutes les 11 s ; elles vont sur la créature la plus fragile.
   2. **Effondrement** : toute l'arène, annoncé 2,5 s, 130 dégâts à chaque créature. Toutes les 15 s, la première à 9 s. Interrompu par le Choc, il ouvre 6 s de vulnérabilité (dégâts × 1,6).
   3. **Faille** : une zone annoncée 1,5 s sous chaque créature, toutes les 6 s ; il faut en sortir.
@@ -59,5 +62,12 @@ Chaque essai s'enregistre dans le navigateur (`cubiquest_proto_banc_essais`), av
   - en A, toutes restent manuelles.
 - **F (cible commune)** : disponible en A, B et C.
 - **En A**, ZQSD déplace le point de ralliement du groupe ; chaque créature garde sa ligne autour de lui.
-- **Réglage** : l'IA seule (variante 0, placement par défaut) gagne 45 essais sur 120, environ 4 sur 10 (graines 1–40, 101–140, 201–240). Dans ses défaites, il reste en moyenne 135 à 162 PV au Gardien.
+- **Réglage** (avec les seconds sorts et l'arène de glace) : l'IA seule (variante 0, placement par défaut) gagne 52 essais sur 120, environ 4 sur 10 (graines 1–40, 101–140, 201–240).
+- **L'arène de glace et de cristaux** (crépuscule) :
+  - sol de neige bleutée et de glace, sans aucun noir ;
+  - brouillard violet léger et poussière de cristal en suspension ;
+  - au bord, de grands cristaux cyan lumineux, des lanternes chaudes, des roches et des pics de glace enneigés, des congères ;
+  - autour, trois couches de falaises cubiques enneigées, de plus en plus hautes et lointaines.
+  - Le centre de l'arène reste plat et dégagé ; au sud, côté caméra, rien de proche ne dépasse un mètre.
+  - Concept de référence : il n'était pas joint au message, la direction suit sa description écrite.
 - **Le Gardien de basalte** est un essai : il n'est pas ajouté au jeu.

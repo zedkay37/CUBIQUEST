@@ -10,6 +10,7 @@ import type { Game, Vec } from '../sim';
 import { T_DOOR, T_FLOOR, T_PILLAR, T_ROCK, T_WALL, T_WATER, type Floor } from './gen';
 import type { DonjonLevel, Item } from './level';
 import { buildDecor } from './decor';
+import { buildIceBackdrop, driftMotes, iceMotes } from './iceBackdrop';
 
 export interface EnvShared {
   uSeen: { value: THREE.DataTexture };
@@ -57,6 +58,8 @@ export function patchEnv(mat: THREE.Material, shared: EnvShared, fade = true) {
 const PAL = {
   foret: { grass: ['#6FA34A', '#78AE50', '#5F9441'], dirt: '#9C7A4E', slab: '#A8A496', moss: '#4E7F3A', wall: ['#8B8677', '#7C7869', '#958F7E'], cap: '#5C8A3E', water: '#4FA3C8', rock: '#7D8790', bg: '#0C0F0B' },
   grotte: { grass: ['#4A4560', '#524B6A', '#433E57'], dirt: '#5A4E4A', slab: '#6A6478', moss: '#3D5A55', wall: ['#3E3A4E', '#45405A', '#373346'], cap: '#5E4E8A', water: '#3C6FA8', rock: '#55506A', bg: '#07060B' },
+  // glace et cristaux, au crépuscule : neige bleutée, glace claire, pierre gris-bleu, jamais de noir
+  glace: { grass: ['#B9C4E6', '#B1BCE0', '#C2CCEA'], dirt: '#8FC6E2', slab: '#7280AE', moss: '#9AA7D6', wall: ['#4F5C8E', '#485486', '#566396'], cap: '#DCE6FA', water: '#6CB8DE', rock: '#66729F', bg: '#1E1A3E' },
 };
 
 /** Bruit déterministe par case (variation des couleurs et des hauteurs). */
@@ -77,11 +80,13 @@ export class DonjonEnv {
   private torches: THREE.PointLight[] = [];
   private torchSpots: Vec[] = [];
   decorCount = 0;
+  /** Glace : flocons et poussière de cristal qui dérivent lentement. */
+  private motes: THREE.Points | null = null;
 
   constructor(
     private scene: THREE.Scene,
     private level: DonjonLevel,
-    private lights?: { hemi: THREE.HemisphereLight; sun: THREE.DirectionalLight },
+    private lights?: { hemi: THREE.HemisphereLight; sun: THREE.DirectionalLight; sunOffset?: THREE.Vector3 },
   ) {
     const f = level.floor;
     this.seenData = new Uint8Array(f.w * f.h * 4).fill(255);
@@ -117,7 +122,8 @@ export class DonjonEnv {
       const kind = room >= 0 ? f.rooms[room].kind : 'couloir';
       const n = hash(x, y);
       let c: string;
-      if (t === T_DOOR || kind === 'couloir') c = n < 0.25 ? pal.moss : pal.dirt;
+      if (f.biome === 'glace') c = n < 0.1 ? pal.dirt : n < 0.32 ? pal.moss : pal.grass[Math.floor(n * 7) % 3];
+      else if (t === T_DOOR || kind === 'couloir') c = n < 0.25 ? pal.moss : pal.dirt;
       else if (kind === 'piliers' || kind === 'boss' || kind === 'escalier' || kind === 'depart') c = (x + y) % 2 ? pal.slab : n < 0.3 ? pal.moss : '#9A9688';
       else c = n < 0.08 ? pal.dirt : n < 0.2 ? pal.moss : pal.grass[Math.floor(n * 7) % 3];
       return new THREE.Color(c).offsetHSL(0, 0, (hash(y, x) - 0.5) * 0.05);
@@ -206,7 +212,7 @@ export class DonjonEnv {
     const solids: { x: number; y: number; t: number }[] = [];
     for (let y = 0; y < f.h; y++) for (let x = 0; x < W; x++) if (f.tiles[y * W + x] === T_PILLAR || f.tiles[y * W + x] === T_ROCK) solids.push({ x, y, t: f.tiles[y * W + x] });
     const pil = solids.filter((s) => s.t === T_PILLAR);
-    const pilMesh = new THREE.InstancedMesh(box, this.mat(pal.slab), Math.max(1, pil.length));
+    const pilMesh = new THREE.InstancedMesh(box, this.mat(f.biome === 'glace' ? '#9FD6EE' : pal.slab), Math.max(1, pil.length));
     pil.forEach((s, i) => {
       m4.compose(new THREE.Vector3(s.x + 0.5, 0, -(s.y + 0.5)), new THREE.Quaternion(), new THREE.Vector3(0.9, 2.6, 0.9));
       pilMesh.setMatrixAt(i, m4);
@@ -268,14 +274,29 @@ export class DonjonEnv {
     this.torchSpots = decor.lights;
     // quelques vraies lumières, données aux torches les plus proches du Meneur
     for (let i = 0; i < 6; i++) {
-      const l = new THREE.PointLight(f.biome === 'grotte' ? '#9C7BFF' : '#FFB25A', 0, 7, 1.5);
+      // glace : lanternes chaudes et cristaux cyan, en alternance
+      const l = new THREE.PointLight(f.biome === 'grotte' ? '#9C7BFF' : f.biome === 'glace' && i % 2 ? '#5FE3FF' : '#FFB25A', 0, 7, 1.5);
       this.torches.push(l);
       this.group.add(l);
     }
     this.scene.background = new THREE.Color(pal.bg);
     // brume légère au loin ; la grotte est sombre, éclairée surtout par ses cristaux et ses torches
     this.scene.fog = new THREE.Fog(f.biome === 'grotte' ? '#0A0814' : '#1E2A1C', 24, 46);
-    if (this.lights) {
+    if (f.biome === 'glace') {
+      // crépuscule : brouillard violet léger qui efface les couches lointaines, ombres bleutées (lumière d'ambiance froide)
+      this.scene.fog = new THREE.Fog('#3A3170', 26, 70);
+      this.group.add(buildIceBackdrop(f));
+      this.motes = iceMotes(f);
+      this.group.add(this.motes);
+      if (this.lights) {
+        this.lights.hemi.color.set('#8E9CF0');
+        this.lights.hemi.groundColor.set('#3C3A78');
+        this.lights.hemi.intensity = 1.0;
+        this.lights.sun.color.set('#FFC2A0');
+        this.lights.sun.intensity = 1.1;
+        this.lights.sunOffset?.set(-16, 11, 9);
+      }
+    } else if (this.lights) {
       const cave = f.biome === 'grotte';
       this.lights.hemi.color.set(cave ? '#8A7FC0' : '#FFF1D6');
       this.lights.hemi.groundColor.set(cave ? '#2A2238' : '#5A5240');
@@ -313,6 +334,7 @@ export class DonjonEnv {
 
   update(g: Game, dt: number, camPos: THREE.Vector3) {
     this.time += dt;
+    if (this.motes) driftMotes(this.motes, dt, this.time);
     const lvl = this.level;
     if (lvl.seenVersion !== this.seenVersion) {
       this.seenVersion = lvl.seenVersion;

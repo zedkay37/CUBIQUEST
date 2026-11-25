@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { type Input, emptyInput, enemies, step } from '../sim';
 import { ProtoView, loadProtoModels } from '../view';
 import { DonjonEnv } from '../donjon/env';
-import { ARENA_CENTER, BOSS, DEFAULT_CONFIG, NAMES, ROLE, SKILL, SPECIES, type BancConfig, type Ligne, type Priorite, type Sp, type Trial, type Variante, newBanc, trialResults } from './banc';
+import { ARENA_CENTER, BOSS, DEFAULT_CONFIG, NAMES, ROLE, SKILL, SKILL2, SPECIES, type BancConfig, type Ligne, type Priorite, type Sp, type Trial, type Variante, newBanc, trialResults } from './banc';
 
 const BANC_STORAGE_KEY = { essais: 'cubiquest_proto_banc_essais', prediction: 'cubiquest_proto_banc_prediction', rotation: 'cubiquest_proto_banc_rotation' };
 const load = <T,>(k: string, d: T): T => {
@@ -49,9 +49,9 @@ export interface Essai extends Trial {
 
 const VARIANTES: { id: Variante; name: string; text: string; keys: string }[] = [
   { id: '0', name: '0 · Aucun contrôle', text: 'Tu places l’équipe sur deux lignes et choisis une priorité de cible par créature ; ensuite tout est automatique.', keys: 'Espace : pause' },
-  { id: 'A', name: 'A · Contrôle collectif', text: 'L’équipe se déplace en groupe ; les attaques sont automatiques ; tu déclenches les 3 compétences et peux désigner une cible commune.', keys: 'ZQSD : le groupe · 1, 2, 3 : compétences vers le curseur · F : cible commune · Espace : pause' },
-  { id: 'B', name: 'B · Meneur fixe', text: 'Tu diriges une créature (choisie avant l’essai, elle tourne d’un essai à l’autre) ; les autres sont automatiques ; tu peux déclencher leurs compétences.', keys: 'ZQSD · clic gauche : sa cible · 1, 2, 3 : compétences · F : cible commune · Espace : pause' },
-  { id: 'C', name: 'C · Contrôle interchangeable', text: 'Comme B, et tu changes de créature à tout moment.', keys: 'ZQSD · clic gauche : sa cible · 1, 2, 3 : compétences · F : cible commune · Tab ou clic sur un portrait : changer · Espace : pause' },
+  { id: 'A', name: 'A · Contrôle collectif', text: 'L’équipe se déplace en groupe ; les attaques sont automatiques ; tu déclenches les 6 sorts (deux par créature) et peux désigner une cible commune.', keys: 'ZQSD : le groupe · 1, 2, 3 puis 4, 5, 6 : les deux sorts de chaque créature, vers le curseur · F : cible commune · Espace : pause' },
+  { id: 'B', name: 'B · Meneur fixe', text: 'Tu diriges une créature (choisie avant l’essai, elle tourne d’un essai à l’autre) ; les autres sont automatiques ; tu peux déclencher leurs compétences.', keys: 'ZQSD · clic gauche : sa cible · 1 à 6 : sorts · F : cible commune · Espace : pause' },
+  { id: 'C', name: 'C · Contrôle interchangeable', text: 'Comme B, et tu changes de créature à tout moment.', keys: 'ZQSD · clic gauche : sa cible · 1 à 6 : sorts · F : cible commune · Tab ou clic sur un portrait : changer · Espace : pause' },
 ];
 const PRIOS: [Priorite, string][] = [['proche', 'la plus proche'], ['invocations', 'les invocations'], ['boss', 'le boss'], ['faible', 'la plus faible']];
 
@@ -180,7 +180,7 @@ function Setup({ variante, hidden, onGo }: { variante: Variante; hidden: boolean
 
 interface Hud {
   t: number;
-  team: { sp: Sp; hp: number; max: number; alive: boolean; controlled: boolean; cd: number }[];
+  team: { sp: Sp; hp: number; max: number; alive: boolean; controlled: boolean; cd: number; cd2: number }[];
   boss: { hp: number; max: number; channel: boolean; vuln: boolean } | null;
   adds: number;
 }
@@ -209,14 +209,14 @@ function Fight({ cfg, hidden, onEnd }: { cfg: BancConfig; hidden: boolean; onEnd
     let aim = { x: 15, y: 15 };
     switchRef.current = (k) => (sw = k);
     const kd = (e: KeyboardEvent) => {
-      if (['Space', 'Tab', 'Digit1', 'Digit2', 'Digit3', 'KeyF'].includes(e.code)) e.preventDefault();
+      if (['Space', 'Tab', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'KeyF'].includes(e.code)) e.preventDefault();
       if (e.repeat) return;
       if (e.code === 'Space') {
         pausedNow = !pausedNow;
         if (pausedNow) pauses.push(Math.round(g.t * 10) / 10);
         setPaused(pausedNow);
       }
-      const d = ['Digit1', 'Digit2', 'Digit3'].indexOf(e.code);
+      const d = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'].indexOf(e.code);
       if (d >= 0) skill = d;
       if (e.code === 'KeyF') focus = true;
       if (e.code === 'Tab') sw = -2;
@@ -293,7 +293,7 @@ function Fight({ cfg, hidden, onEnd }: { cfg: BancConfig; hidden: boolean; onEnd
             t: g.t,
             team: SPECIES.map((sp) => {
               const u = st.team(g).find((x) => x.species === sp)!;
-              return { sp, hp: u.hp, max: u.maxHp, alive: u.alive, controlled: u === g.leader && (cfg.variante === 'B' || cfg.variante === 'C'), cd: Math.max(0, st.cds[sp] ?? 0) };
+              return { sp, hp: u.hp, max: u.maxHp, alive: u.alive, controlled: u === g.leader && (cfg.variante === 'B' || cfg.variante === 'C'), cd: Math.max(0, st.cds[sp] ?? 0), cd2: Math.max(0, st.cds[`${sp}2`] ?? 0) };
             }),
             boss: boss ? { hp: boss.hp, max: boss.maxHp, channel: boss.channel, vuln: boss.healCd > 0 } : null,
             adds: enemies(g).filter((e) => e.role !== 'boss').length,
@@ -361,6 +361,10 @@ function Fight({ cfg, hidden, onEnd }: { cfg: BancConfig; hidden: boolean; onEnd
                 <div className={c.cd > 0 ? 'text-white/50' : 'text-amber-300'}>
                   {v === '0' ? '' : `${i + 1} · `}
                   {SKILL[c.sp].name} {c.cd > 0 ? `(${Math.ceil(c.cd)} s)` : 'prête'}
+                </div>
+                <div className={c.cd2 > 0 ? 'text-white/50' : 'text-amber-300'}>
+                  {v === '0' ? '' : `${i + 4} · `}
+                  {SKILL2[c.sp].name} {c.cd2 > 0 ? `(${Math.ceil(c.cd2)} s)` : 'prête'}
                 </div>
               </button>
             ))}

@@ -53,3 +53,10 @@ test('BANC : C change de créature contrôlée sans rien changer à l’équipe'
   assert.notEqual(g.leader.species, 'raicube');
   assert.deepEqual(g.banc!.team(g).map((u) => `${u.species}:${u.hp}`).sort(), before);
 });
+
+test('BANC : chaque créature a un second sort, lancé par l’IA en variante 0', () => {
+  const g = newBanc({ ...DEFAULT_CONFIG, variante: '0' }, 7, false);
+  while (!g.result) step(g, g.banc!.aiLeaderInput(g));
+  const used = g.banc!.m.skills;
+  for (const name of ['Coulée', 'Rempart', 'Chaîne']) assert.ok((used[name] ?? 0) > 0, `${name} jamais lancé : ${JSON.stringify(used)}`);
+});

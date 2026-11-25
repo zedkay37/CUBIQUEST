@@ -196,7 +196,7 @@ export interface Floor {
   stairs: Vec | null;
   boss: Vec | null;
   floorIndex: number;
-  biome: 'foret' | 'grotte';
+  biome: 'foret' | 'grotte' | 'glace';
 }
 
 const DIRS: Record<string, [number, number]> = { N: [0, 1], S: [0, -1], E: [1, 0], W: [-1, 0] };

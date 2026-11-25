@@ -146,6 +146,8 @@ export class ProtoView {
   visibleFn: ((u: Unit) => boolean) | null = null;
   /** Le soleil suit le Meneur (grands étages : l'ombre reste nette autour de lui). */
   followSun = false;
+  /** Position du soleil par rapport au point suivi (le crépuscule de glace l'abaisse). */
+  sunOffset = new THREE.Vector3(-8, 20, 6);
   /** H : la caméra suit ce point (déplacé au clavier) au lieu du Meneur. */
   camFocus: Vec | null = null;
   /** H : cercles au sol (avant-postes, zone de pose). */
@@ -580,7 +582,7 @@ export class ProtoView {
     this.camera.position.lerp(want, Math.min(1, dt * 6));
     this.camera.lookAt(target.x, target.y, target.z - 2);
     if (this.followSun) {
-      this.sun.position.set(target.x - 8, 20, target.z + 6);
+      this.sun.position.copy(target).add(this.sunOffset);
       this.sun.target.position.copy(target);
     }
     this.renderer.render(this.scene, this.camera);

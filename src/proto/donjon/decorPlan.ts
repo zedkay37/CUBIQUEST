@@ -10,7 +10,9 @@ export type DecorKind =
   | 'chene' | 'sapin' | 'arbre-mort' | 'souche' | 'buisson' | 'fougere' | 'herbes' | 'fleurs-rouges' | 'fleurs-jaunes'
   | 'champignon' | 'champignons' | 'rocher' | 'cailloux' | 'muret' | 'ruine-arche' | 'pilier-casse' | 'colonne'
   | 'torche-pied' | 'lanterne' | 'cristal-bleu' | 'cristal-violet' | 'caisse' | 'tonneau' | 'coffre-ferme'
-  | 'racines' | 'roseaux' | 'nenuphar' | 'pont' | 'stalagmite' | 'os';
+  | 'racines' | 'roseaux' | 'nenuphar' | 'pont' | 'stalagmite' | 'os'
+  // glace et cristaux (banc n° 1)
+  | 'grand-cristal' | 'pic-glace' | 'rocher-neige' | 'congere';
 export interface DecorItem {
   kind: DecorKind;
   x: number;
@@ -20,13 +22,16 @@ export interface DecorItem {
   solid: boolean;
 }
 /** Éléments qui bloquent le passage quand ils sont posés au bord. */
-export const BIG: DecorKind[] = ['chene', 'sapin', 'arbre-mort', 'rocher', 'muret', 'ruine-arche', 'pilier-casse', 'colonne', 'caisse', 'tonneau', 'coffre-ferme', 'stalagmite', 'souche'];
+export const BIG: DecorKind[] = ['grand-cristal', 'pic-glace', 'rocher-neige', 'chene', 'sapin', 'arbre-mort', 'rocher', 'muret', 'ruine-arche', 'pilier-casse', 'colonne', 'caisse', 'tonneau', 'coffre-ferme', 'stalagmite', 'souche'];
 /** Éléments lumineux (une vraie lumière peut leur être donnée). */
-export const LIGHTS: DecorKind[] = ['torche-pied', 'lanterne', 'cristal-bleu', 'cristal-violet'];
+export const LIGHTS: DecorKind[] = ['grand-cristal', 'torche-pied', 'lanterne', 'cristal-bleu', 'cristal-violet'];
 
 const FOREST_EDGE: DecorKind[] = ['chene', 'sapin', 'buisson', 'buisson', 'fougere', 'rocher', 'souche', 'muret', 'ruine-arche', 'pilier-casse', 'colonne', 'caisse', 'tonneau', 'torche-pied', 'arbre-mort', 'champignons', 'racines', 'lanterne', 'coffre-ferme'];
 const FOREST_MID: DecorKind[] = ['herbes', 'herbes', 'fleurs-rouges', 'fleurs-jaunes', 'champignon', 'cailloux', 'fougere', 'racines', 'os'];
 const CAVE_EDGE: DecorKind[] = ['cristal-bleu', 'cristal-violet', 'stalagmite', 'stalagmite', 'rocher', 'pilier-casse', 'colonne', 'caisse', 'tonneau', 'champignons', 'torche-pied', 'muret', 'os'];
+// glace : cristaux cyan bien présents, lanternes chaudes, roches enneigées ; ni arbres ni herbe
+const ICE_EDGE: DecorKind[] = ['grand-cristal', 'grand-cristal', 'cristal-bleu', 'cristal-bleu', 'cristal-violet', 'lanterne', 'lanterne', 'rocher-neige', 'rocher-neige', 'pic-glace', 'pic-glace', 'congere', 'congere'];
+const ICE_MID: DecorKind[] = ['congere', 'congere', 'cristal-bleu', 'pic-glace'];
 const CAVE_MID: DecorKind[] = ['cailloux', 'champignon', 'cristal-bleu', 'os', 'champignons'];
 
 export function planDecor(f: Floor, seed: number): { items: DecorItem[]; lights: Vec[] } {
@@ -49,6 +54,7 @@ export function planDecor(f: Floor, seed: number): { items: DecorItem[]; lights:
   if (f.boss) reserved.push(f.boss);
   for (const r of f.rooms) reserved.push(...r.enemySpots, ...r.nestSpots, ...r.itemSpots, ...(r.treasure ? [r.treasure] : []));
   const cave = f.biome === 'grotte';
+  const ice = f.biome === 'glace';
   const items: DecorItem[] = [];
   const pick = <T>(l: T[]) => l[Math.floor(rng() * l.length)];
   for (const room of f.rooms) {
@@ -71,8 +77,10 @@ export function planDecor(f: Floor, seed: number): { items: DecorItem[]; lights:
         }
         const r = rng();
         let kind: DecorKind | null = null;
-        if (d === 1 && r < 0.58) kind = pick(cave ? CAVE_EDGE : FOREST_EDGE);
-        else if (d === 2 && r < 0.26) kind = pick(cave ? CAVE_MID : FOREST_MID);
+        if (d === 1 && r < 0.58) kind = pick(ice ? ICE_EDGE : cave ? CAVE_EDGE : FOREST_EDGE);
+        else if (d === 2 && r < 0.26) kind = pick(ice ? ICE_MID : cave ? CAVE_MID : FOREST_MID);
+        // glace : le centre de l'arène reste plat et lisible
+        else if (ice && d >= 3) kind = null;
         else if (d >= 3 && r < 0.035) kind = pick(cave ? ['cailloux', 'champignon'] : ['herbes', 'fleurs-jaunes', 'fleurs-rouges', 'cailloux']) as DecorKind;
         if (!kind) continue;
         // pas de grands arbres dans les petites salles

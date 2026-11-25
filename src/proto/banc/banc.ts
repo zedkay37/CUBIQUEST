@@ -19,6 +19,12 @@ export const SPECIES = ['magmadrake', 'crabastion', 'raicube'] as const;
 export type Sp = (typeof SPECIES)[number];
 export const NAMES: Record<Sp, string> = { magmadrake: 'Magmadrake', crabastion: 'Crabastion', raicube: 'Raicube' };
 export const ROLE: Record<Sp, string> = { magmadrake: 'destructeur', crabastion: 'protecteur', raicube: 'contrôleur' };
+/** Second sort de chaque créature (touches 4, 5, 6), mêmes règles que le premier dans toutes les variantes. */
+export const SKILL2: Record<Sp, { name: string; cd: number; key: string; text: string }> = {
+  magmadrake: { name: 'Coulée', cd: 12, key: '4', text: 'une vague de magma qui avance en ligne vers le point visé' },
+  crabastion: { name: 'Rempart', cd: 14, key: '5', text: 'les alliés proches encaissent moitié moins pendant 3,5 s' },
+  raicube: { name: 'Chaîne', cd: 10, key: '6', text: 'un éclair qui saute d’un ennemi à l’autre (4 au plus)' },
+};
 export const SKILL: Record<Sp, { name: string; cd: number; key: string; text: string }> = {
   magmadrake: { name: 'Éruption', cd: 9, key: '1', text: 'zone de feu au point visé' },
   crabastion: { name: 'Choc', cd: 10, key: '2', text: 'étourdit autour de lui ; interrompt la grosse attaque du boss' },
@@ -51,7 +57,7 @@ export const DEFAULT_CONFIG: BancConfig = {
 
 /** Temps de réaction de l'IA face à une zone au sol (s), le même dans toutes les variantes. */
 export const REACTION = 0.5;
-export const BOSS = { hp: 2000, summonEvery: 11, bigEvery: 15, bigFirst: 9, bigCast: 2.5, bigDmg: 130, vuln: 6, vulnMult: 1.6, zoneEvery: 6, zoneDmg: 55 };
+export const BOSS = { hp: 3600, summonEvery: 11, bigEvery: 15, bigFirst: 9, bigCast: 2.5, bigDmg: 130, vuln: 6, vulnMult: 1.6, zoneEvery: 6, zoneDmg: 55 };
 const W = 30;
 const H = 26;
 export const BOSS_HOME: Vec = { x: 15, y: 19 };
@@ -68,7 +74,7 @@ function buildArena(): Floor {
       if (!wall && !pillar) roomOf[y * W + x] = 0;
     }
   const room: Room = { id: 0, kind: 'boss', rect: [0, 0, W, H], center: { ...ARENA_CENTER }, depth: 0, enemySpots: [], nestSpots: [], itemSpots: [], treasure: null, stairs: null, boss: { ...BOSS_HOME }, start: { x: 15, y: 5 } };
-  return { w: W, h: H, tiles, roomOf, rooms: [room], start: { x: 15, y: 5 }, stairs: null, boss: { ...BOSS_HOME }, floorIndex: 3, biome: 'foret' };
+  return { w: W, h: H, tiles, roomOf, rooms: [room], start: { x: 15, y: 5 }, stairs: null, boss: { ...BOSS_HOME }, floorIndex: 3, biome: 'glace' };
 }
 
 /** L'arène : une seule salle, sans brouillard. */
@@ -314,8 +320,61 @@ export class BancState {
     emit(g, { type: 'glow', x: u.x, y: u.y, id: u.id, color: '#FFE27A' });
     return true;
   }
+  /** Second sort (même effet quelle que soit la variante). */
+  skill2(g: Game, u: Unit, at?: Vec): boolean {
+    const sp = u.species as Sp;
+    const key = `${sp}2`;
+    if (!u.alive || !this.ready(key)) return false;
+    const t = this.targetFor(g, u);
+    const p = at ?? (t ? { x: t.x, y: t.y } : null);
+    if (sp === 'magmadrake') {
+      if (!p) return false;
+      // la Coulée avance : quatre poches de magma qui éclatent l'une après l'autre sur la ligne
+      const a = Math.atan2(p.y - u.y, p.x - u.x);
+      for (let k = 1; k <= 4; k++)
+        telegraph(g, { kind: 'disc', x: u.x + Math.cos(a) * 1.5 * k, y: u.y + Math.sin(a) * 1.5 * k, r: 1.3, r2: 0, angle: 0, len: 0, w: 0, dur: 0.08 + 0.12 * k, dmg: 40, team: 'ally', source: 'Magmadrake — Coulée', owner: u.id, from: { x: u.x, y: u.y } });
+    } else if (sp === 'crabastion') {
+      for (const a of this.team(g)) if (a.alive && Math.hypot(a.x - u.x, a.y - u.y) < 6) a.guard = Math.max(a.guard, 3.5);
+      emit(g, { type: 'impact', x: u.x, y: u.y, id: -1, color: '#3FA9F5', by: 'Crabastion — Vague', a: 6 });
+    } else {
+      if (!p) return false;
+      const hit: Unit[] = [];
+      let cur = nearest(p, enemies(g).filter((e) => Math.hypot(e.x - p.x, e.y - p.y) < 4));
+      while (cur && hit.length < 4) {
+        hit.push(cur);
+        damage(g, cur, 30, 'Raicube — Chaîne', undefined, sp);
+        emit(g, { type: 'impact', x: cur.x, y: cur.y, id: -1, color: '#FFE84A', by: 'Raicube — Foudre', a: 1.2 });
+        const from = cur;
+        cur = nearest(from, enemies(g).filter((e) => !hit.includes(e) && Math.hypot(e.x - from.x, e.y - from.y) < 5));
+      }
+      if (!hit.length) return false;
+    }
+    this.cds[key] = SKILL2[sp].cd;
+    this.m.skills[SKILL2[sp].name] = (this.m.skills[SKILL2[sp].name] ?? 0) + 1;
+    emit(g, { type: 'glow', x: u.x, y: u.y, id: u.id, color: '#FFE27A' });
+    return true;
+  }
+  /** Règles automatiques du second sort (0, et compagnons non contrôlés en B et C). */
+  autoSkill2(g: Game, u: Unit) {
+    const sp = u.species as Sp;
+    if (!this.ready(`${sp}2`)) return;
+    const foes = enemies(g);
+    if (sp === 'crabastion') {
+      const hurt = this.team(g).filter((a) => a.alive && a.hp < a.maxHp * 0.6 && Math.hypot(a.x - u.x, a.y - u.y) < 6).length;
+      // Rempart : l'équipe saigne, ou l'Effondrement arrive et le Choc n'est pas prêt
+      const boss = foes.find((e) => e.role === 'boss');
+      if (hurt >= 2 || (boss?.channel && !this.ready('crabastion'))) this.skill2(g, u);
+      return;
+    }
+    const t = this.targetFor(g, u);
+    if (!t) return;
+    const near = foes.filter((e) => Math.hypot(e.x - t.x, e.y - t.y) < 5).length;
+    if (sp === 'magmadrake' && near >= 2 && Math.hypot(t.x - u.x, t.y - u.y) < 6.5) this.skill2(g, u, { x: t.x, y: t.y });
+    if (sp === 'raicube' && near >= 2) this.skill2(g, u);
+  }
   /** Variante 0 : quand l'IA déclenche-t-elle une compétence ? (règles simples, les mêmes pour tous) */
   autoSkill(g: Game, u: Unit) {
+    this.autoSkill2(g, u);
     const sp = u.species as Sp;
     if (!this.ready(sp)) return;
     const foes = enemies(g);
@@ -389,7 +448,14 @@ export class BancState {
       this.autoSkill(g, L);
       return true;
     }
-    if (input.bancSkill >= 0) {
+    if (input.bancSkill >= 3) {
+      // 4, 5, 6 : second sort de Magmadrake, Crabastion, Raicube
+      const u = this.team(g).find((x) => x.species === SPECIES[input.bancSkill - 3]);
+      if (u && this.skill2(g, u, input.aim)) {
+        g.actions++;
+        g.actionsByKind[`compétence ${SKILL2[u.species as Sp].name}`] = (g.actionsByKind[`compétence ${SKILL2[u.species as Sp].name}`] ?? 0) + 1;
+      }
+    } else if (input.bancSkill >= 0) {
       const u = this.team(g).find((x) => x.species === SPECIES[input.bancSkill]);
       if (u && this.skill(g, u, input.aim)) {
         g.actions++;

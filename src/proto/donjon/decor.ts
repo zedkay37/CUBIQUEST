@@ -203,6 +203,27 @@ function sculpt(kind: DecorKind): Sculpt {
     case 'stalagmite':
       for (let y = 0; y < 13; y++) s.cyl(0, 0, Math.max(0.6, 3.5 - y * 0.27), y, y, y % 3 ? '#5D566E' : '#6B6380');
       break;
+    case 'grand-cristal': {
+      // grand amas de cristal cyan, posé sur une roche enneigée : il luit
+      s.ball(0, 1, 0, 4, 1.6, 3.5, s.mix('#7A88B8', '#8896C4'));
+      s.box(-3, 2, 2, 2, -2, 2, '#F2F7FF');
+      for (const [x, z, h, w] of [[0, 0, 16, 2], [3, 1, 11, 1], [-3, -1, 12, 1], [1, -3, 8, 1]]) for (let y = 2; y <= h; y++) {
+        const ww = y > h - 3 ? 0 : w;
+        s.box(x - ww, x + ww, y, y, z - ww, z + ww, y % 3 ? '#5FE3FF' : '#A8F0FF', true);
+      }
+      break;
+    }
+    case 'pic-glace':
+      for (let y = 0; y < 11; y++) s.cyl(0, 0, Math.max(0.5, 2.4 - y * 0.2), y, y, y % 2 ? '#BFE6F6' : '#A9DDF2');
+      s.set(0, 11, 0, '#F2F7FF');
+      break;
+    case 'rocher-neige':
+      s.ball(0, 2.5, 0, 5, 3.4, 4, s.mix('#7A88B8', '#8896C4', '#6C7AA9'));
+      s.ball(0, 5, 0, 4, 1.3, 3.2, '#F2F7FF');
+      break;
+    case 'congere':
+      s.ball(0, 0, 0, 5, 2, 4, s.mix('#F2F7FF', '#E2EBFA', '#D5E1F5'));
+      break;
     case 'os':
       s.box(-3, 2, 0, 0, 0, 0, '#E9E2CF');
       s.set(-4, 0, -1, '#E9E2CF');
@@ -268,7 +289,7 @@ function mesh(s: Sculpt): { body: THREE.BufferGeometry; glow: THREE.BufferGeomet
 }
 
 const cache = new Map<DecorKind, ReturnType<typeof mesh>>();
-const TALL: DecorKind[] = ['chene', 'sapin', 'arbre-mort', 'ruine-arche', 'colonne', 'pilier-casse', 'stalagmite', 'torche-pied', 'roseaux', 'muret'];
+const TALL: DecorKind[] = ['grand-cristal', 'pic-glace', 'chene', 'sapin', 'arbre-mort', 'ruine-arche', 'colonne', 'pilier-casse', 'stalagmite', 'torche-pied', 'roseaux', 'muret'];
 
 /** Coque du contour : gonflée le long des normales moyennes ; brouillard et estompage comme le reste du décor. */
 function hullMaterial(shared: EnvShared, fade: boolean): THREE.MeshBasicMaterial {
@@ -357,6 +378,6 @@ export function buildDecor(f: Floor, shared: EnvShared, patch: (m: THREE.Materia
       lights.push({ x: x + 0.5, y: y - 0.6 });
     }
   }
-  for (const it of items) if (it.kind === 'torche-pied' || it.kind === 'lanterne' || it.kind.startsWith('cristal')) lights.push({ x: it.x, y: it.y });
+  for (const it of items) if (it.kind === 'torche-pied' || it.kind === 'lanterne' || it.kind === 'grand-cristal' || it.kind.startsWith('cristal')) lights.push({ x: it.x, y: it.y });
   return { group, count: items.length, lights, kinds: byKind.size };
 }
